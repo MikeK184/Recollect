@@ -1,0 +1,20 @@
+{
+  "includeIgnored": ["cognee/"],
+  "exclude": [
+    "/.codex/tools/",
+    ".codegraph/",
+    ".cache/",
+    "node_modules/",
+    ".venv/",
+    "venv/",
+    "__pycache__/",
+    ".next/",
+    "dist/",
+    "build/",
+    "coverage/",
+    ".env",
+    ".env.*",
+    "*.pem",
+    "*.key"
+  ]
+}

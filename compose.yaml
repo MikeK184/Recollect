@@ -1,0 +1,45 @@
+name: recollect
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: recollect_admin
+      POSTGRES_DB: recollect
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run ./scripts/setup-local.sh}
+      RECOLLECT_DB_PASSWORD: ${RECOLLECT_DB_PASSWORD:?Run ./scripts/setup-local.sh}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres-init.sh:/docker-entrypoint-initdb.d/recollect.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -U recollect_admin -d recollect -Atqc 'SELECT 1'"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    mem_limit: 1g
+    restart: unless-stopped
+  neo4j:
+    image: neo4j:2026.08
+    environment:
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:?Run ./scripts/setup-local.sh}"
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: "gds.*"
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    ports:
+      - "127.0.0.1:57474:7474"
+    volumes:
+      - ./.data/neo4j/data:/data
+      - ./.data/neo4j/logs:/logs
+      - ./.data/neo4j/plugins:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    mem_limit: 3g
+    restart: unless-stopped
+volumes:
+  postgres_data:

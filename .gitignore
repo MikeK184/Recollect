@@ -1,0 +1,17 @@
+/cognee/
+/agent-memory-atlas/
+.DS_Store
+__pycache__/
+*.pyc
+/.cache/
+/crates/*/.cache/
+/.codegraph/
+/.codex/tools/codegraph/node_modules/
+.env
+.env.*
+!.env.example
+/target/
+/web/node_modules/
+/web/dist/
+/.data/
+/test-results/
