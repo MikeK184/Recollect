@@ -1,0 +1,93 @@
+# Operational Readiness and Integrated Proof
+
+Status: complete
+
+## Purpose
+
+Make the complete personal/team product operable and demonstrably useful through
+reproducible deployment, recovery, integrated negative/positive evaluations and
+measured resource/quality limits. This epic owns final product readiness evidence.
+
+## Governing Sources
+
+- [Integrated acceptance contract](../../contracts/operations-integrated-evaluations.md)
+- [ADR 0013: backup and recovery](../../adr/0013-backup-and-recovery.md)
+- [Recovery contract](../../contracts/operations-recovery-drills.md)
+- [ADR 0011: installation](../../adr/0011-local-and-shared-installation.md)
+- [Installation contract](../../contracts/operations-local-and-shared.md)
+- [Vision: pilot success and limits](../../foundation/vision.md#pilot-success-and-limits)
+- [Stack: delivery and verification](../../foundation/techstack.md#delivery-and-verification)
+- [Stack: graph recovery](../../foundation/techstack.md#graph-computation-and-recovery)
+- [Engineering principles: behavioral proof](../../foundation/engineering-principles.md#prove-useful-behavior-and-failure-boundaries)
+
+## Dependencies and Boundaries
+
+Deployment work can start after platform identity, durable jobs and device
+pairing. Use the same Compose topology locally and on a shared private server,
+with native companions, persistent volumes, explicit migrations, HTTPS for
+shared access and documented operating inputs. Do not create a new topology or
+mandatory infrastructure service to satisfy readiness.
+
+Own operational logs/metrics, resource budgeting, off-machine encrypted backups,
+upgrade/restore procedures, and the integrated acceptance report. Feature epics
+own meaningful tests from their first slices; scope, correction and audit are
+not postponed until this epic. Retention rules come from memory lifecycle, graph
+reconstruction from graph intelligence, and Vault/runtime semantics from MCP.
+
+Recovery and integrated proof wait for the relevant feature paths, including
+capture, review, retrieval, graph analytics and managed observations. Apply the
+current retained erasure journal and the checkpoint's canonical rejection state
+before restored recall becomes available. Ordinary changes beyond the advertised
+recovery point are not claimed recovered. Record what can be rebuilt from retained
+evidence and what cannot.
+
+The first usable product includes all seven product epics. A running stack or
+passing documentation checker alone is insufficient. High availability, customer
+SaaS federation, universal capacity guarantees and a paid database license remain
+outside scope. Actual deployment targets and credentials require the later
+assignment's authorized inputs; this roadmap does not select or access them.
+
+## Decisions Before Implementation
+
+- Specify supported host/runtime versions, packaging, volumes, operating inputs,
+  shared HTTPS configuration and diagnostic/resource limits before deployment.
+- Specify backup retention/expiry, recovery objectives, deletion-ledger recovery,
+  migration compatibility and rollback before data-bearing shared operation.
+- Specify representative corpus/workload and measurable quality/latency/cost
+  acceptance before integrated evaluation. Preserve evidence boundaries and
+  compare methods under equivalent models and context budgets.
+
+## Slice Map
+
+| Slice ID | Status | Evidence | Execution | Summary |
+| --- | --- | --- | --- | --- |
+| `operations-local-and-shared` | shipped | adr-backed, contract-backed | pack | Actual personal/shared UI/API, HTTPS native pairing/MCP, persistent state, migration failure, dependency outage, graceful drain and diagnostics verified |
+| `operations-recovery-drills` | shipped | adr-backed, contract-backed | pack | Actual encrypted SFTP, offline restore, journal continuity, erasure/replay, failed upgrade, interrupted resume, graph/recall and desktop proof |
+| `operations-integrated-evaluations` | shipped | contract-backed | pack | Actual-model quality, seven-capability matrix, unchanged 50-repository/200-document/eight-caller workload, repaired admission/queries, final restore/desktop and normal upgrade verified |
+
+## Slice Dependencies
+
+| Slice ID | Predecessors |
+| --- | --- |
+| `operations-local-and-shared` | `platform-durable-work`, `platform-team-access`, `platform-device-pairing` |
+| `operations-recovery-drills` | `operations-local-and-shared`, `evidence-session-capture`, `graph-exploration`, `retrieval-investigation-ui`, `mcp-observation-capture` |
+| `operations-integrated-evaluations` | `operations-recovery-drills`, `memory-capture-reconciliation` |
+
+## Completion Criteria
+
+- A documented personal install and a two-user shared install exercise actual
+  UI/API/companion paths, with accurate configured/connected/unavailable states.
+- Restore to an empty instance reconstructs eligible graph/search state from
+  retained inputs. Rejected or erased material stays excluded after queue replay
+  and backup restore; permitted unrelated evidence remains available.
+- All seven capabilities have product-path evidence, including corrected-value
+  re-ingestion, late evidence, unauthorized access, forged review and erased data.
+- One workspace session moves across repositories/environments with concurrent
+  tasks; local/private MCP calls and Vault rotation preserve scope and leases.
+- Equal-budget retrieval comparisons and concurrent capture/query/analytics runs
+  report useful answers, misses, false assertions, provenance accuracy, tail
+  latency, write-to-readable lag, memory and cost. State tested limits rather
+  than claiming the proposed VM handles an unmeasured corpus.
+- Operator runbooks and implementation closeouts report what shipped, what ran,
+  remaining limits and any external operator inputs. No incomplete required
+  capability is relabeled as shipped to close the epic.
