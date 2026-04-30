@@ -1,0 +1,88 @@
+# Hybrid Retrieval and Investigation
+
+Status: complete
+
+## Purpose
+
+Return useful, bounded, evidence-backed context from exact, lexical, semantic
+and graph retrieval under one Brain/scope/revision/lifecycle contract. Give
+engineers an investigation UI with explicit disagreement and strict modes.
+
+## Governing Sources
+
+- [Canonical exact and lexical recall](../../contracts/retrieval-exact-and-lexical.md)
+- [Governed semantic representations and recall](../../contracts/retrieval-semantic.md)
+- [Scoped graph fusion and source-aware context](../../contracts/retrieval-graph-fusion.md)
+- [Desktop memory investigation](../../contracts/retrieval-investigation-ui.md)
+- [Vision: memory forms and methods](../../foundation/vision.md#one-memory-model-complementary-methods)
+- [Vision: correction and recall](../../foundation/vision.md#correction-and-learning-loop)
+- [Stack: storage and hybrid retrieval](../../foundation/techstack.md#storage-ownership-and-hybrid-retrieval)
+- [Engineering principles: retrieval](../../foundation/engineering-principles.md#combine-retrieval-methods-under-one-contract)
+
+## Dependencies and Boundaries
+
+Consume canonical evidence, claims, manifests and eligibility from their owners.
+Start exact/lexical retrieval once correction/erasure rules exist; do not wait
+for all graph analytics or MCP connections. Semantic work consumes the shared
+model gateway. Graph fusion consumes graph intelligence's supported path queries.
+
+Own search/recall interfaces, candidate fusion, source attribution/deduplication,
+context budgets, scoped caches, and investigation versus strict retrieval.
+PostgreSQL remains the text/vector store. Exact eligible-vector search supplies
+the baseline; introduce ANN only with measured need and Brain index isolation.
+Do not widen grants, revision applicability or provider permissions to improve recall.
+
+User-selected provider input, 2026-09-14: use `text-embedding-3-large`, paired with
+`gpt-5.6-luna` for text operations through the memory epic's gateway. A real
+[provider probe](../../mappings/openai-provider-preflight-2026-09-14.md) returned
+the embedding model's default 3,072 dimensions. Preserve that selection when
+specifying representation and indexing; do not silently substitute the small
+model or reduce dimensions. Exact eligible-vector search remains the baseline.
+
+Own search results, evidence/claim drill-through, historical filters, missing
+coverage, abstention and links into memory review/graph exploration. Those
+feature owners retain mutation and graph-computation semantics. MCP exposes
+these same application operations rather than a second retrieval implementation.
+Scope-change events must support immediate newly applicable recall when the
+host bridge is integrated.
+
+## Decisions Before Implementation
+
+- Specify public retrieval inputs/results, eligibility modes, temporal/manifest
+  selection, cache invalidation and context-budget behavior.
+- Specify embedding identity/dimensions and reindexing; select/test ranking and
+  fusion on representative questions before introducing approximate indexes.
+- Define quality baselines and acceptable failure/latency behavior for each slice;
+  exact API names and numerical tuning belong in its execution pack.
+
+## Slice Map
+
+| Slice ID | Status | Evidence | Execution | Summary |
+| --- | --- | --- | --- | --- |
+| `retrieval-exact-and-lexical` | shipped | contract-backed | pack | Delivered canonical exact/text candidates, correction-aware bounded context, immutable scope, temporal/manifest filters and browser/native consumers with database/runtime proof |
+| `retrieval-semantic` | shipped | contract-backed | pack | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
+| `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
+| `retrieval-investigation-ui` | shipped | contract-backed | pack | Desktop result/disagreement/source views, frozen history, exact evidence and scoped native graph links; expiry/access/epoch clearing and actual retained SWEG proof |
+
+## Slice Dependencies
+
+| Slice ID | Predecessors |
+| --- | --- |
+| `retrieval-exact-and-lexical` | `memory-retention-and-erasure` |
+| `retrieval-semantic` | `retrieval-exact-and-lexical`, `memory-provider-policy-and-learning` |
+| `retrieval-graph-fusion` | `retrieval-semantic`, `graph-cross-repository-views` |
+| `retrieval-investigation-ui` | `retrieval-graph-fusion`, `memory-procedures-and-handovers` |
+
+## Completion Criteria
+
+- Actual recall excludes unauthorized and inapplicable material while returning
+  positive-control evidence; raw chunks/caches cannot bypass corrections or Erase.
+- Investigations expose useful disagreement with status; strict mode withholds
+  unqualified claims. Historical mention is not mistaken for a current assertion.
+- Answers carry source/revision provenance and expose unavailable evidence;
+  retrieval never treats a runbook as permission to execute it.
+- Semantic and graph additions are compared against the exact/lexical baseline
+  under the same corpus, model and context budget; misses and false assertions
+  are reported alongside latency and cost, without a superiority claim by default.
+- Host-facing retrieval can react to scope changes and preserve concurrent task
+  isolation. End-to-end host proof is completed with the MCP epic.

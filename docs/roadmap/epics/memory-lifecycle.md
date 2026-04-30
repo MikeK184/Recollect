@@ -1,0 +1,114 @@
+# Memory Lifecycle, Learning and Review
+
+Status: complete
+
+## Purpose
+
+Own how evidence becomes claims, decisions and procedures; how trust/time are
+represented; and how review, correction, retention and erasure survive every
+subsequent ingestion, retrieval and rebuild path.
+
+## Governing Sources
+
+- [Canonical claims and time](../../adr/0005-canonical-claims-and-time.md)
+- [Claims contract](../../contracts/memory-claims-and-time.md)
+- [Review and corrections](../../contracts/memory-review-and-corrections.md)
+- [Retention and erasure](../../contracts/memory-retention-and-erasure.md)
+- [Provider policy and learning](../../contracts/memory-provider-policy-and-learning.md)
+- [Procedures and handovers](../../contracts/memory-procedures-and-handovers.md)
+- [Autonomous memory decision](../../adr/0006-autonomous-memory.md)
+- [Autonomous maintenance](../../contracts/memory-autonomous-maintenance.md)
+- [Capture reconciliation](../../contracts/memory-capture-reconciliation.md)
+- [Vision: correction and learning](../../foundation/vision.md#correction-and-learning-loop)
+- [Vision: capture, retention and model policy](../../foundation/vision.md#capture-retention-and-model-policy)
+- [Vision: seven capabilities](../../foundation/vision.md#seven-required-capabilities)
+- [Engineering principles: mutation policy](../../foundation/engineering-principles.md#route-every-mutation-through-one-policy)
+- [Stack: authority and retrieval](../../foundation/techstack.md#storage-ownership-and-hybrid-retrieval)
+
+## Dependencies and Boundaries
+
+Consume versioned evidence and manifests through platform commands/jobs. Own
+claim/support identity, independent review/freshness/operational states, fact
+validity versus knowledge history, correction decisions and current eligibility.
+Each writer and downstream projection must use this authority; no backend or
+model may bypass it.
+
+Own actionable evidence/claim review screens and APIs, including conflict
+resolution, Withdraw and Erase. An accepted status is distinct from human
+review, and human reviewer authority cannot be supplied by model arguments.
+Runbooks and handovers are governed memory records with conditions/outcomes,
+not executable permissions.
+
+Own Brain provider/model/purpose/content policy and the shared model gateway
+before any enrichment, embedding or external reranking. Named acceptance policies
+activate supported knowledge without individual human acceptance. Models reconcile
+evidence; unresolved material stays uncertain while processing continues. Human
+review is an optional override. Deployment provider choices remain inputs.
+
+Provider input, 2026-09-14: the user supplied `OPENAI_API_KEY` in Recollect's ignored
+`.env` and authorized OpenAI for the required model operations. Use a separate
+text model and embedding model behind the shared gateway. The opt-in synthetic
+`scripts/probe-openai.mjs` checks external connectivity; it does not enable
+Brain enrichment or replace the provider-policy contract and retention dependency.
+The [connection proof](../../mappings/openai-provider-preflight-2026-09-14.md)
+records the initially usable GPT-4.1 mini/embedding-3-small pair. After completing
+organization verification, the user selected `gpt-5.6-luna` as the text model;
+that exact model passed structured extraction and is now the probe's default.
+The user subsequently selected `text-embedding-3-large` for embeddings, verified
+at its default 3,072 dimensions. Use Luna with that embedding model when implementing the
+gateway. The delivered [provider-learning proof](../../mappings/provider-learning-proof-2026-09-14.md)
+records actual browser calls and local runtime. The earlier GPT-5 mini verification denial is historical, not a current
+blocker for the selected model.
+
+Own retention/erasure rules and deletion replay obligations. Evidence capture,
+retrieval, graph analytics and MCP adapters implement their respective consumers;
+operations proves restore behavior. This epic does not wait for every consumer
+to exist before delivering its canonical rules, and consumers cannot ship without
+testing those rules through their own paths.
+
+## Decisions Before Implementation
+
+- Specify claim/evidence/time identities, validity precision, allowed mutations,
+  expected-version checks and actor/reviewer authority.
+- Specify assertion rejection/applicability and explicit revalidation, conflict
+  dispositions and current/historical eligibility without a universal semantic
+  matching or newest-wins assumption.
+- Specify per-class retention, minimal audit/deletion metadata and restore
+  enforcement beyond the settled 30-day raw default; define model adapters,
+  policy rules and budgets before enabling automatic learning.
+
+## Slice Map
+
+| Slice ID | Status | Evidence | Execution | Summary |
+| --- | --- | --- | --- | --- |
+| `memory-claims-and-time` | shipped | adr-backed, contract-backed | pack | Delivered evidence-linked proposals/decisions, independent states, temporal history, selective freshness and canonical eligibility with API/browser/SWEG proof |
+| `memory-review-and-corrections` | shipped | contract-backed | pack | Delivered actionable review/conflicts, rejected-value rules, correction, withdrawal/revalidation and replay with API/browser proof |
+| `memory-retention-and-erasure` | shipped | contract-backed | pack | Delivered class deadlines, exact excerpts, dependency erasure, native cleanup and durable restore replay with API/browser/runtime proof |
+| `memory-provider-policy-and-learning` | shipped | contract-backed | pack | Delivered Luna/embedding-large gateway, policy/usage, canonical source learning and erasure with API/browser/real-model/runtime proof |
+| `memory-procedures-and-handovers` | shipped | adr-backed, contract-backed | pack | Delivered typed procedures, governed handovers and autonomous learning/revision/retirement/refresh with API/browser/real-Luna/runtime/erasure proof; human review is optional |
+| `memory-capture-reconciliation` | shipped | contract-backed | pack | Delivered attributed model inputs, bound session reconciliation, maintenance at capacity, recall-feedback exclusions and independent capture/knowledge time with database/native/browser/real-Luna proof |
+
+## Slice Dependencies
+
+| Slice ID | Predecessors |
+| --- | --- |
+| `memory-claims-and-time` | `evidence-repository-publication` |
+| `memory-review-and-corrections` | `memory-claims-and-time` |
+| `memory-retention-and-erasure` | `memory-review-and-corrections` |
+| `memory-provider-policy-and-learning` | `memory-retention-and-erasure` |
+| `memory-procedures-and-handovers` | `memory-review-and-corrections` |
+| `memory-capture-reconciliation` | `memory-procedures-and-handovers`, `evidence-session-capture` |
+
+## Completion Criteria
+
+- Evidence, claim and synthesis views distinguish origin, review, freshness and
+  operational proof; late evidence preserves distinct fact-time/knowledge-time answers.
+- Actual review changes eligibility; stale reviews and forged human authority
+  fail. Different valid environments/periods can coexist without newest-wins.
+- Corrections/rejections survive alternate ingestion adapters, retries, restart
+  and canonical replay while replacement and unrelated claims remain usable.
+- Withdraw and Erase have distinct behavior. Retention and queued-work tests
+  prevent re-entry, preserve allowed excerpts and identify independently supported
+  records; downstream invalidation obligations include aggregate analytics.
+- Unapproved model transmission/fallback is denied. Automatic acceptance records
+  its policy instead of inventing human review. Procedures do not grant execution.
