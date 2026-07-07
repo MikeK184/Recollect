@@ -1,0 +1,126 @@
+{
+  "claims": [
+    {
+      "key": "harbor_anchor",
+      "source": "harbor",
+      "subject": "Harbor rollback gate",
+      "predicate": "recovery",
+      "value": "Restore the previous image when the new release fails its health probe."
+    },
+    {
+      "key": "harbor_record",
+      "source": "harbor",
+      "subject": "Recovery verification record",
+      "predicate": "records",
+      "value": "Record the failed version, rollback result and observed health in the incident record."
+    },
+    {
+      "key": "cedar_anchor",
+      "source": "cedar",
+      "subject": "Cedar renewal refusal",
+      "predicate": "recovery",
+      "value": "Drain existing connections, obtain fresh credentials and reconnect through the pool when renewal is denied."
+    },
+    {
+      "key": "cedar_record",
+      "source": "cedar",
+      "subject": "Credential audit fields",
+      "predicate": "records",
+      "value": "Record the lease identifier, expiry and outcome without copying passwords into the incident note."
+    },
+    {
+      "key": "finch_anchor",
+      "source": "finch",
+      "subject": "Finch authenticated delivery",
+      "predicate": "intake",
+      "value": "Verify the HMAC signature over the original request body and reject invalid signatures."
+    },
+    {
+      "key": "finch_job",
+      "source": "finch",
+      "subject": "Repository refresh scheduling",
+      "predicate": "work",
+      "value": "Valid delivery queues a repository refresh job; extraction does not run inside the HTTP handler."
+    },
+    {
+      "key": "quartz_anchor",
+      "source": "quartz",
+      "subject": "Quartz interrupted worker",
+      "predicate": "recovery",
+      "value": "Another worker may reclaim unfinished local work using a renewable lease."
+    },
+    {
+      "key": "quartz_charge",
+      "source": "quartz",
+      "subject": "Uncertain paid model outcome",
+      "predicate": "retry",
+      "value": "Preserve the uncertain outcome of a lost response and require an explicit new attempt rather than automatically sending the paid request again."
+    },
+    {
+      "key": "orion_counter",
+      "source": "orion",
+      "subject": "Orion request measurement",
+      "predicate": "records",
+      "value": "Request counters, latency histograms and queue depth describe an observed interval."
+    },
+    {
+      "key": "orion_authority",
+      "source": "orion",
+      "subject": "Observed metrics authority",
+      "predicate": "permission",
+      "value": "A dashboard reading does not authorize a configuration change."
+    }
+  ],
+  "questions": [
+    {
+      "key": "relationship_rollback",
+      "query": "Harbor rollback gate",
+      "target": "harbor_record",
+      "relevant_sources": ["harbor"]
+    },
+    {
+      "key": "relationship_credentials",
+      "query": "Cedar renewal refusal",
+      "target": "cedar_record",
+      "relevant_sources": ["cedar"]
+    },
+    {
+      "key": "relationship_webhook",
+      "query": "Finch authenticated delivery",
+      "target": "finch_job",
+      "relevant_sources": ["finch"]
+    },
+    {
+      "key": "relationship_worker",
+      "query": "Quartz interrupted worker",
+      "target": "quartz_charge",
+      "relevant_sources": ["quartz"]
+    },
+    {
+      "key": "paraphrase_rollback",
+      "query": "What should we record after undoing an unhealthy service rollout?",
+      "target": "harbor_record",
+      "relevant_sources": ["harbor"]
+    },
+    {
+      "key": "paraphrase_notification",
+      "query": "What processing is scheduled after an incoming repository notification passes signature verification?",
+      "target": "finch_job",
+      "relevant_sources": ["finch"]
+    },
+    {
+      "key": "unsupported_invoice",
+      "query": "What is the monthly invoice amount for the production hosting contract?",
+      "target": null,
+      "relevant_sources": []
+    },
+    {
+      "key": "unsupported_approver",
+      "query": "Who signed the customer contract and on what date?",
+      "target": null,
+      "relevant_sources": []
+    }
+  ],
+  "context_bytes": 8192,
+  "limit": 4
+}

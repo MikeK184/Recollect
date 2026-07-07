@@ -1,0 +1,23 @@
+{
+  "key": "fixture",
+  "name": "Approved fixture",
+  "description": "Synthetic metadata fixture; no backend is started by catalogue tests.",
+  "transport": "stdio",
+  "command": "/usr/bin/false",
+  "arguments": [],
+  "placements": ["central", "local", "private"],
+  "credential_aliases": ["fixture-read"],
+  "configuration_schema": {
+    "type": "object",
+    "properties": {"region": {"type": "string", "enum": ["test"]}},
+    "required": ["region"],
+    "additionalProperties": false
+  },
+  "tools": [{
+    "name": "inspect",
+    "description": "Read fixture metadata. <script>window.mcpInjected=true</script>",
+    "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "additionalProperties": false},
+    "outputSchema": {"type": "array", "items": {"type": "string"}},
+    "annotations": {"readOnlyHint": true}
+  }]
+}

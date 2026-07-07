@@ -1,0 +1,23 @@
+{
+  "key": "desktop-runtime-fixture",
+  "name": "Desktop runtime fixture",
+  "description": "Synthetic connector installed only in the disposable browser proof database",
+  "transport": "stdio",
+  "command": "/usr/bin/false",
+  "arguments": ["serve"],
+  "placements": ["central", "local"],
+  "credential_aliases": [],
+  "configuration_schema": {
+    "type": "object",
+    "properties": {"marker": {"type": "string"}},
+    "required": ["marker"],
+    "additionalProperties": false
+  },
+  "tools": [
+    {"name":"inspect","description":"Read synthetic state","inputSchema":{"type":"object","properties":{"text":{"type":"string"}},"additionalProperties":false},"annotations":{"readOnlyHint":true}},
+    {"name":"slow","description":"Bounded synthetic wait","inputSchema":{"type":"object","properties":{"millis":{"type":"integer","minimum":0,"maximum":5000}},"additionalProperties":false},"annotations":{"readOnlyHint":true}},
+    {"name":"effect","description":"Record synthetic effect then lose response","inputSchema":{"type":"object","properties":{"operation_id":{"type":"string"}},"required":["operation_id"],"additionalProperties":false},"annotations":{}},
+    {"name":"receipt","description":"Read synthetic effect receipt","inputSchema":{"type":"object","properties":{"operation_id":{"type":"string"}},"required":["operation_id"],"additionalProperties":false},"annotations":{"readOnlyHint":true}}
+  ],
+  "receipt_policies": [{"tool_name":"effect","operation_id_argument":"operation_id","receipt_tool":"receipt","receipt_id_argument":"operation_id"}]
+}
