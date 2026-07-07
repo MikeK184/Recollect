@@ -1,0 +1,81 @@
+{
+  "documents": [
+    {
+      "key": "harbor",
+      "title": "Harbor release recovery",
+      "content": "Harbor deploys a container image and runs a health probe. When the new release fails its health check, restore the previous image and repeat the probe. Record the failed version, rollback result and observed health in the incident record. A deployment declaration alone does not demonstrate a healthy service."
+    },
+    {
+      "key": "cedar",
+      "title": "Cedar credential rotation",
+      "content": "Cedar uses short-lived database credentials. Renew the lease before its expiry. If renewal is denied, drain existing connections, obtain fresh credentials and reconnect through the pool. Never copy passwords into an incident note. Record only the lease identifier, expiry and outcome."
+    },
+    {
+      "key": "finch",
+      "title": "Finch webhook intake",
+      "content": "Finch receives repository change notifications through an HTTP webhook. Verify the HMAC signature over the original request body before accepting the event. Reject invalid signatures. Valid delivery queues a repository refresh job; it does not run extraction inside the HTTP handler."
+    },
+    {
+      "key": "quartz",
+      "title": "Quartz durable jobs",
+      "content": "Quartz background jobs hold renewable leases. After a worker crash, another worker may reclaim unfinished local work. Each outbound paid model attempt has one durable operation identity. If its response is lost, preserve the uncertain outcome and require an explicit new attempt rather than automatically sending the paid request again."
+    },
+    {
+      "key": "orion",
+      "title": "Orion telemetry",
+      "content": "Orion records request counters, latency histograms and queue depth metrics. These measurements help compare error rates and processing delays over time. A dashboard reading describes an observed interval and does not authorize a configuration change."
+    },
+    {
+      "key": "coffee",
+      "title": "Coffee preparation",
+      "content": "To make a cup of filter coffee, grind roasted beans, wet the filter and pour hot water slowly over the grounds. Let the coffee drain into the mug. This recipe is unrelated to engineering service configuration, credentials and deployment work."
+    },
+    {
+      "key": "colors",
+      "title": "Interface color palette",
+      "content": "The synthetic interface palette uses a pale background, charcoal body text and teal accents. Error banners use red and pending states use yellow. Color names here describe a design sample only."
+    }
+  ],
+  "questions": [
+    {
+      "key": "exact_title",
+      "query": "Harbor release recovery",
+      "expected_document": "harbor"
+    },
+    {
+      "key": "literal_phrase",
+      "query": "\"previous image\"",
+      "expected_document": "harbor"
+    },
+    {
+      "key": "paraphrase_rollback",
+      "query": "How can we undo a rollout that makes the service unhealthy?",
+      "expected_document": "harbor"
+    },
+    {
+      "key": "paraphrase_credentials",
+      "query": "What should the connection pool do when temporary database access cannot be extended?",
+      "expected_document": "cedar"
+    },
+    {
+      "key": "paraphrase_webhook",
+      "query": "How do we authenticate incoming repository notifications before scheduling work?",
+      "expected_document": "finch"
+    },
+    {
+      "key": "paraphrase_recovery",
+      "query": "What prevents a worker restart from repeating a charged model call whose reply was lost?",
+      "expected_document": "quartz"
+    },
+    {
+      "key": "unsupported_invoice",
+      "query": "What is the monthly invoice amount for the production hosting contract?",
+      "expected_document": null
+    },
+    {
+      "key": "unsupported_approver",
+      "query": "Who approved the signed customer contract and on what date?",
+      "expected_document": null
+    }
+  ]
+}
