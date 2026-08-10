@@ -1,9 +1,12 @@
 # Recollect
 
+For current local continuation and the historical PC transfer record, read
+[CONTINUE_HERE.md](CONTINUE_HERE.md). Work resumed on the original Mac.
+
 Recollect is an independent engineering memory and MCP coordination product for
 one person or an internal team. Brains bring together knowledge collections,
 repository memories and graphs, environment views, runbooks, and authorized MCP
-connections with Vault credential integration. The first local platform is implemented: a Rust API, same-origin React UI,
+connections with optional Vault credential integration. The first local platform is implemented: a Rust API, same-origin React UI,
 owner/invited accounts, optional OIDC, isolated Brains and effective access controls,
 mutation history, durable jobs with processing controls and live database health.
 Native companions pair through browser approval and use individually revocable
@@ -43,7 +46,36 @@ Standing model policy can also build full-dimensional semantic representations
 automatically. Browser/native recall combines exact, lexical and semantic matches
 under the same scope and memory rules. See [semantic search](docs/runbooks/semantic-recall.md)
 and its [measured synthetic comparison](docs/mappings/semantic-retrieval-2026-09-15.md).
-The remaining product capabilities are tracked in the 29-slice roadmap.
+Exact repository/combined graphs and canonical knowledge relationships support
+native paths and queued PageRank, Leiden and connected-component reports with
+current eligibility and durable scratch cleanup. See
+[graph analytics](docs/runbooks/graph-analytics.md) and
+[desktop graph exploration](docs/runbooks/graph-exploration.md). Recall also fuses
+qualified graph relationships with text/semantic matches and source coverage;
+see [graph recall](docs/runbooks/graph-recall.md). Desktop investigation compares
+disagreements, inspects exact sources and frozen history, and follows scoped graph
+relationships; see [memory investigation](docs/runbooks/memory-investigation.md).
+Approved MCP connections and execution profiles now provide independent Use,
+Manage and Share permissions and cached tool inspection without provider startup;
+see the [catalogue runbook](docs/runbooks/mcp-catalogue.md).
+Central and paired local MCP execution now include isolated credentials, call
+history, cancellation and receipt/evidence reconciliation; see the
+[runtime runbook](docs/runbooks/mcp-runtime.md).
+Registered private runners and optional per-connection Vault credentials now
+support actual execution, renewal, rotation and expiry; see the
+[Vault/private runner runbook](docs/runbooks/mcp-vault-and-private-runners.md).
+Environment, OS-store, Vault and anonymous connections can coexist.
+All 29 original product slices are delivered locally, including
+[coding-host memory/workspace MCP](docs/runbooks/agent-memory-tools.md) verified
+with actual Codex and Claude hosts, and personal/shared installation proven through
+real desktop/API/native HTTPS and operational failure paths. See the
+[continuation record](CONTINUE_HERE.md) for current runtime state, the
+[installation runbook](docs/runbooks/installation.md) for packaging, and the
+[recovery runbook](docs/runbooks/recovery.md) for verified encrypted backup/restore.
+The [integrated evaluation](docs/mappings/integrated-evaluations-2026-09-26.md)
+records actual-model quality, concurrent workload results and measured limits;
+its [runbook](docs/runbooks/integrated-evaluation.md) describes intentional repeats.
+Current UI work targets desktop; mobile views are deferred.
 
 The accepted [vision](docs/foundation/vision.md), [technology stack](docs/foundation/techstack.md),
 and [engineering principles](docs/foundation/engineering-principles.md) select a
@@ -64,8 +96,9 @@ Start the local application:
 
 Open `http://127.0.0.1:8787`; owner credentials are generated in the ignored `.env`
 file. See [local development](docs/runbooks/local-development.md) for prerequisites,
-focused tests, storage and recovery. Changes remain uncommitted; no external
-service deployment is included.
+focused tests, storage and recovery. GitHub publication was explicitly authorized
+on 2026-09-26; see Git history for committed revisions. No external service
+deployment is included.
 
 Validate documentation from the repository root:
 
