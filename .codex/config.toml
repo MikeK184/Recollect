@@ -1,0 +1,32 @@
+# Secret-free Recollect project configuration. Start Codex from this repo.
+# Personal model, reasoning, permissions, approvals, and UI defaults are inherited.
+# Role files are also discoverable as standalone project agents.
+
+[agents.default]
+description = "Coordinates Recollect evidence, implementation, validation, and closeout."
+config_file = "agents/default.toml"
+
+[agents.explorer]
+description = "Read-only research of repo state, dependencies, and official interfaces."
+config_file = "agents/explorer.toml"
+
+[agents.architect]
+description = "Maintains authoritative documents, epic boundaries, and execution packs."
+config_file = "agents/architect.toml"
+
+[agents.worker]
+description = "Implements an authorized, decision-complete Recollect slice."
+config_file = "agents/worker.toml"
+
+[agents.qa]
+description = "Validates acceptance criteria and meaningful failure scenarios."
+config_file = "agents/qa.toml"
+
+[agents.reviewer]
+description = "Reviews correctness, scope, authority, evidence, and closeout consistency."
+config_file = "agents/reviewer.toml"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+env_vars = ["CONTEXT7_API_KEY"]

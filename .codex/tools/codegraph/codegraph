@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+RECOLLECT_CODEGRAPH_TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RECOLLECT_ROOT="$(cd "$RECOLLECT_CODEGRAPH_TOOLS/../../.." && pwd)"
+
+# A bare upstream command runs its agent installer. Here it means local status.
+if [[ $# -eq 0 ]]; then
+  set -- status
+fi
+case "$1" in
+  init|index|sync|status|query|explore|context|node|files|callers|callees|impact|affected|version|help|-h|--help|-v|-V|--version) ;;
+  *)
+    printf '%s\n' 'Use this launcher for local indexing/navigation commands only.' >&2
+    exit 2
+    ;;
+esac
+
+if [[ ! -x "$RECOLLECT_CODEGRAPH_TOOLS/node_modules/.bin/codegraph" ]]; then
+  printf '%s\n' "CodeGraph is not installed here. Run: $RECOLLECT_ROOT/scripts/setup-codegraph.sh" >&2
+  exit 1
+fi
+
+export CODEGRAPH_DIR=.codegraph
+export CODEGRAPH_INSTALL_DIR="$RECOLLECT_ROOT/.cache/codegraph"
+export CODEGRAPH_NO_DOWNLOAD=1
+export CODEGRAPH_NO_UPDATE_CHECK=1
+export CODEGRAPH_TELEMETRY=0
+export DO_NOT_TRACK=1
+export TMPDIR="$RECOLLECT_ROOT/.cache/codegraph/tmp"
+mkdir -p "$TMPDIR"
+
+cd "$RECOLLECT_ROOT"
+exec "$RECOLLECT_CODEGRAPH_TOOLS/node_modules/.bin/codegraph" "$@"

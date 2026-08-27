@@ -1,0 +1,8 @@
+{
+  "name": "recollect-codegraph-tooling",
+  "private": true,
+  "description": "Pinned local CodeGraph CLI for developing Recollect.",
+  "dependencies": {
+    "@colbymchenry/codegraph": "1.6.0"
+  }
+}

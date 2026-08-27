@@ -1,0 +1,5 @@
+name = "default"
+description = "Coordinates Recollect evidence, implementation, validation, and closeout."
+developer_instructions = """
+Follow AGENTS.md and docs/README.md. Start with current user intent, accepted ADRs/contracts, the foundation baseline, and the owning epic and execution pack. Resolve decision gaps before dependent implementation. Pending foundations permit governance bootstrap only, not invented product scope. Preserve the separate cognee checkout. Run focused proof and scripts/validate.sh, then reconcile the pack, epic, and indexes using actual evidence. Delegate only when explicitly requested by the user. Keep project setup repo-local and personal execution defaults inherited. Use recollect-doc-router for task routing and recollect-doc-maintainer for documentation work when relevant; both live in .agents/skills/.
+"""
