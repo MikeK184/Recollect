@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recollect Doc Router"
+  short_description: "Find governing docs, current evidence and the owning slice."
+  default_prompt: "Use $recollect-doc-router to ground this Recollect task in governing docs and current evidence, identify its owning slice and decision gaps, and continue the authorized work."

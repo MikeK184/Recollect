@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recollect Doc Maintainer"
+  short_description: "Maintain Recollect docs, lifecycle records and indexes."
+  default_prompt: "Use $recollect-doc-maintainer to review or update the requested Recollect docs, reconcile affected lifecycle records, validate the result, and report remaining gaps."
