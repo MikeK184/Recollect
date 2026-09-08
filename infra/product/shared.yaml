@@ -1,0 +1,38 @@
+services:
+  proxy:
+    image: caddy:2.11-alpine
+    environment:
+      RECOLLECT_SITE_HOST: ${RECOLLECT_SITE_HOST:?Select an HTTPS hostname}
+    ports:
+      - "${RECOLLECT_PUBLIC_BIND:-0.0.0.0}:${RECOLLECT_PUBLIC_PORT:-443}:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: ${RECOLLECT_TLS_CERT:?Select a PEM certificate}
+        target: /run/recollect-tls/cert.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RECOLLECT_TLS_KEY:?Select a PEM key}
+        target: /run/recollect-tls/key.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: 1
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /data:size=16m
+      - /config:size=16m
+    restart: unless-stopped
+    stop_grace_period: 90s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"

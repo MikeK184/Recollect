@@ -1,0 +1,124 @@
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+x-app: &app
+  image: ${RECOLLECT_IMAGE:-recollect-product:local}
+  build:
+    context: ../..
+    dockerfile: infra/product/Dockerfile
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  volumes:
+    - app_data:/var/lib/recollect
+    - type: bind
+      source: ${RECOLLECT_INSTALL_DIR:?Select a saved installation}/mcp-bindings.json
+      target: /run/recollect/mcp-bindings.json
+      read_only: true
+      bind:
+        create_host_path: false
+  environment:
+    RECOLLECT_MCP_CREDENTIALS_FILE: /run/recollect/mcp-bindings.json
+  stop_signal: SIGTERM
+  stop_grace_period: 90s
+  pids_limit: 256
+  logging: *logging
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    env_file: ${RECOLLECT_INSTALL_DIR}/database.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../postgres-init.sh:/docker-entrypoint-initdb.d/recollect.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -U recollect_admin -d recollect -Atqc 'SELECT 1'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    mem_limit: ${RECOLLECT_POSTGRES_MEMORY:-1g}
+    cpus: ${RECOLLECT_POSTGRES_CPUS:-2}
+    pids_limit: 256
+    restart: unless-stopped
+    stop_grace_period: 90s
+    logging: *logging
+  neo4j:
+    image: neo4j:2026.08
+    env_file: ${RECOLLECT_INSTALL_DIR}/graph.env
+    environment:
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: "gds.*"
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    volumes:
+      - graph_data:/data
+      - graph_logs:/logs
+      - graph_plugins:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    mem_limit: ${RECOLLECT_GRAPH_MEMORY:-3g}
+    cpus: ${RECOLLECT_GRAPH_CPUS:-2}
+    pids_limit: 512
+    restart: unless-stopped
+    stop_grace_period: 90s
+    logging: *logging
+  migrate:
+    <<: *app
+    command: ["migrate"]
+    env_file:
+      - ${RECOLLECT_INSTALL_DIR}/runtime.env
+      - ${RECOLLECT_INSTALL_DIR}/operator.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    restart: "no"
+  api:
+    <<: *app
+    command: ["serve"]
+    env_file: ${RECOLLECT_INSTALL_DIR}/runtime.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "10", "http://127.0.0.1:8787/health/ready"]
+      interval: 15s
+      timeout: 12s
+      retries: 4
+      start_period: 20s
+    mem_limit: ${RECOLLECT_API_MEMORY:-1g}
+    cpus: ${RECOLLECT_API_CPUS:-2}
+    restart: unless-stopped
+  worker:
+    <<: *app
+    command: ["worker"]
+    env_file: ${RECOLLECT_INSTALL_DIR}/runtime.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: ${RECOLLECT_WORKER_MEMORY:-2g}
+    cpus: ${RECOLLECT_WORKER_CPUS:-4}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  graph_data:
+  graph_logs:
+  graph_plugins:
+  app_data:
