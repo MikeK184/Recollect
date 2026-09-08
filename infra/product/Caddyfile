@@ -1,0 +1,14 @@
+{
+    admin off
+    auto_https off
+    persist_config off
+    grace_period 90s
+    log {
+        exclude http.log.access http.log.error
+    }
+}
+
+https://{$RECOLLECT_SITE_HOST}:8443 {
+    tls /run/recollect-tls/cert.pem /run/recollect-tls/key.pem
+    reverse_proxy api:8787
+}

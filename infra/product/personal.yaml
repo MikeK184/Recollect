@@ -1,0 +1,4 @@
+services:
+  api:
+    ports:
+      - "127.0.0.1:${RECOLLECT_PUBLIC_PORT:-8787}:8787"

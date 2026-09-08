@@ -1,0 +1,24 @@
+# Isolated integration fixture. The mock identity is never a product login provider.
+issuer: http://127.0.0.1:5556/dex
+storage:
+  type: sqlite3
+  config:
+    file: /tmp/recollect-dex.db
+web:
+  http: 0.0.0.0:5556
+oauth2:
+  skipApprovalScreen: true
+  responseTypes: [code]
+staticClients:
+  - id: recollect-test
+    name: Recollect isolated test
+    secretEnv: DEX_CLIENT_SECRET
+    redirectURIs:
+      - http://127.0.0.1:8787/api/auth/oidc/callback
+      - http://127.0.0.1:8788/api/auth/oidc/callback
+connectors:
+  - type: mockCallback
+    id: mock
+    name: Synthetic test identity
+logger:
+  level: error

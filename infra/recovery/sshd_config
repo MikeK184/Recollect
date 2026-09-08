@@ -1,0 +1,18 @@
+Port 2222
+ListenAddress 0.0.0.0
+HostKey /fixture/server-key
+PidFile /run/sshd/recollect.pid
+AuthorizedKeysFile .ssh/authorized_keys
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+UsePAM no
+AllowUsers recollect
+AllowAgentForwarding no
+AllowTcpForwarding no
+X11Forwarding no
+PermitTunnel no
+PermitTTY no
+ForceCommand internal-sftp
+Subsystem sftp internal-sftp
+LogLevel ERROR
