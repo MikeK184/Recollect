@@ -1,0 +1,60 @@
+# Evidence Mappings
+
+Store dated observations, source links, payload translations, or local evidence
+here. Mappings are not implementation authority; promote verified conclusions
+into an accepted ADR or contract before implementation relies on them.
+
+Copy [template.md](template.md). Record source/version, observation date,
+verification method, confidence, blind spots, and next verification needed.
+Use `verified`, `observed-once`, `inferred`, or `stale` as confidence labels.
+Redact credentials and private payload details. Recheck drift-prone evidence.
+
+## Index
+
+- [Integrated quality, workload and runtime evidence, 2026-09-26](integrated-evaluations-2026-09-26.md)
+- [Backup and recovery interfaces, 2026-09-26](recovery-2026-09-26.md)
+- [Managed observation reuse and interfaces, 2026-09-26](mcp-observations-2026-09-26.md)
+- [Installed personal/shared acceptance, 2026-09-26](installation-2026-09-26.md)
+- [Vault/private interfaces and proof, 2026-09-22](mcp-vault-private-2026-09-22.md)
+- [MCP catalogue interfaces and proof, 2026-09-22](mcp-catalogue-2026-09-22.md)
+- [MCP runtime interfaces and proof, 2026-09-22](mcp-runtime-2026-09-22.md)
+- [Desktop investigation interfaces and proof, 2026-09-22](retrieval-investigation-2026-09-22.md)
+- [Retrieval fusion reference and local proof, 2026-09-22](retrieval-fusion-2026-09-22.md)
+
+- [Graph exploration interfaces and reuse evidence, 2026-09-22](graph-exploration-interfaces-2026-09-22.md)
+- [PC transfer and implementation handoff, 2026-09-16](../../CONTINUE_HERE.md)
+- [Graph analytics interfaces and current integration evidence, 2026-09-15](graph-analytics-interfaces-2026-09-15.md)
+- [Cross-repository interfaces and parser evidence, 2026-09-15](cross-repository-interfaces-2026-09-15.md)
+
+- [Graph interfaces and pre-filter proof, 2026-09-15](graph-interfaces-2026-09-15.md)
+- [Graph implementation and validation, 2026-09-15](graph-validation-2026-09-15.md)
+- [Cognee, Atlas and graph implementation reuse, 2026-09-15](graph-reuse-review-2026-09-15.md)
+- [Atlas implementation cross-review, 2026-09-15](atlas-implementation-audit-2026-09-15.md)
+- [Exact and lexical retrieval baseline, 2026-09-15](retrieval-baseline-2026-09-15.md)
+- [Semantic retrieval interfaces, 2026-09-15](semantic-interfaces-2026-09-15.md)
+- [Semantic retrieval implementation and measured proof, 2026-09-15](semantic-retrieval-2026-09-15.md)
+- [Cognee extension baseline, 2026-09-13 (historical)](cognee-baseline-2026-09-13.md)
+- [CodeGraph local setup, 2026-09-13](codegraph-setup-2026-09-13.md)
+- [Agent Memory Atlas reference checkout, 2026-09-13](atlas-reference-2026-09-13.md)
+- [Recollect feasibility from Atlas, 2026-09-13 (earlier assessment)](atlas-product-feasibility-2026-09-13.md)
+- [Atlas-informed foundation decisions, 2026-09-13](atlas-foundation-decisions-2026-09-13.md)
+- [Documentation skills and implementation tooling, 2026-09-13](documentation-skills-and-tooling-2026-09-13.md)
+- [Platform dependencies, 2026-09-13](platform-dependencies-2026-09-13.md)
+- [Platform bootstrap local proof, 2026-09-13](platform-bootstrap-proof-2026-09-13.md)
+- [Durable work local proof, 2026-09-14](platform-durable-work-proof-2026-09-14.md)
+- [Team access dependency and local proof, 2026-09-14](platform-team-access-proof-2026-09-14.md)
+- [Companion pairing dependency and local proof, 2026-09-14](platform-device-pairing-proof-2026-09-14.md)
+- [Collections dependency and local proof, 2026-09-14](evidence-collections-proof-2026-09-14.md)
+- [Workspace scope dependency and local proof, 2026-09-14](workspace-scope-proof-2026-09-14.md)
+- [SWEG workspace smoke test, 2026-09-14](sweg-workspace-smoke-2026-09-14.md)
+- [OpenAI provider connection preflight, 2026-09-14](openai-provider-preflight-2026-09-14.md)
+- [Enola committed extraction experiment, 2026-09-14](enola-extraction-proof-2026-09-14.md)
+- [Repository publication and SWEG runtime proof, 2026-09-14](repository-publication-proof-2026-09-14.md)
+- [Claims and temporal history proof, 2026-09-14](claims-and-time-proof-2026-09-14.md)
+- [Review and correction proof, 2026-09-14](review-and-corrections-proof-2026-09-14.md)
+- [Retention, controlled erasure and replay proof, 2026-09-14](retention-and-erasure-proof-2026-09-14.md)
+- [Provider gateway and learning evidence, 2026-09-14](provider-learning-proof-2026-09-14.md)
+- [Procedures, handovers and autonomous maintenance evidence, 2026-09-14](procedures-and-handovers-proof-2026-09-14.md)
+- [Session capture interface evidence, 2026-09-14](session-capture-interfaces-2026-09-14.md)
+- [Agent memory MCP interface evidence, 2026-09-22](mcp-tools-2026-09-22.md)
+- [Installation interface and runtime evidence, 2026-09-22](installation-2026-09-22.md)
