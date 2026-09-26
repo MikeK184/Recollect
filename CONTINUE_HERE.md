@@ -9,6 +9,15 @@ not a declaration that unfinished work is shipped.
 
 ## Current continuation — 2026-09-26
 
+Latest repository decision: Apache-2.0 is selected, with a simplified root README.
+Keep GitHub private. Public visibility and the proposed private-archive rename
+were explicitly deferred; the original commit history and dates stay intact.
+The ignored `.cache/public-release-20260926/candidate-v2/` contains an isolated
+privacy-cleaned history prepared for a possible future publication. It is not
+pushed or active and must be refreshed against later commits before use. The
+original history and handoff also have private backups beside that candidate.
+
+
 All **29 original slices are delivered locally**, plus the Atlas capture repair.
 The first-product goal is complete, with no remaining eligible slice or acceptance
 blocker. The [final evaluation](docs/mappings/integrated-evaluations-2026-09-26.md)
