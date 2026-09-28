@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("desktop coding-agent guidance fixes the Brain and explains optional credentials", async ({
+test("desktop coding-agent guidance binds the Brain and explains direct credentials", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -19,38 +19,34 @@ test("desktop coding-agent guidance fixes the Brain and explains optional creden
   await dialog
     .getByRole("button", { name: "Create Brain", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "Coding host connection", exact: true }),
-  ).toBeVisible();
-  const brain = new URL(page.url()).pathname.split("/").at(-1)!;
+  await expect(page.getByLabel("Switch Brain", { exact: true })).toBeVisible();
+  const brain = new URL(page.url()).pathname.split("/")[2]!;
+  await page.goto(`/brains/${brain}/agents`);
   await page
     .getByRole("button", { name: "Connect coding agent", exact: true })
     .click();
   dialog = page.getByRole("dialog");
+  await expect(dialog.getByText(/recollect-agent pair/)).not.toBeVisible();
   await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    `mcp-config codex --brain ${brain}`,
+    `/api/brains/${brain}/mcp/agent`,
   );
+  await expect(
+    dialog.getByLabel("Store your access token", { exact: true }),
+  ).toBeVisible();
   await dialog.getByLabel("Coding host", { exact: true }).click();
   await page.getByRole("option", { name: "Claude Code", exact: true }).click();
   await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    `mcp-config claude --brain ${brain}`,
+    '"Authorization": "Bearer ${RECOLLECT_MCP_TOKEN}"',
   );
-  await dialog.getByLabel("Session integration", { exact: true }).click();
-  await page
-    .getByRole("option", {
-      name: "Tools with automatic session capture",
-      exact: true,
-    })
-    .click();
-  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    `capture setup claude . --brain ${brain}`,
+  await expect(dialog.getByTestId("agent-credential-command")).toContainText(
+    "export RECOLLECT_MCP_TOKEN",
   );
   await expect(
-    dialog.getByText(/Vault is optional for each managed MCP connection/),
-  ).toBeVisible();
+    dialog.getByLabel("Store your access token", { exact: true }),
+  ).toHaveCount(0);
   await expect(
-    dialog.getByText(/Creating settings alone does not prove a connection/),
-  ).toBeVisible();
+    dialog.getByLabel("Session integration", { exact: true }),
+  ).toHaveCount(0);
   await page.screenshot({
     path: "../.cache/mcp-tools-desktop.png",
     fullPage: false,

@@ -1,5 +1,7 @@
 # Analyze exact eligible graph inputs
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Run PageRank centrality, Leiden communities or connected components through the
@@ -14,11 +16,11 @@ memory maintenance continues under the Brain's standing policy.
 
 ## Procedure
 
-1. Expand **Evidence graphs** in the Brain. Select its graph kind, exact
+1. Open **Graph → Filters** in the Brain. Select its graph kind, exact
    repository snapshot or environment manifest, evidence mode and scope. Wait
    for current projection processing to finish, including automatic rebuilds
    after a correction.
-2. Choose at least one **Graph relation** explicitly. Structural relations and
+2. Open **Insights** and choose at least one **Graph relation** explicitly. Structural relations and
    knowledge provenance form separate analytical inputs. Combined repository
    reports may include validated `terraform_module` links.
 3. Select **Analysis** and **Analysis direction**. PageRank supports outgoing,

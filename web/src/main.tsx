@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { MantineProvider, createTheme } from "@mantine/core";
+import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createRootRoute,
@@ -8,11 +8,17 @@ import {
   createRouter,
   defaultParseSearch,
   defaultStringifySearch,
+  lazyRouteComponent,
+  redirect,
   RouterProvider,
 } from "@tanstack/react-router";
 import "@mantine/core/styles.css";
 import "./styles.css";
+import "./design/typography.css";
 import { App } from "./App";
+import { BrainLayout } from "./app/BrainLayout";
+import { validateBrainSearch } from "./app/useBrainSearch";
+import { theme, cssVariablesResolver } from "./design/theme";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,15 +26,122 @@ export const queryClient = new QueryClient({
   },
 });
 const root = createRootRoute({ component: App });
-const home = createRoute({ getParentRoute: () => root, path: "/" });
+const home = createRoute({
+  getParentRoute: () => root,
+  path: "/",
+  component: lazyRouteComponent(
+    () => import("./features/brains/BrainsPage"),
+    "BrainsPage",
+  ),
+});
 const brain = createRoute({
   getParentRoute: () => root,
   path: "/brains/$brainId",
+  component: BrainLayout,
+  validateSearch: validateBrainSearch,
 });
-const team = createRoute({ getParentRoute: () => root, path: "/team" });
+const brainIndex = createRoute({
+  getParentRoute: () => brain,
+  path: "/",
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/brains/$brainId/ask", params, search: {} });
+  },
+});
+const ask = createRoute({
+  getParentRoute: () => brain,
+  path: "ask",
+  component: lazyRouteComponent(
+    () => import("./features/ask/AskPage"),
+    "AskPage",
+  ),
+});
+const memory = createRoute({
+  getParentRoute: () => brain,
+  path: "memory",
+  component: lazyRouteComponent(
+    () => import("./features/memory/MemoryPage"),
+    "MemoryPage",
+  ),
+});
+const sources = createRoute({
+  getParentRoute: () => brain,
+  path: "sources",
+  component: lazyRouteComponent(
+    () => import("./features/sources/SourcesPage"),
+    "SourcesPage",
+  ),
+});
+const graph = createRoute({
+  getParentRoute: () => brain,
+  path: "graph",
+  component: lazyRouteComponent(
+    () => import("./features/graph/GraphPage"),
+    "GraphPage",
+  ),
+});
+const repositories = createRoute({
+  getParentRoute: () => brain,
+  path: "repositories",
+  component: lazyRouteComponent(
+    () => import("./features/repositories/RepositoriesPage"),
+    "RepositoriesPage",
+  ),
+});
+const agents = createRoute({
+  getParentRoute: () => brain,
+  path: "agents",
+  component: lazyRouteComponent(
+    () => import("./features/agents/AgentsPage"),
+    "AgentsPage",
+  ),
+});
+const connections = createRoute({
+  getParentRoute: () => brain,
+  path: "connections",
+  component: lazyRouteComponent(
+    () => import("./features/connections/ConnectionsPage"),
+    "ConnectionsPage",
+  ),
+});
+const activity = createRoute({
+  getParentRoute: () => brain,
+  path: "activity",
+  component: lazyRouteComponent(
+    () => import("./features/activity/ActivityPage"),
+    "ActivityPage",
+  ),
+});
+const settings = createRoute({
+  getParentRoute: () => brain,
+  path: "settings",
+  component: lazyRouteComponent(
+    () => import("./features/settings/SettingsPage"),
+    "SettingsPage",
+  ),
+});
+const unknownSection = createRoute({
+  getParentRoute: () => brain,
+  path: "$",
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/brains/$brainId/ask",
+      params: { brainId: params.brainId },
+      search: {},
+    });
+  },
+});
+const team = createRoute({
+  getParentRoute: () => root,
+  path: "/team",
+  component: lazyRouteComponent(
+    () => import("./features/workspace/GlobalPages"),
+    "TeamPage",
+  ),
+});
 const devices = createRoute({
   getParentRoute: () => root,
   path: "/devices",
+  component: lazyRouteComponent(() => import("./DevicesPanel"), "DevicesPanel"),
   validateSearch: (search: Record<string, unknown>): { code?: string } => ({
     code:
       typeof search.code === "string" && /^[a-f0-9]{8}$/i.test(search.code)
@@ -37,7 +150,24 @@ const devices = createRoute({
   }),
 });
 const router = createRouter({
-  routeTree: root.addChildren([home, brain, team, devices]),
+  routeTree: root.addChildren([
+    home,
+    brain.addChildren([
+      brainIndex,
+      ask,
+      memory,
+      sources,
+      graph,
+      repositories,
+      agents,
+      connections,
+      activity,
+      settings,
+      unknownSection,
+    ]),
+    team,
+    devices,
+  ]),
   parseSearch: (raw) => {
     const parsed = defaultParseSearch(raw);
     const codes = new URLSearchParams(raw).getAll("code");
@@ -61,17 +191,13 @@ declare module "@tanstack/react-router" {
     router: typeof router;
   }
 }
-const theme = createTheme({
-  primaryColor: "teal",
-  defaultRadius: "md",
-  fontFamily:
-    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  headings: { fontFamily: "inherit", fontWeight: "600" },
-});
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider theme={theme}>
+    <MantineProvider
+      theme={theme}
+      cssVariablesResolver={cssVariablesResolver}
+      forceColorScheme="light"
+    >
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

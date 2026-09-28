@@ -50,3 +50,15 @@ Backup/recovery and integrated capacity evaluations retain their successor slice
 N/A: implements the packaging seam reserved by platform bootstrap. Its existing
 native development startup remains valid; no source or database migration is
 silently applied to the normal running installation.
+
+## Root Compose follow-up — 2026-09-26
+
+The user now requests one Compose group for the existing local app. Extend the
+root `compose.yaml` with the same application image, migration, API and worker
+roles, retaining the root project's PostgreSQL volume, graph bind mounts,
+artifacts, deletion journal and loopback origin. This explicitly authorized local
+conversion is separate from named installations; `install.py` still cannot adopt
+development volumes. Native development remains an alternate, exclusive runtime.
+Keep application state in a narrowly mounted runtime directory and pass only
+selected environment inputs. Preserve legacy account credentials when preparing
+that directory; do not expose installation/operator files to application roles.

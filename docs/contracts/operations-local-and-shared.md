@@ -114,6 +114,43 @@ Report missing Docker, unavailable API, unhealthy dependencies or absent runtime
 as distinct failures. Never equate a rendered configuration or running container
 with a working dependency. Keep UI, API and native diagnostics consistent.
 
+### Root local Compose follow-up — 2026-09-26
+
+The root Compose project runs PostgreSQL, Neo4j, migration, API with built web
+assets, and worker together. Preserve its existing database and graph storage,
+artifacts and deletion journal. The API remains at loopback port 8787. Reuse
+the ignored `.env` credentials through an explicit runtime allowlist; only the
+migration role receives the administrative database URL. Optional OIDC inputs
+are absent when not configured. App state mounts exclude other installations.
+
+`scripts/setup-local.sh` prepares owned runtime directories and the local UID/GID
+without replacing existing secrets. It preserves an existing default account
+credential file when moving its configured location into `.data/runtime/`.
+Custom account-file locations require an explicit Compose override. Both native
+development and Compose use the resulting account-file setting.
+
+`scripts/stack.sh up [--build]` stops container application roles, rejects an
+occupied browser port, waits for databases, reruns migration, then starts the
+API and worker. Migration failure leaves both stopped. `stop` and `down` preserve
+data; no pruning is included. Native `dev.sh` rejects a concurrent API and starts
+only the database services in Compose. Switching runtimes requires stopping the
+previous API and worker. The current native processes may be drained once their
+identity and repository ownership are verified for this conversion.
+
+Prove resolved secret/mount/dependency boundaries, actual browser/login/readiness,
+existing inventory preservation, stop/start persistence and failure gating.
+Test and recovery installations are separate datasets, never dependencies of the
+normal app. Stop only verified, inactive repository-owned fixtures, preserving
+their data and unrelated projects.
+
+The user's subsequent explicit 2026-09-26 cleanup request authorizes deleting
+those inactive Recollect proof containers and their disposable volumes/configuration.
+Identify ownership by saved project records, labels and exact mounts; exclude
+anything mounted by retained containers. Preserve the normal root stack, its
+data, unrelated projects, historical reports and external Vault resources.
+Recheck normal readiness and retained inventory after cleanup. This one-time
+operation does not add automatic deletion to the normal start/stop commands.
+
 ## Acceptance
 
 Render both profiles with actual Compose; inspect complete service/environment,

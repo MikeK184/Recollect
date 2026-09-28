@@ -1,5 +1,7 @@
 # Configure approved MCP connections and profiles
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 The desktop Brain catalogue configures approved tools and independent Use, Manage
@@ -8,12 +10,22 @@ its target or resolving credentials. Actual execution follows in the runtime
 slice. See the [contract](../contracts/mcp-catalogue-and-profiles.md) and
 [local proof](../mappings/mcp-catalogue-2026-09-22.md).
 
-Start the local service with `./scripts/dev.sh` and open
+Start the local Compose service with `./scripts/stack.sh up` and open
 `http://127.0.0.1:8787`. The operator needs the existing migration credentials
 and owner configuration in the ignored `.env`; Brain connection administration
 requires a browser session with Brain admin access. Profile Use is separate.
 
 ## Procedure
+
+For an anonymous HTTP server, use **Connections → MCP servers → Add connection**.
+Enter its name and URL, or select **Use Context7 · no API key**, then **Find tools**.
+After inspecting the discovered tool names, choose **Add server**. This records
+the approved manifest and a central connection in the selected Brain. Listing
+tools does not execute them. Tool-group Use remains an independent permission.
+
+Use **Use registered connector** for an existing definition, or **Import manifest**
+for authenticated servers, local executables and private runners. The older
+operator/import path below remains supported:
 
 1. Prepare a non-secret definition JSON inside the repository. Its fields are
    `key`, `name`, `description`, `transport`, `command`, `arguments`, `placements`,
@@ -23,7 +35,14 @@ requires a browser session with Brain admin access. Profile Use is separate.
    `outputSchema` and `annotations`. Configuration/input schemas describe objects;
    configuration must set `additionalProperties: false`. Only local schema
    references are supported. Review the implementation and schemas before import.
-2. Import that exact definition using the operator command:
+2. The installation owner can register a new connector in **Connections → MCP
+   servers → Add connection** when the catalogue is empty, or **Register another
+   connector** otherwise. Choose the prepared JSON file (or paste it) and select
+   **Register connector**. This uses the same validation as the CLI and never starts
+   the backend. An identical repeat is idempotent; conflicting existing keys are
+   rejected. Non-owner Brain admins see the operator prerequisite.
+
+   Operators can also import or update a definition through the existing command:
 
    ```sh
    set -a
@@ -37,13 +56,13 @@ requires a browser session with Brain admin access. Profile Use is separate.
    An identical import is idempotent. The synthetic test manifest at
    `crates/server/tests/fixtures/mcp-catalogue.json` demonstrates the format but
    deliberately uses `/usr/bin/false`; it is not a usable connector.
-3. Open a Brain's **MCP connections and profiles** panel. **Add connection** selects
+3. Open a Brain's **Connections → MCP servers** tab. **Add connection** selects
    the approved connector, environment, fixed target, placement, runner reference,
    optional approved credential alias and schema-validated non-secret settings.
    Central placement has no runner reference. Local/private placement requires
    one; at this stage that reference is configured, not verified. Supply no secret
    values in JSON or target addresses.
-4. **Create execution profile** and select up to 20 compatible connections.
+4. Continue with **Configure profile & test**, or open **Tool groups → Create execution profile** and select up to 20 compatible connections.
    Brain-wide profiles contain Brain-wide connections only; environment profiles
    can include that environment and Brain-wide connections. **Inspect profile**
    edits memberships for managers and grants for sharers. Grants select an enrolled
@@ -52,7 +71,7 @@ requires a browser session with Brain admin access. Profile Use is separate.
    can explicitly select themselves and save a Use grant.
 5. A user with Brain access and Use can **Inspect cached tools**, select the exact
    environment when required, inspect schemas and page through results. Listings
-   identify both connection and tool name. **Configured / Not connected** is the
+   identify both connection and tool name. **Configured · connection not checked** is the
    expected status; cached metadata does not prove availability or a live call.
 
 ## Verification

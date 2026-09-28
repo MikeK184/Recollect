@@ -1,6 +1,8 @@
 pub mod access;
+pub mod answers;
 pub mod artifacts;
 pub mod auth;
+mod automation;
 pub mod autonomous;
 pub mod brains;
 pub mod capture;
@@ -69,6 +71,8 @@ pub struct AppState {
     pub http: reqwest::Client,
     pub login_attempts: LoginAttempts,
     pub agent_requests: Arc<tokio::sync::Semaphore>,
+    pub mcp_inspections: Arc<tokio::sync::Semaphore>,
+    pub answer_capacity: Arc<tokio::sync::Semaphore>,
     pub metrics: Arc<operations::Metrics>,
 }
 impl AppState {
@@ -82,6 +86,8 @@ impl AppState {
                 .build()?,
             login_attempts: Arc::new(Mutex::new(HashMap::new())),
             agent_requests: Arc::new(tokio::sync::Semaphore::new(16)),
+            mcp_inspections: Arc::new(tokio::sync::Semaphore::new(4)),
+            answer_capacity: Arc::new(tokio::sync::Semaphore::new(4)),
             metrics: Arc::new(operations::Metrics::default()),
         })
     }
@@ -142,6 +148,9 @@ impl AppState {
         capture::devices,
         capture::report_device,
         retrieval::recall,
+        answers::create,
+        answers::get,
+        answers::cancel,
         semantic::get,
         semantic::reindex,
         semantic::retry,
@@ -153,6 +162,10 @@ impl AppState {
         graph::analytics::get,
         graph::analytics::queue,
         graph::analytics::view,
+        automation::get,
+        automation::update,
+        mcp::definitions::approve,
+        mcp::definitions::inspect_http,
         model_policy::get,
         model_policy::update,
         model_policy::history,
@@ -396,6 +409,15 @@ pub(crate) fn api_routes() -> Router<AppState> {
             "/brains/{brain}/recall",
             post(retrieval::recall).layer(DefaultBodyLimit::max(32768)),
         )
+        .route(
+            "/brains/{brain}/answer-requests",
+            post(answers::create).layer(DefaultBodyLimit::max(32768)),
+        )
+        .route("/brains/{brain}/answer-requests/{id}", get(answers::get))
+        .route(
+            "/brains/{brain}/answer-requests/{id}/cancel",
+            post(answers::cancel),
+        )
         .route("/brains/{brain}/semantic", get(semantic::get))
         .route("/brains/{brain}/graph", get(graph::get))
         .route("/brains/{brain}/graph/rebuild", post(graph::rebuild))
@@ -440,6 +462,15 @@ pub(crate) fn api_routes() -> Router<AppState> {
             get(model_policy::history),
         )
         .route("/brains/{brain}/models/usage", get(model_policy::usage))
+        .route(
+            "/brains/{brain}/automation",
+            get(automation::get).put(automation::update),
+        )
+        .route("/mcp/definitions", post(mcp::definitions::approve))
+        .route(
+            "/mcp/definitions/inspect-http",
+            post(mcp::definitions::inspect_http),
+        )
         .route("/brains/{brain}/models/check", post(model_gateway::check))
         .route(
             "/brains/{brain}/learning",

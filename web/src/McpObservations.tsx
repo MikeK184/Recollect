@@ -9,6 +9,7 @@ import {
   Text,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useFocusReturn } from "@mantine/hooks";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { CapturedSource } from "./CapturePanel";
@@ -79,6 +80,7 @@ export function McpObservations({
     retry: false,
     gcTime: 0,
   });
+  useFocusReturn({ opened: viewing !== null && !query.error });
   useEffect(() => {
     onInspectChange(viewing !== null && !query.error);
     return () => onInspectChange(false);

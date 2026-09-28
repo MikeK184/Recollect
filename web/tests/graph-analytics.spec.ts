@@ -1,6 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { openGraphDrawer } from "./desktop-helpers";
+import { test, expect as baseExpect } from "@playwright/test";
+const expect = baseExpect.configure({ timeout: 20_000 });
 
-test("native analytical reports, evidence, invalidation, errors and mobile layout", async ({
+test("native analytical reports, evidence, invalidation, errors at 1280 pixels layout", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -95,12 +97,9 @@ test("native analytical reports, evidence, invalidation, errors and mobile layou
       )
       .toBe("ready");
   }
-  await page.goto(`/brains/${fixture.brain}`);
-  const panel = page.getByRole("region", {
-    name: "Evidence graphs",
-    exact: true,
-  });
-  await panel.getByRole("button", { name: /Evidence graphs/ }).click();
+  await page.goto(`/brains/${fixture.brain}/graph`);
+  const panel = page.locator("body");
+  await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
   await panel
     .getByRole("button", { name: "Rebuild graph", exact: true })
     .click();
@@ -116,16 +115,23 @@ test("native analytical reports, evidence, invalidation, errors and mobile layou
     );
   };
   await expect.poll(currentKnowledgeReady).toBe(true);
+  await openGraphDrawer(page, "Graph insights", "Insights");
   const analytics = panel.getByTestId("graph-analytics");
   const queue = analytics.getByRole("button", {
     name: "Queue analysis",
     exact: true,
   });
   await expect(queue).toBeDisabled();
-  await panel.getByLabel("Graph relations", { exact: true }).click();
+  await openGraphDrawer(page, "Graph filters", "Filters");
+  await panel
+    .getByRole("textbox", { name: "Graph relations", exact: true })
+    .click();
   await page.getByRole("option", { name: "supported by", exact: true }).click();
   await page.keyboard.press("Escape");
-  await analytics.getByLabel("Analysis", { exact: true }).click();
+  await openGraphDrawer(page, "Graph insights", "Insights");
+  await analytics
+    .getByRole("textbox", { name: "Analysis", exact: true })
+    .click();
   await page
     .getByRole("option", { name: "Connected components", exact: true })
     .click();
@@ -151,7 +157,10 @@ test("native analytical reports, evidence, invalidation, errors and mobile layou
   await amber
     .getByRole("button", { name: "Inspect analytical evidence" })
     .click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", {
+    name: "Supporting evidence",
+    exact: true,
+  });
   await expect(dialog.getByText(/ANALYTICS_INERT_EVIDENCE/)).toBeVisible();
   expect(await page.evaluate(() => "analyticsInjected" in window)).toBe(false);
   await dialog
@@ -164,7 +173,7 @@ test("native analytical reports, evidence, invalidation, errors and mobile layou
   await detail
     .getByRole("button", { name: "Exact analytical inputs and parameters" })
     .click();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   await detail.scrollIntoViewIfNeeded();
   expect(
     await page.evaluate(
@@ -172,7 +181,7 @@ test("native analytical reports, evidence, invalidation, errors and mobile layou
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "../.cache/analytics-proof/mobile.png",
+    path: "../.cache/analytics-proof/1280.png",
     fullPage: false,
   });
   await page.setViewportSize({ width: 1440, height: 960 });
@@ -214,9 +223,19 @@ test("native analytical reports, evidence, invalidation, errors and mobile layou
     .getByRole("button", { name: "Open analytical report" })
     .click();
   await expect(detail.getByTestId("analytics-result")).toHaveCount(2);
-  await panel.getByLabel("Graph evidence mode", { exact: true }).click();
+  await openGraphDrawer(page, "Graph filters", "Filters");
+  await panel
+    .getByRole("textbox", { name: "Graph evidence mode", exact: true })
+    .click();
   await page
     .getByRole("option", { name: "Accepted claims only", exact: true })
+    .click();
+  await openGraphDrawer(page, "Graph insights", "Insights");
+  await analytics
+    .getByRole("textbox", { name: "Analysis", exact: true })
+    .click();
+  await page
+    .getByRole("option", { name: "Connected components", exact: true })
     .click();
   await queue.click();
   await expect(

@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 
 test("retention, explicit excerpts and erasure survive a lost response", async ({
@@ -75,10 +76,11 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     });
     return brain.id as string;
   });
-  await page.goto("/brains/" + brain);
+  await page.goto("/brains/" + brain + "/settings?tab=privacy");
   await expect(
-    page.getByRole("heading", { name: "Retention and erasure" }),
+    page.getByRole("heading", { name: "Retention & privacy" }),
   ).toBeVisible();
+  await openDetails(page, "Advanced retention and storage controls");
   await page
     .getByRole("button", { name: "Edit retention", exact: true })
     .click();
@@ -91,9 +93,11 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     .getByRole("button", { name: "Save retention policy", exact: true })
     .click();
   await expect(page.getByText(/Raw sessions: 14 days/)).toBeVisible();
+  await page.goto(`/brains/${brain}/sources`);
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
     .click();
+  await openDetails(page, "More source actions");
   await page
     .getByRole("button", { name: "Retain supporting excerpt", exact: true })
     .click();
@@ -120,13 +124,14 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
     .click();
+  await openDetails(page, "More source actions");
   await page.getByRole("button", { name: "Erase source", exact: true }).click();
   dialog = page.getByRole("dialog", {
     name: "Erase controlled memory",
     exact: true,
   });
   await expect(dialog.getByText(/2 source versions/)).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   await expect
     .poll(() =>
       page.evaluate(
@@ -134,7 +139,7 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
       ),
     )
     .toBeTruthy();
-  await page.screenshot({ path: "../.cache/ui-retention-mobile.png" });
+  await page.screenshot({ path: "../.cache/ui-retention-1280.png" });
   let first = true;
   await page.route("**/api/brains/" + brain + "/erasures", async (route) => {
     if (route.request().method() === "POST" && first) {
@@ -157,13 +162,14 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     .getByRole("button", { name: "Confirm erasure", exact: true })
     .click();
   await page.unroute("**/api/brains/" + brain + "/erasures");
-  await page.goto("/brains/" + brain);
+  await page.goto(`/brains/${brain}/sources`);
   await expect(
     page.getByRole("button", { name: /Synthetic raw browser source/ }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /Browser retained excerpt/ }),
   ).toHaveCount(0);
+  await page.goto(`/brains/${brain}/activity?tab=removal`);
   await page
     .getByRole("button", { name: "Retry cleanup", exact: true })
     .click();
@@ -178,23 +184,30 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   expect(status.total).toBe(1);
   expect(status.items[0].pending_artifacts).toBe(0);
   expect(status.items[0].journaled).toBe(true);
+  await page.goto(`/brains/${brain}/memory`);
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page.getByRole("textbox", { name: "Claim view", exact: true }).click();
   await page
     .getByRole("option", { name: "Include historical states", exact: true })
     .click();
-  await page.getByRole("button", { name: /erased claim · learned/i }).click();
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
+  await page.getByRole("button", { name: /^Unavailable memory ·/ }).click();
   const erasedClaim = page.getByRole("dialog", {
     name: "Claim and knowledge history",
     exact: true,
   });
   await expect(erasedClaim.getByText(/This revision was erased/)).toBeVisible();
+  await openDetails(erasedClaim, "More memory actions");
   await expect(
     erasedClaim.getByRole("button", { name: "Erase claim", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`/brains/${brain}/settings?tab=privacy`);
   await page
-    .getByRole("heading", { name: "Retention and erasure" })
+    .getByRole("heading", { name: "Retention & privacy" })
     .scrollIntoViewIfNeeded();
   await page.screenshot({ path: "../.cache/ui-retention-desktop.png" });
   expect(errors).toEqual([]);

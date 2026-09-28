@@ -87,26 +87,36 @@ pub async fn update_policy(
             "Capture policy changed. Reload before saving.",
         ));
     }
+    let response = persist(&mut tx, brain, auth.user.id, input.policy).await?;
+    commands::finish(&mut tx, key.as_deref(), brain, &response).await?;
+    tx.commit().await?;
+    Ok(Json(response))
+}
+
+pub(crate) async fn persist(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    policy: CapturePolicy,
+) -> Result<CaptureSettings> {
     let response = CaptureSettings {
         brain_id: brain,
         change_id: Uuid::new_v4(),
-        policy: input.policy,
+        policy,
     };
     sqlx::query("INSERT INTO capture_policies(brain_id,change_id,policy,updated_by) VALUES($1,$2,$3,$4) ON CONFLICT(brain_id) DO UPDATE SET change_id=excluded.change_id,policy=excluded.policy,updated_by=excluded.updated_by,updated_at=now()")
-        .bind(brain).bind(response.change_id).bind(SqlJson(&response.policy)).bind(auth.user.id).execute(&mut *tx).await?;
+        .bind(brain).bind(response.change_id).bind(SqlJson(&response.policy)).bind(actor).execute(&mut **tx).await?;
     let audit = db::audit(
-        &mut tx,
-        auth.user.id,
+        tx,
+        actor,
         brain,
         "capture.policy",
         response.change_id,
         "updated",
     )
     .await?;
-    jobs::enqueue(&mut tx, auth.user.id, brain, audit).await?;
-    commands::finish(&mut tx, key.as_deref(), brain, &response).await?;
-    tx.commit().await?;
-    Ok(Json(response))
+    jobs::enqueue(tx, actor, brain, audit).await?;
+    Ok(response)
 }
 
 #[derive(sqlx::FromRow)]

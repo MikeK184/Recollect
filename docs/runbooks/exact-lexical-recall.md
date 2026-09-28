@@ -1,5 +1,7 @@
 # Recall canonical memory and evidence
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and prerequisites
 
 Run the API and worker with `./scripts/dev.sh`, sign in at
@@ -11,7 +13,7 @@ and model-backed paraphrase matching under the same canonical filters.
 
 ## Procedure
 
-Use **Recall memory** on the Brain page. Enter a subject, source title, symbol,
+Use **Ask → Search evidence** in the Brain sidebar. Enter a subject, source title, symbol,
 file path or words from retained evidence. Quoted phrases, `OR` and exclusions
 use PostgreSQL web-search syntax. Search is language-neutral lexical matching;
 it does not infer synonyms or produce a generated answer.

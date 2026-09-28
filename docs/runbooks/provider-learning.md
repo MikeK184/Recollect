@@ -1,6 +1,12 @@
 # Model policy and autonomous memory
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 Status: active
+
+The normal setup now uses **Enable autonomous memory** in Ask or Settings;
+new browser-created Brains include the preset. Detailed overrides below are
+under **Advanced model controls**. See the [desktop guide](desktop-experience.md).
 
 ## Prerequisites
 
@@ -18,7 +24,7 @@ selected automatically.
 
 ## Policy and connectivity
 
-1. Open **Model learning → Edit model policy** as a browser Brain admin.
+1. Open **Settings → AI & automation → Edit model policy** as a browser Brain admin.
 2. Enable transmission and keep **Autonomous memory** selected for normal operation.
    Permit extraction, synthesis and claim content, plus the actual source classes
    to learn, such as document. Query permission supports handover titles. The fixed
@@ -34,7 +40,7 @@ selected automatically.
 
 Policy history records immutable application revisions. If deployment model choices
 change, use **Use installed models** and save an explicit new policy; old permissions
-do not silently switch models. The model request list separates provider completion,
+do not silently switch models. **Activity → Model usage** separates provider completion,
 discarded output, failure and uncertainty.
 
 ## Automatic learning, revision and forgetting
@@ -60,7 +66,7 @@ Durable knowledge is not erased merely because it has not been retrieved recentl
 
 ## Optional explicit learning and human controls
 
-Open retained **Source evidence → Learn from this source**. Select repositories,
+Open retained **Sources → Source evidence → More source actions → Learn from this source**. Select repositories,
 areas, environment and an exact manifest when applicable, then **Queue learning**.
 Source text is bounded; retain an explicit smaller excerpt if necessary. Learning
 runs in the model worker lane and does not block evidence capture.

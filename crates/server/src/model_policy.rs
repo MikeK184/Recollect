@@ -19,7 +19,13 @@ use serde_json::json;
 use sqlx::types::Json as SqlJson;
 use uuid::Uuid;
 
-pub(crate) const PURPOSES: &[&str] = &["extraction", "synthesis", "embedding", "reranking"];
+pub(crate) const PURPOSES: &[&str] = &[
+    "extraction",
+    "synthesis",
+    "embedding",
+    "reranking",
+    "answering",
+];
 pub(crate) const CLASSES: &[&str] = &[
     "document",
     "raw_session",
@@ -268,9 +274,23 @@ pub async fn update(
             "This model policy changed. Reload it before saving.",
         ));
     }
+    let response = persist(&state, &mut tx, brain, auth.user.id, input.policy).await?;
+    commands::finish(&mut tx, key.as_deref(), brain, &response).await?;
+    tx.commit().await?;
+    Ok(Json(response))
+}
+
+pub(crate) async fn persist(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    mut policy: ModelPolicy,
+) -> Result<ModelPolicyVersion> {
+    validate(state, tx, brain, &mut policy).await?;
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM model_policies WHERE brain_id=$1")
         .bind(brain)
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut **tx)
         .await?;
     if count >= 1000 {
         return Err(failure(
@@ -280,22 +300,21 @@ pub async fn update(
     }
     let id = Uuid::new_v4();
     let at=sqlx::query_scalar("INSERT INTO model_policies(id,brain_id,policy,created_by) VALUES($1,$2,$3,$4) RETURNING created_at")
-        .bind(id).bind(brain).bind(SqlJson(&input.policy)).bind(auth.user.id).fetch_one(&mut *tx).await?;
+        .bind(id).bind(brain).bind(SqlJson(&policy)).bind(actor).fetch_one(&mut **tx).await?;
     sqlx::query("INSERT INTO model_policy_heads(brain_id,policy_id) VALUES($1,$2) ON CONFLICT(brain_id) DO UPDATE SET policy_id=excluded.policy_id")
-        .bind(brain).bind(id).execute(&mut *tx).await?;
+        .bind(brain).bind(id).execute(&mut **tx).await?;
     let response = ModelPolicyVersion {
         change_id: id,
         brain_id: brain,
-        policy: input.policy,
-        created_by: Some(auth.user.id),
+        policy,
+        created_by: Some(actor),
         created_at: Some(at),
     };
-    let audit = db::audit(&mut tx, auth.user.id, brain, "model.policy", id, "updated").await?;
-    jobs::enqueue(&mut tx, auth.user.id, brain, audit).await?;
-    commands::finish(&mut tx, key.as_deref(), brain, &response).await?;
-    tx.commit().await?;
-    Ok(Json(response))
+    let audit = db::audit(tx, actor, brain, "model.policy", id, "updated").await?;
+    jobs::enqueue(tx, actor, brain, audit).await?;
+    Ok(response)
 }
+
 #[derive(Default, Deserialize)]
 pub struct PageQuery {
     pub offset: Option<i64>,

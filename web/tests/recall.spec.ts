@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 
 test("recall filters, inert source evidence, context budget and source erasure", async ({
@@ -107,7 +108,7 @@ test("recall filters, inert source evidence, context budget and source erasure",
         ).version.processing,
     )
     .toBe("ready");
-  await page.goto(`/brains/${fixture.brain}`);
+  await page.goto(`/brains/${fixture.brain}/ask?tab=search`);
   const panel = page.getByRole("region", {
     name: "Recall memory",
     exact: true,
@@ -120,6 +121,7 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await search("Amber");
   await expect(panel.getByTestId("recall-result")).toHaveCount(2);
   await expect(panel.getByText(/Review: proposed/)).toBeVisible();
+  await openDetails(panel, "Refine evidence search");
   await panel.getByLabel("Recall mode", { exact: true }).click();
   await page
     .getByRole("option", { name: "Accepted and current", exact: true })
@@ -129,6 +131,7 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await expect(
     panel.getByText("Insufficient eligible evidence", { exact: true }),
   ).toBeVisible();
+  await openDetails(panel, "Refine evidence search");
   await panel.getByLabel("Recall mode", { exact: true }).click();
   await page
     .getByRole("option", { name: "Investigation", exact: true })
@@ -162,13 +165,13 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await expect(evidence.getByTestId("claim-evidence-text")).toContainText(
     "RAW_RECALL_FRAGMENT",
   );
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: "../.cache/recall-source-mobile.png" });
+  await page.screenshot({ path: "../.cache/recall-source-1280.png" });
   await evidence
     .getByRole("button", { name: "Erase source", exact: true })
     .click();
@@ -235,6 +238,8 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await panel.getByRole("button", { name: "Recall", exact: true }).click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
   expect(attempts).toHaveLength(1);
+  await page.goto(`/brains/${fixture.brain}/settings?tab=ai`);
+  await openDetails(page, "Advanced model controls");
   await page
     .getByRole("button", { name: "Edit model policy", exact: true })
     .click();
@@ -246,7 +251,14 @@ test("recall filters, inert source evidence, context budget and source erasure",
     .getByRole("button", { name: "Save model policy", exact: true })
     .click();
   await expect(modelPolicy).not.toBeVisible();
+  await page.goto(`/brains/${fixture.brain}/ask?tab=search`);
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
+  await panel.getByLabel("Search memory", { exact: true }).fill("Cobalt");
+  await openDetails(panel, "Refine evidence search");
+  await panel
+    .getByText("Scope, time and exact lookup", { exact: true })
+    .click();
+  await panel.getByLabel("Semantic similarity", { exact: true }).check();
   expect(attempts).toHaveLength(1);
   await panel.getByRole("button", { name: "Recall", exact: true }).click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);

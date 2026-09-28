@@ -5,6 +5,13 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct McpHttpInspection {
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct McpToolDescriptor {
     pub name: String,

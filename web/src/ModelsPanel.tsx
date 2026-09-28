@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./features/feature-views.css";
 import {
   Alert,
   Badge,
@@ -202,7 +203,10 @@ function PolicyEditor({
         <MultiSelect
           searchable
           label="Allowed model purposes"
-          data={choices(["extraction", "synthesis", "embedding", "reranking"])}
+          data={[
+            ...choices(["extraction", "synthesis", "embedding", "reranking"]),
+            { value: "answering", label: "Answering — evidence-backed Ask" },
+          ]}
           value={draft.purposes}
           onChange={(purposes) =>
             patch({
@@ -210,7 +214,9 @@ function PolicyEditor({
               ...(!purposes.includes("extraction")
                 ? { automatic_learning: false }
                 : {}),
-              ...(!purposes.includes("embedding") ? { automatic_embedding: false } : {}),
+              ...(!purposes.includes("embedding")
+                ? { automatic_embedding: false }
+                : {}),
             })
           }
         />
@@ -222,7 +228,9 @@ function PolicyEditor({
           onChange={(content_classes) => patch({ content_classes })}
         />
         <Text size="xs" c="dimmed">
-          Query permission is also required for semantic search and the fixed synthetic connection check.
+          Query permission is also required for Ask, semantic search and the
+          fixed synthetic connection check. Answering is a separate permission
+          and does not run tools or save conversations.
         </Text>
         {limits.map((field) => (
           <NumberInput
@@ -239,9 +247,15 @@ function PolicyEditor({
           label="Build semantic search automatically"
           checked={draft.automatic_embedding ?? false}
           disabled={!draft.enabled || !draft.purposes.includes("embedding")}
-          onChange={(e) => patch({ automatic_embedding: e.currentTarget.checked })}
+          onChange={(e) =>
+            patch({ automatic_embedding: e.currentTarget.checked })
+          }
         />
-        <Text size="sm">Index existing and newly eligible content using the approved embedding model and content classes. Processing runs in the background without per-record review.</Text>
+        <Text size="sm">
+          Index existing and newly eligible content using the approved embedding
+          model and content classes. Processing runs in the background without
+          per-record review.
+        </Text>
         <Switch
           label="Maintain memory autonomously"
           checked={draft.autonomous_memory}
@@ -249,10 +263,20 @@ function PolicyEditor({
             const autonomous_memory = e.currentTarget.checked;
             patch({
               autonomous_memory,
-              ...(autonomous_memory ? {
-                purposes: [...new Set([...draft.purposes, "extraction", "synthesis"])],
-                content_classes: [...new Set([...draft.content_classes, "claim", "query"])],
-              } : {}),
+              ...(autonomous_memory
+                ? {
+                    purposes: [
+                      ...new Set([
+                        ...draft.purposes,
+                        "extraction",
+                        "synthesis",
+                      ]),
+                    ],
+                    content_classes: [
+                      ...new Set([...draft.content_classes, "claim", "query"]),
+                    ],
+                  }
+                : {}),
             });
           }}
         />
@@ -264,7 +288,11 @@ function PolicyEditor({
         <Switch
           label="Learn from newly processed sources automatically"
           checked={draft.automatic_learning}
-          disabled={draft.autonomous_memory || !draft.enabled || !draft.purposes.includes("extraction")}
+          disabled={
+            draft.autonomous_memory ||
+            !draft.enabled ||
+            !draft.purposes.includes("extraction")
+          }
           onChange={(e) =>
             patch({ automatic_learning: e.currentTarget.checked })
           }
@@ -289,10 +317,9 @@ function PolicyEditor({
         {draft.acceptance && (
           <>
             <Text size="sm">
-              Only exact declarations such as Amber.port = 8080 can qualify.
-              In explicit mode, other interpretations remain proposals.
-              Acceptance records this policy and does not create a human
-              reviewer.
+              Only exact declarations such as Amber.port = 8080 can qualify. In
+              explicit mode, other interpretations remain proposals. Acceptance
+              records this policy and does not create a human reviewer.
             </Text>
             <TextInput
               label="Acceptance rule name"
@@ -395,7 +422,9 @@ function PolicyHistory({
             </Text>
             <Text size="xs">
               Acceptance:{" "}
-              {p.policy.autonomous_memory ? "Autonomous evidence policy" : (p.policy.acceptance?.name ?? "Explicit proposals")}
+              {p.policy.autonomous_memory
+                ? "Autonomous evidence policy"
+                : (p.policy.acceptance?.name ?? "Explicit proposals")}
             </Text>
           </Card>
         ))}
@@ -644,74 +673,76 @@ function LearningRows({
           No learning runs. Open retained source evidence to start one.
         </Text>
       )}
-      {query.data?.items.map((run) => (
-        <Card key={run.id} withBorder>
-          <Stack gap="xs">
-            <Group justify="space-between">
-              <Text fw={600}>
-                {run.automatic ? "Automatic learning" : "Source learning"}
-              </Text>
-              <Badge
-                color={
-                  run.state === "succeeded"
-                    ? "teal"
-                    : run.state === "failed"
-                      ? "red"
-                      : "gray"
-                }
-              >
-                {label(run.state)}
-              </Badge>
-            </Group>
-            <Text size="xs" c="dimmed">
-              {time(run.created_at)}
-            </Text>
-            {run.error_code && (
-              <Text size="sm" c="red">
-                {label(run.error_code)}.{" "}
-                {run.state === "removed"
-                  ? "The input cannot be restored by retrying."
-                  : "Inspect the policy and source before starting another attempt."}
-              </Text>
-            )}
-            {run.state === "succeeded" && (
-              <>
-                <Text size="sm">
-                  {run.accepted} accepted by policy · {run.proposed} proposed ·{" "}
-                  {run.blocked} blocked · {run.conflicting} conflicting ·{" "}
-                  {run.reused} existing claims reused · {run.revised ?? 0} revised · {run.retired ?? 0} retired
+      {!query.error &&
+        query.data?.items.map((run) => (
+          <Card key={run.id} withBorder>
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text fw={600}>
+                  {run.automatic ? "Automatic learning" : "Source learning"}
                 </Text>
-                {run.claim_ids.length === 0 && (
-                  <Text size="sm">The model found no supported claims.</Text>
-                )}
-              </>
-            )}
-            <Group>
-              {run.claim_ids.map((id, index) => (
-                <Button
-                  key={id}
-                  variant="subtle"
-                  size="compact-sm"
-                  onClick={() => onInspect(id)}
+                <Badge
+                  color={
+                    run.state === "succeeded"
+                      ? "teal"
+                      : run.state === "failed"
+                        ? "red"
+                        : "gray"
+                  }
                 >
-                  Inspect learned claim {index + 1}
-                </Button>
-              ))}
-            </Group>
-            {["failed", "cancelled"].includes(run.state) &&
-              !brain.archived &&
-              ["admin", "writer"].includes(brain.role) && (
-                <Button
-                  variant="light"
-                  loading={retry.isPending && retry.variables?.id === run.id}
-                  onClick={() => retry.mutate(run)}
-                >
-                  Start new learning attempt
-                </Button>
+                  {label(run.state)}
+                </Badge>
+              </Group>
+              <Text size="xs" c="dimmed">
+                {time(run.created_at)}
+              </Text>
+              {run.error_code && (
+                <Text size="sm" c="red">
+                  {label(run.error_code)}.{" "}
+                  {run.state === "removed"
+                    ? "The input cannot be restored by retrying."
+                    : "Inspect the policy and source before starting another attempt."}
+                </Text>
               )}
-          </Stack>
-        </Card>
-      ))}
+              {run.state === "succeeded" && (
+                <>
+                  <Text size="sm">
+                    {run.accepted} accepted by policy · {run.proposed} proposed
+                    · {run.blocked} blocked · {run.conflicting} conflicting ·{" "}
+                    {run.reused} existing claims reused · {run.revised ?? 0}{" "}
+                    revised · {run.retired ?? 0} retired
+                  </Text>
+                  {run.claim_ids.length === 0 && (
+                    <Text size="sm">The model found no supported claims.</Text>
+                  )}
+                </>
+              )}
+              <Group>
+                {run.claim_ids.map((id, index) => (
+                  <Button
+                    key={id}
+                    variant="subtle"
+                    size="compact-sm"
+                    onClick={() => onInspect(id)}
+                  >
+                    Inspect learned claim {index + 1}
+                  </Button>
+                ))}
+              </Group>
+              {["failed", "cancelled"].includes(run.state) &&
+                !brain.archived &&
+                ["admin", "writer"].includes(brain.role) && (
+                  <Button
+                    variant="light"
+                    loading={retry.isPending && retry.variables?.id === run.id}
+                    onClick={() => retry.mutate(run)}
+                  >
+                    Start new learning attempt
+                  </Button>
+                )}
+            </Stack>
+          </Card>
+        ))}
       <Pages
         offset={offset}
         total={query.data?.total ?? 0}
@@ -720,7 +751,13 @@ function LearningRows({
     </Stack>
   );
 }
-export function ModelsPanel({ brain }: { brain: Brain }) {
+export function ModelsPanel({
+  brain,
+  section = "settings",
+}: {
+  brain: Brain;
+  section?: "settings" | "activity";
+}) {
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -728,6 +765,7 @@ export function ModelsPanel({ brain }: { brain: Brain }) {
   const cache = useQueryClient();
   const settings = useQuery({
     queryKey: ["models-policy", brain.id],
+    enabled: section === "settings",
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/models/policy", {
@@ -738,6 +776,7 @@ export function ModelsPanel({ brain }: { brain: Brain }) {
   });
   const usage = useQuery({
     queryKey: ["models-usage", brain.id, offset],
+    enabled: section === "activity",
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/models/usage", {
@@ -748,6 +787,7 @@ export function ModelsPanel({ brain }: { brain: Brain }) {
   });
   const catalogue = useQuery({
     queryKey: ["workspace", brain.id],
+    enabled: !!selected,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/workspace", {
@@ -766,159 +806,181 @@ export function ModelsPanel({ brain }: { brain: Brain }) {
     onSettled: () =>
       cache.invalidateQueries({ queryKey: ["models-usage", brain.id] }),
   });
-  const policy = settings.data?.current.policy;
-  const installed = settings.data?.installed;
+  const policy = settings.error ? undefined : settings.data?.current.policy;
+  const installed = settings.error ? undefined : settings.data?.installed;
   return (
-    <Card withBorder padding="lg" id="models" mt="lg">
+    <section className="feature-setting" id="models">
       <Stack>
-        <Group justify="space-between">
-          <Title order={2}>Model learning</Title>
-          <Group>
-            <Button variant="subtle" onClick={() => setHistory(true)}>
-              Policy history
-            </Button>
-            {brain.role === "admin" && (
-              <Button
-                variant="default"
-                disabled={!settings.data}
-                onClick={() => setEditing(true)}
-              >
-                Edit model policy
-              </Button>
-            )}
-          </Group>
-        </Group>
-        <Failure error={settings.error ?? usage.error ?? check.error} />
-        {settings.isPending && <Loader />}
-        {installed && (
+        {section === "settings" && (
           <>
-            <Text>
-              {installed.text_model} · {installed.embedding_model} ·{" "}
-              {installed.embedding_dimensions.toLocaleString()} dimensions
-            </Text>
-            <Text size="sm" c="dimmed">
-              {installed.credentials_present
-                ? "Provider credential present."
-                : "Provider credential missing."}{" "}
-              Connection results below are based on actual calls.
-            </Text>
-          </>
-        )}
-        {policy && (
-          <>
-            <Badge w="fit-content" color={policy.enabled ? "teal" : "gray"}>
-              {policy.enabled
-                ? "Transmission enabled"
-                : "Transmission disabled"}
-            </Badge>
-            <Text size="sm">
-              Allowed purposes:{" "}
-              {policy.purposes.map(label).join(", ") || "none"}. Allowed
-              content: {policy.content_classes.map(label).join(", ") || "none"}.
-            </Text>
-            <Text size="sm">
-              {policy.autonomous_memory
-                ? "Autonomous memory is configured: source catch-up, evidence-based revisions and handover refresh. Human review is optional."
-                : policy.automatic_learning ? "Automatic source learning is enabled." : "Learning starts when requested."}{" "}
-              {!policy.autonomous_memory && <>Acceptance rule: {policy.acceptance?.name ?? "explicit proposals"}.</>}
-            </Text>
-          </>
-        )}
-        {brain.role === "admin" && !brain.archived && (
-          <Group>
-            <Button
-              variant="light"
-              loading={check.isPending}
-              disabled={!policy?.enabled}
-              onClick={() => check.mutate(crypto.randomUUID())}
-            >
-              Check selected models
-            </Button>
-            {check.isError && check.variables && (
-              <Button
-                variant="subtle"
-                disabled={check.isPending}
-                onClick={() => check.mutate(check.variables!)}
-              >
-                Repeat last connection check
-              </Button>
-            )}
-          </Group>
-        )}
-        {check.data && (
-          <Alert color="teal">
-            Both selected models responded successfully. Embeddings have{" "}
-            {check.data.requests
-              .find((r) => r.purpose === "embedding")
-              ?.dimensions?.toLocaleString()}{" "}
-            dimensions. Only fixed synthetic text was sent.
-          </Alert>
-        )}
-        {usage.data && (
-          <>
-            <Text size="sm">
-              {usage.data.charged_tokens.toLocaleString()} /{" "}
-              {usage.data.daily_limit.toLocaleString()} tokens accounted for{" "}
-              {usage.data.day} UTC ·{" "}
-              {usage.data.remaining_tokens.toLocaleString()} remaining ·{" "}
-              {usage.data.in_flight} calls in flight.
-            </Text>
-            <Text size="xs" c="dimmed">
-              Uncertain calls retain their reserved allowance. Starting a new
-              attempt can incur another provider charge.
-            </Text>
-          </>
-        )}
-        <SemanticPanel brain={brain} />
-        <Divider label="Learning results" />
-        <LearningRows brain={brain} onInspect={setSelected} />
-        <Divider label="Model request history" />
-        {usage.data?.total === 0 && (
-          <Text size="sm">No model calls have been admitted.</Text>
-        )}
-        {usage.data?.requests.map((request) => (
-          <Card key={request.id} withBorder>
             <Group justify="space-between">
-              <Text size="sm" fw={600}>
-                {label(request.purpose)} ·{" "}
-                {request.detail_expired
-                  ? "Request detail expired"
-                  : (request.returned_model ?? request.model)}
-              </Text>
-              <Badge
-                color={
-                  request.suppressed
-                    ? "yellow"
-                    : request.state === "succeeded"
-                      ? "teal"
-                      : "gray"
-                }
-              >
-                {request.suppressed ? "Output discarded" : label(request.state)}
-              </Badge>
+              <Title order={3}>AI &amp; automation</Title>
+              <Group>
+                <Button variant="subtle" onClick={() => setHistory(true)}>
+                  Policy history
+                </Button>
+                {brain.role === "admin" && (
+                  <Button
+                    variant="default"
+                    disabled={!settings.data}
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit model policy
+                  </Button>
+                )}
+              </Group>
             </Group>
-            <Text size="xs" c="dimmed">
-              {time(request.created_at)} ·{" "}
-              {request.charged_tokens.toLocaleString()} tokens{" "}
-              {request.detail_expired
-                ? "accounted; detailed history expired"
-                : request.total_tokens === null
-                  ? "reserved"
-                  : "used"}
-            </Text>
-            {request.error_code && (
-              <Text size="sm" c="red">
-                {label(request.error_code)}
-              </Text>
+            <Failure error={settings.error ?? usage.error ?? check.error} />
+            {settings.isPending && <Loader />}
+            {installed && (
+              <>
+                <Text>
+                  {installed.text_model} · {installed.embedding_model} ·{" "}
+                  {installed.embedding_dimensions.toLocaleString()} dimensions
+                </Text>
+                <Text size="sm" c="dimmed">
+                  {installed.credentials_present
+                    ? "Provider credential present."
+                    : "Provider credential missing."}{" "}
+                  Connection results below are based on actual calls.
+                </Text>
+              </>
             )}
-          </Card>
-        ))}
-        <Pages
-          offset={offset}
-          total={usage.data?.total ?? 0}
-          change={setOffset}
-        />
-        {editing && settings.data && (
+            {policy && (
+              <>
+                <Badge w="fit-content" color={policy.enabled ? "teal" : "gray"}>
+                  {policy.enabled
+                    ? "Transmission enabled"
+                    : "Transmission disabled"}
+                </Badge>
+                <Text size="sm">
+                  Allowed purposes:{" "}
+                  {policy.purposes.map(label).join(", ") || "none"}. Allowed
+                  content:{" "}
+                  {policy.content_classes.map(label).join(", ") || "none"}.
+                </Text>
+                <Text size="sm">
+                  {policy.autonomous_memory
+                    ? "Autonomous memory is configured: source catch-up, evidence-based revisions and handover refresh. Human review is optional."
+                    : policy.automatic_learning
+                      ? "Automatic source learning is enabled."
+                      : "Learning starts when requested."}{" "}
+                  {!policy.autonomous_memory && (
+                    <>
+                      Acceptance rule:{" "}
+                      {policy.acceptance?.name ?? "explicit proposals"}.
+                    </>
+                  )}
+                </Text>
+              </>
+            )}
+            {brain.role === "admin" && !brain.archived && (
+              <Group>
+                <Button
+                  variant="light"
+                  loading={check.isPending}
+                  disabled={!policy?.enabled}
+                  onClick={() => check.mutate(crypto.randomUUID())}
+                >
+                  Check selected models
+                </Button>
+                {check.isError && check.variables && (
+                  <Button
+                    variant="subtle"
+                    disabled={check.isPending}
+                    onClick={() => check.mutate(check.variables!)}
+                  >
+                    Repeat last connection check
+                  </Button>
+                )}
+              </Group>
+            )}
+            {check.data && (
+              <Alert color="teal">
+                Both selected models responded successfully. Embeddings have{" "}
+                {check.data.requests
+                  .find((r) => r.purpose === "embedding")
+                  ?.dimensions?.toLocaleString()}{" "}
+                dimensions. Only fixed synthetic text was sent.
+              </Alert>
+            )}
+            <SemanticPanel brain={brain} />
+          </>
+        )}
+        {section === "activity" && (
+          <>
+            <Title order={3}>Model usage and learning</Title>
+            <Failure error={usage.error} />
+            {usage.isPending && <Loader size="sm" />}
+            {!usage.error && usage.data && (
+              <>
+                <Text size="sm">
+                  {usage.data.charged_tokens.toLocaleString()} /{" "}
+                  {usage.data.daily_limit.toLocaleString()} tokens accounted for{" "}
+                  {usage.data.day} UTC ·{" "}
+                  {usage.data.remaining_tokens.toLocaleString()} remaining ·{" "}
+                  {usage.data.in_flight} calls in flight.
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Uncertain calls retain their reserved allowance. Starting a
+                  new attempt can incur another provider charge.
+                </Text>
+              </>
+            )}
+            <Divider label="Learning results" />
+            <LearningRows brain={brain} onInspect={setSelected} />
+            <Divider label="Model request history" />
+            {usage.data?.total === 0 && (
+              <Text size="sm">No model calls have been admitted.</Text>
+            )}
+            {!usage.error &&
+              usage.data?.requests.map((request) => (
+                <Card key={request.id} withBorder>
+                  <Group justify="space-between">
+                    <Text size="sm" fw={600}>
+                      {label(request.purpose)} ·{" "}
+                      {request.detail_expired
+                        ? "Request detail expired"
+                        : (request.returned_model ?? request.model)}
+                    </Text>
+                    <Badge
+                      color={
+                        request.suppressed
+                          ? "yellow"
+                          : request.state === "succeeded"
+                            ? "teal"
+                            : "gray"
+                      }
+                    >
+                      {request.suppressed
+                        ? "Output discarded"
+                        : label(request.state)}
+                    </Badge>
+                  </Group>
+                  <Text size="xs" c="dimmed">
+                    {time(request.created_at)} ·{" "}
+                    {request.charged_tokens.toLocaleString()} tokens{" "}
+                    {request.detail_expired
+                      ? "accounted; detailed history expired"
+                      : request.total_tokens === null
+                        ? "reserved"
+                        : "used"}
+                  </Text>
+                  {request.error_code && (
+                    <Text size="sm" c="red">
+                      {label(request.error_code)}
+                    </Text>
+                  )}
+                </Card>
+              ))}
+            <Pages
+              offset={offset}
+              total={usage.data?.total ?? 0}
+              change={setOffset}
+            />
+          </>
+        )}
+        {editing && settings.data && !settings.error && (
           <PolicyEditor
             brain={brain.id}
             settings={settings.data}
@@ -942,6 +1004,6 @@ export function ModelsPanel({ brain }: { brain: Brain }) {
           />
         )}
       </Stack>
-    </Card>
+    </section>
   );
 }

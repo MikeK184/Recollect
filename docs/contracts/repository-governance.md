@@ -25,6 +25,13 @@ Status: accepted
 - Project Codex configuration contains Context7 and six agent registrations.
   Role files define names, descriptions, and instructions. Personal execution
   preferences remain inherited. Delegation requires explicit user request.
+- OpenCode v2 has equivalent repository-local configuration in `opencode.json`
+  and six Markdown roles in `.opencode/agents/`. Preserve role descriptions and
+  instructions from `.codex/agents/`: `default` is the primary agent and the
+  five specialist roles are subagents invoked only at the user's request.
+  Both hosts use the same root `AGENTS.md`, `.agents/skills/` and CodeGraph CLI.
+  The only configured development MCP remains Context7. Keep credentials and
+  personal model, provider, permission and UI settings out of project files.
 - Repo-local `recollect-doc-router` and `recollect-doc-maintainer` skills live
   in `.agents/skills/`. The router identifies applicable authority, ownership,
   current evidence and decision gaps. The maintainer audits or updates affected
@@ -45,6 +52,9 @@ plus invalid ownership, IDs, statuses, indexes, source authority, and config.
 Verify local Codex configuration discovery and a read-only Context7 request
 separately; network verification is not part of the offline validation command.
 Compare Cognee's Git state and tracked-file content before and after setup.
+For OpenCode setup, verify role parity, project configuration/agent/skill
+discovery and a read-only Context7 call through the installed host separately.
+Neither configuration discovery nor tool listing alone proves a successful call.
 For skill changes, validate the entrypoints and their local references, check
 Codex discovery separately, and exercise routing/maintenance against actual
 governing documents. Structural validation does not prove model behavior.

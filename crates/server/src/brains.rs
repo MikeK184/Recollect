@@ -76,18 +76,21 @@ pub async fn create(
     headers: HeaderMap,
     Json(input): Json<CreateBrain>,
 ) -> Result<Json<Brain>> {
+    if input.managed_memory {
+        auth.require_browser()?;
+    }
     let name = name(input.name)?;
     let description = description(input.description)?;
     let key = commands::key(&headers)?;
     let id = Uuid::new_v4();
     let mut tx = auth.tx(&state.pool).await?;
-    if let Some(response) = commands::reserve::<Brain>(
-        &mut tx,
-        key.as_deref(),
-        "brain.create",
-        serde_json::json!({"name":name,"description":description}),
-    )
-    .await?
+    // Keep receipts from clients predating the optional preset replayable.
+    let mut identity = serde_json::json!({"name":name,"description":description});
+    if input.managed_memory {
+        identity["managed_memory"] = true.into();
+    }
+    if let Some(response) =
+        commands::reserve::<Brain>(&mut tx, key.as_deref(), "brain.create", identity).await?
     {
         tx.commit().await?;
         return Ok(Json(response));
@@ -101,6 +104,9 @@ pub async fn create(
         .await?;
     let audit = db::audit(&mut tx, auth.user.id, id, "brain.create", id, "created").await?;
     jobs::enqueue(&mut tx, auth.user.id, id, audit).await?;
+    if input.managed_memory {
+        crate::automation::apply(&state, &mut tx, id, auth.user.id).await?;
+    }
     let row = sqlx::query_as::<_, BrainRow>(
         "SELECT *,recollect_role(id) AS role FROM brains WHERE id=$1",
     )

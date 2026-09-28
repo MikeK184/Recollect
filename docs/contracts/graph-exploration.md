@@ -70,6 +70,14 @@ unavailable, capacity or no-access state.
 
 ## Acceptance
 
+Desktop entry amendment, 2026-09-26: the accepted
+[desktop contract](desktop-experience.md) permits one bounded knowledge overview
+read on Graph route entry when there is no explicit selection. This uses current
+Brain-only investigation selection and existing bounds/qualification; it does not
+run a model, rebuild, analysis or arbitrary traversal. Explicit history/repository/
+manifest inputs remain exact and are never guessed or replaced. The canvas-first
+toolbar/inspector/list layout preserves all interaction and invalidation above.
+
 Exercise actual PostgreSQL and Neo4j with cycles, parallel edges, self loops,
 isolates, directional and hop-bounded reachability, an excluded shorter hub
 and an eligible control. Verify overview and reachability display refusal,

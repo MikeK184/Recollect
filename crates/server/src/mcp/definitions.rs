@@ -1,8 +1,102 @@
 use super::*;
+use serde_json::json;
 use std::collections::HashSet;
 use tokio::io::AsyncReadExt;
 
 const CATALOGUE_LOCK: i64 = 73241022;
+
+#[utoipa::path(post,path="/api/mcp/definitions/inspect-http",operation_id="inspectHttpMcpDefinition",request_body=McpHttpInspection,responses((status=200,body=McpDefinitionManifest)))]
+pub async fn inspect_http(
+    State(state): State<AppState>,
+    auth: Auth,
+    Json(input): Json<McpHttpInspection>,
+) -> Result<Json<McpDefinitionManifest>> {
+    auth.require_browser()?;
+    if !auth.user.installation_owner {
+        return Err(Error::forbidden());
+    }
+    let _permit = state
+        .mcp_inspections
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| capacity())?;
+    text(input.name.trim(), 120, false)?;
+    let tools = recollect_mcp_runtime::discovery::inspect_http(input.url.trim()).await
+        .map_err(|e| Error(StatusCode::BAD_GATEWAY, e.0,
+            "Could not inspect this anonymous MCP server. Check its URL and authentication requirements."))?;
+    let manifest = McpDefinitionManifest {
+        key: format!("http-{}", Uuid::new_v4()),
+        name: input.name.trim().into(),
+        description: String::new(),
+        transport: "streamable_http".into(),
+        command: None,
+        arguments: vec![],
+        placements: vec!["central".into()],
+        credential_aliases: vec![],
+        configuration_schema: json!({"type":"object", "properties":{}, "additionalProperties":false}),
+        tools,
+        receipt_policies: vec![],
+    };
+    validate_manifest(&manifest)?;
+    crate::publication::safe_payload(
+        &state,
+        &serde_json::to_value(&manifest).map_err(|_| Error::invalid("Invalid manifest."))?,
+    )?;
+    Ok(Json(manifest))
+}
+
+#[utoipa::path(post,path="/api/mcp/definitions",operation_id="approveMcpDefinition",request_body=McpDefinitionManifest,responses((status=200,body=McpDefinitionSummary)))]
+pub async fn approve(
+    State(state): State<AppState>,
+    auth: Auth,
+    Json(manifest): Json<McpDefinitionManifest>,
+) -> Result<Json<McpDefinitionSummary>> {
+    auth.require_browser()?;
+    if !auth.user.installation_owner {
+        return Err(Error::forbidden());
+    }
+    validate_manifest(&manifest)?;
+    let value = serde_json::to_value(&manifest)
+        .map_err(|_| Error::invalid("Invalid connector manifest."))?;
+    crate::publication::safe_payload(&state, &value)?;
+    let mut tx = auth.tx(&state.pool).await?;
+    sqlx::query("SELECT pg_advisory_xact_lock($1)")
+        .bind(CATALOGUE_LOCK)
+        .execute(&mut *tx)
+        .await?;
+    let existing: Option<(Value, bool)> =
+        sqlx::query_as("SELECT manifest,enabled FROM mcp_definitions WHERE key=$1")
+            .bind(&manifest.key)
+            .fetch_optional(&mut *tx)
+            .await?;
+    if let Some((previous, enabled)) = existing {
+        if previous != value || !enabled {
+            return Err(conflict(
+                "This connector key already exists. Use a new key, or have the operator update it through the CLI.",
+            ));
+        }
+    } else {
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM mcp_definitions")
+            .fetch_one(&mut *tx)
+            .await?;
+        if count >= 100 {
+            return Err(capacity());
+        }
+        let id = Uuid::new_v4();
+        sqlx::query("INSERT INTO mcp_definitions(key,id,manifest,approved_by) VALUES($1,$2,$3,$4)")
+            .bind(&manifest.key)
+            .bind(id)
+            .bind(&value)
+            .bind(auth.user.id)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("INSERT INTO mutation_audit(id,actor_id,action,target_id,disposition) VALUES($1,$2,'mcp.definition',$3,'approved')")
+            .bind(Uuid::new_v4()).bind(auth.user.id).bind(id).execute(&mut *tx).await?;
+    }
+    let result = load(&mut tx, &manifest.key).await?.summary();
+    tx.commit().await?;
+    Ok(Json(result))
+}
 
 #[derive(sqlx::FromRow)]
 pub(super) struct DefinitionRow {

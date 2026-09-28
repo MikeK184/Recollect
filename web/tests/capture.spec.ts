@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 
 test("capture policy, companion delivery states and retained source erasure", async ({
@@ -78,17 +79,27 @@ test("capture policy, companion delivery states and retained source erasure", as
     });
     return { brain: brain.id, binding: binding.id, token: poll.token };
   });
-  await page.goto(`/brains/${fixture.brain}`);
+  await page.goto(`/brains/${fixture.brain}/settings?tab=capture`);
   const panel = page.getByRole("region", {
     name: "Session capture",
     exact: true,
   });
   await expect(
-    panel.getByText("Capture disabled", { exact: true }),
+    panel.getByText(/Enable autonomous memory once under AI & automation/),
   ).toBeVisible();
+  await page.goto(`/brains/${fixture.brain}/agents?tab=sessions`);
+  await panel
+    .getByRole("button", { name: "Capture coverage", exact: true })
+    .click();
+  const coverage = page.getByRole("dialog", {
+    name: "Capture coverage",
+    exact: true,
+  });
   await expect(
-    panel.getByText("Configured only", { exact: true }),
+    coverage.getByText("Configured only", { exact: true }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.goto(`/brains/${fixture.brain}/settings?tab=capture`);
   await panel
     .getByRole("button", { name: "Connect capture", exact: true })
     .click();
@@ -100,6 +111,7 @@ test("capture policy, companion delivery states and retained source erasure", as
     dialog.getByText(/cargo run -p recollect-agent -- capture setup/),
   ).toContainText(fixture.brain);
   await page.keyboard.press("Escape");
+  await openDetails(page, "Advanced capture controls");
   await panel
     .getByRole("button", { name: "Capture policy", exact: true })
     .click();
@@ -164,13 +176,18 @@ test("capture policy, companion delivery states and retained source erasure", as
       if (!r.ok) throw new Error(`Capture fixture delivery ${r.status}`);
     }
   }, fixture);
+  await page.goto(`/brains/${fixture.brain}/agents?tab=sessions`);
+  await panel
+    .getByRole("button", { name: "Capture coverage", exact: true })
+    .click();
   await expect(
-    panel.getByText("Partial delivery", { exact: true }),
+    coverage.getByText("Partial delivery", { exact: true }),
   ).toBeVisible();
-  await expect(panel.getByText(/1 queued · 0 denied/)).toBeVisible();
+  await expect(coverage.getByText(/1 queued · 0 denied/)).toBeVisible();
   await expect(
-    panel.getByText(/2 gaps reported across this device/),
+    coverage.getByText(/2 gaps reported across this device/),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
   await panel
     .getByRole("button", { name: "View captured source", exact: true })
     .click();
@@ -184,13 +201,13 @@ test("capture policy, companion delivery states and retained source erasure", as
   await expect(dialog.getByTestId("capture-source-content")).not.toContainText(
     "synthetic-browser-credential",
   );
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: "../.cache/capture-source-mobile.png" });
+  await page.screenshot({ path: "../.cache/capture-source-1280.png" });
   await dialog
     .getByRole("button", { name: "Erase source", exact: true })
     .click();
@@ -227,8 +244,11 @@ test("capture policy, companion delivery states and retained source erasure", as
     });
     if (!r.ok) throw new Error(`Capture report recovery ${r.status}`);
   }, fixture);
+  await panel
+    .getByRole("button", { name: "Capture coverage", exact: true })
+    .click();
   await expect(
-    panel.getByText("Connected · queue empty", { exact: true }),
+    coverage.getByText("Connected · queue empty", { exact: true }),
   ).toBeVisible();
   // A stale server timestamp is displayed as offline/stopped, not connected.
   await page.route(
@@ -241,7 +261,7 @@ test("capture policy, companion delivery states and retained source erasure", as
     },
   );
   await expect(
-    panel.getByText("Offline or stopped", { exact: true }),
+    coverage.getByText("Offline or stopped", { exact: true }),
   ).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 960 });
   await panel.scrollIntoViewIfNeeded();

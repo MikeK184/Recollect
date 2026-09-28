@@ -1,10 +1,24 @@
-import { useEffect, useState } from "react";
+import { iconSize } from "./design/tokens";
+import { useEffect, useRef, useState } from "react";
+import { useBrainSearch, type BrainSearch } from "./app/useBrainSearch";
+import {
+  Network,
+  SlidersHorizontal,
+  Route,
+  ChartNoAxesCombined,
+  Info,
+  List,
+} from "lucide-react";
+import { EmptyState } from "./components/AsyncState";
+import "./features/feature-views.css";
 import {
   Accordion,
   Alert,
   Badge,
   Button,
   Card,
+  Drawer,
+  SegmentedControl,
   Group,
   Loader,
   MultiSelect,
@@ -28,6 +42,11 @@ type Scope = components["schemas"]["GraphSelection"];
 type Node = components["schemas"]["GraphNode"];
 type Evidence = components["schemas"]["ClaimEvidenceChoice"];
 const label = (s: string) => s.replaceAll("_", " ");
+const evidenceModes = [
+  { value: "investigation", label: "Investigation with qualifications" },
+  { value: "strict_accepted", label: "Accepted claims only" },
+  { value: "strict_operational", label: "Verified operational claims only" },
+];
 function localTime(value: string | null | undefined) {
   if (!value) return "";
   const time = new Date(value);
@@ -45,6 +64,35 @@ const initial = (): Scope => ({
   mode: "investigation",
   relations: [],
 });
+function scopeFromRoute(route: BrainSearch): Scope {
+  return {
+    ...initial(),
+    kind: ["knowledge", "repository", "combined"].includes(route.kind ?? "")
+      ? route.kind!
+      : "knowledge",
+    snapshot_id: route.snapshot ?? null,
+    manifest_revision_id: route.manifest ?? null,
+    fact_at: route.fact ?? null,
+    collection_id: route.collection ?? null,
+    mode: route.mode ?? "investigation",
+    selection: {
+      repository_ids:
+        route.repositories ?? (route.repository ? [route.repository] : []),
+      area_ids: route.areas ?? (route.area ? [route.area] : []),
+      environment_id: route.environment ?? null,
+    },
+    relations: route.relations ?? [],
+  };
+}
+function missingExactSelection(scope: Scope) {
+  return (
+    (scope.kind === "repository" &&
+      (!scope.selection.repository_ids?.length ||
+        (!scope.snapshot_id && !scope.manifest_revision_id))) ||
+    (scope.kind === "combined" &&
+      (!scope.selection.environment_id || !scope.manifest_revision_id))
+  );
+}
 const meanings: Record<string, string> = {
   supported_by:
     "The claim cites this evidence; citation does not establish acceptance.",
@@ -62,7 +110,14 @@ function Failure({ error }: { error: Error | null }) {
 }
 export function GraphPanel({ brain }: { brain: Brain }) {
   const cache = useQueryClient();
-  const [scope, setScope] = useState(initial);
+  const [route, patchRoute] = useBrainSearch();
+  const [scope, setScope] = useState(() => scopeFromRoute(route));
+  const routeScopeKey = JSON.stringify(scopeFromRoute(route));
+  const scopeKey = JSON.stringify(scope);
+  const [drawer, setDrawer] = useState<
+    "filters" | "path" | "insights" | "status" | "entities" | null
+  >(null);
+  const initialRead = useRef<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [snapshotOffset, setSnapshotOffset] = useState(0);
   const [manifestOffset, setManifestOffset] = useState(0);
@@ -87,6 +142,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   function clear() {
     setSubmitted(null);
     setPathSubmitted(null);
+    setDetail(null);
     void cache.cancelQueries({ queryKey: ["graph-read", brain.id] });
     void cache.cancelQueries({ queryKey: ["graph-path", brain.id] });
     void cache.cancelQueries({ queryKey: ["graph-explore", brain.id] });
@@ -96,6 +152,32 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     setScope(next);
     setStart("");
     setEnd("");
+  }
+  useEffect(() => {
+    if (scopeKey !== routeScopeKey) {
+      clear();
+      setScope(scopeFromRoute(route));
+      initialRead.current = null;
+      setStart("");
+      setEnd("");
+    }
+  }, [routeScopeKey]);
+  function saveScope() {
+    patchRoute({
+      kind: scope.kind,
+      repository: null,
+      area: null,
+      repositories: scope.selection.repository_ids ?? [],
+      areas: scope.selection.area_ids ?? [],
+      environment: scope.selection.environment_id ?? null,
+      snapshot: scope.snapshot_id ?? null,
+      manifest: scope.manifest_revision_id ?? null,
+      collection: scope.collection_id ?? null,
+      fact: scope.fact_at ?? null,
+      mode: scope.mode,
+      relations: scope.relations,
+      center: null,
+    });
   }
   useEffect(
     () =>
@@ -109,6 +191,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         ) {
           setSubmitted(null);
           setPathSubmitted(null);
+          setDetail(null);
           void cache.cancelQueries({ queryKey: ["graph-read", brain.id] });
           void cache.cancelQueries({ queryKey: ["graph-path", brain.id] });
           void cache.cancelQueries({ queryKey: ["graph-explore", brain.id] });
@@ -129,11 +212,13 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   useEffect(() => {
     setSubmitted(null);
     setPathSubmitted(null);
+    setDetail(null);
   }, [status.data?.memory_epoch, status.data?.link_epoch]);
   useEffect(() => {
     if (status.error) {
       setSubmitted(null);
       setPathSubmitted(null);
+      setDetail(null);
     }
   }, [status.error]);
   const catalogue = useQuery({
@@ -221,6 +306,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       ),
   });
   function load(page = 0) {
+    if (missingExactSelection(scope)) return;
+    initialRead.current = scopeKey;
     const next = {
       nonce: crypto.randomUUID(),
       scope: structuredClone(scope),
@@ -228,6 +315,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     };
     setSubmitted(next);
     setPathSubmitted(null);
+    setDetail(null);
     void cache
       .fetchQuery({
         queryKey: ["graph-read", brain.id, next],
@@ -244,6 +332,17 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       })
       .catch(() => {});
   }
+  useEffect(() => {
+    if (
+      initialRead.current !== scopeKey &&
+      scopeKey === routeScopeKey &&
+      status.data &&
+      !status.error &&
+      !missingExactSelection(scope)
+    ) {
+      load();
+    }
+  }, [status.data, status.error, scopeKey, routeScopeKey]);
   function findPath() {
     const next = {
       nonce: crypto.randomUUID(),
@@ -379,6 +478,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                   onClick={() => {
                     setStart(n.key);
                     setPathSubmitted(null);
+                    setDetail(null);
                   }}
                 >
                   Use as start
@@ -389,6 +489,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                   onClick={() => {
                     setEnd(n.key);
                     setPathSubmitted(null);
+                    setDetail(null);
                   }}
                 >
                   Use as end
@@ -401,560 +502,720 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     );
   }
   const availableGroups = groups.data?.groups ?? [];
+  const readable =
+    submitted && read.data && !read.error && !status.error
+      ? read.data
+      : undefined;
+  const needsSelection = missingExactSelection(scope);
   return (
-    <Card
-      component="section"
-      aria-label="Evidence graphs"
-      withBorder
-      mt="lg"
-      p="lg"
-    >
-      <Accordion variant="default">
-        <Accordion.Item value="graphs">
-          <Accordion.Control>
-            <Title order={3}>Evidence graphs</Title>
-            <Text size="sm" c="dimmed">
-              Explore committed structure and recorded evidence relationships.
-            </Text>
-          </Accordion.Control>
-          <Accordion.Panel>
-            <Stack>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+    <section className="feature-view" aria-label="Evidence graphs">
+      <div className="feature-toolbar">
+        <SegmentedControl
+          aria-label="Graph kind"
+          value={scope.kind}
+          data={[
+            { value: "knowledge", label: "Knowledge" },
+            { value: "repository", label: "Repository" },
+            { value: "combined", label: "Combined" },
+          ]}
+          onChange={(kind) => {
+            change({ ...initial(), kind });
+            setDrawer("filters");
+          }}
+        />
+        <Button
+          variant="default"
+          leftSection={<SlidersHorizontal size={iconSize.small} />}
+          onClick={() => setDrawer("filters")}
+        >
+          Filters
+        </Button>
+        <Button
+          variant="subtle"
+          leftSection={<Route size={iconSize.small} />}
+          onClick={() => setDrawer("path")}
+          disabled={!readable}
+        >
+          Find path
+        </Button>
+        <Button
+          variant="subtle"
+          leftSection={<ChartNoAxesCombined size={iconSize.small} />}
+          onClick={() => setDrawer("insights")}
+        >
+          Insights
+        </Button>
+        <Button
+          variant="subtle"
+          leftSection={<Info size={iconSize.small} />}
+          onClick={() => setDrawer("status")}
+        >
+          Graph status
+        </Button>
+      </div>
+      <div className="feature-scope">
+        <Badge variant="light" color="gray">
+          {scope.mode === "investigation"
+            ? "Include uncertainties"
+            : (evidenceModes.find((mode) => mode.value === scope.mode)?.label ??
+              label(scope.mode))}
+        </Badge>
+        <Text size="xs" c="dimmed">
+          {(scope.selection.repository_ids ?? []).length
+            ? `${(scope.selection.repository_ids ?? []).length} selected repositories`
+            : "All repositories in this Brain"}
+        </Text>
+        {scope.selection.environment_id && (
+          <Badge variant="light">
+            {availableGroups.find(
+              (group) => group.id === scope.selection.environment_id,
+            )?.name ?? "Selected environment"}
+          </Badge>
+        )}
+        {scope.snapshot_id && (
+          <Badge variant="outline">
+            Snapshot {scope.snapshot_id.slice(0, 8)}
+          </Badge>
+        )}
+        {scope.manifest_revision_id && (
+          <Badge variant="outline">
+            Manifest {scope.manifest_revision_id.slice(0, 8)}
+          </Badge>
+        )}
+        {scope.fact_at && (
+          <Badge variant="light">
+            Fact time {new Date(scope.fact_at).toLocaleString()}
+          </Badge>
+        )}
+        {!!(scope.selection.area_ids ?? []).length && (
+          <Badge variant="light">
+            {(scope.selection.area_ids ?? []).length} areas
+          </Badge>
+        )}
+        {scope.collection_id && (
+          <Badge variant="light">
+            {availableGroups.find((group) => group.id === scope.collection_id)
+              ?.name ?? "Selected collection"}
+          </Badge>
+        )}
+        {!!scope.relations.length && (
+          <Badge variant="light">{scope.relations.map(label).join(", ")}</Badge>
+        )}
+      </div>
+      <Failure error={status.error ?? read.error} />
+      {read.isFetching && (
+        <Group role="status" my="lg">
+          <Loader size="sm" />
+          <Text>Reading eligible graph evidence…</Text>
+        </Group>
+      )}
+      {!readable && !read.isFetching && (
+        <EmptyState
+          icon={Network}
+          title={
+            needsSelection
+              ? "Choose an exact graph view"
+              : read.error
+                ? "This graph view is unavailable"
+                : "Explore the evidence"
+          }
+          description={
+            needsSelection
+              ? "Choose a repository snapshot or exact environment manifest in Filters. Recollect will keep that revision selection explicit."
+              : "Load a bounded view of eligible evidence. If a graph is too large, narrow its repositories, areas or relationships."
+          }
+          action={
+            <Button
+              onClick={() => (needsSelection ? setDrawer("filters") : load())}
+            >
+              {needsSelection ? "Choose inputs" : "Load graph view"}
+            </Button>
+          }
+        />
+      )}
+      {readable && submitted && (
+        <>
+          <GraphExplorer
+            key={submitted.nonce}
+            brain={brain}
+            view={readable}
+            path={pathSubmitted && !path.error ? (path.data ?? null) : null}
+            inspect={inspect}
+            onExpired={clear}
+            compactControls
+            initialCenter={route.center ?? ""}
+            initialDirection={route.direction ?? "outgoing"}
+            initialHops={route.hops ?? 2}
+            onExplore={(center, direction, hops) =>
+              patchRoute({ center, direction, hops })
+            }
+            expectedMemoryEpoch={status.data?.memory_epoch}
+            onStart={(key) => {
+              setStart(key);
+              setPathSubmitted(null);
+              setDrawer("path");
+            }}
+            onEnd={(key) => {
+              setEnd(key);
+              setPathSubmitted(null);
+              setDrawer("path");
+            }}
+          />
+          <Button
+            mt="md"
+            size="compact-sm"
+            variant="subtle"
+            leftSection={<List size={iconSize.small} />}
+            onClick={() => setDrawer("entities")}
+          >
+            Browse eligible entity pages
+          </Button>
+        </>
+      )}
+      <Drawer
+        className="feature-drawer"
+        opened={drawer === "filters"}
+        onClose={() => setDrawer(null)}
+        position="right"
+        title="Graph filters"
+        size="lg"
+      >
+        <Stack>
+          <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Select
+              label="Graph kind"
+              value={scope.kind}
+              data={[
+                {
+                  value: "knowledge",
+                  label: "Knowledge and supporting evidence",
+                },
+                { value: "repository", label: "Repository structure" },
+                { value: "combined", label: "Combined repositories" },
+              ]}
+              onChange={(kind) =>
+                change({ ...initial(), kind: kind ?? "knowledge" })
+              }
+            />
+            <Select
+              label="Graph evidence mode"
+              value={scope.mode}
+              data={evidenceModes}
+              onChange={(mode) =>
+                change({ ...scope, mode: mode ?? "investigation" })
+              }
+            />
+            <MultiSelect
+              label="Graph repositories"
+              searchable
+              value={scope.selection.repository_ids}
+              maxValues={scope.kind === "repository" ? 1 : 100}
+              data={(catalogue.data?.repositories ?? []).map((r) => ({
+                value: r.id,
+                label: r.canonical_origin,
+              }))}
+              onChange={(ids) => {
+                setSnapshotOffset(0);
+                change({
+                  ...scope,
+                  snapshot_id: null,
+                  selection: { ...scope.selection, repository_ids: ids },
+                });
+              }}
+            />
+            <TextInput
+              label="Graph fact time"
+              description="Optional applicability time in your local timezone."
+              type="datetime-local"
+              value={localTime(scope.fact_at)}
+              onChange={(event) =>
+                change({
+                  ...scope,
+                  fact_at: event.currentTarget.value
+                    ? new Date(event.currentTarget.value).toISOString()
+                    : null,
+                })
+              }
+            />
+            {scope.kind === "repository" && (
+              <Stack gap="xs">
                 <Select
-                  label="Graph kind"
-                  value={scope.kind}
-                  data={[
-                    {
-                      value: "knowledge",
-                      label: "Knowledge and supporting evidence",
-                    },
-                    { value: "repository", label: "Repository structure" },
-                    { value: "combined", label: "Combined repositories" },
-                  ]}
-                  onChange={(kind) =>
-                    change({ ...initial(), kind: kind ?? "knowledge" })
-                  }
-                />
-                <Select
-                  label="Graph evidence mode"
-                  value={scope.mode}
-                  data={[
-                    {
-                      value: "investigation",
-                      label: "Investigation with qualifications",
-                    },
-                    { value: "strict_accepted", label: "Accepted claims only" },
-                    {
-                      value: "strict_operational",
-                      label: "Verified operational claims only",
-                    },
-                  ]}
-                  onChange={(mode) =>
-                    change({ ...scope, mode: mode ?? "investigation" })
-                  }
-                />
-                <MultiSelect
-                  label="Graph repositories"
+                  label="Graph snapshot"
                   searchable
-                  value={scope.selection.repository_ids}
-                  maxValues={scope.kind === "repository" ? 1 : 100}
-                  data={(catalogue.data?.repositories ?? []).map((r) => ({
-                    value: r.id,
-                    label: r.canonical_origin,
-                  }))}
-                  onChange={(ids) => {
-                    setSnapshotOffset(0);
-                    change({
-                      ...scope,
-                      snapshot_id: null,
-                      selection: { ...scope.selection, repository_ids: ids },
-                    });
-                  }}
-                />
-                <TextInput
-                  label="Graph fact time"
-                  description="Optional applicability time in your local timezone."
-                  type="datetime-local"
-                  value={localTime(scope.fact_at)}
-                  onChange={(event) =>
-                    change({
-                      ...scope,
-                      fact_at: event.currentTarget.value
-                        ? new Date(event.currentTarget.value).toISOString()
-                        : null,
-                    })
-                  }
-                />
-                {scope.kind === "repository" && (
-                  <Stack gap="xs">
-                    <Select
-                      label="Graph snapshot"
-                      searchable
-                      clearable
-                      value={scope.snapshot_id}
-                      data={(snapshots.data?.items ?? []).map((s) => ({
-                        value: s.id,
-                        label: `${s.revision.slice(0, 12)} · ${new Date(s.created_at).toLocaleString()} · ${s.processing}`,
-                      }))}
-                      onChange={(id) => change({ ...scope, snapshot_id: id })}
-                    />
-                    {snapshots.data && snapshots.data.total > 20 && (
-                      <Group>
-                        <Button
-                          size="xs"
-                          disabled={!snapshotOffset}
-                          onClick={() => setSnapshotOffset((n) => n - 20)}
-                        >
-                          Previous snapshots
-                        </Button>
-                        <Button
-                          size="xs"
-                          disabled={snapshotOffset + 20 >= snapshots.data.total}
-                          onClick={() => setSnapshotOffset((n) => n + 20)}
-                        >
-                          More snapshots
-                        </Button>
-                      </Group>
-                    )}
-                  </Stack>
-                )}
-                <Select
-                  label="Graph environment"
                   clearable
-                  value={scope.selection.environment_id}
-                  data={availableGroups
-                    .filter((g) => g.kind === "environment")
-                    .map((g) => ({ value: g.id, label: g.name }))}
-                  onChange={(id) => {
-                    setManifestOffset(0);
-                    change({
-                      ...scope,
-                      manifest_revision_id: null,
-                      selection: { ...scope.selection, environment_id: id },
-                    });
-                  }}
+                  value={scope.snapshot_id}
+                  data={(snapshots.data?.items ?? []).map((s) => ({
+                    value: s.id,
+                    label: `${s.revision.slice(0, 12)} · ${new Date(s.created_at).toLocaleString()} · ${s.processing}`,
+                  }))}
+                  onChange={(id) => change({ ...scope, snapshot_id: id })}
                 />
-                {scope.selection.environment_id && (
-                  <Stack gap="xs">
-                    <Select
-                      label="Graph manifest"
-                      clearable
-                      value={scope.manifest_revision_id}
-                      data={(manifests.data?.items ?? []).map((m) => ({
-                        value: m.id,
-                        label: `${m.name} · ${label(m.kind)} · ${m.id.slice(0, 8)}`,
-                      }))}
-                      onChange={(id) =>
-                        change({ ...scope, manifest_revision_id: id })
-                      }
-                    />
-                    {manifests.data && manifests.data.total > 20 && (
-                      <Group>
-                        <Button
-                          size="xs"
-                          disabled={!manifestOffset}
-                          onClick={() => setManifestOffset((n) => n - 20)}
-                        >
-                          Previous manifests
-                        </Button>
-                        <Button
-                          size="xs"
-                          disabled={manifestOffset + 20 >= manifests.data.total}
-                          onClick={() => setManifestOffset((n) => n + 20)}
-                        >
-                          More manifests
-                        </Button>
-                      </Group>
-                    )}
-                  </Stack>
-                )}
-                <MultiSelect
-                  label="Graph areas"
-                  searchable
-                  value={scope.selection.area_ids}
-                  data={availableGroups
-                    .filter((g) => g.kind === "area")
-                    .map((g) => ({ value: g.id, label: g.name }))}
-                  onChange={(ids) =>
-                    change({
-                      ...scope,
-                      selection: { ...scope.selection, area_ids: ids },
-                    })
-                  }
-                />
-                {scope.kind === "knowledge" && (
-                  <Select
-                    label="Graph collection"
-                    clearable
-                    value={scope.collection_id}
-                    data={availableGroups
-                      .filter((g) => g.kind === "collection")
-                      .map((g) => ({ value: g.id, label: g.name }))}
-                    onChange={(id) => change({ ...scope, collection_id: id })}
-                  />
-                )}
-                <MultiSelect
-                  label="Graph relations"
-                  searchable
-                  value={scope.relations}
-                  data={(scope.kind === "knowledge"
-                    ? ["supported_by", "contributed_to"]
-                    : [
-                        "declares",
-                        "imports",
-                        "calls",
-                        "implements",
-                        "depends_on",
-                        "instantiates",
-                        "injects",
-                        "has_method",
-                        "handled_by",
-                        "implemented_by",
-                        "names",
-                        ...(scope.kind === "combined"
-                          ? ["terraform_module"]
-                          : []),
-                      ]
-                  ).map((value) => ({ value, label: label(value) }))}
-                  onChange={(relations) => change({ ...scope, relations })}
-                />
-              </SimpleGrid>
-              <Failure
-                error={
-                  catalogue.error ??
-                  groups.error ??
-                  snapshots.error ??
-                  manifests.error
-                }
-              />
-              <Text size="sm" c="dimmed">
-                A path follows only the selected evidence and relation types.
-                Committed structure and supporting citations do not prove
-                deployed behavior.
-              </Text>
-              <Group>
-                <Button
-                  onClick={() => load()}
-                  loading={read.isFetching}
-                  disabled={
-                    (scope.kind === "repository" &&
-                      !repository &&
-                      !scope.snapshot_id) ||
-                    (scope.kind === "combined" &&
-                      (!scope.manifest_revision_id ||
-                        !scope.selection.environment_id))
-                  }
-                >
-                  Load graph view
-                </Button>
-                {brain.role !== "reader" && (
-                  <Button
-                    variant="default"
-                    loading={rebuild.isPending}
-                    disabled={
-                      brain.archived ||
-                      (scope.kind === "repository" && !scope.snapshot_id) ||
-                      (scope.kind === "combined" && !scope.manifest_revision_id)
-                    }
-                    onClick={() => rebuild.mutate()}
-                  >
-                    Rebuild graph
-                  </Button>
-                )}
-              </Group>
-              <Failure error={read.error ?? rebuild.error} />
-              {rebuild.isSuccess && (
-                <Alert color="teal">
-                  Graph rebuild queued. Progress appears below.
-                </Alert>
-              )}
-              {submitted && read.data && (
-                <Stack>
+                {snapshots.data && snapshots.data.total > 20 && (
                   <Group>
-                    <Badge>{label(read.data.state)}</Badge>
-                    <Text size="sm">
-                      {read.data.total_nodes} eligible entities ·{" "}
-                      {read.data.total_edges} eligible relationships
-                    </Text>
+                    <Button
+                      size="xs"
+                      disabled={!snapshotOffset}
+                      onClick={() => setSnapshotOffset((n) => n - 20)}
+                    >
+                      Previous snapshots
+                    </Button>
+                    <Button
+                      size="xs"
+                      disabled={snapshotOffset + 20 >= snapshots.data.total}
+                      onClick={() => setSnapshotOffset((n) => n + 20)}
+                    >
+                      More snapshots
+                    </Button>
                   </Group>
-                  <Text size="xs" style={{ overflowWrap: "anywhere" }}>
-                    Generation {read.data.generation.id} · input epoch{" "}
-                    {read.data.generation.input_epoch} ·{" "}
-                    {scope.kind === "combined"
-                      ? "origin epoch"
-                      : "memory epoch"}{" "}
-                    {scope.kind === "combined"
-                      ? status.data?.link_epoch
-                      : read.data.memory_epoch}
-                  </Text>
-                  {scope.kind === "combined" && (
-                    <Stack gap="xs">
-                      <Text fw={600}>Exact repository inputs</Text>
-                      {read.data.inputs.map((input) => (
-                        <Text
-                          key={input.id}
-                          size="xs"
-                          style={{ overflowWrap: "anywhere" }}
-                        >
-                          Snapshot {input.snapshot_id} · generation {input.id}
-                        </Text>
-                      ))}
-                      {!!read.data.link_issues_total && (
-                        <Alert
-                          color="yellow"
-                          title="Unresolved repository links"
-                        >
-                          <Text size="sm">
-                            Showing {read.data.link_issues.length} of{" "}
-                            {read.data.link_issues_total} eligible source
-                            records.
+                )}
+              </Stack>
+            )}
+            <Select
+              label="Graph environment"
+              clearable
+              value={scope.selection.environment_id}
+              data={availableGroups
+                .filter((g) => g.kind === "environment")
+                .map((g) => ({ value: g.id, label: g.name }))}
+              onChange={(id) => {
+                setManifestOffset(0);
+                change({
+                  ...scope,
+                  manifest_revision_id: null,
+                  selection: { ...scope.selection, environment_id: id },
+                });
+              }}
+            />
+            {scope.selection.environment_id && (
+              <Stack gap="xs">
+                <Select
+                  label="Graph manifest"
+                  clearable
+                  value={scope.manifest_revision_id}
+                  data={(manifests.data?.items ?? []).map((m) => ({
+                    value: m.id,
+                    label: `${m.name} · ${label(m.kind)} · ${m.id.slice(0, 8)}`,
+                  }))}
+                  onChange={(id) =>
+                    change({ ...scope, manifest_revision_id: id })
+                  }
+                />
+                {manifests.data && manifests.data.total > 20 && (
+                  <Group>
+                    <Button
+                      size="xs"
+                      disabled={!manifestOffset}
+                      onClick={() => setManifestOffset((n) => n - 20)}
+                    >
+                      Previous manifests
+                    </Button>
+                    <Button
+                      size="xs"
+                      disabled={manifestOffset + 20 >= manifests.data.total}
+                      onClick={() => setManifestOffset((n) => n + 20)}
+                    >
+                      More manifests
+                    </Button>
+                  </Group>
+                )}
+              </Stack>
+            )}
+            <MultiSelect
+              label="Graph areas"
+              searchable
+              value={scope.selection.area_ids}
+              data={availableGroups
+                .filter((g) => g.kind === "area")
+                .map((g) => ({ value: g.id, label: g.name }))}
+              onChange={(ids) =>
+                change({
+                  ...scope,
+                  selection: { ...scope.selection, area_ids: ids },
+                })
+              }
+            />
+            {scope.kind === "knowledge" && (
+              <Select
+                label="Graph collection"
+                clearable
+                value={scope.collection_id}
+                data={availableGroups
+                  .filter((g) => g.kind === "collection")
+                  .map((g) => ({ value: g.id, label: g.name }))}
+                onChange={(id) => change({ ...scope, collection_id: id })}
+              />
+            )}
+            <MultiSelect
+              label="Graph relations"
+              searchable
+              value={scope.relations}
+              data={(scope.kind === "knowledge"
+                ? ["supported_by", "contributed_to"]
+                : [
+                    "declares",
+                    "imports",
+                    "calls",
+                    "implements",
+                    "depends_on",
+                    "instantiates",
+                    "injects",
+                    "has_method",
+                    "handled_by",
+                    "implemented_by",
+                    "names",
+                    ...(scope.kind === "combined" ? ["terraform_module"] : []),
+                  ]
+              ).map((value) => ({ value, label: label(value) }))}
+              onChange={(relations) => change({ ...scope, relations })}
+            />
+          </SimpleGrid>
+          <Failure
+            error={
+              catalogue.error ??
+              groups.error ??
+              snapshots.error ??
+              manifests.error
+            }
+          />
+
+          <Text size="sm" c="dimmed">
+            Selected revisions stay exact. A path follows only the selected
+            evidence and relation types; committed structure does not prove
+            deployed behavior.
+          </Text>
+          <Button
+            onClick={() => {
+              saveScope();
+              load();
+              setDrawer(null);
+            }}
+            loading={read.isFetching}
+            disabled={needsSelection}
+          >
+            Apply graph filters
+          </Button>
+        </Stack>
+      </Drawer>
+      <Drawer
+        className="feature-drawer"
+        opened={drawer === "path"}
+        onClose={() => setDrawer(null)}
+        position="right"
+        title="Find an evidence path"
+        size="lg"
+      >
+        {readable ? (
+          <Stack>
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <TextInput
+                label="Path start"
+                value={start}
+                onChange={(e) => {
+                  setStart(e.currentTarget.value);
+                  setPathSubmitted(null);
+                  setDetail(null);
+                }}
+              />
+              <TextInput
+                label="Path end"
+                value={end}
+                onChange={(e) => {
+                  setEnd(e.currentTarget.value);
+                  setPathSubmitted(null);
+                  setDetail(null);
+                }}
+              />
+              <Select
+                label="Path direction"
+                value={direction}
+                data={["outgoing", "incoming", "both"]}
+                onChange={(value) => {
+                  setDirection(value ?? "outgoing");
+                  setPathSubmitted(null);
+                  setDetail(null);
+                }}
+              />
+              <NumberInput
+                label="Maximum path hops"
+                min={1}
+                max={8}
+                value={hops}
+                onChange={(n) => {
+                  setHops(Number(n) || 1);
+                  setPathSubmitted(null);
+                  setDetail(null);
+                }}
+              />
+            </SimpleGrid>
+            <Button
+              onClick={findPath}
+              loading={path.isFetching}
+              disabled={!start || !end}
+            >
+              Find shortest eligible path
+            </Button>
+            <Failure error={path.error} />
+            {pathSubmitted && path.data && !path.error && (
+              <Card withBorder p="md">
+                <Stack>
+                  <Title order={4}>
+                    {path.data.status === "path"
+                      ? `${path.data.edges.length} hops in the eligible graph`
+                      : "No path within the selected hop bound"}
+                  </Title>
+                  {path.data.nodes.map((n, i) => (
+                    <Stack key={`${n.key}-${i}`} gap="xs">
+                      {node(n, false)}
+                      {path.data?.edges[i] && (
+                        <Alert color="blue">
+                          <Text fw={600}>
+                            {label(path.data.edges[i].relation)} ·{" "}
+                            {label(path.data.edges[i].family)}
                           </Text>
-                          {read.data.link_issues.map((issue) => (
-                            <Text
-                              key={issue.source}
-                              size="xs"
-                              style={{ overflowWrap: "anywhere" }}
-                            >
-                              {label(issue.code)} · {issue.source}
+                          <Text size="sm" style={{ overflowWrap: "anywhere" }}>
+                            Recorded direction:{" "}
+                            {
+                              path.data.nodes.find(
+                                (node) => node.key === path.data!.edges[i].from,
+                              )?.evidence.label
+                            }
+                            {" → "}
+                            {
+                              path.data.nodes.find(
+                                (node) => node.key === path.data!.edges[i].to,
+                              )?.evidence.label
+                            }
+                          </Text>
+                          {path.data.edges[i].from !== n.key && (
+                            <Text size="sm">
+                              Followed in reverse for this path.
                             </Text>
-                          ))}
+                          )}
+                          <Text size="sm">
+                            {meanings[path.data.edges[i].relation] ??
+                              `A static ${label(path.data.edges[i].relation)} relationship in the selected direction.`}
+                          </Text>
                         </Alert>
                       )}
                     </Stack>
-                  )}
-                  {read.data.coverage.partial && (
-                    <Alert color="yellow">
-                      {read.data.coverage.reasons.map(label).join(" · ")}
-                    </Alert>
-                  )}
-                  {!read.data.total_nodes && (
-                    <Text>No entities are eligible in this view.</Text>
-                  )}
-                  <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                    <TextInput
-                      label="Path start"
-                      value={start}
-                      onChange={(e) => {
-                        setStart(e.currentTarget.value);
-                        setPathSubmitted(null);
-                      }}
-                    />
-                    <TextInput
-                      label="Path end"
-                      value={end}
-                      onChange={(e) => {
-                        setEnd(e.currentTarget.value);
-                        setPathSubmitted(null);
-                      }}
-                    />
-                    <Select
-                      label="Path direction"
-                      value={direction}
-                      data={["outgoing", "incoming", "both"]}
-                      onChange={(value) => {
-                        setDirection(value ?? "outgoing");
-                        setPathSubmitted(null);
-                      }}
-                    />
-                    <NumberInput
-                      label="Maximum path hops"
-                      min={1}
-                      max={8}
-                      value={hops}
-                      onChange={(n) => {
-                        setHops(Number(n) || 1);
-                        setPathSubmitted(null);
-                      }}
-                    />
-                  </SimpleGrid>
-                  <Button
-                    onClick={findPath}
-                    loading={path.isFetching}
-                    disabled={!start || !end}
-                  >
-                    Find shortest eligible path
-                  </Button>
-                  <Failure error={path.error} />
-                  {pathSubmitted && path.data && (
-                    <Card withBorder p="md">
-                      <Stack>
-                        <Title order={4}>
-                          {path.data.status === "path"
-                            ? `${path.data.edges.length} hops in the eligible graph`
-                            : "No path within the selected hop bound"}
-                        </Title>
-                        {path.data.nodes.map((n, i) => (
-                          <Stack key={`${n.key}-${i}`} gap="xs">
-                            {node(n, false)}
-                            {path.data?.edges[i] && (
-                              <Alert color="blue">
-                                <Text fw={600}>
-                                  {label(path.data.edges[i].relation)} ·{" "}
-                                  {label(path.data.edges[i].family)}
-                                </Text>
-                                <Text
-                                  size="sm"
-                                  style={{ overflowWrap: "anywhere" }}
-                                >
-                                  Recorded direction:{" "}
-                                  {
-                                    path.data.nodes.find(
-                                      (node) =>
-                                        node.key === path.data!.edges[i].from,
-                                    )?.evidence.label
-                                  }
-                                  {" → "}
-                                  {
-                                    path.data.nodes.find(
-                                      (node) =>
-                                        node.key === path.data!.edges[i].to,
-                                    )?.evidence.label
-                                  }
-                                </Text>
-                                {path.data.edges[i].from !== n.key && (
-                                  <Text size="sm">
-                                    Followed in reverse for this path.
-                                  </Text>
-                                )}
-                                <Text size="sm">
-                                  {meanings[path.data.edges[i].relation] ??
-                                    `A static ${label(path.data.edges[i].relation)} relationship in the selected direction.`}
-                                </Text>
-                              </Alert>
-                            )}
-                          </Stack>
-                        ))}
-                      </Stack>
-                    </Card>
-                  )}
-                  <GraphExplorer
-                    key={submitted.nonce}
-                    brain={brain}
-                    view={read.data}
-                    path={pathSubmitted ? (path.data ?? null) : null}
-                    inspect={inspect}
-                    onExpired={clear}
-                    onStart={(key) => {
-                      setStart(key);
-                      setPathSubmitted(null);
-                    }}
-                    onEnd={(key) => {
-                      setEnd(key);
-                      setPathSubmitted(null);
-                    }}
-                  />
-                  <Title order={4}>Eligible entities</Title>
-                  <SimpleGrid cols={{ base: 1, md: 2 }}>
-                    {read.data.nodes.map((n) => node(n, true))}
-                  </SimpleGrid>
-                  {read.data.total_nodes > 100 && (
-                    <Group>
-                      <Button
-                        disabled={!read.data.offset}
-                        onClick={() => load(read.data!.offset - 100)}
-                      >
-                        Previous entities
-                      </Button>
+                  ))}
+                </Stack>
+              </Card>
+            )}
+          </Stack>
+        ) : (
+          <Text>Load a graph view first, then choose its path endpoints.</Text>
+        )}
+      </Drawer>
+      <Drawer
+        className="feature-drawer"
+        opened={drawer === "entities"}
+        onClose={() => setDrawer(null)}
+        position="right"
+        title="Eligible entities"
+        size="lg"
+      >
+        {readable && (
+          <Stack>
+            <Title order={4}>Eligible entities</Title>
+            <SimpleGrid cols={{ base: 1, md: 2 }}>
+              {readable.nodes.map((n) => node(n, true))}
+            </SimpleGrid>
+            {readable.total_nodes > 100 && (
+              <Group>
+                <Button
+                  disabled={!readable.offset}
+                  onClick={() => load(readable!.offset - 100)}
+                >
+                  Previous entities
+                </Button>
+                <Text size="sm">
+                  {readable.offset + 1}–
+                  {Math.min(readable.offset + 100, readable.total_nodes)} of{" "}
+                  {readable.total_nodes}
+                </Text>
+                <Button
+                  disabled={readable.offset + 100 >= readable.total_nodes}
+                  onClick={() => load(readable!.offset + 100)}
+                >
+                  More entities
+                </Button>
+              </Group>
+            )}
+          </Stack>
+        )}
+      </Drawer>
+      <Drawer
+        className="feature-drawer"
+        opened={drawer === "insights"}
+        onClose={() => setDrawer(null)}
+        position="right"
+        title="Graph insights"
+        size="lg"
+      >
+        {drawer === "insights" && (
+          <AnalyticsPanel brain={brain} scope={scope} inspect={inspect} />
+        )}
+      </Drawer>
+      <Drawer
+        className="feature-drawer"
+        opened={drawer === "status"}
+        onClose={() => setDrawer(null)}
+        position="right"
+        title="Graph status and maintenance"
+        size="lg"
+      >
+        <Stack>
+          {readable && (
+            <>
+              <Group>
+                <Badge>{label(readable.state)}</Badge>
+                <Text size="sm">
+                  {readable.total_nodes} eligible entities ·{" "}
+                  {readable.total_edges} eligible relationships
+                </Text>
+              </Group>
+              <Text size="xs" style={{ overflowWrap: "anywhere" }}>
+                Generation {readable.generation.id} · input epoch{" "}
+                {readable.generation.input_epoch} ·{" "}
+                {scope.kind === "combined" ? "origin epoch" : "memory epoch"}{" "}
+                {scope.kind === "combined"
+                  ? status.data?.link_epoch
+                  : readable.memory_epoch}
+              </Text>
+              {scope.kind === "combined" && (
+                <Stack gap="xs">
+                  <Text fw={600}>Exact repository inputs</Text>
+                  {readable.inputs.map((input) => (
+                    <Text
+                      key={input.id}
+                      size="xs"
+                      style={{ overflowWrap: "anywhere" }}
+                    >
+                      Snapshot {input.snapshot_id} · generation {input.id}
+                    </Text>
+                  ))}
+                  {!!readable.link_issues_total && (
+                    <Alert color="yellow" title="Unresolved repository links">
                       <Text size="sm">
-                        {read.data.offset + 1}–
-                        {Math.min(
-                          read.data.offset + 100,
-                          read.data.total_nodes,
-                        )}{" "}
-                        of {read.data.total_nodes}
+                        Showing {readable.link_issues.length} of{" "}
+                        {readable.link_issues_total} eligible source records.
                       </Text>
-                      <Button
-                        disabled={
-                          read.data.offset + 100 >= read.data.total_nodes
-                        }
-                        onClick={() => load(read.data!.offset + 100)}
-                      >
-                        More entities
-                      </Button>
-                    </Group>
+                      {readable.link_issues.map((issue) => (
+                        <Text
+                          key={issue.source}
+                          size="xs"
+                          style={{ overflowWrap: "anywhere" }}
+                        >
+                          {label(issue.code)} · {issue.source}
+                        </Text>
+                      ))}
+                    </Alert>
                   )}
                 </Stack>
               )}
-              <AnalyticsPanel brain={brain} scope={scope} inspect={inspect} />
-              <Title order={4}>Projection processing</Title>
-              <Failure error={status.error} />
-              {status.isPending && <Loader size="sm" />}
-              {status.data?.generations.length === 0 && (
-                <Text size="sm">
-                  No graph generation yet. The worker discovers materialized
-                  repositories and claim evidence automatically.
-                </Text>
+              {readable.coverage.partial && (
+                <Alert color="yellow">
+                  {readable.coverage.reasons.map(label).join(" · ")}
+                </Alert>
               )}
-              {status.data?.generations.map((g) => (
-                <Card withBorder p="sm" key={g.id}>
-                  <Stack gap="xs">
-                    <Group justify="space-between">
-                      <Text fw={600}>{label(g.kind)} graph</Text>
-                      <Badge>{label(g.state)}</Badge>
-                    </Group>
-                    <Text size="xs" style={{ overflowWrap: "anywhere" }}>
-                      Generation {g.id}
-                      {g.snapshot_id ? ` · snapshot ${g.snapshot_id}` : ""}
-                      {g.kind === "combined"
-                        ? ` · ${g.input_snapshot_ids?.length ?? 0} exact repository inputs · ${g.adapter}`
-                        : ""}
-                    </Text>
-                    <Text size="sm">
-                      {g.node_count} entities · {g.edge_count} relationships ·{" "}
-                      {g.unresolved} unresolved · {g.ambiguous} ambiguous ·{" "}
-                      {g.unsupported} unsupported
-                    </Text>
-                    <Text size="xs">
-                      {new Date(g.created_at).toLocaleString()} ·{" "}
-                      {g.kind === "knowledge" &&
-                      g.input_epoch !== status.data?.memory_epoch
-                        ? "Knowledge input changed; reads use current eligibility."
-                        : g.kind === "combined" &&
-                            g.input_epoch !== status.data?.link_epoch
-                          ? "Origin bindings changed; current links are being rebuilt."
-                          : "Exact input retained."}
-                    </Text>
-                    {g.error_code && (
-                      <Alert color="red">{label(g.error_code)}</Alert>
-                    )}
-                    {status.data?.jobs.find((j) => j.id === g.job_id) && (
-                      <Text size="xs">
-                        Job:{" "}
-                        {label(
-                          status.data.jobs.find((j) => j.id === g.job_id)!
-                            .state,
-                        )}{" "}
-                        ·{" "}
-                        {
-                          status.data.jobs.find((j) => j.id === g.job_id)!
-                            .progress
-                        }
-                        %
-                      </Text>
-                    )}
-                  </Stack>
-                </Card>
-              ))}
-              {status.data && status.data.total > 20 && (
-                <Group>
-                  <Button
-                    disabled={!offset}
-                    onClick={() => setOffset((n) => n - 20)}
-                  >
-                    Previous generations
-                  </Button>
-                  <Button
-                    disabled={offset + 20 >= status.data.total}
-                    onClick={() => setOffset((n) => n + 20)}
-                  >
-                    More generations
-                  </Button>
+              {!readable.total_nodes && (
+                <Text>No entities are eligible in this view.</Text>
+              )}
+            </>
+          )}
+          {brain.role !== "reader" && (
+            <Button
+              variant="default"
+              loading={rebuild.isPending}
+              disabled={
+                brain.archived ||
+                (scope.kind === "repository" && !scope.snapshot_id) ||
+                (scope.kind === "combined" && !scope.manifest_revision_id)
+              }
+              onClick={() => rebuild.mutate()}
+            >
+              Rebuild graph
+            </Button>
+          )}
+          <Failure error={rebuild.error} />
+          {rebuild.isSuccess && (
+            <Alert color="teal">
+              Graph rebuild queued. Progress appears below.
+            </Alert>
+          )}
+          <Title order={4}>Projection processing</Title>
+          <Failure error={status.error} />
+          {status.isPending && <Loader size="sm" />}
+          {status.data?.generations.length === 0 && (
+            <Text size="sm">
+              No graph generation yet. The worker discovers materialized
+              repositories and claim evidence automatically.
+            </Text>
+          )}
+          {status.data?.generations.map((g) => (
+            <Card withBorder p="sm" key={g.id}>
+              <Stack gap="xs">
+                <Group justify="space-between">
+                  <Text fw={600}>{label(g.kind)} graph</Text>
+                  <Badge>{label(g.state)}</Badge>
                 </Group>
-              )}
-            </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
+                <Text size="xs" style={{ overflowWrap: "anywhere" }}>
+                  Generation {g.id}
+                  {g.snapshot_id ? ` · snapshot ${g.snapshot_id}` : ""}
+                  {g.kind === "combined"
+                    ? ` · ${g.input_snapshot_ids?.length ?? 0} exact repository inputs · ${g.adapter}`
+                    : ""}
+                </Text>
+                <Text size="sm">
+                  {g.node_count} entities · {g.edge_count} relationships ·{" "}
+                  {g.unresolved} unresolved · {g.ambiguous} ambiguous ·{" "}
+                  {g.unsupported} unsupported
+                </Text>
+                <Text size="xs">
+                  {new Date(g.created_at).toLocaleString()} ·{" "}
+                  {g.kind === "knowledge" &&
+                  g.input_epoch !== status.data?.memory_epoch
+                    ? "Knowledge input changed; reads use current eligibility."
+                    : g.kind === "combined" &&
+                        g.input_epoch !== status.data?.link_epoch
+                      ? "Origin bindings changed; current links are being rebuilt."
+                      : "Exact input retained."}
+                </Text>
+                {g.error_code && (
+                  <Alert color="red">{label(g.error_code)}</Alert>
+                )}
+                {status.data?.jobs.find((j) => j.id === g.job_id) && (
+                  <Text size="xs">
+                    Job:{" "}
+                    {label(
+                      status.data.jobs.find((j) => j.id === g.job_id)!.state,
+                    )}{" "}
+                    ·{" "}
+                    {status.data.jobs.find((j) => j.id === g.job_id)!.progress}%
+                  </Text>
+                )}
+              </Stack>
+            </Card>
+          ))}
+          {status.data && status.data.total > 20 && (
+            <Group>
+              <Button
+                disabled={!offset}
+                onClick={() => setOffset((n) => n - 20)}
+              >
+                Previous generations
+              </Button>
+              <Button
+                disabled={offset + 20 >= status.data.total}
+                onClick={() => setOffset((n) => n + 20)}
+              >
+                More generations
+              </Button>
+            </Group>
+          )}
+        </Stack>
+      </Drawer>
       {detail?.claim && (
         <ClaimDialog
           brain={brain}
@@ -965,7 +1226,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           }}
           onClose={() => setDetail(null)}
         />
-      )}{" "}
+      )}
       {detail?.evidence && (
         <EvidenceDialog
           brain={brain}
@@ -974,6 +1235,6 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           onClose={() => setDetail(null)}
         />
       )}
-    </Card>
+    </section>
   );
 }

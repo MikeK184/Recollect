@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 
 test("author claims, inspect exact evidence and preserve fact and knowledge history", async ({
@@ -45,11 +46,12 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     });
     return { brain: brain.id, source: source.id, version: source.version.id };
   });
-  await page.goto(`/brains/${fixture.brain}`);
+  await page.goto(`/brains/${fixture.brain}/memory`);
   await expect(
-    page.getByText("No claims recorded in this view.", { exact: true }),
+    page.getByText("Your knowledge will gather here", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "New memory", exact: true }).click();
+  await page.getByRole("button", { name: "Add memory", exact: true }).click();
+  await page.getByRole("button", { name: "Structured entry", exact: true }).click();
   let dialog = page.getByRole("dialog");
   await dialog
     .getByRole("textbox", { name: "Subject", exact: true })
@@ -106,7 +108,7 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     .click();
   // A second editor must not overwrite the first editor's later knowledge revision.
   const other = await context.newPage();
-  await other.goto(`/brains/${fixture.brain}`);
+  await other.goto(`/brains/${fixture.brain}/memory`);
   await other
     .getByRole("button", {
       name: "Vault production · authentication method",
@@ -162,6 +164,7 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     ),
   ).toBeVisible();
   await other.close();
+  await openDetails(dialog, "Version history");
   await dialog
     .getByRole("textbox", { name: "Knowledge revision", exact: true })
     .click();
@@ -183,6 +186,7 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     path: "../.cache/ui/claim-history.png",
     animations: "disabled",
   });
+  await openDetails(dialog, "Version history");
   await dialog
     .getByRole("textbox", { name: "Knowledge revision", exact: true })
     .click();
@@ -216,12 +220,12 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
   await expect(
     dialog.getByText("Freshness: needs verification", { exact: true }),
   ).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   await dialog
     .getByRole("heading", { name: "Vault production", exact: true })
     .scrollIntoViewIfNeeded();
   await page.screenshot({
-    path: "../.cache/ui/claim-mobile.png",
+    path: "../.cache/ui/claim-1280.png",
     animations: "disabled",
   });
   expect(
@@ -231,22 +235,24 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
   ).toBe(true);
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page
     .getByLabel("Fact time (UTC)", { exact: true })
     .fill("2026-01-15T00:00");
   await page
-    .getByRole("button", { name: "Apply time filters", exact: true })
+    .getByRole("button", { name: "Apply filters", exact: true })
     .click();
   await expect(
-    page.getByText("No eligible claims on this page for these filters.", {
+    page.getByText("No matching memory", {
       exact: true,
     }),
   ).toBeVisible();
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page
     .getByLabel("Fact time (UTC)", { exact: true })
     .fill("2026-02-15T00:00");
   await page
-    .getByRole("button", { name: "Apply time filters", exact: true })
+    .getByRole("button", { name: "Apply filters", exact: true })
     .click();
   await expect(
     page.getByRole("button", {
@@ -254,12 +260,16 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
       exact: true,
     }),
   ).toBeVisible();
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page.getByRole("textbox", { name: "Claim view", exact: true }).click();
   await page
     .getByRole("option", { name: "Strict accepted", exact: true })
     .click();
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
   await expect(
-    page.getByText("No eligible claims on this page for these filters.", {
+    page.getByText("No matching memory", {
       exact: true,
     }),
   ).toBeVisible();

@@ -236,3 +236,59 @@ pub(crate) async fn final_gate(
 ) -> Result<DateTime<Utc>> {
     read::final_gate(tx, auth, &output.admission.selected).await
 }
+
+/// Requalify only the immutable graph witness; no Neo4j traversal or model
+/// call is repeated while an answer is being transmitted/published.
+pub(crate) async fn bundle_evidence(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    auth: &Auth,
+    input: &RecallRequest,
+    response: &RecallResponse,
+) -> Result<Vec<RecallItem>> {
+    let Some(original) = &response.graph else {
+        return Ok(vec![]);
+    };
+    let current = prepare(
+        state,
+        tx,
+        auth,
+        response.brain_id,
+        input,
+        response.knowledge_at,
+        None,
+    )
+    .await?;
+    if current.selected.view.generation.id != original.view.generation.id {
+        return Err(crate::answers::stale());
+    }
+    let mut items = BTreeMap::new();
+    for item in &response.context.items {
+        if let Some(witness) = &item.graph_match {
+            for node in &witness.nodes {
+                let selected = current
+                    .selected
+                    .nodes
+                    .get(&node.key)
+                    .ok_or_else(crate::answers::stale)?;
+                if selected.evidence.kind != node.kind
+                    || selected.evidence.id != node.id
+                    || selected.evidence.revision_id != node.revision_id
+                    || selected.evidence.label != node.label
+                {
+                    return Err(crate::answers::stale());
+                }
+                items.insert(node.key.clone(), selected.evidence.clone());
+            }
+            for edge in &witness.edges {
+                if !current.selected.edges.iter().any(|current| {
+                    serde_json::to_value(current).ok() == serde_json::to_value(edge).ok()
+                }) {
+                    return Err(crate::answers::stale());
+                }
+            }
+        }
+    }
+    read::final_gate(tx, auth, &current.selected).await?;
+    Ok(items.into_values().collect())
+}

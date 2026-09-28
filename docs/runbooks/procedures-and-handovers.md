@@ -1,5 +1,7 @@
 # Procedures and handovers
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Start `./scripts/dev.sh`, sign in at `http://127.0.0.1:8787` and open a Brain.
@@ -19,7 +21,7 @@ unexecuted procedure remains **Untested**. Later evidence can revise machine-mai
 procedures without individual review. The browser's creation/editing form is an
 optional way to supply or correct the same canonical memory.
 
-1. In **Claims and decisions**, choose **New claim** and select Procedure. Supply
+1. In **Memory**, choose **Add memory** and select Procedure. Supply
    conditions, one to twenty ordered steps, expected outcome and exact evidence.
    Record only actual success/failure observations with their time, conditions,
    result and supporting evidence. Scope selects the applicable environment and
@@ -28,7 +30,7 @@ optional way to supply or correct the same canonical memory.
    risks/open questions. Pick one to twelve current non-handover contributors.
    Their repositories/areas and exact support are combined. All contributors must
    share the same environment, including Brain-wide/no-environment scope.
-3. Alternatively, use **Generated handovers → Generate handover**, supply a title
+3. Alternatively, use **Memory → Handovers → Generated handovers → Generate handover**, supply a title
    and select contributors. This first request defines what the handover covers.
    Enabled synthesis, claim and query permissions allow the native model worker
    to generate it. The attempt list shows progress, safe failure and result links.

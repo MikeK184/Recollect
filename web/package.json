@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "generate": "openapi-typescript ../.cache/openapi.json -o src/api-schema.d.ts",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build",
+    "check:design": "node scripts/check-design.mjs",
+    "typecheck": "npm run check:design && tsc --noEmit",
+    "build": "npm run typecheck && vite build",
     "test:ui": "playwright test",
     "format": "prettier --write src/App.tsx src/api.ts src/main.tsx src/styles.css vite.config.ts playwright.config.ts tests"
   },
@@ -23,6 +24,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "22.20.4",
     "@types/react": "^19.0.0",

@@ -5,6 +5,72 @@ native HTTPS pairing/MCP, persistent state and operational failure behavior pass
 The [contract](../contracts/operations-local-and-shared.md) and
 [installed acceptance](../mappings/installation-2026-09-26.md) record the evidence.
 
+## Existing local app: one Compose group
+
+Run from the repository root with Docker/Compose and Python 3.11+:
+
+```sh
+./scripts/stack.sh up --build
+./scripts/stack.sh status
+```
+
+Open **http://127.0.0.1:8787** and sign in with `RECOLLECT_OWNER_USERNAME` and
+`RECOLLECT_OWNER_PASSWORD` from the ignored `.env`. The UI is built into the API
+image; a separate frontend container is unnecessary. Docker Desktop groups
+`postgres`, `neo4j`, `api`, `worker` and the completed `migrate` role under
+**recollect**. A successfully exited migration container is expected.
+
+```sh
+./scripts/stack.sh stop          # Stop the whole normal app, preserving data
+./scripts/stack.sh up            # Restart the same data and credentials
+./scripts/stack.sh logs          # Follow application logs
+./scripts/stack.sh up --build    # Rebuild and restart after backend/UI changes
+./scripts/stack.sh down          # Remove containers/network, preserving data
+```
+
+The root `compose.yaml` is also a complete standard Compose file. After setup,
+`docker compose up -d`, `docker compose stop`, `docker compose ps --all` and
+`docker compose down` work directly. The repository wrapper is equivalent:
+`./scripts/docker.sh compose ...`. Prefer `stack.sh up` for updates: it drains
+application roles and explicitly reruns migration before serving. Direct
+`compose restart` does not build changed code or provide that update sequence.
+Never use `down --volumes` to stop an installation whose data you want to keep.
+
+The root stack retains `recollect_postgres_data`, `.data/neo4j/`,
+`.data/artifacts/` and `.data/erasure-journal/`. Runtime account credentials live
+under `.data/runtime/`; setup preserves a legacy `.data/credentials.json` when
+present and updates only that path in `.env`. It records your UID/GID so files
+stay writable from either runtime. The application mounts these three narrow
+directories, not the repository, `.env` or other installation credentials.
+MCP receipts retain their existing location under artifacts. PostgreSQL and Neo4j
+retain loopback development ports 55432 and 57474 for native tooling.
+
+Native development remains available with `./scripts/dev.sh` after stopping the
+container stack. It starts only database containers and runs the API/worker in
+the terminal. Ctrl+C drains both native processes. Both launchers reject an
+occupied port 8787; stop the previous API **and** worker before switching.
+Old detached native processes require an explicit graceful stop after checking
+their repository ownership. Neither launcher kills arbitrary host processes.
+
+Optional model credentials remain governed by Brain policy. Custom account-file,
+MCP-provider/outbox or journal-mirror paths require explicit container mounts;
+the convenience launcher refuses those unsupported native-path configurations.
+Use a named installation below for another origin, shared HTTPS or provider
+mount customization. Native companions and private runners remain native.
+
+Projects named `recollect-install-proof-*` and labeled Vault/SFTP fixtures are
+independent test datasets from earlier acceptance runs. They are not required
+by the normal app and are not included by root stack commands. Stop only verified
+inactive fixtures; keep their saved installation files/volumes unless deletion
+is separately intended. Do not restart failed-upgrade proof stacks blindly.
+On 2026-09-26 the user explicitly authorized deletion of the old local proof
+stacks and their disposable data. Those saved installations must be recreated
+to rerun their tests; the normal root stack and historical reports remain.
+
+Focused configuration/setup verification: `python3 scripts/test-root-compose.py`.
+Current local conversion evidence is recorded in the
+[root Compose mapping](../mappings/root-compose-2026-09-26.md).
+
 ## Prepare one installation
 
 Use Docker/Compose and Python 3.11 or later. Image builds need at least 12 GiB of

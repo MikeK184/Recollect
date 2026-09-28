@@ -75,9 +75,9 @@ test("installed desktop owner/member isolation, evidence and native HTTPS pairin
       animations: "disabled",
     });
     await owner.keyboard.press("Escape");
-    await owner.goto(`${saved.origin}/brains/${saved.brain.id}`);
+    await owner.goto(`${saved.origin}/brains/${saved.brain.id}/sources`);
     await expect(
-      owner.getByRole("heading", { name: saved.brain.name, exact: true }),
+      owner.getByRole("heading", { name: "Sources", level: 1, exact: true }),
     ).toBeVisible();
 
     await login(member, saved.member);
@@ -87,12 +87,12 @@ test("installed desktop owner/member isolation, evidence and native HTTPS pairin
     await expect(
       member.getByText(saved.member_brain.name, { exact: true }),
     ).toBeVisible();
-    await member.goto(`${saved.origin}/brains/${saved.brain.id}`);
+    await member.goto(`${saved.origin}/brains/${saved.brain.id}/sources`);
     await expect(
-      member.getByRole("heading", { name: saved.brain.name, exact: true }),
+      member.getByRole("heading", { name: "Sources", level: 1, exact: true }),
     ).toBeVisible();
     await expect(
-      member.getByRole("button", { name: "Import source", exact: true }),
+      member.getByRole("button", { name: "Add source", exact: true }),
     ).toHaveCount(0);
     await member
       .getByRole("button", { name: new RegExp(saved.brain.name) })

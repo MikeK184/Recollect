@@ -1,4 +1,7 @@
+import { Link } from "@tanstack/react-router";
+import { iconSize } from "./design/tokens";
 import { useState } from "react";
+import "./features/feature-views.css";
 import { EraseAction } from "./RetentionPanel";
 import {
   Alert,
@@ -125,32 +128,45 @@ export function RepositoryDialog({
             Publish an exact locally available commit from your checkout.
           </Alert>
         )}
-        {snapshots.data?.items.map((s) => (
-          <Card withBorder key={s.id}>
-            <Stack gap="xs">
-              <Group justify="space-between">
-                <Button
-                  variant="subtle"
-                  px={0}
-                  onClick={() => setSelected(s.id)}
+        {!snapshots.error &&
+          snapshots.data?.items.map((s) => (
+            <Card withBorder key={s.id}>
+              <Stack gap="xs">
+                <Group justify="space-between">
+                  <Button
+                    variant="subtle"
+                    px={0}
+                    onClick={() => setSelected(s.id)}
+                  >
+                    Inspect snapshot
+                  </Button>
+                  <Badge color={s.processing === "ready" ? "teal" : "orange"}>
+                    {s.processing}
+                  </Badge>
+                </Group>
+                <Code className="revision-code">{s.revision}</Code>
+                <Link
+                  to="/brains/$brainId/memory"
+                  params={{ brainId: brain.id }}
+                  search={{ repository: s.repository_id }}
                 >
-                  Inspect snapshot
-                </Button>
-                <Badge color={s.processing === "ready" ? "teal" : "orange"}>
-                  {s.processing}
-                </Badge>
-              </Group>
-              <Code className="revision-code">{s.revision}</Code>
-              <Text size="sm">
-                {s.fact_count} facts · {s.file_count} files ·{" "}
-                {s.retained_file_count} retained
-              </Text>
-              <Text size="xs" c="dimmed">
-                {time(s.created_at)} · {s.adapter} {s.adapter_build}
-              </Text>
-            </Stack>
-          </Card>
-        ))}
+                  Memory in this repository
+                </Link>
+                <Text size="xs" c="dimmed">
+                  Shows current memories whose scope includes this repository.
+                  Inspect their exact support before attributing them to this
+                  snapshot.
+                </Text>
+                <Text size="sm">
+                  {s.fact_count} facts · {s.file_count} files ·{" "}
+                  {s.retained_file_count} retained
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {time(s.created_at)} · {s.adapter} {s.adapter_build}
+                </Text>
+              </Stack>
+            </Card>
+          ))}
         {snapshots.data && (
           <Pages
             offset={offset}
@@ -235,7 +251,8 @@ export function SnapshotDialog({
           { params: { path: { ...path, file: selectedFile! } } },
         ),
       ),
-    enabled: !!selectedFile,
+    enabled: !!selectedFile && tab === "files",
+    refetchInterval: 4000,
   });
   const key = useIdempotency();
   const process = useMutation({
@@ -255,7 +272,7 @@ export function SnapshotDialog({
       void facts.refetch();
     },
   });
-  const s = details.data?.snapshot;
+  const s = details.error ? undefined : details.data?.snapshot;
   return (
     <Modal opened onClose={onClose} size="xl" title="Repository snapshot">
       <Stack className="publication-panel">
@@ -326,7 +343,7 @@ export function SnapshotDialog({
                       </Button>
                       <Failure error={content.error} />
                       {content.isPending && <Loader size="sm" />}
-                      {content.data && (
+                      {!content.error && content.data && (
                         <>
                           <Text fw={600}>{content.data.file.path}</Text>
                           {content.data.content !== null &&
@@ -352,29 +369,30 @@ export function SnapshotDialog({
                     </>
                   ) : (
                     <>
-                      {files.data?.items.length === 0 && (
+                      {!files.error && files.data?.items.length === 0 && (
                         <Text>No files in this snapshot.</Text>
                       )}
-                      {files.data?.items.map((f) => (
-                        <button
-                          className="source-row"
-                          key={f.id}
-                          onClick={() => setSelectedFile(f.id)}
-                        >
-                          <FileCode2 size={18} />
-                          <span className="source-row-body">
-                            <Text size="sm" fw={500}>
-                              {f.path}
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              {f.status.replaceAll("_", " ")} ·{" "}
-                              {f.extraction.replaceAll("_", " ")} ·{" "}
-                              {f.availability.replaceAll("_", " ")}
-                            </Text>
-                          </span>
-                        </button>
-                      ))}
-                      {files.data && (
+                      {!files.error &&
+                        files.data?.items.map((f) => (
+                          <button
+                            className="source-row"
+                            key={f.id}
+                            onClick={() => setSelectedFile(f.id)}
+                          >
+                            <FileCode2 size={iconSize.navigation} />
+                            <span className="source-row-body">
+                              <Text size="sm" fw={500}>
+                                {f.path}
+                              </Text>
+                              <Text size="xs" c="dimmed">
+                                {f.status.replaceAll("_", " ")} ·{" "}
+                                {f.extraction.replaceAll("_", " ")} ·{" "}
+                                {f.availability.replaceAll("_", " ")}
+                              </Text>
+                            </span>
+                          </button>
+                        ))}
+                      {!files.error && files.data && (
                         <Pages
                           offset={fileOffset}
                           total={files.data.total}
@@ -390,24 +408,27 @@ export function SnapshotDialog({
                 <Stack>
                   <Failure error={facts.error} />
                   {facts.isPending && <Loader size="sm" />}
-                  {facts.data && facts.data.processing !== "ready" && (
-                    <Alert color="yellow">
-                      Fact processing is {facts.data.processing}. Retained
-                      extraction artifacts remain available separately.
-                    </Alert>
-                  )}
-                  {facts.data?.items.length === 0 && (
+                  {!facts.error &&
+                    facts.data &&
+                    facts.data.processing !== "ready" && (
+                      <Alert color="yellow">
+                        Fact processing is {facts.data.processing}. Retained
+                        extraction artifacts remain available separately.
+                      </Alert>
+                    )}
+                  {!facts.error && facts.data?.items.length === 0 && (
                     <Text>No materialized facts available.</Text>
                   )}
-                  {facts.data?.items.map((f) => (
-                    <Card withBorder key={f.id}>
-                      <Text size="xs" mb="xs">
-                        Record {f.ordinal + 1} · {f.id}
-                      </Text>
-                      <JsonView value={f.record} />
-                    </Card>
-                  ))}
-                  {facts.data && (
+                  {!facts.error &&
+                    facts.data?.items.map((f) => (
+                      <Card withBorder key={f.id}>
+                        <Text size="xs" mb="xs">
+                          Record {f.ordinal + 1} · {f.id}
+                        </Text>
+                        <JsonView value={f.record} />
+                      </Card>
+                    ))}
+                  {!facts.error && facts.data && (
                     <Pages
                       offset={factOffset}
                       total={facts.data.total}
@@ -470,10 +491,12 @@ export function SnapshotDialog({
                   <Stack>
                     <Failure error={artifact.error} />
                     {artifact.isPending && <Loader size="sm" />}
-                    {artifact.data?.content !== null &&
+                    {!artifact.error &&
+                    artifact.data?.content !== null &&
                     artifact.data?.content !== undefined ? (
                       <JsonView value={artifact.data.content} />
                     ) : (
+                      !artifact.error &&
                       artifact.data && (
                         <Alert color="yellow">
                           Artifact {artifact.data.availability}.
@@ -491,7 +514,13 @@ export function SnapshotDialog({
   );
 }
 
-export function PublicationPanel({ brain }: { brain: Brain }) {
+export function PublicationPanel({
+  brain,
+  section = "environments",
+}: {
+  brain: Brain;
+  section?: "repositories" | "environments";
+}) {
   const cache = useQueryClient();
   const [environment, setEnvironment] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
@@ -506,26 +535,6 @@ export function PublicationPanel({ brain }: { brain: Brain }) {
         }),
       ),
     refetchInterval: 5000,
-  });
-  const policy = useQuery({
-    queryKey: ["repository-policy", brain.id],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/repositories/policy", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
-  const updatePolicy = useMutation({
-    mutationFn: async (allowed: boolean) =>
-      result(
-        await client.PUT("/api/brains/{brain}/repositories/policy", {
-          params: { path: { brain: brain.id } },
-          body: { allow_file_content: allowed },
-        }),
-      ),
-    onSuccess: (value) =>
-      cache.setQueryData(["repository-policy", brain.id], value),
   });
   const manifests = useQuery({
     queryKey: ["revision-manifests", brain.id, environment, offset],
@@ -547,16 +556,16 @@ export function PublicationPanel({ brain }: { brain: Brain }) {
     void cache.invalidateQueries({ queryKey: ["revision-manifest", brain.id] });
   };
   return (
-    <Card withBorder p="xl" mt="xl" className="publication-panel">
+    <section className="feature-view publication-panel">
       <Stack>
         <Group justify="space-between">
           <Group gap="sm">
-            <GitCommitHorizontal size={20} />
+            <GitCommitHorizontal size={iconSize.action} />
             <Title order={3}>Environment revisions</Title>
           </Group>
           {brain.role !== "reader" && !brain.archived && (
             <Button
-              leftSection={<Plus size={16} />}
+              leftSection={<Plus size={iconSize.small} />}
               disabled={
                 !catalogue.data?.environments.length ||
                 !catalogue.data?.repositories.length
@@ -572,30 +581,6 @@ export function PublicationPanel({ brain }: { brain: Brain }) {
           desired configuration and recorded deployment observations keep
           separate provenance.
         </Text>
-        <Failure error={policy.error} />
-        <Failure error={updatePolicy.error} />
-        {policy.data &&
-          (brain.role === "admin" && !brain.archived ? (
-            <Switch
-              label="Allow explicitly selected repository file text"
-              description="Applies to new publications. Turning this off preserves previously retained evidence."
-              checked={
-                updatePolicy.isPending
-                  ? updatePolicy.variables
-                  : policy.data.allow_file_content
-              }
-              disabled={updatePolicy.isPending}
-              onChange={(e) => updatePolicy.mutate(e.currentTarget.checked)}
-            />
-          ) : (
-            <Text size="sm">
-              Repository text capture:{" "}
-              {policy.data.allow_file_content
-                ? "allowed for explicitly selected files"
-                : "disabled"}
-            </Text>
-          ))}
-        <Divider />
         <Failure error={catalogue.error} />
         <Select
           clearable
@@ -621,31 +606,33 @@ export function PublicationPanel({ brain }: { brain: Brain }) {
             repository to create an explicit selection.
           </Text>
         )}
-        {manifests.data?.items.map((m) => (
-          <button
-            key={m.manifest_id}
-            className="source-row"
-            onClick={() => setSelected(m.manifest_id)}
-          >
-            <GitCommitHorizontal size={18} />
-            <span className="source-row-body">
-              <Text fw={500}>{m.name}</Text>
-              <Text size="sm">
-                {catalogue.data?.environments.find(
-                  (e) => e.id === m.environment_id,
-                )?.name || m.environment_id}{" "}
-                ·{" "}
-                {m.kind === "observed_deployed"
-                  ? "Recorded deployment observation"
-                  : m.kind}{" "}
-                · {m.entries.length} repositories
-              </Text>
-              <Text size="xs" c="dimmed">
-                Recorded {time(m.created_at)}
-              </Text>
-            </span>
-          </button>
-        ))}
+        {!manifests.error &&
+          !catalogue.error &&
+          manifests.data?.items.map((m) => (
+            <button
+              key={m.manifest_id}
+              className="source-row"
+              onClick={() => setSelected(m.manifest_id)}
+            >
+              <GitCommitHorizontal size={iconSize.navigation} />
+              <span className="source-row-body">
+                <Text fw={500}>{m.name}</Text>
+                <Text size="sm">
+                  {catalogue.data?.environments.find(
+                    (e) => e.id === m.environment_id,
+                  )?.name || m.environment_id}{" "}
+                  ·{" "}
+                  {m.kind === "observed_deployed"
+                    ? "Recorded deployment observation"
+                    : m.kind}{" "}
+                  · {m.entries.length} repositories
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Recorded {time(m.created_at)}
+                </Text>
+              </span>
+            </button>
+          ))}
         {manifests.data && (
           <Pages
             offset={offset}
@@ -653,9 +640,11 @@ export function PublicationPanel({ brain }: { brain: Brain }) {
             onChange={setOffset}
           />
         )}
-        <Button variant="subtle" onClick={() => void manifests.refetch()}>
-          Refresh manifests
-        </Button>
+        {manifests.error && (
+          <Button variant="subtle" onClick={() => void manifests.refetch()}>
+            Retry manifests
+          </Button>
+        )}
       </Stack>
       {creating && catalogue.data && (
         <ManifestForm
@@ -678,7 +667,7 @@ export function PublicationPanel({ brain }: { brain: Brain }) {
           onSaved={refresh}
         />
       )}
-    </Card>
+    </section>
   );
 }
 function ManifestDialog({
@@ -734,7 +723,9 @@ function ManifestDialog({
         }}
       />
     );
-  const selected = historical ?? detail.data?.current;
+  const selected = detail.error
+    ? undefined
+    : (historical ?? detail.data?.current);
   return (
     <Modal opened onClose={onClose} size="xl" title="Revision manifest">
       <Stack className="publication-panel">
@@ -1178,5 +1169,65 @@ function EntryForm({
         />
       </Stack>
     </Card>
+  );
+}
+
+export function RepositoryStoragePolicy({ brain }: { brain: Brain }) {
+  const cache = useQueryClient();
+  const policy = useQuery({
+    queryKey: ["repository-policy", brain.id],
+    queryFn: async () =>
+      result(
+        await client.GET("/api/brains/{brain}/repositories/policy", {
+          params: { path: { brain: brain.id } },
+        }),
+      ),
+  });
+  const updatePolicy = useMutation({
+    mutationFn: async (allowed: boolean) =>
+      result(
+        await client.PUT("/api/brains/{brain}/repositories/policy", {
+          params: { path: { brain: brain.id } },
+          body: { allow_file_content: allowed },
+        }),
+      ),
+    onSuccess: (value) =>
+      cache.setQueryData(["repository-policy", brain.id], value),
+  });
+
+  return (
+    <section className="feature-setting">
+      <Stack gap="md">
+        <Title order={3}>Repository file storage</Title>
+        <Text size="sm" c="dimmed">
+          Published structure is separate from retained file text. Files require
+          explicit companion selection and this Brain's permission.
+        </Text>
+        <Failure error={policy.error} />
+        <Failure error={updatePolicy.error} />
+        {!policy.error &&
+          policy.data &&
+          (brain.role === "admin" && !brain.archived ? (
+            <Switch
+              label="Allow explicitly selected repository file text"
+              description="Applies to new publications. Turning this off preserves previously retained evidence."
+              checked={
+                updatePolicy.isPending
+                  ? updatePolicy.variables
+                  : policy.data.allow_file_content
+              }
+              disabled={updatePolicy.isPending}
+              onChange={(e) => updatePolicy.mutate(e.currentTarget.checked)}
+            />
+          ) : (
+            <Text size="sm">
+              Repository text capture:{" "}
+              {policy.data.allow_file_content
+                ? "allowed for explicitly selected files"
+                : "disabled"}
+            </Text>
+          ))}
+      </Stack>
+    </section>
   );
 }

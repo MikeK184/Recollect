@@ -12,6 +12,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useFocusReturn } from "@mantine/hooks";
 import { client, result, type Brain } from "./api";
 import type { McpCatalogue } from "./McpPanel";
 import { McpCallDialog } from "./McpCallDialog";
@@ -49,6 +50,7 @@ export function McpRuntimePanel({
   const [cursor, setCursor] = useState<string | undefined>();
   const [releasing, setReleasing] = useState(false);
   const [releaseError, setReleaseError] = useState<string | null>(null);
+  useFocusReturn({ opened: selected !== null });
   const release = async () => {
     setReleasing(true);
     setReleaseError(null);

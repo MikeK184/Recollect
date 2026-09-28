@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The [managed experience amendment](memory-managed-experience.md) governs the
+2026-09-28 managed setup, progressive disclosure and owner connector approval
+changes; earlier explicit APIs and stored policies remain compatible.
+
 ## Source
 
 The user's 2026-09-14 clarification establishes autonomous operation: no person will

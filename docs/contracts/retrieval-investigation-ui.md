@@ -13,6 +13,11 @@ and [graph exploration](graph-exploration.md). Mobile is deferred by the user's
 2026-09-22 instruction. Normal memory maintenance remains autonomous; investigation
 and human review are optional controls.
 
+The 2026-09-26 [desktop contract](desktop-experience.md) moves this unchanged
+evidence investigation into Search evidence under the contextual Ask route.
+[Evidence-backed answers](retrieval-answers.md) is the separately authorized
+generated-answer consumer; it does not replace these bounded search semantics.
+
 ## Contract
 
 ### One bounded investigation
@@ -141,6 +146,7 @@ inspection cannot silently add data to it.
 
 ## Explicit Deferrals
 
-Generated answers, automatic assertion of answer sufficiency, cross-query saved
-investigations, historical graph reconstruction, mobile, MCP host injection and
-execution UI. Search views do not promise exhaustive conflict or source discovery.
+Automatic assertion of answer sufficiency, cross-query saved investigations,
+historical graph reconstruction, mobile, MCP host injection and execution UI.
+Generated answers are owned by the separate accepted answer contract, not by
+these search views. Search does not promise exhaustive conflict/source discovery.

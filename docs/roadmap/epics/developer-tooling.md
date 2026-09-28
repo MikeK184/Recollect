@@ -1,6 +1,6 @@
 # Developer Tooling
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -35,6 +35,7 @@ skills and MCPs. Use Terme's available pair as reference; keep all writes here.
 | `codegraph-local-navigation` | shipped | adr-backed, contract-backed | pack | Installed pinned local CLI, indexed Cognee from Recollect, verified a permissions flow and incremental refresh, and documented navigation |
 | `atlas-reference-checkout` | shipped | contract-backed | small-fix: explicit user-authorized reference clone with isolated ignore/docs changes; no application code or runtime integration | Cloned Agent Memory Atlas and verified the requested pattern/comparison sources and generated HTML against the live pages |
 | `documentation-skills` | shipped | adr-backed, contract-backed | pack | Adapted Terme's router and maintainer to Recollect, verified discovery, and assessed tooling against the accepted stack |
+| `opencode-project-setup` | in-progress | adr-backed, contract-backed | pack | Carry the existing project instructions, two skills, six roles and Context7 into OpenCode v2 and verify host discovery and a read-only MCP call |
 
 ## CodeGraph closeout
 

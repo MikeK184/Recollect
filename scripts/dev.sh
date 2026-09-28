@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+./scripts/check-local-port.sh
 ./scripts/setup-local.sh
 set -a
 source .env
 set +a
-./scripts/docker.sh compose up -d --wait --wait-timeout 300
+if [[ -n "$(./scripts/docker.sh compose ps --status running -q api worker)" ]]; then
+  printf 'Stop the container API and worker with ./scripts/stack.sh stop before native development.\n' >&2
+  exit 1
+fi
+./scripts/docker.sh compose up -d --wait --wait-timeout 300 postgres neo4j
 cargo run -p recollect-server -- migrate
 npm --prefix web install --cache .cache/npm --no-audit --no-fund
 mkdir -p .cache

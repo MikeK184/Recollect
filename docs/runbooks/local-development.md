@@ -1,5 +1,7 @@
 # Local product development
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Run the locally delivered Recollect platform with Rust/Cargo, Node/npm, Python 3
@@ -52,7 +54,7 @@ cargo run -p recollect-server -- serve
 After server interface changes run `./scripts/generate-api.sh`, then
 `npm --prefix web run build`. Generation checks for duplicate operation IDs before
 building the typed client.
-The browser is served from `web/dist` at the same origin. Brain Knowledge sources
+The browser is served from `web/dist` at the same origin. The Brain **Sources** route
 supports imports, source history and overlapping views; see
 [source evidence](evidence-collections.md). Artifacts live under
 `RECOLLECT_ARTIFACT_DIR`, default `.data/artifacts`, and must be available to both

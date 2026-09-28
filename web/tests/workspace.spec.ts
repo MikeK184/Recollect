@@ -54,15 +54,12 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     await dialog
       .getByRole("button", { name: "Create Brain", exact: true })
       .click();
-    await page.waitForURL(/\/brains\/[0-9a-f-]{36}$/);
+    await page.waitForURL(/\/brains\/[0-9a-f-]{36}\/ask$/);
     await expect(
-      page.getByRole("heading", {
-        name: "Workspace investigation",
-        exact: true,
-      }),
+      page.getByLabel("Switch Brain", { exact: true }),
     ).toBeVisible();
     const brainURL = page.url();
-    const brain = new URL(brainURL).pathname.split("/").at(-1)!;
+    const brain = new URL(brainURL).pathname.split("/")[2]!;
     await writeFile(
       resolve(fixture, ".recollect/workspace.toml"),
       `brain = "${brain}"\n`,
@@ -85,6 +82,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
         "Synthetic checkout metadata fixture\n",
       );
     }
+    await page.goto(`/brains/${brain}/sources`);
     await page
       .getByRole("button", { name: "Manage views", exact: true })
       .click();
@@ -195,7 +193,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
       parent.task.id,
       "context",
     ]);
-    await page.goto(brainURL);
+    await page.goto(`/brains/${brain}/agents?tab=contexts`);
     await page
       .getByRole("button", { name: "Native investigation", exact: true })
       .click();
@@ -326,7 +324,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     expect(sibling.task.scope.selection.repository_ids).toHaveLength(2);
     await command(["scope", "close", brain, sibling.task.id]);
     await page.keyboard.press("Escape");
-    await page.getByRole("tab", { name: "Repositories", exact: true }).click();
+    await page.goto(`/brains/${brain}/repositories`);
     const card = page
       .locator(".workspace-repository")
       .filter({ hasText: "example.test/Team/infra" })
@@ -359,7 +357,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
       path: "../.cache/ui/workspace-checkouts.png",
       animations: "disabled",
     });
-    await page.getByRole("tab", { name: "Your tasks", exact: true }).click();
+    await page.goto(`/brains/${brain}/agents?tab=contexts`);
     await page.screenshot({
       path: "../.cache/ui/workspace-tasks.png",
       fullPage: true,

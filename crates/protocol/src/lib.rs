@@ -17,6 +17,8 @@ mod capture;
 pub use capture::*;
 mod retrieval;
 pub use retrieval::*;
+mod answers;
+pub use answers::*;
 mod semantic;
 pub use semantic::*;
 mod graph;
@@ -67,6 +69,8 @@ pub struct Brain {
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct CreateBrain {
     pub name: String,
+    #[serde(default)]
+    pub managed_memory: bool,
     #[serde(default)]
     pub description: String,
 }

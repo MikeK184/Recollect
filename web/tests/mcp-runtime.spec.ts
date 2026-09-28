@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect as baseExpect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 
@@ -68,15 +69,28 @@ async function setup(page: Page) {
       "PUT",
     );
   await grant(true);
-  await page.goto(`/brains/${brain.id}`);
+  await page.goto(`/brains/${brain.id}/connections?tab=profiles`);
   const panel = page.getByRole("region", {
     name: "MCP connections and profiles",
     exact: true,
   });
+  await panel
+    .getByRole("button", { name: "Runtime diagnostics", exact: true })
+    .click();
   await expect(
-    panel.getByText("Runner available", { exact: true }),
+    page.getByText("Runner available", { exact: true }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    panel.getByRole("button", { name: "Runtime diagnostics", exact: true }),
+  ).toBeFocused();
   const run = async (name: string, args: string) => {
+    for (let i = 0; i < 4 && (await page.getByRole("dialog").count()); i++) {
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(180);
+    }
+    if (!page.url().includes(`/brains/${brain.id}/connections`))
+      await page.goto(`/brains/${brain.id}/connections?tab=profiles`);
     await panel
       .getByRole("button", { name: "Inspect cached tools", exact: true })
       .click();
@@ -216,6 +230,7 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const f = await setup(page);
+  await page.goto(`/brains/${f.brain.id}/settings?tab=capture`);
   const capture = page.getByRole("region", {
     name: "Session capture",
     exact: true,
@@ -264,13 +279,29 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
   await expect(
     dialog.getByText("Captured observations", { exact: true }),
   ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", {
+      name: "Inspect captured evidence",
+      exact: true,
+    }),
+  ).toBeFocused();
   await page.screenshot({
     path: "../.cache/ui-managed-call-desktop.png",
     animations: "disabled",
   });
   await page.keyboard.press("Escape");
-  await capture.scrollIntoViewIfNeeded();
-  await expect(capture).toContainText("1 published");
+  await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Tool runtime diagnostics", exact: true }),
+  ).toBeVisible();
+  await page.goto(`/brains/${f.brain.id}/agents?tab=sessions`);
+  await capture
+    .getByRole("button", { name: "Capture coverage", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Capture coverage", exact: true }),
+  ).toContainText("1 published");
+  await page.keyboard.press("Escape");
   await expect(capture).toContainText("Managed tool");
   await page.screenshot({
     path: "../.cache/ui-managed-activity-desktop.png",
@@ -366,7 +397,12 @@ test("desktop cancellation, output expiry and Use revocation clear retained cont
   await expect(
     f.panel.getByRole("button", { name: "Inspect cached tools", exact: true }),
   ).toBeDisabled();
-  await f.panel
+  const runtime = page.getByRole("dialog", {
+    name: "Tool runtime diagnostics",
+    exact: true,
+  });
+  await expect(runtime).toBeVisible();
+  await runtime
     .getByRole("button", { name: "End tool session", exact: true })
     .click();
   expect(errors).toEqual([]);

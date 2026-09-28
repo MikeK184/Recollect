@@ -1,5 +1,7 @@
 # Explore canonical graph evidence
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Use the locally delivered repository and knowledge projections with an authorized
@@ -15,21 +17,21 @@ A Brain with no claims or repository publications can have no graph generations.
 
 ## Procedure
 
-1. Open the Brain and expand **Evidence graphs**. Choose **Repository structure**
+1. Open the Brain and select **Graph → Filters**. Choose **Repository structure**
    or **Knowledge and supporting evidence**, then select scope and evidence mode.
 2. For structure, select one repository and its exact **Graph snapshot**. An
    environment selection requires its exact **Graph manifest**; the snapshot
    must be an entry of that manifest. Snapshot and manifest selectors have paging.
    Development publication does not replace an older production input.
 3. Choose optional areas, fact time and relation filters. Knowledge views also
-   support collection selection. **Load graph view** returns canonical entities,
+   support collection selection. **Apply graph filters** returns canonical entities,
    qualified relationship counts, generation identity and coverage. Read partial
    reasons before interpreting an empty view or a path.
 4. Use an entity's **Use as start** and **Use as end** buttons, choose direction
    and a maximum of one to eight hops, then **Find shortest eligible path**.
    **Inspect evidence** opens the same retained evidence used by recall. Selecting
    the same entity at both ends explicitly requests its zero-hop path.
-5. Writers can request **Rebuild graph**. The previous ready generation remains
+5. Writers can request **Graph status → Rebuild graph**. The previous ready generation remains
    qualified while the new one builds. Inspect generation status and the Brain's
    Processing panel for progress, attempts, cancellation and retry. Page refresh
    does not repeat rebuild, view or path requests.

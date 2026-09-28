@@ -18,6 +18,7 @@ use uuid::Uuid;
 
 #[derive(Deserialize, Default)]
 pub struct CatalogueQuery {
+    pub q: Option<String>,
     pub collection: Option<Uuid>,
     pub area: Option<Uuid>,
     pub environment: Option<Uuid>,
@@ -289,7 +290,7 @@ async fn changed(
     Ok(())
 }
 
-#[utoipa::path(get,path="/api/brains/{brain}/evidence",operation_id="evidenceCatalogue",params(("brain"=Uuid,Path),("collection"=Option<Uuid>,Query),("area"=Option<Uuid>,Query),("environment"=Option<Uuid>,Query),("offset"=Option<i64>,Query)),responses((status=200,body=EvidenceCatalogue)))]
+#[utoipa::path(get,path="/api/brains/{brain}/evidence",operation_id="evidenceCatalogue",params(("brain"=Uuid,Path),("collection"=Option<Uuid>,Query),("area"=Option<Uuid>,Query),("environment"=Option<Uuid>,Query),("q"=Option<String>,Query),("offset"=Option<i64>,Query)),responses((status=200,body=EvidenceCatalogue)))]
 pub async fn catalogue(
     State(state): State<AppState>,
     auth: Auth,
@@ -297,6 +298,7 @@ pub async fn catalogue(
     Query(query): Query<CatalogueQuery>,
 ) -> Result<Json<EvidenceCatalogue>> {
     let offset = offset(query.offset)?;
+    let search = crate::publication::list_query(query.q.as_deref())?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
     let mut filters = vec![];
@@ -313,19 +315,21 @@ pub async fn catalogue(
             filters.push(id);
         }
     }
-    let condition = "s.brain_id=$1 AND NOT EXISTS(SELECT 1 FROM unnest($2::uuid[]) f WHERE NOT EXISTS(SELECT 1 FROM evidence_memberships m WHERE m.source_id=s.id AND m.group_id=f))";
+    let condition = "s.brain_id=$1 AND NOT EXISTS(SELECT 1 FROM unnest($2::uuid[]) f WHERE NOT EXISTS(SELECT 1 FROM evidence_memberships m WHERE m.source_id=s.id AND m.group_id=f)) AND ($3='' OR (recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active' AND position(lower($3) in lower(v.title))>0))";
     let total: i64 =
-        sqlx::query_scalar(&format!("SELECT count(*) FROM sources s WHERE {condition}"))
+        sqlx::query_scalar(&format!("SELECT count(*) FROM sources s JOIN source_versions v ON v.id=s.current_version AND v.brain_id=s.brain_id WHERE {condition}"))
             .bind(brain)
             .bind(&filters)
+            .bind(&search)
             .fetch_one(&mut *tx)
             .await?;
     let rows: Vec<SourceRow> = sqlx::query_as(&format!(
-        "{} WHERE {condition} ORDER BY s.updated_at DESC,s.id LIMIT 50 OFFSET $3",
+        "{} WHERE {condition} ORDER BY s.updated_at DESC,s.id LIMIT 50 OFFSET $4",
         source_select()
     ))
     .bind(brain)
     .bind(&filters)
+    .bind(&search)
     .bind(offset)
     .fetch_all(&mut *tx)
     .await?;

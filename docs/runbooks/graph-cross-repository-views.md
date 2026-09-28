@@ -1,5 +1,7 @@
 # Explore exact combined repository graphs
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Use the [canonical graph runtime](graph-projection-and-traversal.md) with two or
@@ -20,14 +22,14 @@ remote links from source hints alone.
 2. Create an environment manifest with one exact snapshot per repository. Empty
    configuration paths select the whole snapshot; otherwise select literal files
    or directories. Descendants match at a `/` boundary, without glob expansion.
-3. Expand **Evidence graphs**, choose **Combined repositories**, and select
+3. Open **Graph → Filters**, choose **Combined repositories**, and select
    **Graph environment** and **Graph manifest**. **Graph repositories** can narrow
    the view. Load after the required inputs finish processing.
 4. Inspect **Exact repository inputs** and **Unresolved repository links**. At most
    100 eligible source issues appear with an explicit total. Ambiguous targets,
    unsupported sources and mismatched commits do not become edges. Identical
    snapshot sets can share generations across environment manifests.
-5. Choose endpoints and **Find shortest eligible path**. Enola's HCL declarations
+5. Open **Find path**, choose endpoints and **Find shortest eligible path**. Enola's HCL declarations
    point from symbols to containing directories; **both** can traverse them in
    reverse. The path displays recorded direction and marks reverse steps. A
    `terraform_module` edge means an exact declared dependency, without claiming

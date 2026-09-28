@@ -5,6 +5,14 @@ local capability does not establish a deployed or published service.
 
 | Pack | Status |
 | --- | --- |
+| [mcp-direct-auth-repair.md](mcp-direct-auth-repair.md) | shipped |
+| [mcp-direct-connections.md](mcp-direct-connections.md) | shipped |
+| [operations-public-benchmark.md](operations-public-benchmark.md) | shipped |
+| [memory-managed-experience.md](memory-managed-experience.md) | shipped |
+| [platform-desktop-shell.md](platform-desktop-shell.md) | shipped |
+| [mcp-desktop-setup.md](mcp-desktop-setup.md) | shipped |
+| [desktop-experience-contracts.md](desktop-experience-contracts.md) | shipped |
+| [operations-root-compose.md](operations-root-compose.md) | shipped |
 | [operations-integrated-evaluations.md](operations-integrated-evaluations.md) | shipped |
 | [operations-recovery-drills.md](operations-recovery-drills.md) | shipped |
 | [mcp-observation-capture.md](mcp-observation-capture.md) | shipped |

@@ -1,44 +1,57 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Group, Select, Stack, Text } from "@mantine/core";
+import {
+  Button,
+  Group,
+  Select,
+  Stack,
+  Text,
+  px,
+  useMantineTheme,
+} from "@mantine/core";
 import cytoscape, { type Core, type StylesheetJson } from "cytoscape";
+import { palette, fonts, iconSize } from "./design/tokens";
+import { Maximize, ZoomIn, ZoomOut, Focus } from "lucide-react";
+import "./features/feature-views.css";
 import type { components } from "./api-schema";
 
 type Node = components["schemas"]["GraphNode"];
 type Edge = components["schemas"]["GraphEdge"];
 export type GraphChoice = { kind: "node" | "edge"; id: string } | null;
+const labelMaxWidth = 145;
 
-const style: StylesheetJson = [
+const graphStyles = (labelFontSize: number): StylesheetJson => [
   {
     selector: "node",
     style: {
-      "background-color": "#1971c2",
+      "background-color": palette.blue,
       label: "data(label)",
-      color: "#172b4d",
-      "font-size": 11,
+      color: palette.ink,
+      "font-size": labelFontSize,
+      "font-family": fonts.ui,
       "text-valign": "bottom",
       "text-margin-y": 7,
       "text-wrap": "ellipsis",
-      "text-max-width": "145px",
-      width: 24,
-      height: 24,
+      "text-max-width": `${labelMaxWidth}px`,
+      width: 30,
+      height: 30,
       "border-width": 2,
-      "border-color": "#fff",
+      "border-color": palette.paperLight,
     },
   },
   {
     selector: 'node[kind = "claim"]',
-    style: { "background-color": "#7950f2", shape: "diamond" },
+    style: { "background-color": palette.amber, shape: "round-rectangle" },
   },
   {
     selector: 'node[kind = "source_version"]',
-    style: { "background-color": "#099268", shape: "round-rectangle" },
+    style: { "background-color": palette.sage, shape: "round-rectangle" },
   },
   {
     selector: "edge",
     style: {
       width: 1.5,
-      "line-color": "#8698ad",
-      "target-arrow-color": "#8698ad",
+      "line-color": palette.lineDark,
+      "target-arrow-color": palette.lineDark,
       "target-arrow-shape": "triangle",
       "curve-style": "bezier",
       "arrow-scale": 0.9,
@@ -48,16 +61,16 @@ const style: StylesheetJson = [
     selector: 'edge[family = "cross_repository"]',
     style: {
       "line-style": "dashed",
-      "line-color": "#c96f12",
-      "target-arrow-color": "#c96f12",
+      "line-color": palette.violet,
+      "target-arrow-color": palette.violet,
     },
   },
   {
     selector: ".path",
     style: {
-      "line-color": "#087f5b",
-      "target-arrow-color": "#087f5b",
-      "border-color": "#087f5b",
+      "line-color": palette.sageDark,
+      "target-arrow-color": palette.sageDark,
+      "border-color": palette.sageDark,
       "border-width": 4,
       width: 3,
     },
@@ -66,12 +79,12 @@ const style: StylesheetJson = [
   {
     selector: ".chosen",
     style: {
-      "line-color": "#e8590c",
-      "target-arrow-color": "#e8590c",
-      "border-color": "#e8590c",
+      "line-color": palette.ink,
+      "target-arrow-color": palette.ink,
+      "border-color": palette.ink,
       "border-width": 5,
       "overlay-opacity": 0.15,
-      "overlay-color": "#e8590c",
+      "overlay-color": palette.ink,
     },
   },
 ];
@@ -100,6 +113,8 @@ export default function GraphCanvas({
   pathNodes: string[];
   pathEdges: string[];
 }) {
+  const theme = useMantineTheme();
+  const labelFontSize = Number(px(theme.fontSizes.xs));
   const container = useRef<HTMLDivElement>(null);
   const core = useRef<Core | null>(null);
   const choose = useRef(onChoose);
@@ -111,7 +126,7 @@ export default function GraphCanvas({
     setReady(false);
     const cy = cytoscape({
       container: container.current,
-      style,
+      style: graphStyles(labelFontSize),
       elements: [
         ...nodes.map((n) => ({
           data: { id: n.key, label: n.evidence.label, kind: n.evidence.kind },
@@ -137,7 +152,10 @@ export default function GraphCanvas({
             numIter: 250,
             randomize: false,
             padding: 35,
-            componentSpacing: 80,
+            // The default short spring can overlap the captions of small graphs.
+            idealEdgeLength: labelMaxWidth + 48,
+            nodeRepulsion: labelMaxWidth ** 2,
+            componentSpacing: labelMaxWidth,
             nodeDimensionsIncludeLabels: true,
           }
         : layout === "breadthfirst"
@@ -180,7 +198,7 @@ export default function GraphCanvas({
       cy.destroy();
       core.current = null;
     };
-  }, [nodes, edges, layout]);
+  }, [nodes, edges, layout, labelFontSize]);
   useEffect(() => {
     const cy = core.current;
     if (!cy) return;
@@ -201,77 +219,71 @@ export default function GraphCanvas({
   }
   return (
     <Stack gap="xs" style={{ minWidth: 0 }}>
-      <Group align="end">
-        <Select
-          label="Graph layout"
-          value={layout}
-          onChange={(value) => setLayout(value ?? "cose")}
-          data={[
-            { value: "cose", label: "Connected clusters" },
-            { value: "breadthfirst", label: "Directed layers" },
-            { value: "grid", label: "Grid" },
-          ]}
+      <div className="graph-stage">
+        <div
+          ref={container}
+          className="graph-canvas"
+          role="img"
+          aria-label={`Interactive graph: ${nodes.length} entities and ${edges.length} directed relationships. Use the entity search or List view for keyboard inspection.`}
+          data-testid="graph-canvas"
+          data-ready={ready}
         />
-        <Button
-          variant="light"
-          onClick={() => core.current && fitGraph(core.current)}
-        >
-          Fit graph
-        </Button>
-        <Button
-          variant="light"
-          aria-label="Zoom graph in"
-          onClick={() => zoom(1.3)}
-        >
-          +
-        </Button>
-        <Button
-          variant="light"
-          aria-label="Zoom graph out"
-          onClick={() => zoom(1 / 1.3)}
-        >
-          −
-        </Button>
-        <Button
-          variant="light"
-          disabled={!choice}
-          onClick={() => {
-            if (choice) {
-              const cy = core.current;
-              if (cy)
-                fitGraph(
-                  cy,
-                  cy.getElementById(choice.id).closedNeighborhood(),
-                  65,
-                );
-            }
-          }}
-        >
-          Focus selection
-        </Button>
-      </Group>
-      <div
-        ref={container}
-        role="img"
-        aria-label={`Interactive graph: ${nodes.length} entities and ${edges.length} directed relationships. Use the entity and relationship controls below for keyboard inspection.`}
-        data-testid="graph-canvas"
-        data-ready={ready}
-        style={{
-          height: "clamp(290px, 48vh, 520px)",
-          width: "100%",
-          minWidth: 0,
-          overflow: "hidden",
-          contain: "inline-size",
-          background: "#f8fafc",
-          border: "1px solid #ced4da",
-          borderRadius: 8,
-        }}
-      />
+        <Group className="graph-canvas-controls" align="end" justify="end">
+          <Select
+            label="Graph layout"
+            value={layout}
+            onChange={(value) => setLayout(value ?? "cose")}
+            data={[
+              { value: "cose", label: "Connected clusters" },
+              { value: "breadthfirst", label: "Directed layers" },
+              { value: "grid", label: "Grid" },
+            ]}
+          />
+          <Button
+            variant="subtle"
+            aria-label="Fit graph"
+            onClick={() => core.current && fitGraph(core.current)}
+          >
+            <Maximize size={iconSize.small} />
+          </Button>
+          <Button
+            variant="subtle"
+            aria-label="Zoom graph in"
+            onClick={() => zoom(1.3)}
+          >
+            <ZoomIn size={iconSize.small} />
+          </Button>
+          <Button
+            variant="subtle"
+            aria-label="Zoom graph out"
+            onClick={() => zoom(1 / 1.3)}
+          >
+            <ZoomOut size={iconSize.small} />
+          </Button>
+          <Button
+            variant="subtle"
+            disabled={!choice}
+            onClick={() => {
+              if (choice) {
+                const cy = core.current;
+                if (cy)
+                  fitGraph(
+                    cy,
+                    cy.getElementById(choice.id).closedNeighborhood(),
+                    65,
+                  );
+              }
+            }}
+          >
+            Focus selection
+          </Button>
+        </Group>
+      </div>
       <Text size="xs" c="dimmed">
-        Drag to pan; scroll to zoom; select an entity or arrow to inspect it.
-        Blue: repository evidence · purple: claim · green: source. Orange marks
-        selection; green outlines mark the requested path. Layout position does
-        not indicate trust or importance.
+        Drag to pan; scroll to zoom; select an entity or arrow to inspect. Blue:
+        repository evidence · amber: memory · sage: source. Dark outlines mark
+        selection; sage outlines mark the path. Layout position does not
+        indicate trust or importance.
       </Text>
     </Stack>
   );

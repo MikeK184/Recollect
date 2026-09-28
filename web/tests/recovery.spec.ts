@@ -1,3 +1,4 @@
+import { openGraphDrawer, loadGraph } from "./desktop-helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -45,9 +46,13 @@ test("restored desktop preserves scoped evidence, graph and uncertain effect rec
     animations: "disabled",
   });
   await page.keyboard.press("Escape");
-  await page.goto(`${saved.origin}/brains/${saved.brain.id}`);
+  await page.goto(`${saved.origin}/brains/${saved.brain.id}/ask?tab=search`);
   await expect(
-    page.getByRole("heading", { name: saved.brain.name, exact: true }),
+    page.getByRole("heading", {
+      name: "Ask your Brain",
+      level: 1,
+      exact: true,
+    }),
   ).toBeVisible();
   const recall = page.getByRole("region", {
     name: "Recall memory",
@@ -77,29 +82,31 @@ test("restored desktop preserves scoped evidence, graph and uncertain effect rec
   expect((await (await erased).json()).context.items).toEqual([]);
   await expect(recall.getByTestId("recall-result")).toHaveCount(0);
 
-  const graph = page.getByRole("region", {
-    name: "Evidence graphs",
-    exact: true,
-  });
-  await graph.getByRole("button", { name: /Evidence graphs/ }).click();
-  await graph.getByLabel("Graph kind", { exact: true }).click();
-  await page
-    .getByRole("option", { name: "Repository structure", exact: true })
+  await page.goto(`${saved.origin}/brains/${saved.brain.id}/graph`);
+  const graph = page.locator("body");
+  await page.getByText("Repository", { exact: true }).click();
+  await graph
+    .getByRole("textbox", { name: "Graph repositories", exact: true })
     .click();
-  await graph.getByLabel("Graph repositories", { exact: true }).click();
   await page
     .getByRole("option", { name: "example.test/team/recovery", exact: true })
     .click();
   await page.keyboard.press("Escape");
-  await graph
-    .getByRole("button", { name: "Load graph view", exact: true })
-    .click();
+  await loadGraph(page);
+  await openGraphDrawer(
+    page,
+    "Eligible entities",
+    "Browse eligible entity pages",
+  );
   await expect(graph.getByTestId("graph-entity")).toHaveCount(2);
+  await page.keyboard.press("Escape");
+  await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
   await expect(
     graph.getByText("2 eligible entities · 1 eligible relationships", {
       exact: true,
     }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(graph.getByTestId("graph-canvas")).toHaveAttribute(
     "data-ready",
     "true",
@@ -109,6 +116,9 @@ test("restored desktop preserves scoped evidence, graph and uncertain effect rec
     animations: "disabled",
   });
 
+  await page.goto(
+    `${saved.origin}/brains/${saved.brain.id}/activity?tab=tools`,
+  );
   const activity = page.getByRole("region", {
     name: "MCP activity",
     exact: true,
@@ -139,9 +149,9 @@ test("restored desktop preserves scoped evidence, graph and uncertain effect rec
     await expect(
       member.getByRole("button", { name: "Runtime diagnostics", exact: true }),
     ).toHaveCount(0);
-    await member.goto(`${saved.origin}/brains/${saved.brain.id}`);
+    await member.goto(`${saved.origin}/brains/${saved.brain.id}/sources`);
     await expect(
-      member.getByRole("button", { name: "Import source", exact: true }),
+      member.getByRole("button", { name: "Add source", exact: true }),
     ).toHaveCount(0);
     await member
       .getByRole("button", { name: /RetainedIndependentCobalt/ })

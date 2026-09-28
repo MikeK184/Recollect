@@ -84,11 +84,11 @@ export function JobsPanel({ id, admin }: { id: string; admin: boolean }) {
       aria-label="Background processing"
       withBorder
       p="lg"
-      mt="xl"
+      className="feature-view"
     >
       <Group justify="space-between" mb="sm">
         <Text fw={600}>Processing</Text>
-        {processing.data && (
+        {!processing.error && processing.data && (
           <Badge
             color={
               processing.data.state === "current"
@@ -124,7 +124,7 @@ export function JobsPanel({ id, admin }: { id: string; admin: boolean }) {
       )}
       {jobs.isPending ? (
         <Loader size="sm" />
-      ) : !jobs.data?.length ? (
+      ) : jobs.error || processing.error ? null : !jobs.data?.length ? (
         <Text c="dimmed" size="sm">
           No background work yet.
         </Text>

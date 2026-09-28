@@ -10,6 +10,8 @@ Personal use and internal-team use share one application and permission model.
 
 ## Governing Sources
 
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
+- [Desktop contract](../../contracts/desktop-experience.md)
 - [Runtime ADR](../../adr/0003-product-runtime.md)
 - [Bootstrap contract](../../contracts/platform-bootstrap.md)
 - [Durable-work contract](../../contracts/platform-durable-work.md)
@@ -70,6 +72,8 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-durable-work` | shipped | contract-backed | pack | Atomic mutation/audit/outbox support, idempotent bounded workers and explicit job/projection state |
 | `platform-team-access` | shipped | contract-backed | pack | Invited local accounts, optional OIDC, effective grants and tested internal/external revocation behavior |
 | `platform-device-pairing` | shipped | contract-backed | pack | Native companion enrollment with individually revocable credentials and shared protocol types |
+| `desktop-experience-contracts` | shipped | adr-backed, contract-backed | pack | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
+| `platform-desktop-shell` | shipped | adr-backed, contract-backed | pack | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
 
 ## Slice Dependencies
 
@@ -83,6 +87,8 @@ one acyclic implementation order.
 | `platform-durable-work` | `platform-bootstrap` |
 | `platform-team-access` | `platform-bootstrap` |
 | `platform-device-pairing` | `platform-bootstrap` |
+| `desktop-experience-contracts` | `operations-integrated-evaluations` |
+| `platform-desktop-shell` | `desktop-experience-contracts` |
 
 ## Completion Criteria
 
@@ -96,3 +102,12 @@ one acyclic implementation order.
   job failure. No test result is inferred from middleware or a schema alone.
 - Publish focused validation and a runnable development procedure. This epic
   completing does not establish memory, graph-analytics or MCP product readiness.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the final local image separately from
+remaining cross-domain acceptance. The [platform-desktop-shell closeout](../execution/archive/platform-desktop-shell.md)
+records this owner’s completed checks. The [desktop guide](../../runbooks/desktop-experience.md)
+documents current function locations. Other owners keep unfinished criteria active;
+prior shipped domain records remain historical evidence rather than redesign proof.

@@ -15,14 +15,16 @@ async function ownerLogin(page: Page) {
   ).toBeVisible();
 }
 async function createBrain(page: Page, name: string) {
-  await page.getByRole("link", { name: /Your Brains/ }).click();
+  await page.goto("/");
   await page.getByRole("button", { name: "Create Brain", exact: true }).click();
   await page.getByRole("dialog").getByLabel(/^Name/).fill(name);
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Create Brain", exact: true })
     .click();
-  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(page.getByLabel("Switch Brain", { exact: true })).toBeVisible();
+  const brain = new URL(page.url()).pathname.split("/")[2];
+  await page.goto(`/brains/${brain}/settings?tab=access`);
 }
 
 test("invite a teammate and revoke shared Brain access through the browser", async ({
@@ -31,7 +33,7 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
 }) => {
   await ownerLogin(page);
   const username = `teammate-${randomUUID().slice(0, 8)}`;
-  await page.getByRole("link", { name: "Team", exact: true }).click();
+  await page.goto("/team");
   await page.getByRole("button", { name: "Add teammate" }).click();
   let dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^Teammate username/).fill(username);
@@ -55,8 +57,7 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
   ).toHaveCount(0);
   await createBrain(page, "Shared team evidence");
   const brainUrl = page.url();
-  await page.getByRole("button", { name: "Manage access" }).click();
-  dialog = page.getByRole("dialog");
+  dialog = page.getByRole("region", { name: "Brain access", exact: true });
   await dialog.getByLabel(/^Account username/).fill(username);
   await dialog.getByRole("button", { name: "Save direct grant" }).click();
   await expect(
@@ -69,7 +70,7 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
   });
   await member.goto(brainUrl);
   await expect(
-    member.getByRole("heading", { name: "Shared team evidence", exact: true }),
+    member.getByRole("heading", { name: "Settings", level: 1, exact: true }),
   ).toBeVisible();
   await expect(
     member.getByRole("button", { name: "Edit Brain", exact: true }),
@@ -80,13 +81,13 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
   await memberCard.getByRole("button", { name: "Remove direct grant" }).click();
   await expect(dialog.getByText("Effective access is now none.")).toBeVisible();
   await expect(
-    member.getByRole("heading", { name: "Shared team evidence", exact: true }),
+    member.getByRole("heading", { name: "Settings", level: 1, exact: true }),
   ).toHaveCount(0, { timeout: 10000 });
   await expect(
     member.getByText("This resource is unavailable or you do not have access."),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("link", { name: "Team", exact: true }).click();
+  await page.goto("/team");
   const account = page
     .locator(".mantine-Card-root")
     .filter({ has: page.getByText(username, { exact: true }) })
@@ -100,19 +101,19 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
     member.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
   await page.screenshot({ path: "../.cache/ui/team.png", fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("link", { name: /Your Brains/ }).click();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Your Brains", exact: true }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Team", exact: true }).click();
+  await page.goto("/team");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
     ),
   ).toBe(false);
   await page.screenshot({
-    path: "../.cache/ui/team-mobile.png",
+    path: "../.cache/ui/team-1280.png",
     fullPage: true,
   });
   await context.close();
@@ -126,7 +127,7 @@ test("organization sign-in obtains a Brain role from a real signed group claim",
     "Run ./scripts/test-oidc.sh ui for the isolated provider",
   );
   await ownerLogin(page);
-  await page.getByRole("link", { name: "Team", exact: true }).click();
+  await page.goto("/team");
   await page.getByRole("button", { name: "Add teammate" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^Teammate username/).fill("organization-browser");
@@ -140,10 +141,13 @@ test("organization sign-in obtains a Brain role from a real signed group claim",
     page.getByText("organization-browser", { exact: true }),
   ).toBeVisible();
   await createBrain(page, "Organization evidence");
-  await page.getByRole("button", { name: "Manage access" }).click();
-  await dialog.getByLabel(/^Group name or ID/).fill("authors");
-  await dialog.getByRole("button", { name: "Save group mapping" }).click();
-  await expect(dialog.getByText("Group mapping updated.")).toBeVisible();
+  const access = page.getByRole("region", {
+    name: "Brain access",
+    exact: true,
+  });
+  await access.getByLabel(/^Group name or ID/).fill("authors");
+  await access.getByRole("button", { name: "Save group mapping" }).click();
+  await expect(access.getByText("Group mapping updated.")).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Sign out" }).click();
   const pairingResponse = await page.request.post("/api/devices/pairings", {
@@ -165,13 +169,18 @@ test("organization sign-in obtains a Brain role from a real signed group claim",
       "This pairing was declined or cancelled. Start a new request to try again.",
     ),
   ).toBeVisible();
-  await page.getByRole("link", { name: /Your Brains/ }).click();
+  await page.goto("/");
   await expect(
     page.getByText("organization-browser", { exact: true }),
   ).toBeVisible();
   await page
     .getByRole("heading", { name: "Organization evidence", exact: true })
     .click();
+  await page
+    .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link", { name: "Settings", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "Access", exact: true }).click();
   await expect(page.getByText("Your role:")).toContainText("reader");
   await expect(page.getByRole("button", { name: "Manage access" })).toHaveCount(
     0,

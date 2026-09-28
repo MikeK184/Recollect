@@ -129,6 +129,13 @@ one capture-lane pass; omitting the lane retains the interactive default.
 
 ## Acceptance
 
+Desktop list amendment, 2026-09-26: the
+[desktop contract](desktop-experience.md#literal-list-search) adds optional source
+`q`, trimmed to at most 200 UTF-8 bytes, for case-insensitive literal containment
+over the permitted current title before pagination. It does not search retained
+bodies, call a model or change exact-version/retention rules. Empty q preserves
+the prior list and ordinary wildcard characters are literal.
+
 Exercise actual handlers, PostgreSQL RLS and filesystem artifacts: writer/reader/
 foreign isolation with positive controls; shared membership removal; immutable
 updates and stale-editor/replay behavior; actor/device audit; denied capture and

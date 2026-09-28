@@ -166,12 +166,10 @@ export function HandoversPanel({ brain }: { brain: Brain }) {
   });
   const error = runs.error ?? retry.error ?? cancel.error;
   return (
-    <Card withBorder p="xl" mt="lg">
+    <Card withBorder p="lg" mt="xl" className="feature-setting">
       <Stack>
         <Group justify="space-between">
-          <Title order={2} fz={21}>
-            Generated handovers
-          </Title>
+          <Title order={3}>Generated handovers</Title>
           {brain.role !== "reader" && !brain.archived && (
             <Button size="xs" onClick={() => setCreating(true)}>
               Generate handover
@@ -196,70 +194,71 @@ export function HandoversPanel({ brain }: { brain: Brain }) {
         {runs.data?.total === 0 && (
           <Text c="dimmed">No generated handovers yet.</Text>
         )}
-        {runs.data?.items.map((run) => (
-          <Card withBorder key={run.id}>
-            <Stack gap="sm">
-              <Group justify="space-between">
-                <Text fw={600}>{run.title || "Handover attempt"}</Text>
-                <Badge
-                  color={
-                    run.state === "succeeded"
-                      ? "teal"
-                      : ["failed", "removed"].includes(run.state)
-                        ? "orange"
-                        : "gray"
-                  }
-                >
-                  {run.state}
-                </Badge>
-              </Group>
-              <Text size="xs" c="dimmed">
-                {new Date(run.created_at).toLocaleString()} ·{" "}
-                {run.contributions.length} contributions
-              </Text>
-              {run.error_code && (
-                <Text size="sm">{run.error_code.replaceAll("_", " ")}</Text>
-              )}
-              <Group>
-                {run.claim_id && run.state === "succeeded" && (
-                  <Button
-                    variant="light"
-                    size="xs"
-                    onClick={() => setSelected(run.claim_id!)}
+        {!runs.error &&
+          runs.data?.items.map((run) => (
+            <Card withBorder key={run.id}>
+              <Stack gap="sm">
+                <Group justify="space-between">
+                  <Text fw={600}>{run.title || "Handover attempt"}</Text>
+                  <Badge
+                    color={
+                      run.state === "succeeded"
+                        ? "teal"
+                        : ["failed", "removed"].includes(run.state)
+                          ? "orange"
+                          : "gray"
+                    }
                   >
-                    Inspect generated handover
-                  </Button>
+                    {run.state}
+                  </Badge>
+                </Group>
+                <Text size="xs" c="dimmed">
+                  {new Date(run.created_at).toLocaleString()} ·{" "}
+                  {run.contributions.length} contributions
+                </Text>
+                {run.error_code && (
+                  <Text size="sm">{run.error_code.replaceAll("_", " ")}</Text>
                 )}
-                {["failed", "cancelled"].includes(run.state) &&
-                  brain.role !== "reader" &&
-                  !brain.archived && (
+                <Group>
+                  {run.claim_id && run.state === "succeeded" && (
                     <Button
                       variant="light"
                       size="xs"
-                      loading={retry.isPending && retry.variables === run.id}
-                      disabled={retry.isPending && retry.variables !== run.id}
-                      onClick={() => retry.mutate(run.id)}
+                      onClick={() => setSelected(run.claim_id!)}
                     >
-                      Start new handover attempt
+                      Inspect generated handover
                     </Button>
                   )}
-                {["queued", "running"].includes(run.state) &&
-                  brain.role === "admin" && (
-                    <Button
-                      variant="subtle"
-                      size="xs"
-                      loading={
-                        cancel.isPending && cancel.variables === run.job_id
-                      }
-                      onClick={() => cancel.mutate(run.job_id)}
-                    >
-                      Cancel handover
-                    </Button>
-                  )}
-              </Group>
-            </Stack>
-          </Card>
-        ))}
+                  {["failed", "cancelled"].includes(run.state) &&
+                    brain.role !== "reader" &&
+                    !brain.archived && (
+                      <Button
+                        variant="light"
+                        size="xs"
+                        loading={retry.isPending && retry.variables === run.id}
+                        disabled={retry.isPending && retry.variables !== run.id}
+                        onClick={() => retry.mutate(run.id)}
+                      >
+                        Start new handover attempt
+                      </Button>
+                    )}
+                  {["queued", "running"].includes(run.state) &&
+                    brain.role === "admin" && (
+                      <Button
+                        variant="subtle"
+                        size="xs"
+                        loading={
+                          cancel.isPending && cancel.variables === run.job_id
+                        }
+                        onClick={() => cancel.mutate(run.job_id)}
+                      >
+                        Cancel handover
+                      </Button>
+                    )}
+                </Group>
+              </Stack>
+            </Card>
+          ))}
         {!!runs.data && runs.data.total > 20 && (
           <Group>
             <Button

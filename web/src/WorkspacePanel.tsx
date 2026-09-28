@@ -1,4 +1,6 @@
+import { iconSize } from "./design/tokens";
 import { useState } from "react";
+import "./features/feature-views.css";
 import {
   Alert,
   Badge,
@@ -96,10 +98,19 @@ function Pages({
   );
 }
 
-export function WorkspacePanel({ brain }: { brain: Brain }) {
+export function WorkspacePanel({
+  brain,
+  section = "tasks",
+}: {
+  brain: Brain;
+  section?: "repositories" | "tasks";
+}) {
   const cache = useQueryClient();
   const [workspace, setWorkspace] = useState<string | null>(null);
-  const [tab, setTab] = useState<string | null>("tasks");
+  const [tab, setTab] = useState<string | null>(
+    section === "repositories" ? "repositories" : "tasks",
+  );
+  const [publishing, setPublishing] = useState(false);
   const [checkoutOffset, setCheckoutOffset] = useState(0);
   const [taskOffset, setTaskOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -145,35 +156,35 @@ export function WorkspacePanel({ brain }: { brain: Brain }) {
     );
   const data = catalogue.data;
   return (
-    <Card withBorder p="xl" mt="xl" className="workspace-panel">
-      <Group justify="space-between" mb="md">
-        <Group gap="sm">
-          <FolderGit2 size={20} />
-          <Text fw={600}>Workspace &amp; tasks</Text>
-        </Group>
-        <Group gap="xs">
-          <McpAgentSetup brain={brain} />
-          <Button
-            variant="subtle"
-            size="xs"
-            aria-label="Refresh catalogue"
-            onClick={refresh}
-          >
-            <RefreshCw size={15} />
+    <section className="feature-view workspace-panel">
+      <div className="feature-toolbar">
+        <div className="feature-search">
+          <Text size="sm" c="dimmed">
+            {section === "repositories"
+              ? "Shared repository identities and published snapshots. Your local checkout paths remain private."
+              : "Your agent manages these working scopes automatically. Inspect or adjust your own context here when needed."}
+          </Text>
+        </div>
+        {section === "repositories" ? (
+          <Button variant="default" onClick={() => setPublishing(true)}>
+            Publish from companion
           </Button>
+        ) : (
           <Button
-            size="xs"
-            leftSection={<Plus size={14} />}
+            variant="default"
+            leftSection={<Plus size={iconSize.small} />}
             disabled={brain.archived || !data}
             onClick={() => setForm({})}
           >
-            New task
+            New task scope
           </Button>
-        </Group>
-      </Group>
-      <Text c="dimmed" size="sm" mb="lg">
-        Browse registered repositories and keep each task’s working context
-        distinct.
+        )}
+      </div>
+      <Text size="xs" c="dimmed" mb="md">
+        {catalogue.dataUpdatedAt
+          ? `Catalogue checked ${new Date(catalogue.dataUpdatedAt).toLocaleTimeString()}`
+          : "Loading catalogue…"}
+        . Native workspace discovery runs on your paired device.
       </Text>
       {handoff && (
         <Alert
@@ -190,18 +201,23 @@ export function WorkspacePanel({ brain }: { brain: Brain }) {
         <Loader size="sm" />
       ) : (
         data && (
-          <Tabs value={tab} onChange={setTab}>
+          <Tabs value={tab} onChange={setTab} keepMounted={false}>
             <Tabs.List>
-              <Tabs.Tab value="tasks">Your tasks</Tabs.Tab>
-              <Tabs.Tab value="repositories">Repositories</Tabs.Tab>
+              {section === "tasks" && (
+                <Tabs.Tab value="tasks">Your task scopes</Tabs.Tab>
+              )}
+              {section === "repositories" && (
+                <Tabs.Tab value="repositories">Published repositories</Tabs.Tab>
+              )}
               <Tabs.Tab value="checkouts">Your checkouts</Tabs.Tab>
             </Tabs.List>
             <Tabs.Panel value="tasks" pt="lg">
               <Stack gap="sm">
                 {data.tasks.length === 0 && (
                   <Text size="sm" c="dimmed">
-                    No tasks yet. Start a task with the repositories, areas and
-                    environment you want to work on.
+                    No task scopes yet. Connected agents create and maintain
+                    their own scopes. Manual setup is available when you need
+                    it.
                   </Text>
                 )}
                 {data.tasks.map((task) => (
@@ -414,6 +430,28 @@ export function WorkspacePanel({ brain }: { brain: Brain }) {
           </Tabs>
         )
       )}
+      <Modal
+        opened={publishing}
+        onClose={() => setPublishing(false)}
+        title="Publish from your companion"
+        size="lg"
+      >
+        <Stack>
+          <Text>
+            Use the paired native companion from a task scoped to the
+            repository. Recollect publishes the selected committed tree, not
+            uncommitted working files.
+          </Text>
+          <Code
+            block
+          >{`recollect-agent repository publish ${brain.id} REPOSITORY_ID TASK_ID /path/to/checkout --revision COMMIT`}</Code>
+          <Text size="sm" c="dimmed">
+            Replace the identifiers with your repository and task scope. File
+            text stays local unless explicitly selected with --retain-file and
+            permitted in Settings. This browser cannot scan your checkout.
+          </Text>
+        </Stack>
+      </Modal>
       {data && form && (
         <TaskForm
           brain={brain}
@@ -457,7 +495,7 @@ export function WorkspacePanel({ brain }: { brain: Brain }) {
           }}
         />
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -736,7 +774,7 @@ function TaskDialog({
                 </Button>
                 <Button
                   variant="light"
-                  leftSection={<GitBranch size={15} />}
+                  leftSection={<GitBranch size={iconSize.small} />}
                   onClick={() => onFork(data.task)}
                 >
                   Start subagent

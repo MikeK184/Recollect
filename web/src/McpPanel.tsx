@@ -1,9 +1,12 @@
+import { McpConnectorSetup } from "./McpConnectorSetup";
+import { iconSize } from "./design/tokens";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
   Button,
   Card,
+  Drawer,
   Code,
   Group,
   Loader,
@@ -13,6 +16,9 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { Unplug, ShieldCheck, Plus, Activity } from "lucide-react";
+import { EmptyState } from "./components/AsyncState";
+import "./features/feature-views.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
@@ -41,13 +47,26 @@ export const availabilityLabel = (value: string) =>
     configuration_invalid: "Settings need attention",
   })[value] ?? value;
 
-export function McpPanel({ brain, actor }: { brain: Brain; actor: string }) {
+export function McpPanel({
+  brain,
+  actor,
+  section = "connections",
+  onSectionChange,
+}: {
+  brain: Brain;
+  actor: string;
+  section?: "connections" | "profiles" | "runners" | "activity";
+  onSectionChange?: (section: string | null) => void;
+}) {
   const cache = useQueryClient();
   const [connection, setConnection] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState(false);
+  const [connectorSetup, setConnectorSetup] = useState(false);
   const [profile, setProfile] = useState<string | null>(null);
   const [discover, setDiscover] = useState<string | null>(null);
   const [environment, setEnvironment] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [setupSaved, setSetupSaved] = useState(false);
   const [session, setSession] = useState(() => crypto.randomUUID());
   const [selectedCall, setSelectedCall] = useState<string | null>(null);
   const [run, setRun] = useState<{
@@ -155,23 +174,31 @@ export function McpPanel({ brain, actor }: { brain: Brain; actor: string }) {
         "Unavailable environment")
       : "Brain-wide";
   return (
-    <Card
-      withBorder
-      padding="lg"
-      component="section"
-      aria-label="MCP connections and profiles"
-    >
-      <Stack>
-        <Group justify="space-between">
-          <Title order={3}>MCP connections and profiles</Title>
-          <Badge variant="light" color="gray">
-            Catalogue
-          </Badge>
-        </Group>
-        <Text size="sm" c="dimmed">
-          Organize approved tools by environment and decide who can use, manage
-          or share each profile. Brain access alone does not grant tool use.
-        </Text>
+    <section className="feature-view" aria-label="MCP connections and profiles">
+      <Stack gap="lg">
+        {connectorSetup && (
+          <McpConnectorSetup
+            brain={brain}
+            close={() => setConnectorSetup(false)}
+            saved={(connected) => {
+              setConnectorSetup(false);
+              setNotice(
+                connected
+                  ? "MCP server added. Include it in a tool group to make it available to your agents."
+                  : "Connector registered. Add a connection to choose its target and execution location.",
+              );
+              refresh();
+            }}
+          />
+        )}
+        {section === "profiles" && (
+          <Text size="sm">
+            Profiles are tool groups: choose which MCP connections an agent can
+            use together. For example, a Documentation profile could contain
+            GitLab and Confluence. Use permission is separate from changing or
+            sharing the group.
+          </Text>
+        )}
         {notice && (
           <Alert
             title="Catalogue updated"
@@ -192,173 +219,302 @@ export function McpPanel({ brain, actor }: { brain: Brain; actor: string }) {
         {catalogue.isPending && <Loader size="sm" />}
         {data && !workspace.error && (
           <>
-            <Group>
-              <Select
-                label="Catalogue environment"
-                placeholder="All environments"
-                clearable
-                data={environments}
-                value={environment}
-                onChange={(value) => {
-                  setEnvironment(value);
-                  setDiscover(null);
-                }}
-              />
-              {data.can_configure && (
-                <>
+            {section !== "activity" && (
+              <div className="feature-toolbar">
+                <Select
+                  className="feature-search"
+                  label="Catalogue environment"
+                  placeholder="All environments"
+                  clearable
+                  data={environments}
+                  value={environment}
+                  onChange={(value) => {
+                    setEnvironment(value);
+                    setDiscover(null);
+                  }}
+                />
+                {section === "connections" && data.can_configure && (
                   <Button
-                    disabled={
-                      brain.archived || !data.definitions.some((d) => d.enabled)
-                    }
-                    onClick={() => setConnection("new")}
+                    leftSection={<Plus size={iconSize.small} />}
+                    disabled={brain.archived}
+                    onClick={() => setConnectorSetup(true)}
                   >
                     Add connection
                   </Button>
+                )}
+                {section === "connections" &&
+                  data.can_configure &&
+                  data.definitions.length > 0 && (
+                    <Button
+                      variant="subtle"
+                      disabled={brain.archived}
+                      onClick={() => setConnection("new")}
+                    >
+                      Use registered connector
+                    </Button>
+                  )}
+                {section === "profiles" && data.can_configure && (
                   <Button
-                    variant="light"
+                    leftSection={<Plus size={iconSize.small} />}
                     disabled={brain.archived}
                     onClick={() => setProfile("new")}
                   >
                     Create execution profile
                   </Button>
-                </>
-              )}
-            </Group>
+                )}
+                {section !== "runners" && (
+                  <Button
+                    variant="subtle"
+                    leftSection={<Activity size={iconSize.small} />}
+                    onClick={() => setDiagnostics(true)}
+                  >
+                    Runtime diagnostics
+                  </Button>
+                )}
+              </div>
+            )}
             {brain.archived && (
               <Alert color="gray">
                 This Brain is archived. Configuration and profile use are
                 paused.
               </Alert>
             )}
-            {data.can_configure && data.definitions.length === 0 && (
-              <Alert title="No approved connectors">
-                The installation operator must approve a connector definition
-                before you can configure a connection. Catalogue approval does
-                not start it.
-              </Alert>
-            )}
-            {data.profiles.filter(
-              (p) =>
-                !environment ||
-                !p.environment_id ||
-                p.environment_id === environment,
-            ).length === 0 && (
-              <Text size="sm">
-                No visible execution profiles in this selection. A Brain
-                administrator can create one or grant profile access.
-              </Text>
-            )}
-            {data.profiles
-              .filter(
-                (p) =>
-                  !environment ||
-                  !p.environment_id ||
-                  p.environment_id === environment,
-              )
-              .map((p) => (
-                <Card withBorder key={p.id} data-testid="mcp-profile">
-                  <Group justify="space-between">
-                    <Text fw={600}>{p.name}</Text>
-                    <Badge color={p.enabled ? "teal" : "gray"}>
-                      {p.enabled ? "Configured" : "Disabled"}
-                    </Badge>
-                  </Group>
-                  {p.description && <Text size="sm">{p.description}</Text>}
-                  <Text size="sm">
-                    {environmentName(p.environment_id)} ·{" "}
-                    {p.connection_ids.length} connections
-                  </Text>
-                  <Text size="sm">Your rights: {rightsLabel(p.rights)}</Text>
-                  {!p.rights.use_profile && (
-                    <Text size="xs" c="dimmed">
-                      An explicit Use grant is required, including for
-                      administrators.
-                    </Text>
-                  )}
-                  <Group mt="sm">
-                    <Button
-                      size="xs"
-                      variant="light"
-                      onClick={() => setProfile(p.id)}
-                    >
-                      Inspect profile
-                    </Button>
-                    <Button
-                      size="xs"
-                      disabled={
-                        !p.rights.use_profile || !p.enabled || brain.archived
-                      }
-                      onClick={() => setDiscover(p.id)}
-                    >
-                      Inspect cached tools
-                    </Button>
-                  </Group>
-                </Card>
-              ))}
-            {data.connections.length > 0 && (
+            {section === "connections" && (
               <>
-                <Title order={4}>Connections</Title>
-                {data.connections
-                  .filter(
-                    (c) =>
-                      !environment ||
-                      !c.environment_id ||
-                      c.environment_id === environment,
-                  )
-                  .map((c) => (
-                    <Card withBorder key={c.id} data-testid="mcp-connection">
-                      <Group justify="space-between">
-                        <Text fw={600}>{c.name}</Text>
-                        <Badge
-                          color={
-                            c.availability === "configured" ? "gray" : "yellow"
-                          }
-                        >
-                          {availabilityLabel(c.availability)}
-                        </Badge>
-                      </Group>
-                      <Text size="sm">
-                        {environmentName(c.environment_id)} · {c.placement}{" "}
-                        placement
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {c.description}
-                      </Text>
-                      {data.can_configure && (
-                        <Button
-                          size="xs"
-                          mt="xs"
-                          variant="light"
-                          onClick={() => setConnection(c.id)}
-                        >
-                          Inspect connection
+                {setupSaved && (
+                  <Alert title="Connection saved · not tested" color="brand">
+                    <Text size="sm">
+                      Add this connection to an execution profile and grant Use
+                      separately. Then choose a tool, review its inputs and
+                      effects, and explicitly run it. Saving has made no tool
+                      call.
+                    </Text>
+                    <Group mt="md">
+                      {onSectionChange && (
+                        <Button onClick={() => onSectionChange("profiles")}>
+                          Configure profile &amp; test
                         </Button>
                       )}
-                    </Card>
-                  ))}
+                      <Button
+                        variant="subtle"
+                        onClick={() => setSetupSaved(false)}
+                      >
+                        Dismiss setup guidance
+                      </Button>
+                    </Group>
+                  </Alert>
+                )}
+                {data.can_configure && data.definitions.length === 0 && (
+                  <Alert title="No approved connectors">
+                    Start with Add connection to register an MCP connector. Then
+                    choose where it runs and which agents may use it.
+                  </Alert>
+                )}
+                {!data.connections.length && (
+                  <EmptyState
+                    icon={Unplug}
+                    title="Tools, when you need them"
+                    description="Add an approved connection, then include it in a profile with explicit tool-use permissions."
+                  />
+                )}
+                <div className="connection-grid">
+                  {data.connections
+                    .filter(
+                      (connection) =>
+                        !environment ||
+                        !connection.environment_id ||
+                        connection.environment_id === environment,
+                    )
+                    .map((connection) => (
+                      <Card
+                        withBorder
+                        p="lg"
+                        key={connection.id}
+                        className="connection-record"
+                        data-testid="mcp-connection"
+                      >
+                        <Stack gap="md">
+                          <Group gap="sm">
+                            <Unplug size={iconSize.action} />
+                            <Text fw={600}>{connection.name}</Text>
+                          </Group>
+                          <Text size="sm" c="dimmed">
+                            {connection.description ||
+                              "Approved tool connection"}
+                          </Text>
+                          <Badge
+                            variant="light"
+                            color={
+                              connection.availability === "configured"
+                                ? "gray"
+                                : "yellow"
+                            }
+                          >
+                            {availabilityLabel(connection.availability)}
+                          </Badge>
+                          <Text size="xs" c="dimmed">
+                            {environmentName(connection.environment_id)} ·{" "}
+                            {connection.placement} placement
+                          </Text>
+                          {data.can_configure && (
+                            <Button
+                              variant="default"
+                              onClick={() => setConnection(connection.id)}
+                            >
+                              Inspect connection
+                            </Button>
+                          )}
+                        </Stack>
+                      </Card>
+                    ))}
+                </div>
+                <Text size="xs" c="dimmed">
+                  Saving a connection does not contact its server. A real test
+                  uses a profile with an explicit Use grant and may have
+                  effects.
+                </Text>
+                {onSectionChange && (
+                  <Button
+                    variant="subtle"
+                    w="fit-content"
+                    onClick={() => onSectionChange("profiles")}
+                  >
+                    Manage profiles and test tools
+                  </Button>
+                )}
               </>
             )}
-            <Text size="xs" c="dimmed">
-              These records are approved configuration. No backend connection,
-              credential delivery or successful tool call is established by this
-              catalogue.
-            </Text>
-            <McpPrivateRunners
-              brain={brain}
-              canConfigure={data.can_configure}
-            />
-            <McpRuntimePanel
-              brain={brain}
-              actor={actor}
-              catalogue={data}
-              selected={selectedCall}
-              select={setSelectedCall}
-              session={session}
-              released={() => {
-                setRun(null);
-                setSession(crypto.randomUUID());
+            {section === "profiles" && (
+              <>
+                <Text size="sm" c="dimmed">
+                  Use, Manage and Share are independent grants. Brain membership
+                  and administration do not grant tool use.
+                </Text>
+                {!data.profiles.length && (
+                  <EmptyState
+                    icon={ShieldCheck}
+                    title="Choose who can use your tools"
+                    description="Execution profiles group connections and grant only the permissions each person or group needs."
+                  />
+                )}
+                <div className="connection-grid">
+                  {data.profiles
+                    .filter(
+                      (profile) =>
+                        !environment ||
+                        !profile.environment_id ||
+                        profile.environment_id === environment,
+                    )
+                    .map((profile) => (
+                      <Card
+                        withBorder
+                        p="lg"
+                        key={profile.id}
+                        className="connection-record"
+                        data-testid="mcp-profile"
+                      >
+                        <Stack gap="sm">
+                          <Group justify="space-between">
+                            <Text fw={600}>{profile.name}</Text>
+                            <Badge
+                              variant="light"
+                              color={profile.enabled ? "teal" : "gray"}
+                            >
+                              {profile.enabled ? "Enabled" : "Disabled"}
+                            </Badge>
+                          </Group>
+                          <Text size="sm" c="dimmed">
+                            {profile.description}
+                          </Text>
+                          <Text size="xs">
+                            {environmentName(profile.environment_id)} ·{" "}
+                            {profile.connection_ids.length} connections
+                          </Text>
+                          <Text size="sm">
+                            Your rights: {rightsLabel(profile.rights)}
+                          </Text>
+                          {!profile.rights.use_profile && (
+                            <Text size="xs" c="dimmed">
+                              An explicit Use grant is required, including for
+                              administrators.
+                            </Text>
+                          )}
+                          <Group>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => setProfile(profile.id)}
+                            >
+                              Inspect profile
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="light"
+                              disabled={
+                                !profile.rights.use_profile ||
+                                !profile.enabled ||
+                                brain.archived
+                              }
+                              onClick={() => setDiscover(profile.id)}
+                            >
+                              Inspect cached tools
+                            </Button>
+                          </Group>
+                        </Stack>
+                      </Card>
+                    ))}
+                </div>
+              </>
+            )}
+            {section === "runners" && (
+              <McpPrivateRunners
+                brain={brain}
+                canConfigure={data.can_configure}
+              />
+            )}
+            {section === "activity" && (
+              <McpRuntimePanel
+                brain={brain}
+                actor={actor}
+                catalogue={data}
+                selected={selectedCall}
+                select={setSelectedCall}
+                session={session}
+                released={() => {
+                  setRun(null);
+                  setSession(crypto.randomUUID());
+                }}
+              />
+            )}
+            <Drawer
+              className="feature-drawer"
+              opened={diagnostics && section !== "activity"}
+              onClose={() => {
+                setSelectedCall(null);
+                setDiagnostics(false);
               }}
-            />
+              closeOnEscape={selectedCall === null}
+              closeOnClickOutside={selectedCall === null}
+              trapFocus={selectedCall === null}
+              position="right"
+              title="Tool runtime diagnostics"
+              size="lg"
+            >
+              {diagnostics && section !== "activity" && (
+                <McpRuntimePanel
+                  brain={brain}
+                  actor={actor}
+                  catalogue={data}
+                  selected={selectedCall}
+                  select={setSelectedCall}
+                  session={session}
+                  released={() => {
+                    setRun(null);
+                    setSession(crypto.randomUUID());
+                  }}
+                />
+              )}
+            </Drawer>
           </>
         )}
         {data && connection && !workspace.error && (
@@ -370,6 +526,7 @@ export function McpPanel({ brain, actor }: { brain: Brain; actor: string }) {
             environments={environments}
             close={() => setConnection(null)}
             saved={() => {
+              setSetupSaved(connection === "new");
               setConnection(null);
               refresh();
             }}
@@ -417,12 +574,13 @@ export function McpPanel({ brain, actor }: { brain: Brain; actor: string }) {
             submitted={(id) => {
               setRun(null);
               setSelectedCall(id);
+              setDiagnostics(true);
               refresh();
             }}
           />
         )}
       </Stack>
-    </Card>
+    </section>
   );
 }
 

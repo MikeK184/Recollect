@@ -1,5 +1,7 @@
 # Investigate recalled memory on desktop
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Prerequisites
 
 Run `./scripts/dev.sh`, open `http://127.0.0.1:8787`, sign in and select a Brain.
@@ -10,7 +12,7 @@ learning or maintenance. Current UI work targets desktop.
 
 ## Search and compare
 
-Enter a query or exact identity in **Recall memory**. Select an eligibility mode,
+Open **Ask → Search evidence** and enter a query or exact identity. Select an eligibility mode,
 collection, scope, optional exact manifest and time filters. **Maximum results**
 accepts one to twenty; the context budget includes full provenance and graph
 witnesses. Press **Recall** explicitly. The selection card records the actual

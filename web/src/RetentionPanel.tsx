@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./features/feature-views.css";
 import {
   Alert,
   Badge,
@@ -471,11 +472,20 @@ export function ExcerptAction({
     </>
   );
 }
-export function RetentionPanel({ brain }: { brain: Brain }) {
+export function RetentionPanel({
+  brain,
+  section = "settings",
+  simple = false,
+}: {
+  brain: Brain;
+  section?: "settings" | "activity";
+  simple?: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [offset, setOffset] = useState(0);
   const policy = useQuery({
     queryKey: ["retention", brain.id],
+    enabled: section === "settings",
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/retention", {
@@ -485,6 +495,7 @@ export function RetentionPanel({ brain }: { brain: Brain }) {
   });
   const erasures = useQuery({
     queryKey: ["erasures", brain.id, offset],
+    enabled: section === "activity",
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/erasures", {
@@ -494,11 +505,21 @@ export function RetentionPanel({ brain }: { brain: Brain }) {
     refetchInterval: 4000,
   });
   return (
-    <Card withBorder p="xl" mt="lg">
+    <section className="feature-setting">
       <Stack>
+        {simple && (
+          <Text size="sm">
+            Recollect enforces these retention rules in the background. It
+            revises memory as evidence changes and excludes obsolete information
+            from current recall. You do not need to manage individual expiry
+            dates.
+          </Text>
+        )}
         <Group justify="space-between">
-          <Title order={3}>Retention and erasure</Title>
-          {brain.role === "admin" && (
+          <Title order={3}>
+            {section === "settings" ? "Retention & privacy" : "Data removal"}
+          </Title>
+          {section === "settings" && !simple && brain.role === "admin" && (
             <Button
               variant="default"
               disabled={!policy.data}
@@ -508,85 +529,96 @@ export function RetentionPanel({ brain }: { brain: Brain }) {
             </Button>
           )}
         </Group>
-        <Failure error={policy.error} />
-        <Failure error={erasures.error} />
-        {policy.isPending && <Loader size="sm" />}
-        {policy.data && (
+        {section === "settings" && (
           <>
-            <Text size="sm">
-              Raw sessions: {policy.data.policy.raw_session_days} days · raw
-              tool output: {policy.data.policy.tool_output_days} days. Excerpts
-              are{" "}
-              {policy.data.policy.allow_support_excerpts
-                ? "permitted"
-                : "disabled"}
-              .
+            <Failure error={policy.error} />
+            {policy.isPending && <Loader size="sm" />}
+            {!policy.error && policy.data && (
+              <>
+                <Text size="sm">
+                  Raw sessions: {policy.data.policy.raw_session_days} days · raw
+                  tool output: {policy.data.policy.tool_output_days} days.
+                  Excerpts are{" "}
+                  {policy.data.policy.allow_support_excerpts
+                    ? "permitted"
+                    : "disabled"}
+                  .
+                </Text>
+                <Group gap="xs">
+                  {policyFields
+                    .filter((f) => f.optional)
+                    .map((f) => (
+                      <Badge variant="light" key={f.key}>
+                        {f.title}:{" "}
+                        {policy.data!.policy[f.key] == null
+                          ? "until erased"
+                          : String(policy.data!.policy[f.key]) + " days"}
+                      </Badge>
+                    ))}
+                </Group>
+              </>
+            )}
+            <Text size="sm" c="dimmed">
+              Open a source, claim, snapshot or manifest to preview erasure.
+              Collection erasure includes its associated sources.
             </Text>
-            <Group gap="xs">
-              {policyFields
-                .filter((f) => f.optional)
-                .map((f) => (
-                  <Badge variant="light" key={f.key}>
-                    {f.title}:{" "}
-                    {policy.data!.policy[f.key] == null
-                      ? "until erased"
-                      : String(policy.data!.policy[f.key]) + " days"}
-                  </Badge>
-                ))}
-            </Group>
           </>
         )}
-        <Text size="sm" c="dimmed">
-          Open a source, claim, snapshot or manifest to preview erasure.
-          Collection erasure includes its associated sources.
-        </Text>
-        {erasures.isPending ? (
-          <Loader size="sm" />
-        ) : erasures.data?.items.length === 0 ? (
-          <Text size="sm">No erasure or expiry requests.</Text>
-        ) : (
-          erasures.data?.items.map((item) => (
-            <Card withBorder key={item.id} p="md">
-              <Stack gap="sm">
-                <Text size="sm">
-                  {label(item.cause)} · {label(item.target.kind)} ·{" "}
-                  {time(item.created_at)}
-                </Text>
-                {brain.role === "admin" ? (
-                  <ErasureProgress brain={brain.id} item={item} />
-                ) : (
-                  <>
-                    <Badge>{label(item.state)}</Badge>
-                    <Text size="xs">
-                      {item.pending_artifacts} files pending.
-                      {item.graph_pending ? " Graph cleanup pending. " : " "}
-                      Offline companion copies require check-in.
+        {section === "activity" && (
+          <>
+            <Failure error={erasures.error} />
+            {erasures.isPending ? (
+              <Loader size="sm" />
+            ) : erasures.data?.items.length === 0 ? (
+              <Text size="sm">No erasure or expiry requests.</Text>
+            ) : (
+              !erasures.error &&
+              erasures.data?.items.map((item) => (
+                <Card withBorder key={item.id} p="md">
+                  <Stack gap="sm">
+                    <Text size="sm">
+                      {label(item.cause)} · {label(item.target.kind)} ·{" "}
+                      {time(item.created_at)}
                     </Text>
-                  </>
-                )}
-              </Stack>
-            </Card>
-          ))
+                    {brain.role === "admin" ? (
+                      <ErasureProgress brain={brain.id} item={item} />
+                    ) : (
+                      <>
+                        <Badge>{label(item.state)}</Badge>
+                        <Text size="xs">
+                          {item.pending_artifacts} files pending.
+                          {item.graph_pending
+                            ? " Graph cleanup pending. "
+                            : " "}
+                          Offline companion copies require check-in.
+                        </Text>
+                      </>
+                    )}
+                  </Stack>
+                </Card>
+              ))
+            )}
+            {erasures.data && erasures.data.total > 20 && (
+              <Group>
+                <Button
+                  variant="subtle"
+                  disabled={offset === 0}
+                  onClick={() => setOffset(Math.max(0, offset - 20))}
+                >
+                  Previous requests
+                </Button>
+                <Button
+                  variant="subtle"
+                  disabled={offset + 20 >= erasures.data.total}
+                  onClick={() => setOffset(offset + 20)}
+                >
+                  Next requests
+                </Button>
+              </Group>
+            )}
+          </>
         )}
-        {erasures.data && erasures.data.total > 20 && (
-          <Group>
-            <Button
-              variant="subtle"
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - 20))}
-            >
-              Previous requests
-            </Button>
-            <Button
-              variant="subtle"
-              disabled={offset + 20 >= erasures.data.total}
-              onClick={() => setOffset(offset + 20)}
-            >
-              Next requests
-            </Button>
-          </Group>
-        )}
-        {editing && policy.data && (
+        {editing && policy.data && !policy.error && (
           <PolicyEditor
             brain={brain.id}
             settings={policy.data}
@@ -594,6 +626,6 @@ export function RetentionPanel({ brain }: { brain: Brain }) {
           />
         )}
       </Stack>
-    </Card>
+    </section>
   );
 }
