@@ -2,6 +2,25 @@
 
 Status: accepted
 
+## HTTP form setup (2026-09-28 clarification)
+
+The installation owner may enter a name and exact HTTP MCP URL and explicitly
+request anonymous metadata discovery. The server uses the shared SDK with no
+credential, redirect, proxy or tool call, bounded wire sizes, pagination, timeout
+and concurrency. Tool descriptions collapse whitespace and are clipped to the
+existing 2,000-character display limit; input/output schemas remain unchanged
+and must pass the existing offline validators. HTTPS and exact loopback HTTP follow the existing transport
+target rules. Discovery returns a candidate manifest for the existing approval
+handler; remote metadata cannot execute commands or grant profile Use. Name/URL
+edits invalidate the preview. The form creates the connection through existing
+Brain authority after approval; duplicate keys and stale revisions retain their
+existing behavior. Advanced manifest import remains available for authenticated,
+local and private-runner definitions.
+
+The [managed experience amendment](memory-managed-experience.md) governs the
+2026-09-28 managed setup, progressive disclosure and owner connector approval
+changes; earlier explicit APIs and stored policies remain compatible.
+
 ## Source
 
 The user-authorized full product goal permits routine implementation decisions

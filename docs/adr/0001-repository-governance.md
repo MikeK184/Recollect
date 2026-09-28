@@ -39,4 +39,11 @@ does not authorize speculative integrations or import another repo's rules.
 
 ## Supersession
 
+The user's 2026-09-28 request extends the existing repository setup to OpenCode.
+Keep Codex support and add an equivalent OpenCode v2 project configuration and
+six role definitions. Both hosts share root `AGENTS.md`, `.agents/skills/`, the
+existing Context7 integration and CodeGraph CLI. Personal provider/model,
+reasoning, permission and UI settings remain inherited; do not change home
+configuration or product Brain connections as part of this developer setup.
+
 N/A: this is the initial repository-governance decision.

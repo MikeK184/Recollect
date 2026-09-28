@@ -1,4 +1,56 @@
 name: recollect
+
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Deliberate allowlist: never pass the entire .env or the host environment.
+x-runtime: &runtime
+  DATABASE_URL: postgres://recollect_app:${RECOLLECT_DB_PASSWORD:?Run ./scripts/setup-local.sh}@postgres:5432/recollect
+  RECOLLECT_OWNER_USERNAME: ${RECOLLECT_OWNER_USERNAME:-owner}
+  RECOLLECT_OWNER_PASSWORD: ${RECOLLECT_OWNER_PASSWORD:?Run ./scripts/setup-local.sh}
+  RECOLLECT_BIND: 0.0.0.0:8787
+  RECOLLECT_PUBLIC_ORIGIN: ${RECOLLECT_PUBLIC_ORIGIN:-http://127.0.0.1:8787}
+  RECOLLECT_STATIC_DIR: /opt/recollect/web
+  NEO4J_URL: http://neo4j:7474
+  NEO4J_USERNAME: neo4j
+  NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Run ./scripts/setup-local.sh}
+  RECOLLECT_CREDENTIAL_FILE: /var/lib/recollect/credentials.json
+  RECOLLECT_ARTIFACT_DIR: /var/lib/recollect/artifacts
+  RECOLLECT_ERASURE_JOURNAL: /var/lib/recollect/erasure-journal
+  RECOLLECT_MCP_OUTBOX_DIR: /var/lib/recollect/artifacts/.mcp-receipts/central
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  RECOLLECT_TEXT_MODEL: ${RECOLLECT_TEXT_MODEL:-gpt-5.6-luna}
+  RECOLLECT_EMBEDDING_MODEL: ${RECOLLECT_EMBEDDING_MODEL:-text-embedding-3-large}
+  RECOLLECT_EMBEDDING_DIMENSIONS: ${RECOLLECT_EMBEDDING_DIMENSIONS:-3072}
+  # Unresolved keys are omitted, so unconfigured OIDC stays disabled.
+  RECOLLECT_OIDC_ISSUER:
+  RECOLLECT_OIDC_CLIENT_ID:
+  RECOLLECT_OIDC_CLIENT_SECRET:
+  RECOLLECT_OIDC_SCOPES:
+
+x-app: &app
+  image: recollect-dev:local
+  build:
+    context: .
+    dockerfile: infra/product/Dockerfile
+  user: "${RECOLLECT_LOCAL_UID:?Run ./scripts/setup-local.sh}:${RECOLLECT_LOCAL_GID:?Run ./scripts/setup-local.sh}"
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  volumes:
+    - ./.data/runtime:/var/lib/recollect
+    - ${RECOLLECT_ARTIFACT_DIR:-./.data/artifacts}:/var/lib/recollect/artifacts
+    - ${RECOLLECT_ERASURE_JOURNAL:-./.data/erasure-journal}:/var/lib/recollect/erasure-journal
+  environment: *runtime
+  stop_signal: SIGTERM
+  stop_grace_period: 90s
+  pids_limit: 256
+  logging: *logging
+
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -18,6 +70,10 @@ services:
       timeout: 3s
       retries: 30
     mem_limit: 1g
+    cpus: 2
+    pids_limit: 256
+    stop_grace_period: 90s
+    logging: *logging
     restart: unless-stopped
   neo4j:
     image: neo4j:2026.08
@@ -40,6 +96,56 @@ services:
       timeout: 3s
       retries: 60
     mem_limit: 3g
+    cpus: 2
+    pids_limit: 512
+    stop_grace_period: 90s
+    logging: *logging
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    command: ["migrate"]
+    environment:
+      <<: *runtime
+      DATABASE_ADMIN_URL: postgres://recollect_admin:${POSTGRES_PASSWORD:?Run ./scripts/setup-local.sh}@postgres:5432/recollect
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    restart: "no"
+  api:
+    <<: *app
+    command: ["serve"]
+    ports:
+      - "127.0.0.1:8787:8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "10", "http://127.0.0.1:8787/health/ready"]
+      interval: 10s
+      timeout: 12s
+      retries: 6
+      start_period: 20s
+    mem_limit: 1g
+    cpus: 2
+    restart: unless-stopped
+  worker:
+    <<: *app
+    command: ["worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 2g
+    cpus: 4
     restart: unless-stopped
 volumes:
   postgres_data:

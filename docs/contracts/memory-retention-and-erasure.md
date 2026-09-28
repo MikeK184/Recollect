@@ -193,6 +193,14 @@ An unavailable source is never fabricated as an empty successful extraction.
 
 ## Acceptance
 
+Temporary-answer amendment, 2026-09-26: [answers](retrieval-answers.md) retain no
+question, answer or retrieved-body transcript in canonical storage, logs or
+backups. Exact dependencies and current erasure/expiry fences are rechecked
+before transmission/publication; invalid results are cleared from browser memory.
+Existing model-request audit expiry removes detailed usage fields. A minimal
+opaque request-ID replay tombstone remains to prevent duplicate provider work;
+it contains no conversation or source text and does not preserve erased bytes.
+
 - Defaults/overrides apply by class and deadline, with retained-excerpt and unrelated
   document controls. Expiry of sole support qualifies retained claims without preserving
   forbidden full raw content. Shortening policy immediately denies due reads/work.

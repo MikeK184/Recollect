@@ -85,7 +85,7 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
       await send(`${base}/claims`, proposal("Conditional service", value));
     return { brain: brain.id, single: single.claim_id };
   });
-  await page.goto(`/brains/${fixture.brain}`);
+  await page.goto(`/brains/${fixture.brain}/memory`);
   await page
     .getByRole("button", {
       name: "Review service · configuration",

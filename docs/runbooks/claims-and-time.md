@@ -1,5 +1,7 @@
 # Author and inspect claims over time
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 Status: active
 
 ## Prerequisites
@@ -16,7 +18,7 @@ that someone must review every automatically learned memory.
 
 ## Procedure
 
-1. Open a Brain and its **Claims and decisions** panel. Choose **New claim**.
+1. Open a Brain and select **Memory → Add memory**.
 2. Enter a subject, property/relationship, value and optional rationale. Choose
    Claim or Decision / intent. Select repositories, areas and environment as
    applicable. Empty selections apply across the Brain; they do not create access.
@@ -37,7 +39,7 @@ that someone must review every automatically learned memory.
 7. **Revise proposal** appends knowledge without overwriting history. Another editor
    saving first produces a conflict: cancel, reopen the current proposal and apply
    the intended change. A lost response can be retried with unchanged input.
-8. Select **Knowledge revision** to inspect earlier knowledge. Set separate fact
+8. Select **Version history → Knowledge revision** to inspect earlier knowledge. Set separate fact
    and knowledge time filters in the panel for historical questions. An absent
    knowledge revision produces no result; a known fact interval excludes its end.
 

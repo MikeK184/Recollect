@@ -1,6 +1,6 @@
 # Repository Graphs, Knowledge Graphs and Analytics
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -10,6 +10,8 @@ clustering and bounded large-graph analysis in the first usable product.
 
 ## Governing Sources
 
+- [Desktop contract](../../contracts/desktop-experience.md)
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
 - [ADR 0007](../../adr/0007-canonical-graph-projections.md)
 - [Projection/traversal contract](../../contracts/graph-projection-and-traversal.md)
 - [Exact combined graph contract](../../contracts/graph-cross-repository-views.md)
@@ -60,6 +62,7 @@ scope, with queued work and explicit resource limits.
 | `graph-cross-repository-views` | shipped | contract-backed | pack | Delivered exact combined inputs and parsed pinned Terraform links with qualified native paths, correction/recovery and browser proof |
 | `graph-analytics` | shipped | contract-backed | pack | Delivered native GDS reports, complete qualification/invalidation, owned scratch recovery and reader concurrency with normal runtime/browser proof |
 | `graph-exploration` | shipped | contract-backed | pack | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and SWEG runtime proof |
+| `graph-desktop-workspace` | in-progress | adr-backed, contract-backed | pack | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
 
 ## Slice Dependencies
 
@@ -69,6 +72,7 @@ scope, with queued work and explicit resource limits.
 | `graph-cross-repository-views` | `graph-projection-and-traversal` |
 | `graph-analytics` | `graph-cross-repository-views` |
 | `graph-exploration` | `graph-analytics` |
+| `graph-desktop-workspace` | `platform-desktop-shell` |
 
 ## Completion Criteria
 
@@ -82,3 +86,12 @@ scope, with queued work and explicit resource limits.
   changes during queued computation. Historical reports follow retention rules.
 - Resource admission and concurrency limits protect capture/recall. UI progress,
   stale/error states and large-graph limitations match actual job state.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the verified final local image separately
+from remaining current-code domain and integrated acceptance. The
+[desktop guide](../../runbooks/desktop-experience.md) documents the current function
+locations. Product/proof slices stay in progress until their required checks pass;
+prior shipped domain records remain historical evidence rather than redesign proof.

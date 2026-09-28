@@ -1,14 +1,20 @@
 # Capture Codex and Claude session evidence
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
+Managed setup enables all supported sanitized event kinds and managed tool
+capture together. **Connections → Coding agents** gives the normal pairing,
+automatic-capture setup and verification flow. Individual policy controls below
+are optional overrides under Settings → Capture → Advanced capture controls.
+
 ## Purpose and Prerequisites
 
-Run `./scripts/dev.sh` and open `http://127.0.0.1:8787`. The Brain's **Session
-capture** panel shows policy, companion delivery and published evidence. Use a
+Run `./scripts/dev.sh` and open `http://127.0.0.1:8787`. Use **Agents → Captured sessions** for published evidence and **Capture coverage** for companion delivery; the canonical policy editor is **Settings → Capture**. Use a
 [paired native companion](device-pairing.md) with writer access, and install the
 selected host on PATH. Codex 0.154.0 and Claude Code 2.1.270 were exercised with
 actual host processes and the compiled Recollect hook.
 
-An admin enables **Capture policy** once for the Brain. Supported events then
+An admin enables **Settings → Capture → Capture policy** once for the Brain. Supported events then
 flow automatically; no person accepts each memory. Capture permission is separate
 from the [model policy](provider-learning.md). That policy governs automatic
 learning and revision; [retention](retention-and-erasure.md) governs expiry and
@@ -104,7 +110,7 @@ identities remain visible; they are never overwritten. Queue limits preserve
 existing pending evidence and count arrivals that could not be saved. Unsupported
 host events, ambiguous child attribution and missing output remain explicit gaps.
 
-Use source **Erase** and the Brain retention panel for controlled content. Delivery
+Use source **Erase** and **Settings → Retention & privacy** for controlled content. Delivery
 synchronizes deletion fences and clears affected local bodies before acknowledging
 privacy progress or selecting uploads. A disconnected device applies new erasure
 when it next connects. Removing a host plugin or setup file is not source erasure.

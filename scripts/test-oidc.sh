@@ -23,7 +23,8 @@ for attempt in {1..100}; do
 done
 curl -fsS "$RECOLLECT_OIDC_ISSUER/.well-known/openid-configuration" >/dev/null
 if [[ "${1:-}" == ui ]]; then
-  ./scripts/test-ui.sh
+  shift
+  ./scripts/test-ui.sh "$@"
 else
   cargo test -p recollect-server --test platform oidc_live -- --ignored --test-threads=1
 fi

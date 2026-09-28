@@ -21,8 +21,11 @@ for RECOLLECT_UI_SPEC in "$@"; do
     RECOLLECT_UI_MCP_RUNTIME=1
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == public-benchmark.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == mcp-direct.spec.ts ]]; then
+    RECOLLECT_UI_NEEDS_WORKER=1
+  fi
   # Recall reads processed canonical chunks while the browser test is running.
-  if [[ "${RECOLLECT_UI_SPEC##*/}" == recall.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall-graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == investigation.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-combined.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-analytics.spec.ts ]]; then
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == desktop.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall-graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == investigation.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-combined.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-analytics.spec.ts ]]; then
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
 done
@@ -37,13 +40,20 @@ RECOLLECT_TEST_DB="recollect_ui_$(python3 -c 'import uuid; print(uuid.uuid4().he
 RECOLLECT_UI_PID=''
 RECOLLECT_UI_WORKER_PID=''
 cleanup() {
+  local RECOLLECT_UI_EXIT_STATUS=$?
   if [[ -n "$RECOLLECT_UI_WORKER_PID" ]]; then
-    kill -INT "$RECOLLECT_UI_WORKER_PID" 2>/dev/null || true
+    # Background children may inherit ignored SIGINT before Tokio initializes.
+    # TERM also uses the server's durable drain path once its handler is ready.
+    kill -TERM "$RECOLLECT_UI_WORKER_PID" 2>/dev/null || true
     wait "$RECOLLECT_UI_WORKER_PID" 2>/dev/null || true
   fi
   if [[ -n "$RECOLLECT_UI_PID" ]]; then
-    kill -INT "$RECOLLECT_UI_PID" 2>/dev/null || true
+    kill -TERM "$RECOLLECT_UI_PID" 2>/dev/null || true
     wait "$RECOLLECT_UI_PID" 2>/dev/null || true
+  fi
+  if [[ "${RECOLLECT_PUBLIC_SEMANTIC:-0}" == 1 && "$RECOLLECT_UI_EXIT_STATUS" != 0 ]]; then
+    printf 'Semantic benchmark failed; retained owned database and private artifacts for request reconciliation: %s\n' "$RECOLLECT_TEST_DB" >&2
+    return 0
   fi
   if ! env -u VAULT_TOKEN target/debug/recollect-server privacy-reconcile >> .cache/ui/cleanup.log 2>&1; then
     printf 'Owned UI database and journals retained because privacy/analytics cleanup is uncertain: %s\n' "$RECOLLECT_TEST_DB" >&2
@@ -109,7 +119,7 @@ if [[ -z "$RECOLLECT_UI_WORKER_PID" ]]; then
   env -u VAULT_TOKEN target/debug/recollect-server worker > .cache/ui/worker.log 2>&1 &
   RECOLLECT_UI_WORKER_PID=$!
 fi
-for attempt in {1..50}; do
+for attempt in {1..200}; do
   RECOLLECT_PENDING="$(./scripts/docker.sh compose exec -T postgres psql -U recollect_admin -d "$RECOLLECT_TEST_DB" -Atqc "SELECT count(*) FROM jobs WHERE state IN ('queued','running')")"
   if [[ "$RECOLLECT_PENDING" == 0 ]]; then break; fi
   sleep 0.1

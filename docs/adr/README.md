@@ -24,3 +24,4 @@ pending foundation documents as accepted authority.
 - [0011: Personal and shared installation](0011-local-and-shared-installation.md)
 - [0012: Managed tool observations](0012-managed-tool-observations.md)
 - [0013: Consistent encrypted backup and recovery](0013-backup-and-recovery.md)
+- [0014: Contextual desktop experience and evidence-backed answers](0014-desktop-experience-and-answers.md)

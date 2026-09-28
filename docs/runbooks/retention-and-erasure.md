@@ -1,11 +1,17 @@
 # Retention, erasure and deletion replay
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 Status: active
+
+Retention operates automatically. The normal Settings view explains the active
+lifecycle; manual overrides are under **Advanced retention and storage controls**.
+The managed preset preserves any existing retention choices and uses the accepted
+30-day raw defaults for new Brains. It does not age-delete durable knowledge.
 
 ## Browser workflow
 
-Start `./scripts/dev.sh` and open `http://127.0.0.1:8787`. Each Brain has a
-**Retention and erasure** panel. Readers inspect policy/status; admins edit retention
+Start `./scripts/dev.sh` and open `http://127.0.0.1:8787`. Use **Settings → Retention & privacy** for policy and **Activity → Data removal** for progress. Readers inspect policy/status; admins edit retention
 and erase content, including in archived Brains. Devices cannot initiate admin erasure.
 
 New sources select document, sanitized raw-session or sanitized tool-output retention.
@@ -14,11 +20,11 @@ repository snapshots and claims default to until erased. Durations apply to exis
 content from capture time. Shortening can expire it immediately; extending cannot restore
 removed bytes. Retention and permission to send content to a model are separate policies.
 
-Open retained source evidence and **Retain supporting excerpt** to select exact lines,
+Open retained source evidence and **More source actions → Retain supporting excerpt** to select exact lines,
 up to 8 KiB. The server copies those lines with provenance and independent retention.
 Ordinary raw expiry preserves a permitted excerpt; source erasure also removes its copies.
 
-Open a source, claim, snapshot or manifest and choose **Erase**. Collection erasure is
+Open a source, claim, snapshot or manifest and choose **Erase**; sources and claims keep this under their **More … actions** disclosure. Collection erasure is
 under **Manage views**. Inspect counts, shared-source effects and retained independent
 revisions, then **Confirm erasure**. Changed inputs require a fresh preview. Retry an
 interrupted response with unchanged input. Content becomes unavailable before file

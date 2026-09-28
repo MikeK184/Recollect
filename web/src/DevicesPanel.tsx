@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
@@ -30,7 +30,9 @@ export function DevicesPanel() {
   );
   const devices = useQuery({
     queryKey: ["devices"],
-    queryFn: async () => result(await client.GET("/api/devices")),
+    queryFn: async ({ signal }) =>
+      result(await client.GET("/api/devices", { signal })),
+    gcTime: 0,
     refetchInterval: 3000,
   });
   const revoke = useMutation({
@@ -43,6 +45,9 @@ export function DevicesPanel() {
       void cache.invalidateQueries({ queryKey: ["devices"] });
     },
   });
+  useEffect(() => {
+    if (devices.isError) setSelected(null);
+  }, [devices.isError]);
   return (
     <Stack gap="xl">
       <div className="page-heading">
@@ -62,7 +67,7 @@ export function DevicesPanel() {
         </Badge>
       </div>
       {code && <PairingApproval key={code} code={code} />}
-      <Card withBorder p="xl" bg="#f0f5e9">
+      <Card withBorder p="xl" bg="var(--rc-surface)">
         <Group align="flex-start" wrap="nowrap">
           <Laptop size={24} style={{ flexShrink: 0 }} />
           <Stack gap="xs">
@@ -231,7 +236,7 @@ function PairingApproval({ code }: { code: string }) {
     },
   });
   return (
-    <Card withBorder p="xl" style={{ borderColor: "#9fbd91" }}>
+    <Card withBorder p="xl" style={{ borderColor: "var(--rc-accent)" }}>
       <Stack>
         <Group>
           <ShieldCheck size={22} />

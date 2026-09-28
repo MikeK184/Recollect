@@ -1,4 +1,15 @@
-import { useState } from "react";
+import { FilterBar } from "./components/FilterBar";
+import { ScopeSummary } from "./components/ScopeSummary";
+import { DetailInspector } from "./components/DetailInspector";
+import { ActionMenu } from "./components/ActionMenu";
+import { iconSize } from "./design/tokens";
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { useBrainSearch } from "./app/useBrainSearch";
+import { useDebouncedValue } from "@mantine/hooks";
+import { EmptyState } from "./components/AsyncState";
+import { useContentDeadline } from "./useContentDeadline";
+import "./features/feature-views.css";
 import { EraseAction, ExcerptAction } from "./RetentionPanel";
 import { LearningAction } from "./ModelsPanel";
 import {
@@ -8,6 +19,7 @@ import {
   Card,
   Checkbox,
   Divider,
+  Drawer,
   FileButton,
   Group,
   Loader,
@@ -29,6 +41,9 @@ import {
   Plus,
   RefreshCw,
   Settings2,
+  Search,
+  SlidersHorizontal,
+  Info,
   Upload,
 } from "lucide-react";
 import { client, result, type Brain } from "./api";
@@ -75,28 +90,73 @@ const groupOptions = (views: View[]) =>
 
 export function EvidencePanel({ brain }: { brain: Brain }) {
   const cache = useQueryClient();
-  const [filters, setFilters] = useState<Record<string, string | null>>({
-    collection: null,
-    area: null,
-    environment: null,
-  });
+  const [route, patchRoute] = useBrainSearch();
+  const filters: Record<string, string | null> = {
+    collection: route.collection ?? null,
+    area: route.area ?? null,
+    environment: route.environment ?? null,
+  };
+  const setFilters = (values: Record<string, string | null>) =>
+    patchRoute(values);
+  useEffect(
+    () => setOffset(0),
+    [route.collection, route.area, route.environment],
+  );
   const [offset, setOffset] = useState(0);
+  const [search, setSearch] = useState("");
+  const [query] = useDebouncedValue(search.trim(), 300);
+  const [filtering, setFiltering] = useState(false);
   const [manage, setManage] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [selected, setSelected] = useState<Source | null>(null);
+  const selected = route.source ?? null;
+  const setSelected = (source: Source | null) =>
+    patchRoute({
+      source: source?.id ?? null,
+      version: source?.version.id ?? null,
+    });
+  const versionReference = useQuery({
+    queryKey: ["source-reference", brain.id, route.version],
+    enabled: !!route.version && !selected,
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET(
+          "/api/brains/{brain}/claim-evidence/{kind}/{evidence}",
+          {
+            params: {
+              path: {
+                brain: brain.id,
+                kind: "source_version",
+                evidence: route.version!,
+              },
+            },
+            signal,
+          },
+        ),
+      ),
+    refetchInterval: 4000,
+  });
+  const selectedSourceId =
+    selected ??
+    (!versionReference.error
+      ? versionReference.data?.evidence.source_id
+      : null);
+
   const [editing, setEditing] = useState<{
     source: Source;
     content: Content;
   } | null>(null);
   const writable = brain.role !== "reader" && !brain.archived;
   const catalogue = useQuery({
-    queryKey: ["evidence", brain.id, filters, offset],
-    queryFn: async () =>
+    queryKey: ["evidence", brain.id, filters, query, offset],
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/evidence", {
+          signal,
           params: {
             path: { brain: brain.id },
             query: {
+              q: query || undefined,
               collection: filters.collection ?? undefined,
               area: filters.area ?? undefined,
               environment: filters.environment ?? undefined,
@@ -120,24 +180,9 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
   };
   const clear = () => {
     setFilters({ collection: null, area: null, environment: null });
+    setSearch("");
     setOffset(0);
   };
-  const policy = useMutation({
-    mutationFn: async (value: boolean) =>
-      result(
-        await client.PUT("/api/brains/{brain}/evidence/policy", {
-          params: { path: { brain: brain.id } },
-          body: { allow_document_content: value },
-        }),
-      ),
-    onSuccess: (policy) => {
-      cache.setQueriesData<Catalogue>(
-        { queryKey: ["evidence", brain.id] },
-        (current) => (current ? { ...current, policy } : current),
-      );
-      refresh();
-    },
-  });
   const groups = catalogue.data?.groups ?? [];
   if (catalogue.error)
     return (
@@ -156,108 +201,179 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
       </Card>
     );
   return (
-    <Card withBorder p="xl" className="evidence-panel">
+    <section
+      className="feature-view evidence-panel"
+      aria-label="Knowledge sources"
+    >
       <Stack gap="lg">
-        <Group justify="space-between">
-          <Group gap="sm">
-            <BookOpen size={21} />
-            <Title order={2} fz={21}>
-              Knowledge sources
-            </Title>
-          </Group>
-          {writable && (
-            <Button
-              size="xs"
-              leftSection={<Plus size={14} />}
-              disabled={catalogue.isPending || policy.isPending}
-              onClick={() => setImporting(true)}
-            >
-              Import source
-            </Button>
-          )}
-        </Group>
-        <Text size="sm" c="dimmed">
-          Keep the original evidence, follow its history and organize it across
-          your Brain.
-        </Text>
-        <div className="evidence-filters">
-          {kinds.map((kind) => (
-            <Select
-              key={kind.value}
-              label={kind.label}
-              placeholder="All"
-              clearable
-              searchable
-              value={filters[kind.value]}
-              onChange={(value) => {
-                setFilters({ ...filters, [kind.value]: value });
-                setOffset(0);
-              }}
-              data={groups
-                .filter((v) => v.kind === kind.value)
-                .map((v) => ({ value: v.id, label: v.name }))}
-              size="xs"
-            />
-          ))}
-        </div>
-        <Group justify="space-between">
-          <Text size="xs" c="dimmed">
-            {catalogue.data?.total ?? 0} sources ·{" "}
+        <FilterBar>
+          <TextInput
+            className="feature-search"
+            aria-label="Search source titles"
+            placeholder="Search source titles…"
+            leftSection={<Search size={iconSize.navigation} />}
+            maxLength={200}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.currentTarget.value);
+              setOffset(0);
+            }}
+          />
+          <Button
+            variant="default"
+            leftSection={<SlidersHorizontal size={iconSize.small} />}
+            onClick={() => setFiltering(true)}
+          >
+            Filters
             {Object.values(filters).some(Boolean)
-              ? "Matching all selected views"
-              : "All sources"}
-          </Text>
+              ? ` · ${Object.values(filters).filter(Boolean).length}`
+              : ""}
+          </Button>
           {(writable || brain.role === "admin") && (
             <Button
-              size="compact-xs"
               variant="subtle"
-              leftSection={<Settings2 size={13} />}
+              leftSection={<Settings2 size={iconSize.small} />}
               disabled={catalogue.isPending}
               onClick={() => setManage(true)}
             >
               Manage views
             </Button>
           )}
+          {writable && (
+            <Button
+              leftSection={<Plus size={iconSize.small} />}
+              disabled={catalogue.isPending}
+              onClick={() => setImporting(true)}
+            >
+              Add source
+            </Button>
+          )}
+        </FilterBar>
+        <Drawer
+          className="feature-drawer"
+          opened={filtering}
+          onClose={() => setFiltering(false)}
+          position="right"
+          title="Filter sources"
+          size="md"
+        >
+          <Stack>
+            <Text size="sm" c="dimmed">
+              Collections, areas and environments organize the same evidence.
+              Selected filters intersect.
+            </Text>
+            <Stack gap="md">
+              {kinds.map((kind) => (
+                <Select
+                  key={kind.value}
+                  label={kind.label}
+                  placeholder="All"
+                  clearable
+                  searchable
+                  value={filters[kind.value]}
+                  onChange={(value) => {
+                    setFilters({ ...filters, [kind.value]: value });
+                    setOffset(0);
+                  }}
+                  data={groups
+                    .filter((v) => v.kind === kind.value)
+                    .map((v) => ({ value: v.id, label: v.name }))}
+                />
+              ))}
+            </Stack>
+            <Button variant="default" onClick={clear}>
+              Clear source filters
+            </Button>
+            <Button onClick={() => setFiltering(false)}>Show sources</Button>
+          </Stack>
+        </Drawer>
+        <Group justify="space-between">
+          <Text size="xs" c="dimmed">
+            {catalogue.data
+              ? `${catalogue.data.total} source${catalogue.data.total === 1 ? "" : "s"}`
+              : "Loading sources"}
+            {query ? " · matching source titles" : ""}
+          </Text>
+          {Object.values(filters).some(Boolean) && (
+            <Button variant="subtle" size="compact-sm" onClick={clear}>
+              Clear filters
+            </Button>
+          )}
         </Group>
+        {Object.values(filters).some(Boolean) && (
+          <ScopeSummary>
+            {Object.values(filters)
+              .filter(Boolean)
+              .map((id) => (
+                <Badge variant="light" key={id}>
+                  {groups.find((group) => group.id === id)?.name ??
+                    "Selected view"}
+                </Badge>
+              ))}
+          </ScopeSummary>
+        )}
         {catalogue.isPending ? (
           <Loader />
         ) : !catalogue.data?.sources.length ? (
-          <div className="evidence-empty">
-            <FolderOpen size={28} />
-            <Text fw={600}>No sources in this view</Text>
-            <Text size="sm" c="dimmed" ta="center">
-              {Object.values(filters).some(Boolean)
-                ? "Change a filter or organize a source into this view."
-                : "Import a document or keep a reference to a controlled source."}
-            </Text>
-          </div>
+          <EmptyState
+            icon={FolderOpen}
+            title={
+              query || Object.values(filters).some(Boolean)
+                ? "No matching sources"
+                : "Start with your evidence"
+            }
+            description={
+              query || Object.values(filters).some(Boolean)
+                ? "Try another title or clear the selected views."
+                : "Add a text document, paste useful material, or keep a reference to a controlled source."
+            }
+          />
         ) : (
-          <Stack gap="sm">
+          <div className="feature-list">
+            <div
+              className="feature-list-heading source-record-heading"
+              aria-hidden="true"
+            >
+              <span />
+              <span>Source</span>
+              <span>Kind</span>
+              <span className="source-record-updated">Updated</span>
+              <span>Status</span>
+            </div>
             {catalogue.data.sources.map((source) => (
               <button
                 key={source.id}
-                className="source-row"
+                className="source-row source-record"
                 onClick={() => setSelected(source)}
               >
-                <FileText size={20} className="source-symbol" />
-                <div className="source-row-body">
+                <FileText size={iconSize.action} className="source-symbol" />
+                <span className="source-record-name">
                   <Text fw={600} size="sm">
                     {source.version.title}
                   </Text>
-                  <Text size="xs" c="dimmed" mt={5}>
-                    {source.version.contributor} ·{" "}
-                    {timestamp(source.version.recorded_at)}
-                  </Text>
-                  <Group gap={5} mt={7}>
-                    {source.group_ids.slice(0, 5).map((id) => (
+                  <Group gap={5} mt={5}>
+                    {source.group_ids.slice(0, 3).map((id) => (
                       <Badge size="xs" variant="light" color="gray" key={id}>
-                        {groups.find((g) => g.id === id)?.name ?? "View"}
+                        {groups.find((group) => group.id === id)?.name ??
+                          "View"}
                       </Badge>
                     ))}
                   </Group>
-                </div>
+                </span>
+                <span className="feature-meta">
+                  {source.version.availability === "reference_only"
+                    ? "Reference"
+                    : (source.version.retention_class ?? "document").replaceAll(
+                        "_",
+                        " ",
+                      )}
+                </span>
+                <span className="feature-meta source-record-updated">
+                  {new Date(source.version.recorded_at).toLocaleDateString()}
+                </span>
                 <Badge
-                  size="xs"
+                  size="sm"
+                  variant="light"
                   color={
                     source.version.processing === "ready" &&
                     source.version.availability === "retained"
@@ -269,7 +385,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
                 </Badge>
               </button>
             ))}
-          </Stack>
+          </div>
         )}
         {(offset > 0 || (catalogue.data?.total ?? 0) > 50) && (
           <Group justify="space-between">
@@ -294,25 +410,13 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
             </Button>
           </Group>
         )}
-        {brain.role === "admin" && (
-          <>
-            <Divider />
-            <Switch
-              label="Allow document content retention"
-              description="When off, new imports keep references only. Existing evidence is preserved."
-              checked={
-                policy.isPending
-                  ? policy.variables
-                  : (catalogue.data?.policy.allow_document_content ?? true)
-              }
-              disabled={
-                brain.archived || policy.isPending || catalogue.isPending
-              }
-              onChange={(event) => policy.mutate(event.currentTarget.checked)}
-            />
-            {policy.error && <Alert color="red">{policy.error.message}</Alert>}
-          </>
-        )}
+        <div className="feature-note">
+          <Info size={iconSize.small} />
+          <span>
+            Search matches titles. Import supports text files, pasted text and
+            references. Content retention is managed in Settings.
+          </span>
+        </div>
       </Stack>
       <GroupManager
         brain={brain.id}
@@ -345,31 +449,54 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           refresh();
         }}
       />
-      {selected && (
+      {route.version && !selected && !selectedSourceId && (
+        <Drawer
+          opened
+          onClose={() => setSelected(null)}
+          title="Source evidence"
+          className="feature-drawer"
+        >
+          {versionReference.error ? (
+            <Alert color="red">
+              {versionReference.error.message}
+              <Button
+                variant="subtle"
+                onClick={() => void versionReference.refetch()}
+              >
+                Try again
+              </Button>
+            </Alert>
+          ) : (
+            <Loader />
+          )}
+        </Drawer>
+      )}
+      {selectedSourceId && (
         <SourceViewer
-          key={selected.id}
+          key={selectedSourceId}
           brain={brain.id}
-          source={
-            catalogue.data?.sources.find((s) => s.id === selected.id) ??
-            selected
-          }
+          sourceId={selectedSourceId}
+          source={catalogue.data?.sources.find(
+            (source) => source.id === selectedSourceId,
+          )}
+          selectedVersion={route.version}
+          onVersionChange={(version) => patchRoute({ version })}
           views={groups}
           writable={writable}
           admin={brain.role === "admin"}
           close={() => setSelected(null)}
           refresh={refresh}
           edit={(content) => {
-            setEditing({
-              source:
-                catalogue.data?.sources.find((s) => s.id === selected.id) ??
-                selected,
-              content,
-            });
+            const source = catalogue.data?.sources.find(
+              (source) => source.id === selectedSourceId,
+            );
+            if (!source) return;
+            setEditing({ source, content });
             setSelected(null);
           }}
         />
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -509,7 +636,7 @@ function GroupManager({
                     {view.name}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    {view.source_count} sources
+                    {view.source_count} source{view.source_count === 1 ? "" : "s"}
                   </Text>
                 </div>
                 <Group gap="xs">
@@ -796,7 +923,7 @@ function SourceEditor({
                     <Button
                       {...props}
                       variant="default"
-                      leftSection={<Upload size={15} />}
+                      leftSection={<Upload size={iconSize.small} />}
                       loading={loading}
                     >
                       Choose text file
@@ -813,7 +940,12 @@ function SourceEditor({
                 autosize
                 value={content}
                 onChange={(e) => setContent(e.currentTarget.value)}
-                styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
+                styles={{
+                  input: {
+                    fontFamily: "var(--rc-font-mono)",
+                    fontSize: "var(--mantine-font-size-xs)",
+                  },
+                }}
               />
               <Checkbox
                 label="Retain this document’s text in this Brain"
@@ -873,6 +1005,9 @@ function SourceEditor({
 function SourceViewer({
   brain,
   source,
+  sourceId,
+  selectedVersion,
+  onVersionChange,
   views,
   writable,
   admin,
@@ -881,7 +1016,10 @@ function SourceViewer({
   edit,
 }: {
   brain: string;
-  source: Source;
+  source?: Source;
+  sourceId: string;
+  selectedVersion?: string;
+  onVersionChange: (version: string) => void;
   views: View[];
   writable: boolean;
   admin: boolean;
@@ -889,27 +1027,42 @@ function SourceViewer({
   refresh: () => void;
   edit: (content: Content) => void;
 }) {
-  const [version, setVersion] = useState(source.version.id);
   const [offset, setOffset] = useState(0);
   const [organizing, setOrganizing] = useState(false);
-  const [groups, setGroups] = useState(source.group_ids);
+  const [groups, setGroups] = useState(source?.group_ids ?? []);
   const history = useQuery({
-    queryKey: ["source-history", brain, source.id, offset],
-    queryFn: async () =>
+    queryKey: ["source-history", brain, sourceId, offset],
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/sources/{source}/versions", {
-          params: { path: { brain, source: source.id }, query: { offset } },
+          signal,
+          params: { path: { brain, source: sourceId }, query: { offset } },
         }),
       ),
     refetchInterval: 4000,
   });
+  const head = useQuery({
+    queryKey: ["source-history", brain, sourceId, 0],
+    enabled: !source,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/sources/{source}/versions", {
+          params: { path: { brain, source: sourceId }, query: { offset: 0 } },
+          signal,
+        }),
+      ),
+    refetchInterval: 4000,
+  });
+  const currentVersion = source?.version.id ?? head.data?.versions[0]?.id;
+  const version = selectedVersion ?? currentVersion ?? "";
   const evidence = useQuery({
-    queryKey: ["source-content", brain, source.id, version],
-    queryFn: async () =>
+    queryKey: ["source-content", brain, sourceId, version],
+    enabled: !!version,
+    queryFn: async ({ signal }) =>
       result(
         await client.GET(
           "/api/brains/{brain}/sources/{source}/versions/{version}",
-          { params: { path: { brain, source: source.id, version } } },
+          { params: { path: { brain, source: sourceId, version } }, signal },
         ),
       ),
     refetchInterval: 4000,
@@ -918,7 +1071,7 @@ function SourceViewer({
     mutationFn: async () =>
       result(
         await client.PUT("/api/brains/{brain}/sources/{source}/groups", {
-          params: { path: { brain, source: source.id } },
+          params: { path: { brain, source: sourceId } },
           body: { group_ids: groups },
         }),
       ),
@@ -931,15 +1084,31 @@ function SourceViewer({
     mutationFn: async () =>
       result(
         await client.POST("/api/brains/{brain}/sources/{source}/process", {
-          params: { path: { brain, source: source.id } },
+          params: { path: { brain, source: sourceId } },
         }),
       ),
     onSuccess: refresh,
   });
-  const data = evidence.data;
-  const error = evidence.error ?? history.error;
+  const expired = useContentDeadline(evidence.data?.version.expires_at);
+  const data = expired ? undefined : evidence.data;
+  const error =
+    evidence.error ??
+    history.error ??
+    head.error ??
+    (expired
+      ? new Error(
+          "This source reached its retention deadline. Refresh to inspect its remaining metadata.",
+        )
+      : null);
   return (
-    <Modal opened onClose={close} title="Source evidence" size="xl" centered>
+    <DetailInspector
+      className="feature-drawer"
+      opened
+      onClose={close}
+      title="Source evidence"
+      position="right"
+      size="min(42rem, 90vw)"
+    >
       <Stack>
         {error ? (
           <Alert color="red">
@@ -961,9 +1130,7 @@ function SourceViewer({
             <>
               <Group justify="space-between" align="flex-start">
                 <div>
-                  <Title order={2} fz={24}>
-                    {data.version.title}
-                  </Title>
+                  <Title order={2}>{data.version.title}</Title>
                   <Text size="xs" c="dimmed" mt="xs">
                     Contributed by {data.version.contributor} · recorded{" "}
                     {timestamp(data.version.recorded_at)}
@@ -988,12 +1155,6 @@ function SourceViewer({
                   ? "expires " + timestamp(data.version.expires_at)
                   : "until erased"}
               </Text>
-              <EraseAction
-                brain={brain}
-                permitted={admin}
-                target={{ kind: "source", id: source.id }}
-                name={data.version.title}
-              />
               {data.version.excerpt && (
                 <Text size="xs" c="dimmed">
                   Supporting excerpt from source lines{" "}
@@ -1002,16 +1163,6 @@ function SourceViewer({
                   {timestamp(data.version.excerpt.captured_at)}.
                 </Text>
               )}
-              {writable &&
-                data.version.privacy_state === "active" &&
-                data.content != null && (
-                  <ExcerptAction
-                    brain={brain}
-                    source={source.id}
-                    version={data.version.id}
-                    title={data.version.title}
-                  />
-                )}
               <Text size="sm" c="dimmed">
                 Observed{" "}
                 {data.version.observed_at
@@ -1023,36 +1174,39 @@ function SourceViewer({
                   Source reference: {data.version.source_uri}
                 </Text>
               )}
-              <Select
-                label="Evidence version"
-                data={(history.data?.versions ?? []).map((v) => ({
-                  value: v.id,
-                  label: `${v.id === source.version.id ? "Current · " : "Earlier · "}${timestamp(v.recorded_at)} · ${v.contributor}`,
-                }))}
-                value={version}
-                onChange={(v) => v && setVersion(v)}
-              />
-              {(offset > 0 || (history.data?.total ?? 0) > 20) && (
-                <Group>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    disabled={offset === 0}
-                    onClick={() => setOffset(Math.max(0, offset - 20))}
-                  >
-                    Newer history
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    disabled={offset + 20 >= (history.data?.total ?? 0)}
-                    onClick={() => setOffset(offset + 20)}
-                  >
-                    Older history
-                  </Button>
-                </Group>
-              )}
-              {version !== source.version.id && (
+              <details className="feature-details">
+                <summary>Version history</summary>
+                <Select
+                  label="Evidence version"
+                  data={(history.data?.versions ?? []).map((v) => ({
+                    value: v.id,
+                    label: `${v.id === currentVersion ? "Current · " : "Earlier · "}${timestamp(v.recorded_at)} · ${v.contributor}`,
+                  }))}
+                  value={version}
+                  onChange={(v) => v && onVersionChange(v)}
+                />
+                {(offset > 0 || (history.data?.total ?? 0) > 20) && (
+                  <Group>
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      disabled={offset === 0}
+                      onClick={() => setOffset(Math.max(0, offset - 20))}
+                    >
+                      Newer history
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      disabled={offset + 20 >= (history.data?.total ?? 0)}
+                      onClick={() => setOffset(offset + 20)}
+                    >
+                      Older history
+                    </Button>
+                  </Group>
+                )}
+              </details>
+              {version !== currentVersion && (
                 <Alert color="yellow">
                   You are viewing an earlier source version. Current knowledge
                   may refer to newer evidence.
@@ -1067,14 +1221,6 @@ function SourceViewer({
                     {data.version.byte_length.toLocaleString()} retained bytes ·{" "}
                     {data.spans.length} processed support spans
                   </Text>
-                  <LearningAction
-                    brain={brain}
-                    version={version}
-                    writable={
-                      writable &&
-                      (data.version.privacy_state ?? "active") === "active"
-                    }
-                  />
                 </>
               ) : (
                 <Alert
@@ -1096,13 +1242,13 @@ function SourceViewer({
                       : "The recorded artifact could not be read. Restore it or import a new version; existing metadata does not recreate missing evidence."}
                 </Alert>
               )}
-              {writable && (
+              {writable && source && (
                 <Group>
                   <Button
                     size="sm"
                     variant="default"
                     disabled={
-                      version !== source.version.id ||
+                      version !== currentVersion ||
                       data.version.privacy_state === "erased" ||
                       data.version.retention_class === "support_excerpt"
                     }
@@ -1120,19 +1266,78 @@ function SourceViewer({
                   >
                     Organize source
                   </Button>
-                  {data.version.retained && version === source.version.id && (
-                    <Button
-                      size="sm"
-                      variant="subtle"
-                      leftSection={<RefreshCw size={14} />}
-                      loading={process.isPending}
-                      onClick={() => process.mutate()}
-                    >
-                      Reprocess source
-                    </Button>
-                  )}
                 </Group>
               )}
+              <Link
+                to="/brains/$brainId/graph"
+                params={{ brainId: brain }}
+                search={{
+                  kind: "knowledge",
+                  center: `source_version:${version}`,
+                  direction: "incoming",
+                  hops: 1,
+                }}
+              >
+                Explore memory linked to this version
+              </Link>
+              <Text size="xs" c="dimmed">
+                Shows recorded eligible incoming evidence relationships; it does
+                not imply every derived memory is currently eligible.
+              </Text>
+              {!source && (
+                <Text size="xs" c="dimmed">
+                  This exact version was opened directly. Edit its title or
+                  grouping from its row in Sources.
+                </Text>
+              )}
+              <ActionMenu label="More source actions">
+                <Stack gap="md">
+                  <Text size="sm" c="dimmed">
+                    Reprocessing, explicit learning, supporting excerpts and
+                    removal use the same Brain policy and permissions.
+                  </Text>
+                  <EraseAction
+                    brain={brain}
+                    permitted={admin}
+                    target={{ kind: "source", id: sourceId }}
+                    name={data.version.title}
+                  />
+
+                  {writable &&
+                    data.version.privacy_state === "active" &&
+                    data.content != null && (
+                      <ExcerptAction
+                        brain={brain}
+                        source={sourceId}
+                        version={data.version.id}
+                        title={data.version.title}
+                      />
+                    )}
+
+                  <LearningAction
+                    brain={brain}
+                    version={version}
+                    writable={
+                      writable &&
+                      (data.version.privacy_state ?? "active") === "active"
+                    }
+                  />
+
+                  {writable &&
+                    data.version.retained &&
+                    version === currentVersion && (
+                      <Button
+                        size="sm"
+                        variant="subtle"
+                        leftSection={<RefreshCw size={iconSize.small} />}
+                        loading={process.isPending}
+                        onClick={() => process.mutate()}
+                      >
+                        Reprocess source
+                      </Button>
+                    )}
+                </Stack>
+              </ActionMenu>
               {process.error && (
                 <Alert color="red">{process.error.message}</Alert>
               )}
@@ -1166,6 +1371,63 @@ function SourceViewer({
           )
         )}
       </Stack>
-    </Modal>
+    </DetailInspector>
+  );
+}
+
+export function SourcesStoragePolicy({ brain }: { brain: Brain }) {
+  const cache = useQueryClient();
+  const query = useQuery({
+    queryKey: ["evidence", brain.id, "storage-policy"],
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/evidence", {
+          signal,
+          params: { path: { brain: brain.id } },
+        }),
+      ),
+    refetchInterval: 4000,
+  });
+  const save = useMutation({
+    mutationFn: async (allow_document_content: boolean) =>
+      result(
+        await client.PUT("/api/brains/{brain}/evidence/policy", {
+          params: { path: { brain: brain.id } },
+          body: { allow_document_content },
+        }),
+      ),
+    onSuccess: () =>
+      cache.invalidateQueries({ queryKey: ["evidence", brain.id] }),
+  });
+  return (
+    <section className="feature-setting">
+      <Stack gap="md">
+        <Title order={3}>Document storage</Title>
+        <Text size="sm" c="dimmed">
+          Choose whether new explicit imports may retain text. Existing evidence
+          follows its own retention policy.
+        </Text>
+        {query.error ? (
+          <Alert color="red">{query.error.message}</Alert>
+        ) : query.isPending ? (
+          <Loader size="sm" />
+        ) : (
+          <Switch
+            label="Allow document content retention"
+            description="When off, new imports keep references only. Existing evidence is preserved."
+            checked={
+              save.isPending
+                ? save.variables
+                : (query.data?.policy.allow_document_content ?? false)
+            }
+            disabled={
+              brain.role !== "admin" || brain.archived || save.isPending
+            }
+            onChange={(event) => save.mutate(event.currentTarget.checked)}
+          />
+        )}
+        {save.error && <Alert color="red">{save.error.message}</Alert>}
+      </Stack>
+    </section>
   );
 }

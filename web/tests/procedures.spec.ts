@@ -45,8 +45,9 @@ test("author procedures, compose handovers and preserve contribution inspection"
     });
     return { brain: brain.id, source: source.id };
   });
-  await page.goto("/brains/" + fixture.brain);
-  await page.getByRole("button", { name: "New memory", exact: true }).click();
+  await page.goto("/brains/" + fixture.brain + "/memory");
+  await page.getByRole("button", { name: "Add memory", exact: true }).click();
+  await page.getByRole("button", { name: "Structured entry", exact: true }).click();
   let dialog = page.getByRole("dialog");
   await dialog
     .getByRole("textbox", { name: "Memory kind", exact: true })
@@ -105,16 +106,17 @@ test("author procedures, compose handovers and preserve contribution inspection"
   await expect(
     dialog.getByText("Review: proposed", { exact: true }),
   ).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: "../.cache/ui-procedure-mobile.png" });
+  await page.screenshot({ path: "../.cache/ui-procedure-1280.png" });
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.getByRole("button", { name: "New memory", exact: true }).click();
+  await page.getByRole("button", { name: "Add memory", exact: true }).click();
+  await page.getByRole("button", { name: "Structured entry", exact: true }).click();
   dialog = page.getByRole("dialog");
   await dialog
     .getByRole("textbox", { name: "Memory kind", exact: true })
@@ -162,6 +164,7 @@ test("author procedures, compose handovers and preserve contribution inspection"
   ).toBeVisible();
   await page.screenshot({ path: "../.cache/ui-handover-desktop.png" });
   await page.keyboard.press("Escape");
+  await page.getByRole("tab", { name: "Handovers", exact: true }).click();
   await page
     .getByRole("button", { name: "Generate handover", exact: true })
     .click();
@@ -243,14 +246,14 @@ test("author procedures, compose handovers and preserve contribution inspection"
     expect(proof.usage.total).toBe(1);
     expect(proof.usage.requests[0].purpose).toBe("synthesis");
     expect(proof.runs.items[0].state).toBe("succeeded");
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 1280, height: 800 });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
     await page.screenshot({
-      path: "../.cache/ui-generated-handover-mobile.png",
+      path: "../.cache/ui-generated-handover-1280.png",
     });
   }
   expect(errors).toEqual([]);

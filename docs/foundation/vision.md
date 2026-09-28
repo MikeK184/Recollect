@@ -222,7 +222,11 @@ Use autonomous learning and maintenance under a standing Brain policy. Models
 interpret and reconcile evidence; workers accept supported routine knowledge,
 revise it, retire obsolete material and enforce retention/erasure without a human
 checking each record. Unresolved evidence remains explicitly uncertain while work
-continues. Human inspection and correction are optional interventions. Automatic
+continues. Human inspection and correction are optional interventions. The 2026-09-28
+clarification makes managed defaults the normal setup: people do not tune token
+budgets, capture kinds, result counts or per-record lifecycle decisions. Agents
+select useful scope and context through the plugin; the UI explains progress and
+supports optional intervention. See the [managed experience](../contracts/memory-managed-experience.md). Automatic
 acceptance records its policy and never claims human review or operational proof.
 Preserve the origin and actual evidence class. This 2026-09-14 clarification is
 governed by [ADR 0006](../adr/0006-autonomous-memory.md).

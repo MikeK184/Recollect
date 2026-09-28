@@ -47,6 +47,16 @@ pub(crate) fn offset(page: &Page) -> Result<i64> {
         Ok(n)
     }
 }
+/// Literal list filtering; never interpreted as SQL wildcard/search syntax.
+pub(crate) fn list_query(query: Option<&str>) -> Result<String> {
+    let value = query.unwrap_or_default().trim();
+    if value.len() > 200 || value.chars().any(char::is_control) {
+        return Err(Error::invalid(
+            "Use a list search within 200 UTF-8 bytes without control characters.",
+        ));
+    }
+    Ok(value.to_owned())
+}
 async fn write_tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid) -> Result<Tx<'a>> {
     let mut tx = auth.tx(&state.pool).await?;
     db::require_writer(&mut tx, brain).await?;

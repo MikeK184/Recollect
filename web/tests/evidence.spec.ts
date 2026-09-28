@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -28,11 +29,14 @@ test("import evidence, preserve history and share one source across collection v
   await dialog
     .getByRole("button", { name: "Create Brain", exact: true })
     .click();
+  await expect(page.getByLabel("Switch Brain", { exact: true })).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link", { name: "Sources", exact: true })
+    .click();
+  const brain = new URL(page.url()).pathname.split("/")[2];
   await expect(
-    page.getByRole("heading", { name: "Operational evidence", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("No sources in this view", { exact: true }),
+    page.getByText("Start with your evidence", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Manage views", exact: true }).click();
   for (const [kind, name] of [
@@ -52,6 +56,7 @@ test("import evidence, preserve history and share one source across collection v
     await expect(dialog.getByText(name, { exact: true })).toBeVisible();
   }
   await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   for (const [kind, name] of [
     ["Collection", "Runbooks"],
     ["Area", "Vault"],
@@ -60,9 +65,8 @@ test("import evidence, preserve history and share one source across collection v
     await page.getByRole("textbox", { name: kind, exact: true }).click();
     await page.getByRole("option", { name, exact: true }).click();
   }
-  await page
-    .getByRole("button", { name: "Import source", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Show sources", exact: true }).click();
+  await page.getByRole("button", { name: "Add source", exact: true }).click();
   await dialog.getByLabel(/^Source title/).fill("Production Vault");
   await dialog.locator('input[type="file"]').setInputFiles({
     name: "vault.md",
@@ -121,6 +125,7 @@ test("import evidence, preserve history and share one source across collection v
   await expect(dialog).toHaveCount(0);
   await page.getByRole("button", { name: /Production Vault/ }).click();
   await expect(dialog.getByTestId("source-content")).toHaveText(replacement);
+  await openDetails(dialog, "Version history");
   await dialog
     .getByRole("textbox", { name: "Evidence version", exact: true })
     .click();
@@ -134,6 +139,7 @@ test("import evidence, preserve history and share one source across collection v
   await expect(
     dialog.getByRole("button", { name: "Edit source", exact: true }),
   ).toBeDisabled();
+  await openDetails(dialog, "Version history");
   await dialog
     .getByRole("textbox", { name: "Evidence version", exact: true })
     .click();
@@ -167,8 +173,10 @@ test("import evidence, preserve history and share one source across collection v
     .click();
   await expect(dialog.getByText("Runbooks", { exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page.getByRole("textbox", { name: "Collection", exact: true }).click();
   await page.getByRole("option", { name: "Shared notes", exact: true }).click();
+  await page.getByRole("button", { name: "Show sources", exact: true }).click();
   await expect(
     page.getByRole("button", { name: /Production Vault/ }),
   ).toBeVisible();
@@ -185,14 +193,14 @@ test("import evidence, preserve history and share one source across collection v
     fullPage: false,
     animations: "disabled",
   });
+  await page.goto(`/brains/${brain}/settings?tab=privacy`);
   const captureSwitch = page.getByRole("switch", {
     name: /^Allow document content retention/,
   });
   await captureSwitch.click();
   await expect(captureSwitch).not.toBeChecked();
-  await page
-    .getByRole("button", { name: "Import source", exact: true })
-    .click();
+  await page.goto(`/brains/${brain}/sources`);
+  await page.getByRole("button", { name: "Add source", exact: true }).click();
   await expect(
     dialog.getByText("This Brain currently allows reference-only imports."),
   ).toBeVisible();
@@ -214,14 +222,14 @@ test("import evidence, preserve history and share one source across collection v
   ).toBeVisible();
   await expect(dialog.getByTestId("source-content")).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
     ),
   ).toBe(false);
   await page.screenshot({
-    path: "../.cache/ui/collections-mobile.png",
+    path: "../.cache/ui/collections-1280.png",
     fullPage: true,
     animations: "disabled",
   });

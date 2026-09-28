@@ -10,31 +10,29 @@ projected. This workflow makes no model request or customer checkout read.
 
 ## Procedure
 
-1. Expand **Evidence graphs**. Select knowledge, repository structure or combined
-   repositories, then the desired repositories, areas, environment, exact
-   snapshot/manifest, evidence mode and relation families. **Load graph view**
-   loads eligible entities and the interactive overview.
-2. Inspect generation/readiness, exact inputs and coverage limitations. Blue
-   nodes represent repository evidence, purple claims and green retained sources.
-   Arrow direction is the recorded relationship direction. Position is a layout
-   choice; it does not indicate truth, importance or deployed impact.
-3. Select an entity/arrow on the canvas, or use **Inspect graph entity** and
-   **Inspect graph relationship** with the keyboard. Details retain canonical
-   identity, evidence class, source/revision/commit and relationship provenance.
-   **Inspect selected evidence** or **Inspect relationship evidence** opens the
-   existing canonical inspection dialog.
-4. Select **Explore connections**, or choose a center from the current entity
-   page and **Explore from center**. Choose outgoing, incoming or both directions
-   and one to eight hops. The response includes all reached eligible entities,
-   their induced relationships and one shortest witness per entity. Incoming
+1. Open **Graph**. A bounded current knowledge overview loads when no exact
+   selection is supplied. Use Knowledge/Repository/Combined and **Filters** for
+   repositories, areas, environment, exact snapshot/manifest, mode and relations.
+   **Apply graph filters** records that exact selection; missing inputs are not guessed.
+2. Open **Graph status** for readiness/generation and coverage. Blue nodes represent
+   repository evidence, amber claims and sage retained sources. Arrow direction is
+   the recorded relationship. Layout does not imply truth or deployed impact.
+3. Select an entity/arrow on the canvas, use **Inspect graph entity** / **Inspect
+   graph relationship**, or select **List** for keyboard-readable entities. The
+   inspector preserves canonical identity, revision and provenance. **Inspect
+   selected evidence** or **Inspect relationship evidence** opens exact support.
+4. Use **Explore from an entity**, choose a center and **Explore from center**.
+   Direction and one-to-eight hops bound the read. The result contains reached
+   eligible entities, their induced relationships and shortest witnesses. Incoming
    traversal does not reverse recorded arrow directions.
-5. Set path start/end and **Find shortest eligible path**. The ordered textual
-   path remains available; **Show shortest path on canvas** displays its exact
-   witness relationships. Green highlights mark this path, and orange marks the
-   selected element. Equal-length native shortest paths can choose different ties.
-6. Use **Graph layout**, **Fit graph**, zoom and **Focus selection** to inspect
-   the display. These are renderer operations, not evidence mutations. Queued
-   [analytics and reports](graph-analytics.md) remain in the same graph panel.
+5. Use **Find path** with contextual **Use as start** / **Use as end**, then
+   **Find shortest eligible path**. The ordered textual path remains available;
+   **Show shortest path on canvas** displays its exact witness relationships.
+   Dark sage highlights the path and ink highlights selection. Equal-length paths
+   may choose different ties.
+6. **Graph layout**, **Fit graph**, zoom and **Focus selection** only affect the
+   renderer. **Insights** opens explicit [analytics](graph-analytics.md); **Graph
+   status** contains authorized rebuild. Neither action runs just by opening Graph.
 
 ## Limits and recovery
 

@@ -10,6 +10,8 @@ delivery, local/central/private execution and safe process lifecycle.
 
 ## Governing Sources
 
+- [Desktop contract](../../contracts/desktop-experience.md)
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
 - [Managed observation ADR](../../adr/0012-managed-tool-observations.md)
 - [Automatic managed observation capture](../../contracts/mcp-observation-capture.md)
 - [Agent memory MCP ADR](../../adr/0010-agent-memory-mcp.md)
@@ -65,21 +67,27 @@ universal catalogue of customer connectors is introduced.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `mcp-direct-auth-repair` | shipped | contract-backed | pack | SWEG credential handoff repaired through Keychain; installed Codex 0.157.1 workspace read and deployed concrete setup instructions verified |
+| `mcp-direct-connections` | shipped | contract-backed | pack | Direct HTTP host setup and token, anonymous name/URL form; real Context7 metadata/protocol proof with useful documentation quota-blocked |
 | `mcp-catalogue-and-profiles` | shipped | contract-backed | pack | Operator-approved cached definitions, Brain/environment connections, independent profile use/manage/share and desktop catalogue with real RLS/browser proof |
 | `mcp-runtime-and-credentials` | shipped | adr-backed, contract-backed | pack | Actual central/paired stdio and HTTP calls, isolated credentials, fenced recovery without effect replay, desktop/native workflow and verified local schema 022 upgrade |
 | `mcp-vault-and-private-runners` | shipped | adr-backed, contract-backed | pack | Optional per-connection Vault Proxy delivery, real issuance/renewal/rotation, authenticated private stdio/HTTP/native/desktop execution and preserved normal migration 023 |
 | `mcp-memory-and-workspace-tools` | shipped | adr-backed, contract-backed | pack | Stateless paired MCP, native bridge, scoped memory/graph/handover tools and fresh capture defaults proven through real coding hosts |
 | `mcp-observation-capture` | shipped | adr-backed, contract-backed | pack | Actual central/local/private receipts become scoped canonical evidence; automatic learning, separate reconciliation, retries, native erasure synchronization, older-state replay and desktop state verified; normal migration 024 preserved |
+| `mcp-desktop-setup` | shipped | adr-backed, contract-backed | pack | Guided approved connection setup, profiles/runners and uncertain-call inspection without widening grants |
 
 ## Slice Dependencies
 
 | Slice ID | Predecessors |
 | --- | --- |
+| `mcp-direct-auth-repair` | `mcp-direct-connections` |
 | `mcp-catalogue-and-profiles` | `platform-durable-work`, `evidence-workspace-scope` |
 | `mcp-runtime-and-credentials` | `mcp-catalogue-and-profiles` |
 | `mcp-vault-and-private-runners` | `mcp-runtime-and-credentials` |
 | `mcp-memory-and-workspace-tools` | `mcp-runtime-and-credentials`, `retrieval-graph-fusion`, `memory-procedures-and-handovers`, `evidence-session-capture` |
 | `mcp-observation-capture` | `mcp-vault-and-private-runners`, `mcp-memory-and-workspace-tools` |
+| `mcp-desktop-setup` | `platform-desktop-shell` |
+| `mcp-direct-connections` | `mcp-desktop-setup`, `mcp-memory-and-workspace-tools` |
 
 ## Completion Criteria
 
@@ -95,3 +103,12 @@ universal catalogue of customer connectors is introduced.
   Captured success/failure preserves what was actually observed.
 - Codex/Claude memory/workspace integration refreshes applicable context after
   scope changes without relabeling in-flight tasks or inventing missing events.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the final local image separately from
+remaining cross-domain acceptance. The [mcp-desktop-setup closeout](../execution/archive/mcp-desktop-setup.md)
+records this owner’s completed checks. The [desktop guide](../../runbooks/desktop-experience.md)
+documents current function locations. Other owners keep unfinished criteria active;
+prior shipped domain records remain historical evidence rather than redesign proof.

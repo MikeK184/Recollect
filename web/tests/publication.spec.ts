@@ -147,17 +147,15 @@ test("native committed publication resumes and browser preserves manifest histor
       .getByRole("button", { name: "Create Brain", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", {
-        name: "Committed publication proof",
-        exact: true,
-      }),
+      page.getByLabel("Switch Brain", { exact: true }),
     ).toBeVisible();
     const brainURL = page.url();
-    const brain = new URL(brainURL).pathname.split("/").at(-1)!;
+    const brain = new URL(brainURL).pathname.split("/")[2]!;
     await writeFile(
       resolve(fixture, ".recollect/workspace.toml"),
       `brain = "${brain}"\n`,
     );
+    await page.goto(`/brains/${brain}/sources`);
     await page
       .getByRole("button", { name: "Manage views", exact: true })
       .click();
@@ -176,6 +174,7 @@ test("native committed publication resumes and browser preserves manifest histor
     }
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.goto(`/brains/${brain}/settings?tab=privacy`);
     await page
       .getByRole("switch", {
         name: "Allow explicitly selected repository file text",
@@ -257,8 +256,7 @@ test("native committed publication resumes and browser preserves manifest histor
       env: process.env,
       stdio: "ignore",
     });
-    await page.goto(brainURL);
-    await page.getByRole("tab", { name: "Repositories", exact: true }).click();
+    await page.goto(`/brains/${brain}/repositories`);
     await page.getByRole("button", { name: "Snapshots", exact: true }).click();
     await page
       .getByRole("button", { name: "Inspect snapshot", exact: true })
@@ -304,6 +302,10 @@ test("native committed publication resumes and browser preserves manifest histor
     ).toBeVisible();
     await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
+    await page.getByRole("tab", { name: "Environments", exact: true }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/brains/${brain}/repositories\\?tab=environments$`),
+    );
     await page
       .getByRole("button", { name: "New manifest", exact: true })
       .click();
@@ -410,9 +412,9 @@ test("native committed publication resumes and browser preserves manifest histor
       path: "../.cache/ui/publication-manifest.png",
       fullPage: true,
     });
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.screenshot({
-      path: "../.cache/ui/publication-mobile.png",
+      path: "../.cache/ui/publication-1280.png",
       fullPage: true,
     });
     expect(

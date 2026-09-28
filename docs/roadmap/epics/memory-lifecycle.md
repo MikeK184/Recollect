@@ -1,6 +1,8 @@
 # Memory Lifecycle, Learning and Review
 
-Status: complete
+Status: active
+
+[Managed experience](../../contracts/memory-managed-experience.md) governs the 2026-09-28 agent-first setup correction.
 
 ## Purpose
 
@@ -10,6 +12,8 @@ subsequent ingestion, retrieval and rebuild path.
 
 ## Governing Sources
 
+- [Desktop contract](../../contracts/desktop-experience.md)
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
 - [Canonical claims and time](../../adr/0005-canonical-claims-and-time.md)
 - [Claims contract](../../contracts/memory-claims-and-time.md)
 - [Review and corrections](../../contracts/memory-review-and-corrections.md)
@@ -87,6 +91,8 @@ testing those rules through their own paths.
 | `memory-provider-policy-and-learning` | shipped | contract-backed | pack | Delivered Luna/embedding-large gateway, policy/usage, canonical source learning and erasure with API/browser/real-model/runtime proof |
 | `memory-procedures-and-handovers` | shipped | adr-backed, contract-backed | pack | Delivered typed procedures, governed handovers and autonomous learning/revision/retirement/refresh with API/browser/real-Luna/runtime/erasure proof; human review is optional |
 | `memory-capture-reconciliation` | shipped | contract-backed | pack | Delivered attributed model inputs, bound session reconciliation, maintenance at capacity, recall-feedback exclusions and independent capture/knowledge time with database/native/browser/real-Luna proof |
+| `memory-desktop-workflows` | in-progress | adr-backed, contract-backed | pack | Readable memory/handover inspectors and standing settings with literal assertion search and preserved autonomous authority |
+| `memory-managed-experience` | shipped | contract-backed | pack | Managed autonomous defaults, simple Ask/notes and actionable owner MCP setup |
 
 ## Slice Dependencies
 
@@ -98,6 +104,8 @@ testing those rules through their own paths.
 | `memory-provider-policy-and-learning` | `memory-retention-and-erasure` |
 | `memory-procedures-and-handovers` | `memory-review-and-corrections` |
 | `memory-capture-reconciliation` | `memory-procedures-and-handovers`, `evidence-session-capture` |
+| `memory-desktop-workflows` | `platform-desktop-shell` |
+| `memory-managed-experience` | `platform-desktop-shell`, `memory-capture-reconciliation`, `mcp-desktop-setup` |
 
 ## Completion Criteria
 
@@ -112,3 +120,20 @@ testing those rules through their own paths.
   records; downstream invalidation obligations include aggregate analytics.
 - Unapproved model transmission/fallback is denied. Automatic acceptance records
   its policy instead of inventing human review. Procedures do not grant execution.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the verified final local image separately
+from remaining current-code domain and integrated acceptance. The
+[desktop guide](../../runbooks/desktop-experience.md) documents the current function
+locations. Product/proof slices stay in progress until their required checks pass;
+prior shipped domain records remain historical evidence rather than redesign proof.
+
+## Managed experience follow-up, 2026-09-28
+
+The [managed setup slice](../execution/archive/memory-managed-experience.md) is
+delivered locally with native/browser proof and preserved existing Brain data.
+The [dated mapping](../../mappings/managed-memory-experience-2026-09-28.md) records
+the operating defaults, initial failures, completed reruns and limits. The epic
+remains active for the separate desktop workflow and integrated acceptance scope.

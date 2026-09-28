@@ -1,5 +1,7 @@
 # Publish committed repository evidence
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Publish exact locally available Git commits into an authorized Brain and select
@@ -49,11 +51,10 @@ target/debug/recollect-agent repository publish BRAIN REPOSITORY TASK /path/to/c
 ```
 
 Repeat `--retain-file` for up to 20 permitted text files. First enable **Allow
-explicitly selected repository file text** in the Brain's Environment revisions
-panel. The default is disabled. An absent/excluded selected file is an error;
+explicitly selected repository file text** in **Settings → Retention & privacy**. The default is disabled. An absent/excluded selected file is an error;
 turning the policy off later does not erase accepted text.
 
-In the browser, open **Workspace & tasks → Repositories → Snapshots**. Inspect
+In the browser, open **Repositories → Published repositories → Snapshots**. Inspect
 exact commit, files/availability, fact records, coverage, insights, receipt and
 contributors. Reprocessing uses retained artifacts with current authority. The
 native inspection commands are:
@@ -65,8 +66,7 @@ target/debug/recollect-agent repository manifests BRAIN
 target/debug/recollect-agent repository manifest BRAIN MANIFEST
 ```
 
-Create an environment in Manage views, then **New manifest** under Environment
-revisions. Select repositories and published snapshots, or explicitly enter an
+Create an environment in **Sources → Manage views**, then use **Repositories → Environments → New manifest**. Select repositories and published snapshots, or explicitly enter an
 exact revision without a snapshot. Config paths are relative references. Choose
 committed code, desired configuration or a recorded deployment observation;
 observations require a timestamp and supporting reference. Recollect does not

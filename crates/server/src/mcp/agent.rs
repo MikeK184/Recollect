@@ -46,7 +46,7 @@ pub async fn serve(
         return Error(
             StatusCode::FORBIDDEN,
             "device_required",
-            "Use a paired companion for agent tools.",
+            "Use a Recollect MCP access token for agent tools.",
         )
         .into_response();
     }

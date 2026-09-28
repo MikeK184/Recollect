@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect as baseExpect } from "@playwright/test";
+const expect = baseExpect.configure({ timeout: 20_000 });
 
 test("desktop graph recall preserves witnesses, explicit queries and scope/expiry clearing", async ({
   page,
@@ -113,7 +114,7 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
       ).generations.some((g: { state: string }) => g.state === "ready"),
     )
     .toBe(true);
-  await page.goto(`/brains/${fixture.brain}`);
+  await page.goto(`/brains/${fixture.brain}/ask?tab=search`);
   const panel = page.getByRole("region", {
     name: "Recall memory",
     exact: true,

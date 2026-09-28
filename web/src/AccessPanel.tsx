@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./features/feature-views.css";
 import {
   Alert,
   Badge,
@@ -17,7 +18,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 
 const roles = ["reader", "writer", "admin"];
-export function AccessPanel({ brain, actor }: { brain: Brain; actor: string }) {
+export function AccessPanel({
+  brain,
+  actor,
+  embedded = false,
+}: {
+  brain: Brain;
+  actor: string;
+  embedded?: boolean;
+}) {
   const [opened, setOpened] = useState(false);
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("reader");
@@ -29,18 +38,18 @@ export function AccessPanel({ brain, actor }: { brain: Brain; actor: string }) {
   const id = brain.id;
   const access = useQuery({
     queryKey: ["access", id],
-    enabled: opened,
+    enabled: opened || embedded,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{id}/access", {
           params: { path: { id } },
         }),
       ),
-    refetchInterval: opened ? 5000 : false,
+    refetchInterval: opened || embedded ? 5000 : false,
   });
   const options = useQuery({
     queryKey: ["auth-options"],
-    enabled: opened,
+    enabled: opened || embedded,
     queryFn: async () => result(await client.GET("/api/auth/options")),
   });
   const action = useMutation({
@@ -97,7 +106,192 @@ export function AccessPanel({ brain, actor }: { brain: Brain; actor: string }) {
       void cache.invalidateQueries();
     },
   });
-  return (
+  const content = (
+    <Stack gap="lg">
+      <Text size="sm" c="dimmed">
+        Ownership, direct roles and current organization groups each contribute
+        access. Removing one can leave another in place.
+      </Text>
+      {(access.error || action.error) && (
+        <Alert color="red">{(access.error || action.error)?.message}</Alert>
+      )}
+      {message && <Alert color="teal">{message}</Alert>}
+      {access.isPending ? (
+        <Loader />
+      ) : (
+        !access.error && (
+          <Stack gap="xs">
+            {access.data?.members.map((member) => (
+              <Card withBorder key={member.account.id}>
+                <Group justify="space-between">
+                  <Text fw={600}>{member.account.username}</Text>
+                  <Badge color={member.effective_role ? "teal" : "gray"}>
+                    {member.effective_role ?? "No access"}
+                  </Badge>
+                </Group>
+                <Text size="xs" c="dimmed" mt="xs">
+                  {member.owner ? "Owner · " : ""}
+                  {member.direct_role
+                    ? `Direct ${member.direct_role}`
+                    : "No direct grant"}
+                  {!member.account.enabled ? " · Account disabled" : ""}
+                </Text>
+                {member.groups.length > 0 && (
+                  <Text size="xs" mt="xs">
+                    Groups: {member.groups.join(", ")}
+                  </Text>
+                )}
+                {member.membership_until && (
+                  <Text size="xs" c="dimmed">
+                    Membership valid until{" "}
+                    {new Date(member.membership_until).toLocaleTimeString()}
+                  </Text>
+                )}
+                {member.direct_role && (
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    mt="xs"
+                    disabled={action.isPending}
+                    onClick={() =>
+                      action.mutate({
+                        kind: "remove",
+                        target: member.account.id,
+                      })
+                    }
+                  >
+                    Remove direct grant
+                  </Button>
+                )}
+              </Card>
+            ))}
+          </Stack>
+        )
+      )}
+      {!access.error && (
+        <>
+          <Divider label="Direct access" />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              action.mutate({ kind: "grant" });
+            }}
+          >
+            <Stack>
+              <TextInput
+                label="Account username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                maxLength={120}
+              />
+              <Select
+                label="Direct role"
+                value={role}
+                data={roles}
+                onChange={(v) => setRole(v ?? "reader")}
+              />
+              <Button type="submit" loading={action.isPending}>
+                Save direct grant
+              </Button>
+            </Stack>
+          </form>
+          <Divider label="Organization groups" />
+          {access.data?.group_grants.map((mapping) => (
+            <Group key={mapping.id} justify="space-between">
+              <Text size="sm">
+                {mapping.group_name} · {mapping.role}
+              </Text>
+              <Button
+                size="xs"
+                variant="subtle"
+                color="red"
+                disabled={action.isPending}
+                onClick={() =>
+                  action.mutate({ kind: "ungroup", target: mapping.id })
+                }
+              >
+                Remove group mapping
+              </Button>
+            </Group>
+          ))}
+          {options.data?.oidc_configured ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                action.mutate({ kind: "group" });
+              }}
+            >
+              <Stack>
+                <TextInput
+                  label="Group name or ID"
+                  value={group}
+                  onChange={(e) => setGroup(e.target.value)}
+                  required
+                  maxLength={200}
+                />
+                <Select
+                  label="Group role"
+                  value={groupRole}
+                  data={roles}
+                  onChange={(v) => setGroupRole(v ?? "reader")}
+                />
+                <Button
+                  type="submit"
+                  variant="light"
+                  loading={action.isPending}
+                >
+                  Save group mapping
+                </Button>
+              </Stack>
+            </form>
+          ) : (
+            <Text size="sm" c="dimmed">
+              Organization sign-in is not configured. Direct roles are
+              available.
+            </Text>
+          )}
+          {brain.owner_id === actor && (
+            <>
+              <Divider label="Ownership" />
+              <Text size="sm" c="dimmed">
+                Transfer this Brain to an enabled member. Your own access will
+                then depend on any remaining direct or group grants.
+              </Text>
+              <Select
+                label="New owner"
+                value={nextOwner}
+                onChange={setNextOwner}
+                data={
+                  access.data?.members
+                    .filter((m) => m.account.enabled && m.account.id !== actor)
+                    .map((m) => ({
+                      value: m.account.id,
+                      label: m.account.username,
+                    })) ?? []
+                }
+                placeholder="Grant access to a teammate first"
+              />
+              <Button
+                variant="default"
+                disabled={!nextOwner}
+                loading={action.isPending}
+                onClick={() => action.mutate({ kind: "owner" })}
+              >
+                Transfer ownership
+              </Button>
+            </>
+          )}
+        </>
+      )}
+    </Stack>
+  );
+  return embedded ? (
+    <section className="feature-setting" aria-label="Brain access">
+      {content}
+    </section>
+  ) : (
     <>
       <Button mt="md" variant="light" onClick={() => setOpened(true)}>
         Manage access
@@ -109,187 +303,7 @@ export function AccessPanel({ brain, actor }: { brain: Brain; actor: string }) {
         size="lg"
         centered
       >
-        <Stack gap="lg">
-          <Text size="sm" c="dimmed">
-            Ownership, direct roles and current organization groups each
-            contribute access. Removing one can leave another in place.
-          </Text>
-          {(access.error || action.error) && (
-            <Alert color="red">{(access.error || action.error)?.message}</Alert>
-          )}
-          {message && <Alert color="teal">{message}</Alert>}
-          {access.isPending ? (
-            <Loader />
-          ) : (
-            !access.error && (
-              <Stack gap="xs">
-                {access.data?.members.map((member) => (
-                  <Card withBorder key={member.account.id}>
-                    <Group justify="space-between">
-                      <Text fw={600}>{member.account.username}</Text>
-                      <Badge color={member.effective_role ? "teal" : "gray"}>
-                        {member.effective_role ?? "No access"}
-                      </Badge>
-                    </Group>
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {member.owner ? "Owner · " : ""}
-                      {member.direct_role
-                        ? `Direct ${member.direct_role}`
-                        : "No direct grant"}
-                      {!member.account.enabled ? " · Account disabled" : ""}
-                    </Text>
-                    {member.groups.length > 0 && (
-                      <Text size="xs" mt="xs">
-                        Groups: {member.groups.join(", ")}
-                      </Text>
-                    )}
-                    {member.membership_until && (
-                      <Text size="xs" c="dimmed">
-                        Membership valid until{" "}
-                        {new Date(member.membership_until).toLocaleTimeString()}
-                      </Text>
-                    )}
-                    {member.direct_role && (
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        color="red"
-                        mt="xs"
-                        disabled={action.isPending}
-                        onClick={() =>
-                          action.mutate({
-                            kind: "remove",
-                            target: member.account.id,
-                          })
-                        }
-                      >
-                        Remove direct grant
-                      </Button>
-                    )}
-                  </Card>
-                ))}
-              </Stack>
-            )
-          )}
-          {!access.error && (
-            <>
-              <Divider label="Direct access" />
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  action.mutate({ kind: "grant" });
-                }}
-              >
-                <Stack>
-                  <TextInput
-                    label="Account username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    maxLength={120}
-                  />
-                  <Select
-                    label="Direct role"
-                    value={role}
-                    data={roles}
-                    onChange={(v) => setRole(v ?? "reader")}
-                  />
-                  <Button type="submit" loading={action.isPending}>
-                    Save direct grant
-                  </Button>
-                </Stack>
-              </form>
-              <Divider label="Organization groups" />
-              {access.data?.group_grants.map((mapping) => (
-                <Group key={mapping.id} justify="space-between">
-                  <Text size="sm">
-                    {mapping.group_name} · {mapping.role}
-                  </Text>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    disabled={action.isPending}
-                    onClick={() =>
-                      action.mutate({ kind: "ungroup", target: mapping.id })
-                    }
-                  >
-                    Remove group mapping
-                  </Button>
-                </Group>
-              ))}
-              {options.data?.oidc_configured ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    action.mutate({ kind: "group" });
-                  }}
-                >
-                  <Stack>
-                    <TextInput
-                      label="Group name or ID"
-                      value={group}
-                      onChange={(e) => setGroup(e.target.value)}
-                      required
-                      maxLength={200}
-                    />
-                    <Select
-                      label="Group role"
-                      value={groupRole}
-                      data={roles}
-                      onChange={(v) => setGroupRole(v ?? "reader")}
-                    />
-                    <Button
-                      type="submit"
-                      variant="light"
-                      loading={action.isPending}
-                    >
-                      Save group mapping
-                    </Button>
-                  </Stack>
-                </form>
-              ) : (
-                <Text size="sm" c="dimmed">
-                  Organization sign-in is not configured. Direct roles are
-                  available.
-                </Text>
-              )}
-              {brain.owner_id === actor && (
-                <>
-                  <Divider label="Ownership" />
-                  <Text size="sm" c="dimmed">
-                    Transfer this Brain to an enabled member. Your own access
-                    will then depend on any remaining direct or group grants.
-                  </Text>
-                  <Select
-                    label="New owner"
-                    value={nextOwner}
-                    onChange={setNextOwner}
-                    data={
-                      access.data?.members
-                        .filter(
-                          (m) => m.account.enabled && m.account.id !== actor,
-                        )
-                        .map((m) => ({
-                          value: m.account.id,
-                          label: m.account.username,
-                        })) ?? []
-                    }
-                    placeholder="Grant access to a teammate first"
-                  />
-                  <Button
-                    variant="default"
-                    disabled={!nextOwner}
-                    loading={action.isPending}
-                    onClick={() => action.mutate({ kind: "owner" })}
-                  >
-                    Transfer ownership
-                  </Button>
-                </>
-              )}
-            </>
-          )}
-        </Stack>
+        {content}
       </Modal>
     </>
   );

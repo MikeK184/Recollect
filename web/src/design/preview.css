@@ -1,0 +1,21 @@
+.design-preview {
+  width: min(1200px, 100%);
+  margin: auto;
+  padding: 40px;
+}
+.design-preview > .brand {
+  margin-bottom: 48px;
+}
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.token-swatch > span {
+  display: block;
+  height: 48px;
+  border: 1px solid var(--rc-border);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}

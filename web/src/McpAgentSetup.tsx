@@ -4,108 +4,275 @@ import {
   Button,
   Code,
   CopyButton,
-  Group,
   Modal,
+  PasswordInput,
   Select,
   Stack,
   Text,
 } from "@mantine/core";
-import type { Brain } from "./api";
+import { useMutation } from "@tanstack/react-query";
+import { client, result, type Brain } from "./api";
+import { ErrorState } from "./components/AsyncState";
 
 const shell = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
-export function McpAgentSetup({ brain }: { brain: Brain }) {
+export function McpAgentSetup({
+  brain,
+  initialHost,
+  buttonLabel = "Connect coding agent",
+}: {
+  brain: Brain;
+  initialHost?: string;
+  buttonLabel?: string;
+}) {
   const [opened, setOpened] = useState(false);
-  const [host, setHost] = useState("codex");
-  const [capture, setCapture] = useState("tools");
-  const command = `RECOLLECT_URL=${shell(window.location.origin)} recollect-agent ${capture === "capture" ? "capture setup" : "mcp-config"} ${host} ${capture === "capture" ? ". " : ""}--brain ${brain.id}${capture === "tools" ? " --directory ." : ""}`;
+  const [host, setHost] = useState(initialHost ?? "codex");
+  const [token, setToken] = useState<string | null>(null);
+  const [credentialStore, setCredentialStore] = useState(
+    /Mac/.test(navigator.platform) ? "keychain" : "environment",
+  );
+  const url = `${window.location.origin}/api/brains/${brain.id}/mcp/agent`;
+  const keychain = host === "codex" && credentialStore === "keychain";
+  const keychainService = `Recollect MCP: ${url}`;
+  const keychainRead = `/usr/bin/security find-generic-password -a recollect -s ${shell(keychainService)} -w`;
+  const connectionSecret = token
+    ? keychain
+      ? JSON.stringify({ Authorization: `Bearer ${token}` })
+      : token
+    : "";
+  const config =
+    host === "codex"
+      ? `[mcp_servers.recollect]\nurl = ${JSON.stringify(url)}\n${keychain ? `http_headers_helper = ${JSON.stringify(keychainRead)}` : 'bearer_token_env_var = "RECOLLECT_MCP_TOKEN"'}`
+      : JSON.stringify(
+          {
+            mcpServers: {
+              recollect: {
+                type: "http",
+                url,
+                headers: { Authorization: "Bearer ${RECOLLECT_MCP_TOKEN}" },
+              },
+            },
+          },
+          null,
+          2,
+        );
+  const create = useMutation({
+    mutationFn: async () => {
+      const pairing = result(
+        await client.POST("/api/devices/pairings", {
+          body: {
+            name: `${host === "codex" ? "Codex" : "Claude Code"} MCP · ${brain.name}`.slice(
+              0,
+              120,
+            ),
+          },
+        }),
+      );
+      try {
+        result(
+          await client.POST("/api/devices/pairings/{code}/approve", {
+            params: { path: { code: pairing.user_code } },
+            body: { approve: true },
+          }),
+        );
+        const credential = result(
+          await client.POST("/api/devices/pairings/poll", {
+            body: { device_code: pairing.device_code },
+          }),
+        );
+        if (!credential.token)
+          throw new Error("No access token was returned. Try again.");
+        const finished = await client.POST("/api/devices/pairings/finish", {
+          body: { device_code: pairing.device_code },
+        });
+        if (!finished.response.ok)
+          throw new Error(
+            "Could not finish creating this token. Check Devices before retrying.",
+          );
+        return credential.token;
+      } catch (error) {
+        await client.POST("/api/devices/pairings/cancel", {
+          body: { device_code: pairing.device_code },
+        });
+        throw error;
+      }
+    },
+    onSuccess: (value) => {
+      setToken(value);
+      create.reset();
+    },
+    gcTime: 0,
+  });
+  const close = () => {
+    if (create.isPending) return;
+    setToken(null);
+    create.reset();
+    setOpened(false);
+  };
   return (
     <>
       <Button
-        size="xs"
         variant="light"
         onClick={() => setOpened(true)}
         disabled={brain.archived}
       >
-        Connect coding agent
+        {buttonLabel}
       </Button>
       <Modal
         opened={opened}
-        onClose={() => setOpened(false)}
-        title="Connect a coding agent"
+        onClose={close}
+        title={
+          initialHost
+            ? `Connect ${initialHost === "codex" ? "Codex" : "Claude Code"}`
+            : "Connect a coding agent"
+        }
         size="lg"
       >
-        <Stack>
-          <Text size="sm">
-            Use Recollect memory, task scopes and approved tools from your
-            coding agent. Run these commands from the workspace you want to use.
+        <Stack gap="lg">
+          <Text>
+            Connect directly over MCP to recall and contribute memory. No
+            Recollect companion is required.
           </Text>
+          {!initialHost && (
+            <Select
+              label="Coding host"
+              value={host}
+              onChange={(v) => v && setHost(v)}
+              data={[
+                { value: "codex", label: "Codex" },
+                { value: "claude", label: "Claude Code" },
+              ]}
+              allowDeselect={false}
+            />
+          )}
+          {host === "codex" && (
+            <Select
+              label="Store your access token"
+              value={credentialStore}
+              onChange={(value) => value && setCredentialStore(value)}
+              data={[
+                { value: "keychain", label: "macOS Keychain" },
+                { value: "environment", label: "Environment variable" },
+              ]}
+              allowDeselect={false}
+              description={
+                keychain
+                  ? "Codex reads Keychain directly. Start Codex normally after setup."
+                  : "The token must be available in the terminal that starts your agent."
+              }
+            />
+          )}
           <Text size="sm">
-            Install the companion binaries together, then pair this device
-            through Devices:
+            Add this to{" "}
+            <code>{host === "codex" ? ".codex/config.toml" : ".mcp.json"}</code>{" "}
+            in your project, keeping any existing servers.
           </Text>
-          <Code
-            block
-          >{`RECOLLECT_URL=${shell(window.location.origin)} recollect-agent pair`}</Code>
-          <Select
-            label="Coding host"
-            value={host}
-            onChange={(value) => value && setHost(value)}
-            data={[
-              { value: "codex", label: "Codex" },
-              { value: "claude", label: "Claude Code" },
-            ]}
-            allowDeselect={false}
-          />
-          <Select
-            label="Session integration"
-            value={capture}
-            onChange={(value) => value && setCapture(value)}
-            data={[
-              { value: "tools", label: "Memory and workspace tools" },
-              {
-                value: "capture",
-                label: "Tools with automatic session capture",
-              },
-            ]}
-            allowDeselect={false}
-          />
           <Code block data-testid="agent-setup-command">
-            {command}
+            {config}
           </Code>
-          <Group justify="space-between">
-            <Text size="xs" c="dimmed">
-              Brain: {brain.name}
+          <CopyButton value={config}>
+            {({ copied, copy }) => (
+              <Button variant="default" onClick={copy}>
+                {copied ? "Copied" : "Copy MCP configuration"}
+              </Button>
+            )}
+          </CopyButton>
+          {!keychain && (
+            <Text size="sm">
+              Keep <code>RECOLLECT_MCP_TOKEN</code> exactly as written in the
+              configuration. It is a variable name; your access token goes into
+              the hidden terminal prompt below.
             </Text>
-            <CopyButton value={command}>
-              {({ copied, copy }) => (
-                <Button size="xs" variant="light" onClick={copy}>
-                  {copied ? "Copied" : "Copy setup command"}
-                </Button>
-              )}
-            </CopyButton>
-          </Group>
-          <Text size="sm">
-            {capture === "tools"
-              ? "The command prints settings and launch arguments for this Brain. Add them to your host’s project settings or pass the arguments when launching it."
-              : "The command creates a capture setup and prints its launch command. Use that command to start the host with tools and automatic capture under the Brain’s capture policy."}
-          </Text>
-          <Text size="sm">
-            Pairing credentials stay in your OS credential store. Your OS may
-            request access when the bridge first starts. Set
-            RECOLLECT_DEVICE_PROFILE if you use a named pairing.
-          </Text>
-          <Alert color="blue" title="Connection options">
-            Vault is optional for each managed MCP connection. Environment
-            credentials, OS-stored credentials and anonymous access work
-            independently. Managed tools still require profile Use permission.
-          </Alert>
+          )}
+          {token ? (
+            <>
+              <PasswordInput
+                label={
+                  keychain
+                    ? "Keychain secret · shown once"
+                    : "Access token · shown once"
+                }
+                readOnly
+                value={connectionSecret}
+                autoComplete="off"
+              />
+              <CopyButton value={connectionSecret}>
+                {({ copied, copy }) => (
+                  <Button variant="light" onClick={copy}>
+                    {copied
+                      ? "Copied"
+                      : keychain
+                        ? "Copy Keychain secret"
+                        : "Copy access token"}
+                  </Button>
+                )}
+              </CopyButton>
+              <Alert color="teal">
+                Token created. Save it using the steps below, then restart your
+                agent. A successful Recollect tool call confirms the connection.
+              </Alert>
+            </>
+          ) : (
+            <Button loading={create.isPending} onClick={() => create.mutate()}>
+              Create access token
+            </Button>
+          )}
+          {keychain ? (
+            <>
+              <Text size="sm">
+                Copy the Keychain secret, run this command in Terminal, and
+                paste at the hidden password prompt. Paste it again if asked to
+                confirm. This saves the credential for this Brain in Keychain.
+              </Text>
+              <Code block data-testid="agent-credential-command">
+                {`/usr/bin/security add-generic-password -U -a recollect -s ${shell(keychainService)} -w`}
+              </Code>
+              <Text size="sm">
+                Start Codex normally in your project and ask it to use
+                Recollect&apos;s <code>workspace.list</code>. Codex 0.157.1 is
+                verified with this Keychain setup.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text size="sm">
+                Copy the access token. In a bash or zsh terminal in your
+                project, run this block and paste the token at the hidden
+                prompt. The agent starts with the token; repeat this step for a
+                new terminal.
+              </Text>
+              <Code block data-testid="agent-credential-command">
+                {`printf 'Recollect access token: '\nread -r -s RECOLLECT_MCP_TOKEN\nprintf '\\n'\nexport RECOLLECT_MCP_TOKEN\n${host === "codex" ? "codex" : "claude"}`}
+              </Code>
+              <Text size="sm">
+                An already running agent does not receive this variable. Ask the
+                newly started agent to use Recollect&apos;s{" "}
+                <code>workspace.list</code>.
+              </Text>
+            </>
+          )}
+          <ErrorState error={create.error} />
           <Text size="xs" c="dimmed">
-            A scope change returns fresh context. With managed capture, later
-            turns adopt the new scope; existing turns and delayed tool results
-            retain their original scope. Creating settings alone does not prove
-            a connection.
+            The token uses your current Brain permissions. Revoke it under
+            Devices. This connection selects {brain.name}.
           </Text>
+          <details className="feature-advanced">
+            <summary>Automatic session capture</summary>
+            <Stack gap="sm">
+              <Text size="sm">
+                MCP gives your agent memory tools. Capturing supported
+                conversations and discovering local repositories also needs the
+                Recollect companion and its host hooks.
+              </Text>
+              <Code
+                block
+              >{`RECOLLECT_URL=${shell(window.location.origin)} recollect-agent pair\nRECOLLECT_URL=${shell(window.location.origin)} recollect-agent capture setup ${host} . --brain ${brain.id}`}</Code>
+              <Text size="sm">
+                Pairing uses a short browser approval code. A packaged plugin
+                and native MCP OAuth sign-in are not available yet.
+              </Text>
+            </Stack>
+          </details>
         </Stack>
       </Modal>
     </>

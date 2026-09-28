@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
@@ -18,6 +18,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Users } from "lucide-react";
 import { client, result } from "./api";
+import { ErrorState } from "./components/AsyncState";
 
 export function TeamPanel() {
   const cache = useQueryClient();
@@ -28,7 +29,9 @@ export function TeamPanel() {
   const [link, setLink] = useState("");
   const team = useQuery({
     queryKey: ["team"],
-    queryFn: async () => result(await client.GET("/api/team")),
+    queryFn: async ({ signal }) =>
+      result(await client.GET("/api/team", { signal })),
+    gcTime: 0,
     refetchInterval: 5000,
   });
   const options = useQuery({
@@ -37,7 +40,9 @@ export function TeamPanel() {
   });
   const history = useQuery({
     queryKey: ["team-audit"],
-    queryFn: async () => result(await client.GET("/api/team/audit")),
+    queryFn: async ({ signal }) =>
+      result(await client.GET("/api/team/audit", { signal })),
+    gcTime: 0,
   });
   const refresh = () => {
     void cache.invalidateQueries({ queryKey: ["team"] });
@@ -99,6 +104,14 @@ export function TeamPanel() {
     },
     onSuccess: refresh,
   });
+  useEffect(() => {
+    if (team.isError) {
+      setOpened(false);
+      setLink("");
+    }
+  }, [team.isError]);
+  if (team.isError)
+    return <ErrorState error={team.error} retry={() => void team.refetch()} />;
   return (
     <Stack gap="xl">
       <div className="page-heading">

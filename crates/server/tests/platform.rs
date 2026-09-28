@@ -24,6 +24,8 @@ struct Login {
 
 #[path = "platform/brain_admission.rs"]
 mod brain_admission;
+#[path = "platform/managed.rs"]
+mod managed;
 
 #[path = "platform/graph.rs"]
 mod graph;

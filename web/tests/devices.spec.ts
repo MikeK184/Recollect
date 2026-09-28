@@ -152,14 +152,14 @@ test("browser approves a native companion, persists its OS credential and revoke
       fullPage: true,
       animations: "disabled",
     });
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: 1280, height: 800 });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
       ),
     ).toBe(false);
     await page.screenshot({
-      path: "../.cache/ui/devices-mobile.png",
+      path: "../.cache/ui/devices-1280.png",
       fullPage: true,
       animations: "disabled",
     });

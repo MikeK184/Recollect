@@ -130,29 +130,31 @@ pub(super) async fn embed(
     brain: Uuid,
     input: &RecallRequest,
     admission: &mut Admission,
+    answer: Option<&crate::answers::Guard<'_>>,
 ) -> Result<Vec<f32>> {
-    let response = gateway::invoke_for_policy(
-        state,
-        gateway::Context {
-            brain,
-            actor: auth.user.id,
-            device: auth.device_id,
-        },
-        gateway::Invocation {
-            operation: input.semantic_request_id.ok_or_else(Error::missing)?,
-            purpose: "embedding".into(),
-            inputs: vec![],
-            query: Some(input.query.clone()),
-            instructions: String::new(),
-            prompt_label: "semantic-query-1".into(),
-            schema_label: "embedding-3072-1".into(),
-            format: gateway::Format::Embedding,
-            metadata_replay: false,
-            expected_json: None,
-        },
-        admission.policy_id,
-    )
-    .await?;
+    let context = gateway::Context {
+        brain,
+        actor: auth.user.id,
+        device: auth.device_id,
+    };
+    let invocation = gateway::Invocation {
+        operation: input.semantic_request_id.ok_or_else(Error::missing)?,
+        purpose: "embedding".into(),
+        inputs: vec![],
+        query: Some(input.query.clone()),
+        instructions: String::new(),
+        prompt_label: "semantic-query-1".into(),
+        schema_label: "embedding-3072-1".into(),
+        format: gateway::Format::Embedding,
+        metadata_replay: false,
+        expected_json: None,
+    };
+    let response = if let Some(answer) = answer {
+        gateway::invoke_answer_embedding(state, context, invocation, admission.policy_id, answer)
+            .await?
+    } else {
+        gateway::invoke_for_policy(state, context, invocation, admission.policy_id).await?
+    };
     let Some(gateway::Output::Embeddings(mut vectors)) = response.output else {
         return Err(model_policy::failure(
             "model_result_not_retained",

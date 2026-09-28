@@ -132,6 +132,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/answer-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["answerBrain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/answer-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["answerStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/answer-requests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelAnswer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/automation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["automationSettings"];
+        put: operations["adoptManagedMemory"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/capture/bindings": {
         parameters: {
             query?: never;
@@ -1828,6 +1892,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mcp/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveMcpDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mcp/definitions/inspect-http": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["inspectHttpMcpDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mcp/runner/claim": {
         parameters: {
             query?: never;
@@ -2209,6 +2305,49 @@ export interface components {
             /** Format: uuid */
             operation_id?: string | null;
         };
+        AnswerCitation: {
+            evidence: components["schemas"]["RecallItem"];
+            id: string;
+        };
+        AnswerRequest: {
+            question: string;
+            recall?: components["schemas"]["RecallRequest"];
+            /** Format: uuid */
+            request_id: string;
+        };
+        /**
+         * @description Only the initial POST may contain ephemeral payload. Status/replay returns
+         *     the same shape with answer, citations and recall absent or empty.
+         */
+        AnswerResponse: {
+            answer?: null | components["schemas"]["AnswerText"];
+            citations: components["schemas"]["AnswerCitation"][];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at?: string | null;
+            failure_code?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: int64 */
+            memory_epoch?: number | null;
+            /** Format: uuid */
+            model_request_id?: string | null;
+            provider_may_have_run: boolean;
+            recall?: null | components["schemas"]["RecallResponse"];
+            /** Format: uuid */
+            request_id: string;
+            state: string;
+        };
+        AnswerStatement: {
+            citation_ids: string[];
+            text: string;
+        };
+        AnswerText: {
+            limitations: string[];
+            statements: components["schemas"]["AnswerStatement"][];
+            summary: string;
+        };
         ApiError: {
             code: string;
             message: string;
@@ -2245,6 +2384,17 @@ export interface components {
             /** Format: int32 */
             membership_minutes: number;
             oidc_configured: boolean;
+        };
+        AutomationSettings: {
+            capture: components["schemas"]["CaptureSettings"];
+            models: components["schemas"]["ModelSettings"];
+            retention: components["schemas"]["RetentionSettings"];
+        };
+        AutomationUpdate: {
+            /** Format: uuid */
+            capture_change: string;
+            /** Format: uuid */
+            model_change: string;
         };
         Brain: {
             archived: boolean;
@@ -2596,6 +2746,7 @@ export interface components {
         };
         CreateBrain: {
             description?: string;
+            managed_memory?: boolean;
             name: string;
         };
         CreateEvidenceGroup: {
@@ -3507,6 +3658,10 @@ export interface components {
             group_name?: string | null;
             rights: components["schemas"]["McpRights"];
             username?: string | null;
+        };
+        McpHttpInspection: {
+            name: string;
+            url: string;
         };
         McpInstance: {
             /** Format: int32 */
@@ -4978,6 +5133,121 @@ export interface operations {
             };
         };
     };
+    answerBrain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerResponse"];
+                };
+            };
+        };
+    };
+    answerStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerResponse"];
+                };
+            };
+        };
+    };
+    cancelAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerResponse"];
+                };
+            };
+        };
+    };
+    automationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationSettings"];
+                };
+            };
+        };
+    };
+    adoptManagedMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationSettings"];
+                };
+            };
+        };
+    };
     captureBindings: {
         parameters: {
             query?: {
@@ -5274,6 +5544,7 @@ export interface operations {
                 knowledge_at?: string;
                 mode?: string;
                 kind?: string;
+                q?: string;
                 offset?: number;
             };
             header?: never;
@@ -5524,6 +5795,7 @@ export interface operations {
                 collection?: string;
                 area?: string;
                 environment?: string;
+                q?: string;
                 offset?: number;
             };
             header?: never;
@@ -8154,6 +8426,52 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    approveMcpDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpDefinitionManifest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpDefinitionSummary"];
+                };
+            };
+        };
+    };
+    inspectHttpMcpDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpHttpInspection"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpDefinitionManifest"];
+                };
             };
         };
     };

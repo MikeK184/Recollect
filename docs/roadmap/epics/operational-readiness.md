@@ -1,6 +1,6 @@
 # Operational Readiness and Integrated Proof
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -10,6 +10,9 @@ measured resource/quality limits. This epic owns final product readiness evidenc
 
 ## Governing Sources
 
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
+- [Desktop contract](../../contracts/desktop-experience.md)
+- [Answer contract](../../contracts/retrieval-answers.md)
 - [Integrated acceptance contract](../../contracts/operations-integrated-evaluations.md)
 - [ADR 0013: backup and recovery](../../adr/0013-backup-and-recovery.md)
 - [Recovery contract](../../contracts/operations-recovery-drills.md)
@@ -61,9 +64,14 @@ assignment's authorized inputs; this roadmap does not select or access them.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `operations-public-benchmark` | shipped | contract-backed | pack | Frozen 50-question lexical/semantic evidence retrieval reports, provider usage and Atlas lifecycle proof; not a universal memory score |
 | `operations-local-and-shared` | shipped | adr-backed, contract-backed | pack | Actual personal/shared UI/API, HTTPS native pairing/MCP, persistent state, migration failure, dependency outage, graceful drain and diagnostics verified |
 | `operations-recovery-drills` | shipped | adr-backed, contract-backed | pack | Actual encrypted SFTP, offline restore, journal continuity, erasure/replay, failed upgrade, interrupted resume, graph/recall and desktop proof |
 | `operations-integrated-evaluations` | shipped | contract-backed | pack | Actual-model quality, seven-capability matrix, unchanged 50-repository/200-document/eight-caller workload, repaired admission/queries, final restore/desktop and normal upgrade verified |
+| `operations-root-compose` | shipped | adr-backed, contract-backed | pack | Root Compose image/browser login, preserved inventory, full stop/start, migration-failure gate and verified fixture shutdown pass |
+| `operations-proof-cleanup` | shipped | contract-backed | small-fix: explicitly authorized removal of verified disposable local fixtures; no product implementation or schema change | Removed 50 containers, 49 volumes, 9 networks and 10 fixture directories; current seven-Brain inventory and readiness preserved |
+| `operations-desktop-activity` | in-progress | adr-backed, contract-backed | pack | Authorized bounded Activity feeds and diagnostics with canonical detail/recovery links |
+| `desktop-experience-acceptance` | in-progress | adr-backed, contract-backed | pack | Real desktop/API/agent regression, answer quality/privacy, resource measurements and rollout/rollback evidence |
 
 ## Slice Dependencies
 
@@ -72,6 +80,11 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | `operations-local-and-shared` | `platform-durable-work`, `platform-team-access`, `platform-device-pairing` |
 | `operations-recovery-drills` | `operations-local-and-shared`, `evidence-session-capture`, `graph-exploration`, `retrieval-investigation-ui`, `mcp-observation-capture` |
 | `operations-integrated-evaluations` | `operations-recovery-drills`, `memory-capture-reconciliation` |
+| `operations-public-benchmark` | `operations-integrated-evaluations` |
+| `operations-root-compose` | `operations-local-and-shared` |
+| `operations-proof-cleanup` | `operations-root-compose` |
+| `operations-desktop-activity` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup` |
+| `desktop-experience-acceptance` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup`, `retrieval-ask-experience`, `operations-desktop-activity` |
 
 ## Completion Criteria
 
@@ -91,3 +104,12 @@ assignment's authorized inputs; this roadmap does not select or access them.
 - Operator runbooks and implementation closeouts report what shipped, what ran,
   remaining limits and any external operator inputs. No incomplete required
   capability is relabeled as shipped to close the epic.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the verified final local image separately
+from remaining current-code domain and integrated acceptance. The
+[desktop guide](../../runbooks/desktop-experience.md) documents the current function
+locations. Product/proof slices stay in progress until their required checks pass;
+prior shipped domain records remain historical evidence rather than redesign proof.

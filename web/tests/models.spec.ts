@@ -1,3 +1,4 @@
+import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 
 test("OpenAI policy, selected models and governed source learning", async ({
@@ -48,10 +49,12 @@ test("OpenAI policy, selected models and governed source learning", async ({
     });
     return { brain: brain.id, source: source.id };
   });
-  await page.goto("/brains/" + fixture.brain);
+  await page.goto("/brains/" + fixture.brain + "/settings?tab=ai");
   await expect(
     page.getByText("Transmission disabled", { exact: true }),
   ).toBeVisible();
+  await page.goto(`/brains/${fixture.brain}/settings?tab=ai`);
+  await openDetails(page, "Advanced model controls");
   await page
     .getByRole("button", { name: "Edit model policy", exact: true })
     .click();
@@ -63,7 +66,9 @@ test("OpenAI policy, selected models and governed source learning", async ({
     dialog.getByLabel("Embedding model", { exact: true }),
   ).toHaveValue("text-embedding-3-large");
   await dialog.getByLabel("Allow model transmission", { exact: true }).check();
-  await dialog.getByLabel("Maintain memory autonomously", { exact: true }).uncheck();
+  await dialog
+    .getByLabel("Maintain memory autonomously", { exact: true })
+    .uncheck();
   await dialog
     .getByRole("textbox", { name: "Allowed content classes", exact: true })
     .click();
@@ -92,9 +97,11 @@ test("OpenAI policy, selected models and governed source learning", async ({
   await expect(
     page.getByText(/Embeddings have 3,072 dimensions/),
   ).toBeVisible();
+  await page.goto(`/brains/${fixture.brain}/sources`);
   await page
     .getByRole("button", { name: /Synthetic literal configuration/ })
     .click();
+  await openDetails(page, "More source actions");
   await page
     .getByRole("button", { name: "Learn from this source", exact: true })
     .click();
@@ -105,6 +112,7 @@ test("OpenAI policy, selected models and governed source learning", async ({
   await expect(dialog.getByText(/Learning queued/)).toBeVisible();
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
+  await page.goto(`/brains/${fixture.brain}/activity?tab=models`);
   await expect(page.getByText(/1 accepted by policy · 0 proposed/)).toBeVisible(
     { timeout: 70_000 },
   );
@@ -150,19 +158,21 @@ test("OpenAI policy, selected models and governed source learning", async ({
       (r: { state: string }) => r.state === "succeeded",
     ),
   ).toBe(true);
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1280, height: 800 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: "../.cache/ui-model-claim-mobile.png" });
+  await page.screenshot({ path: "../.cache/ui-model-claim-1280.png" });
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 960 });
   await page
-    .getByRole("heading", { name: "Model learning", exact: true })
+    .getByRole("heading", { name: "Model usage and learning", exact: true })
     .scrollIntoViewIfNeeded();
   await page.screenshot({ path: "../.cache/ui-model-learning-desktop.png" });
+  await page.goto(`/brains/${fixture.brain}/settings?tab=ai`);
+  await openDetails(page, "Advanced model controls");
   await page
     .getByRole("button", { name: "Edit model policy", exact: true })
     .click();

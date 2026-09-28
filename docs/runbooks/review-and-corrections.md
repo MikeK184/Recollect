@@ -1,5 +1,7 @@
 # Review claims and correct rejected values
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 Status: active
 
 These are optional human interventions. Normal learning, evidence-based revision,
@@ -15,7 +17,7 @@ Paired device tokens cannot perform human review. No model call is required.
 
 ## Procedure
 
-1. Open **Claims and decisions**, select a claim, then **Review and corrections**.
+1. Open **Memory**, select a claim, then **Review and corrections**.
    Inspect its original evidence, applicability, assessment and existing rules.
 2. Choose **Accept**, **Reject value**, **Withdraw**, **Correct value**,
    **Explicitly revalidate**, or **Restore withdrawn claim** as appropriate.

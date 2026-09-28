@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The [managed experience amendment](memory-managed-experience.md) governs the
+2026-09-28 managed setup, progressive disclosure and owner connector approval
+changes; earlier explicit APIs and stored policies remain compatible.
+
 Current operating-model amendment: [autonomous maintenance](memory-autonomous-maintenance.md)
 supersedes the literal-only acceptance and per-record review assumptions below
 when autonomous mode is enabled. These original explicit-learning behaviors remain
@@ -9,6 +13,9 @@ the compatibility mode and the historical scope of the shipped provider slice.
 The [semantic contract](retrieval-semantic.md) extends this shared gateway with
 canonical embedding representations and default-false standing automatic embedding;
 it preserves separate capture, learning and query-transmission permissions.
+The 2026-09-26 [answer contract](retrieval-answers.md) adds the separate default-off
+`answering` purpose and exact retrieval-bundle consumer. Existing model selection,
+content classes, quotas and metadata-only retention remain authoritative.
 
 ## Source
 
@@ -38,7 +45,8 @@ Every Brain starts with external transmission and automatic learning disabled.
 Browser Brain admins may save a complete immutable policy revision using its
 current change ID. The policy explicitly names provider, text/embedding models,
 embedding dimensions, allowed purposes and allowed content classes. Purpose values
-are `extraction`, `synthesis`, `embedding` and `reranking`. Content classes are
+are `extraction`, `synthesis`, `embedding`, `reranking` and `answering`. Existing
+policies do not acquire answering permission during migration. Content classes are
 `document`, `raw_session`, `tool_output`, `support_excerpt`, `repository`,
 `claim` and `query`. Capture/retention permission does not grant transmission.
 Models must match installed adapter configuration; an installation change cannot
@@ -71,7 +79,11 @@ rejected, withdrawn, erased, expired and rule-blocked assertions cannot enter as
 usable current claims. Learning may inspect permitted raw source evidence, but
 its output always passes current rejection/conflict policy before publication.
 The gateway does not itself enable retrieval, expose an arbitrary prompt endpoint
-or claim that a cited source proves an assertion.
+or claim that a cited source proves an assertion. The accepted answer consumer
+supplies a server-owned exact-fragment bundle with frozen retrieval scope/time;
+it revalidates those exact eligible items rather than resolving them as larger
+whole-source or newer-revision inputs. Its read-only historical selection is
+governed by the recall contracts, never silently upgraded to current claims.
 
 Before outbound admission, recheck active actor/device authority, Brain state,
 exact input availability and current policy. Record the request ID, actor/device,

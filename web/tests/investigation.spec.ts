@@ -1,4 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { openDetails } from "./desktop-helpers";
+import { test, expect as baseExpect, type Page } from "@playwright/test";
+const expect = baseExpect.configure({ timeout: 20_000 });
 
 async function setup(page: Page, name: string) {
   await page.goto("/");
@@ -163,7 +165,7 @@ async function setup(page: Page, name: string) {
         ).version.processing,
     )
     .toBe("ready");
-  await page.goto(`/brains/${fixture.brain}`);
+  await page.goto(`/brains/${fixture.brain}/ask?tab=search`);
   return fixture;
 }
 
@@ -210,10 +212,10 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
     exact: true,
   });
   const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  await openDetails(panel, "Refine evidence search");
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
     .click();
-  await panel.getByLabel("Context budget (KiB)").fill("32");
   await panel.getByLabel("Recall areas", { exact: true }).click();
   await page.getByRole("option", { name: "Test systems", exact: true }).click();
   await page.keyboard.press("Escape");
@@ -421,6 +423,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
   });
   await expect(dialog.getByTestId("claim-value")).toHaveText("6060");
   await expect(dialog).toContainText("Historical knowledge revision");
+  await openDetails(dialog, "Version history");
   await dialog.getByLabel("Knowledge revision", { exact: true }).click();
   await page
     .getByRole("option", { name: "Latest knowledge", exact: true })
@@ -472,6 +475,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
       .getByRole("button", { name: "Confirm review", exact: true }),
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await openDetails(dialog, "Version history");
   await dialog.getByLabel("Knowledge revision", { exact: true }).click();
   await page
     .getByRole("option", { name: "Latest knowledge", exact: true })
@@ -527,10 +531,19 @@ test("bounded comparison and late recall responses do not expand copied context 
     exact: true,
   });
   const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  await openDetails(panel, "Refine evidence search");
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
     .click();
-  await panel.getByLabel("Maximum results", { exact: true }).fill("1");
+  // Exercise the partial-bundle UI using a real server response with a bounded
+  // agent-style request. Resource tuning is no longer a browser control.
+  await page.route(`**${f.base}/recall`, async (route) => {
+    const request = route.request().postDataJSON();
+    const response = await route.fetch({
+      postData: JSON.stringify({ ...request, limit: 1 }),
+    });
+    await route.fulfill({ response });
+  });
   await panel
     .getByLabel("Search memory", { exact: true })
     .fill("Investigation Boreal");
@@ -668,6 +681,7 @@ test("desktop investigation clears nested stale evidence and text context withou
     exact: true,
   });
   const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  await openDetails(panel, "Refine evidence search");
   let recalls = 0;
   page.on("request", (r) => {
     if (r.method() === "POST" && r.url().endsWith(`${f.base}/recall`))

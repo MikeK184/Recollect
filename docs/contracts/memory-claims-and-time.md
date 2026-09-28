@@ -145,6 +145,13 @@ usable before future search or model work exists.
 
 ## Acceptance
 
+Desktop list amendment, 2026-09-26: the
+[desktop contract](desktop-experience.md#literal-list-search) adds optional memory
+`q`, trimmed to at most 200 UTF-8 bytes, for case-insensitive literal containment
+over subject, predicate, value and rationale before pagination. It does not alter
+eligibility, revision/history reads or authorized detail. Empty q preserves the
+prior list; the UI names this assertion-search scope rather than claiming Recall.
+
 - Actual API/database and browser authoring, evidence inspection and stale editing;
   exact earlier source/version support survives later edits and service restart.
 - Late evidence gives different fact-time and knowledge-time results; point precision,

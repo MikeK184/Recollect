@@ -2,6 +2,30 @@
 
 Status: accepted
 
+## Direct host setup (2026-09-28 clarification)
+
+Normal remote MCP is the primary browser setup path. Codex and Claude Code can
+connect directly to the existing HTTP endpoint with a Recollect device bearer
+credential. The signed-in browser may run the existing start/approve/poll/finish
+pairing sequence on the user's explicit Create access token action. The credential
+is shown once in component memory and can be revoked under Devices; copied host
+configuration refers to an environment variable or a host-supported OS credential
+helper. For local Codex on macOS, its standard `http_headers_helper` reads the
+selected URL's authorization-header JSON from Keychain through `security`.
+The secret is entered at a hidden native prompt, never embedded in copied config,
+shell commands, arguments or history. Environment setup must give an executable
+hidden-prompt/export/launch sequence and distinguish variable names from values.
+It inherits the account's current
+Brain grants, as existing device credentials do. A configured endpoint selects
+one Brain; this is not a claim that the token is restricted to that Brain.
+
+The companion is optional for local repository discovery and session hooks.
+Direct MCP can recall and deliberately contribute memory without a companion,
+but does not capture a host's conversation automatically. Recollect currently
+does not implement MCP OAuth discovery/authorization; host support for OAuth
+does not supply that missing server behavior. Do not label manual token setup
+as OAuth or a published plugin.
+
 ## Source
 
 [ADR 0010](../adr/0010-agent-memory-mcp.md), the full authorized product goal,

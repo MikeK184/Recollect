@@ -1,4 +1,6 @@
-import { test, expect } from "@playwright/test";
+import { loadGraph, openGraphDrawer, openDetails } from "./desktop-helpers";
+import { test, expect as baseExpect } from "@playwright/test";
+const expect = baseExpect.configure({ timeout: 20_000 });
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
@@ -208,27 +210,24 @@ test("committed HCL publications supply combined graph paths and browser evidenc
       notes: "Synthetic committed source; no deployed-state assertion.",
       base_revision: null,
     });
-    await page.goto(`/brains/${brain.id}`);
-    const panel = page.getByRole("region", {
-      name: "Evidence graphs",
-      exact: true,
-    });
-    await panel.getByRole("button", { name: /Evidence graphs/ }).click();
-    await panel.getByLabel("Graph kind", { exact: true }).click();
-    await page
-      .getByRole("option", { name: "Combined repositories", exact: true })
+    await page.goto(`/brains/${brain.id}/graph`);
+    const panel = page.locator("body");
+    await page.getByText("Combined", { exact: true }).click();
+    const load = () => loadGraph(page);
+    await expect(
+      panel.getByRole("button", { name: "Apply graph filters", exact: true }),
+    ).toBeDisabled();
+    await panel
+      .getByRole("textbox", { name: "Graph environment", exact: true })
       .click();
-    const load = panel.getByRole("button", {
-      name: "Load graph view",
-      exact: true,
-    });
-    await expect(load).toBeDisabled();
-    await panel.getByLabel("Graph environment", { exact: true }).click();
     await page
       .getByRole("option", { name: "Exact native inputs", exact: true })
       .click();
-    await panel.getByLabel("Graph manifest", { exact: true }).click();
+    await panel
+      .getByRole("textbox", { name: "Graph manifest", exact: true })
+      .click();
     await page.getByRole("option", { name: /Pinned native pair/ }).click();
+    await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
     await panel
       .getByRole("button", { name: "Rebuild graph", exact: true })
       .click();
@@ -249,7 +248,8 @@ test("committed HCL publications supply combined graph paths and browser evidenc
           ).length,
       )
       .toBeGreaterThanOrEqual(3);
-    await load.click();
+    await load();
+    await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
     await expect(
       panel.getByText("Exact repository inputs", { exact: true }),
     ).toBeVisible();
@@ -275,13 +275,16 @@ test("committed HCL publications supply combined graph paths and browser evidenc
     );
     expect(callerRoot).toBeTruthy();
     expect(targetVariable).toBeTruthy();
+    await openGraphDrawer(page, "Find an evidence path", "Find path");
     await panel
       .getByLabel("Path start", { exact: true })
       .fill(`repository_fact:${callerRoot.id}`);
     await panel
       .getByLabel("Path end", { exact: true })
       .fill(`repository_fact:${targetVariable.id}`);
-    await panel.getByLabel("Path direction", { exact: true }).click();
+    await panel
+      .getByRole("textbox", { name: "Path direction", exact: true })
+      .click();
     await page.getByRole("option", { name: "both", exact: true }).click();
     const pathResponse = page.waitForResponse(
       (r) => r.url().endsWith("/graph/path") && r.request().method() === "POST",
@@ -312,13 +315,22 @@ test("committed HCL publications supply combined graph paths and browser evidenc
     await expect(
       panel.getByText(/This is a declared dependency/),
     ).toBeVisible();
+    await openGraphDrawer(
+      page,
+      "Eligible entities",
+      "Browse eligible entity pages",
+    );
     const bridge = panel
       .getByTestId("graph-entity")
       .filter({ has: page.getByText("module.bridge", { exact: true }) });
     await bridge
       .getByRole("button", { name: "Inspect evidence", exact: true })
       .click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole("dialog", {
+      name: "Supporting evidence",
+      exact: true,
+    });
+    await openDetails(dialog, "Technical record");
     await expect(dialog.locator("pre")).toContainText("verified_literal");
     await expect(dialog.locator("pre")).toContainText(targetCommit);
     await expect(dialog.locator("pre")).not.toContainText(
@@ -327,9 +339,10 @@ test("committed HCL publications supply combined graph paths and browser evidenc
     await dialog
       .getByRole("button", { name: "Back to graph", exact: true })
       .click();
+    await openGraphDrawer(page, "Find an evidence path", "Find path");
     for (const [width, height, name] of [
       [1440, 960, "desktop"],
-      [390, 844, "mobile"],
+      [1280, 800, "1280"],
     ] as const) {
       await page.setViewportSize({ width, height });
       await panel

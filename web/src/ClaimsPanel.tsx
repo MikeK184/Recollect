@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { MemoryNoteDialog } from "./features/memory/MemoryNoteDialog";
+import { FilterBar } from "./components/FilterBar";
+import { ScopeSummary } from "./components/ScopeSummary";
+import { DetailInspector } from "./components/DetailInspector";
+import { ActionMenu } from "./components/ActionMenu";
+import { iconSize } from "./design/tokens";
+import { useEffect, useState } from "react";
+import { useBrainSearch } from "./app/useBrainSearch";
+import { useDebouncedValue } from "@mantine/hooks";
+import { EmptyState } from "./components/AsyncState";
+import "./features/feature-views.css";
 import {
   Alert,
   Badge,
   Button,
   Card,
   Divider,
+  Drawer,
   Group,
   Loader,
   Modal,
@@ -18,7 +29,13 @@ import {
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookMarked, Plus } from "lucide-react";
+import {
+  BookMarked,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  FileText,
+} from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
@@ -202,9 +219,12 @@ export function EvidenceDialog({
                 remote availability.
               </Alert>
             ) : null}
-            <pre className="source-content">
-              {JSON.stringify(data.data, null, 2)}
-            </pre>
+            <details className="feature-details">
+              <summary>Technical record</summary>
+              <pre className="source-content">
+                {JSON.stringify(data.data, null, 2)}
+              </pre>
+            </details>
           </>
         )}
         {eraseSource && evidence.source_id && (
@@ -797,6 +817,8 @@ export function ClaimDialog({
   catalogue,
   knowledgeAt,
   factAt,
+  revisionId,
+  onKnowledgeChange,
   onClose,
   onSaved,
 }: {
@@ -805,10 +827,13 @@ export function ClaimDialog({
   catalogue?: Catalogue;
   knowledgeAt?: string;
   factAt?: string;
+  revisionId?: string;
+  onKnowledgeChange?: (at?: string, revision?: string) => void;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [knowledge, setKnowledge] = useState<string | undefined>(knowledgeAt);
+  useEffect(() => setKnowledge(knowledgeAt), [knowledgeAt]);
   const [offset, setOffset] = useState(0);
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(
     null,
@@ -835,7 +860,21 @@ export function ClaimDialog({
     retry: false,
     gcTime: 0,
   });
-  const view = !query.isError ? query.data?.selected : undefined;
+  const mismatch =
+    revisionId &&
+    query.data?.selected &&
+    query.data.selected.revision.id !== revisionId;
+  const exactError =
+    revisionId && !knowledgeAt
+      ? new Error(
+          "An exact revision link also needs its recorded knowledge time. No different revision is shown.",
+        )
+      : mismatch
+        ? new Error(
+            "This revision does not match the selected claim and knowledge time. No different revision is shown.",
+          )
+        : null;
+  const view = !query.isError && !exactError ? query.data?.selected : undefined;
   const manifestId = view?.revision.content.manifest_revision_id;
   const selectedManifest = useQuery({
     queryKey: ["claim-manifest", brain.id, manifestId],
@@ -856,21 +895,23 @@ export function ClaimDialog({
         ),
       ),
   });
-  if (query.isError)
+  if (query.isError || exactError)
     return (
-      <Modal
+      <DetailInspector
+        className="feature-drawer"
+        position="right"
         opened
         onClose={onClose}
-        size="xl"
+        size="min(44rem, 90vw)"
         title="Claim and knowledge history"
       >
         <Stack>
-          <Failure error={query.error} />
+          <Failure error={query.error ?? exactError} />
           <Button variant="light" onClick={() => void query.refetch()}>
             Try again
           </Button>
         </Stack>
-      </Modal>
+      </DetailInspector>
     );
   if (view && contribution)
     return (
@@ -943,29 +984,41 @@ export function ClaimDialog({
       label: `Knowledge at ${time(knowledge)}`,
     });
   return (
-    <Modal
+    <DetailInspector
+      className="feature-drawer"
+      position="right"
       opened
       onClose={onClose}
-      size="xl"
+      size="min(44rem, 90vw)"
       title="Claim and knowledge history"
     >
       <Stack className="claims-panel">
         {query.isPending && <Loader />}
         {query.data && (
           <>
-            <Select
-              label="Knowledge revision"
-              data={historyOptions}
-              value={knowledge ?? "current"}
-              onChange={(v) =>
-                setKnowledge(v === "current" ? undefined : (v ?? undefined))
-              }
-            />
-            <Pages
-              offset={offset}
-              total={query.data.total}
-              onChange={setOffset}
-            />
+            <details className="feature-details">
+              <summary>Version history</summary>
+              <Select
+                label="Knowledge revision"
+                data={historyOptions}
+                value={knowledge ?? "current"}
+                onChange={(value) => {
+                  const at =
+                    value === "current" ? undefined : (value ?? undefined);
+                  setKnowledge(at);
+                  const revision = [
+                    ...history,
+                    ...(query.data?.unavailable_history ?? []),
+                  ].find((item) => item.recorded_at === at);
+                  onKnowledgeChange?.(at, revision?.id);
+                }}
+              />
+              <Pages
+                offset={offset}
+                total={query.data.total}
+                onChange={setOffset}
+              />
+            </details>
             {!view && (
               <Alert>
                 {query.data?.selection_state === "not_recorded"
@@ -973,12 +1026,6 @@ export function ClaimDialog({
                   : `This revision was ${query.data?.selection_state}. Its content is unavailable; an older revision has not been substituted.`}
               </Alert>
             )}
-            <EraseAction
-              brain={brain.id}
-              permitted={brain.role === "admin"}
-              target={{ kind: "claim", id }}
-              name={view?.revision.content.subject ?? "Claim history"}
-            />
           </>
         )}
         {view && r && (
@@ -1093,7 +1140,7 @@ export function ClaimDialog({
                 <Button
                   variant="default"
                   loading={selectedManifest.isPending}
-                  disabled={!selectedManifest.data}
+                  disabled={!selectedManifest.data || !!selectedManifest.error}
                   onClick={() =>
                     selectedManifest.data &&
                     setSelectedEvidence(selectedManifest.data.evidence)
@@ -1153,31 +1200,88 @@ export function ClaimDialog({
             </Button>
           </>
         )}
+        {query.data && (
+          <>
+            <ActionMenu label="More memory actions">
+              <EraseAction
+                brain={brain.id}
+                permitted={brain.role === "admin"}
+                target={{ kind: "claim", id }}
+                name={view?.revision.content.subject ?? "Claim history"}
+              />
+            </ActionMenu>
+          </>
+        )}
       </Stack>
-    </Modal>
+    </DetailInspector>
   );
 }
 
-export function ClaimsPanel({ brain }: { brain: Brain }) {
+export function ClaimsPanel({
+  brain,
+  kind,
+  onKindChange,
+  selectedId,
+  onSelectedIdChange,
+}: {
+  brain: Brain;
+  kind?: string | null;
+  onKindChange?: (value: string | null) => void;
+  selectedId?: string | null;
+  onSelectedIdChange?: (value: string | null) => void;
+}) {
   const cache = useQueryClient();
+  const [route, patchRoute] = useBrainSearch();
   const [offset, setOffset] = useState(0);
-  const [mode, setMode] = useState<string | null>("investigation");
-  const [memoryKind, setMemoryKind] = useState<string | null>(null);
-  const [environment, setEnvironment] = useState<string | null>(null);
-  const [repository, setRepository] = useState<string | null>(null);
-  const [factDraft, setFactDraft] = useState("");
-  const [knowledgeDraft, setKnowledgeDraft] = useState("");
-  const [times, setTimes] = useState<{
-    fact_at?: string;
-    knowledge_at?: string;
-  }>({});
+  const mode = route.mode ?? "investigation";
+  const setMode = (mode: string | null) => patchRoute({ mode });
+  const internalKind = ["claim", "decision", "procedure", "handover"].includes(
+    route.kind ?? "",
+  )
+    ? route.kind!
+    : null;
+  const setInternalKind = (kind: string | null) => patchRoute({ kind });
+  const memoryKind = kind === undefined ? internalKind : kind;
+  const environment = route.environment ?? null;
+  const setEnvironment = (environment: string | null) =>
+    patchRoute({ environment });
+  const repository = route.repository ?? null;
+  const setRepository = (repository: string | null) =>
+    patchRoute({ repository });
+  const [search, setSearch] = useState("");
+  const [query] = useDebouncedValue(search.trim(), 300);
+  const [filtering, setFiltering] = useState(false);
+  const [factDraft, setFactDraft] = useState(utc(route.fact));
+  const [knowledgeDraft, setKnowledgeDraft] = useState(utc(route.knowledge));
+  const times = { fact_at: route.fact, knowledge_at: route.knowledge };
+  const setTimes = (times: { fact_at?: string; knowledge_at?: string }) =>
+    patchRoute({
+      fact: times.fact_at ?? null,
+      knowledge: times.knowledge_at ?? null,
+      revision: null,
+    });
+  useEffect(() => {
+    setFactDraft(utc(route.fact));
+    setKnowledgeDraft(utc(route.knowledge));
+  }, [route.fact, route.knowledge]);
+  useEffect(
+    () => setOffset(0),
+    [mode, memoryKind, environment, repository, route.fact, route.knowledge],
+  );
   const [creating, setCreating] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [noting, setNoting] = useState(false);
+  const selected =
+    selectedId === undefined ? (route.claim ?? null) : selectedId;
+  const setSelected = (value: string | null) => {
+    patchRoute({ claim: value, revision: null });
+    onSelectedIdChange?.(value);
+  };
   const catalogue = useQuery({
     queryKey: ["workspace", brain.id],
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/workspace", {
+          signal,
           params: { path: { brain: brain.id } },
         }),
       ),
@@ -1192,14 +1296,17 @@ export function ClaimsPanel({ brain }: { brain: Brain }) {
       environment,
       repository,
       times,
+      query,
       offset,
     ],
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/claims", {
+          signal,
           params: {
             path: { brain: brain.id },
             query: {
+              q: query || undefined,
               mode: mode ?? undefined,
               kind: memoryKind ?? undefined,
               environment_id: environment ?? undefined,
@@ -1216,43 +1323,117 @@ export function ClaimsPanel({ brain }: { brain: Brain }) {
     for (const key of ["claims", "claim", "audit", "jobs", "processing"])
       void cache.invalidateQueries({ queryKey: [key, brain.id] });
   };
+  const clear = () => {
+    patchRoute({
+      mode: null,
+      kind: null,
+      environment: null,
+      repository: null,
+      fact: null,
+      knowledge: null,
+      revision: null,
+    });
+    onKindChange?.(null);
+    setSearch("");
+    setFactDraft("");
+    setKnowledgeDraft("");
+    setOffset(0);
+  };
+  const filtered =
+    mode !== "investigation" ||
+    !!environment ||
+    !!repository ||
+    !!times.fact_at ||
+    !!times.knowledge_at;
+  const data = claims.error || catalogue.error ? undefined : claims.data;
   return (
-    <Card withBorder p="xl" mt="xl" className="claims-panel">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <Group>
-            <BookMarked size={21} />
-            <Title order={2} fz={21}>
-              Engineering memory
-            </Title>
-          </Group>
-          {brain.role !== "reader" && !brain.archived && (
-            <Button
-              size="xs"
-              leftSection={<Plus size={14} />}
-              onClick={() => setCreating(true)}
-              disabled={!catalogue.data}
-            >
-              New memory
-            </Button>
+    <section className="feature-view claims-panel" aria-label="Memory records">
+      <FilterBar>
+        <TextInput
+          className="feature-search"
+          aria-label="Search memory"
+          placeholder="Find a memory…"
+          leftSection={<Search size={iconSize.navigation} />}
+          maxLength={200}
+          value={search}
+          onChange={(event) => {
+            setSearch(event.currentTarget.value);
+            setOffset(0);
+          }}
+        />
+        <Button
+          variant="default"
+          leftSection={<SlidersHorizontal size={iconSize.small} />}
+          onClick={() => setFiltering(true)}
+        >
+          Filters{filtered ? " · applied" : ""}
+        </Button>
+        {brain.role !== "reader" && !brain.archived && (
+          <Button
+            leftSection={<Plus size={iconSize.small} />}
+            onClick={() => setNoting(true)}
+            disabled={!catalogue.data || !!catalogue.error}
+          >
+            Add memory
+          </Button>
+        )}
+      </FilterBar>
+      {filtered && (
+        <ScopeSummary>
+          {mode !== "investigation" && (
+            <Badge variant="light">{label(mode ?? "investigation")}</Badge>
           )}
-        </Group>
-        <Text size="sm" c="dimmed">
-          Keep assertions tied to exact evidence. Inspect when they applied and
-          when this Brain learned them.
-        </Text>
-        <Failure error={catalogue.error} />
-        <div className="evidence-filters">
-          <Select
-            label="Filter memory kind"
-            data={memoryKinds}
-            clearable
-            value={memoryKind}
-            onChange={(value) => {
-              setMemoryKind(value);
-              setOffset(0);
-            }}
-          />
+          {environment && (
+            <Badge variant="light">
+              {catalogue.data?.environments.find((e) => e.id === environment)
+                ?.name ?? "Selected environment"}
+            </Badge>
+          )}
+          {repository && (
+            <Badge variant="light">
+              {catalogue.data?.repositories.find((r) => r.id === repository)
+                ?.canonical_origin ?? "Selected repository"}
+            </Badge>
+          )}
+          {times.fact_at && (
+            <Badge variant="light">Fact time {time(times.fact_at)}</Badge>
+          )}
+          {times.knowledge_at && (
+            <Badge variant="light">
+              Knowledge time {time(times.knowledge_at)}
+            </Badge>
+          )}
+          <Button variant="subtle" size="compact-sm" onClick={clear}>
+            Clear filters
+          </Button>
+        </ScopeSummary>
+      )}
+      <Drawer
+        className="feature-drawer"
+        opened={filtering}
+        onClose={() => setFiltering(false)}
+        position="right"
+        title="Filter memory"
+        size="md"
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Search matches subjects, predicates, values and rationale. These
+            filters keep applicability and knowledge history explicit.
+          </Text>
+          {kind === undefined && (
+            <Select
+              label="Filter memory kind"
+              data={memoryKinds}
+              clearable
+              value={memoryKind}
+              onChange={(value) => {
+                setInternalKind(value);
+                onKindChange?.(value);
+                setOffset(0);
+              }}
+            />
+          )}
           <Select
             label="Claim view"
             data={[
@@ -1262,8 +1443,8 @@ export function ClaimsPanel({ brain }: { brain: Brain }) {
               { value: "history", label: "Include historical states" },
             ]}
             value={mode}
-            onChange={(v) => {
-              setMode(v);
+            onChange={(value) => {
+              setMode(value);
               setOffset(0);
             }}
           />
@@ -1277,8 +1458,8 @@ export function ClaimsPanel({ brain }: { brain: Brain }) {
               })) ?? []
             }
             value={environment}
-            onChange={(v) => {
-              setEnvironment(v);
+            onChange={(value) => {
+              setEnvironment(value);
               setOffset(0);
             }}
           />
@@ -1293,134 +1474,181 @@ export function ClaimsPanel({ brain }: { brain: Brain }) {
               })) ?? []
             }
             value={repository}
-            onChange={(v) => {
-              setRepository(v);
+            onChange={(value) => {
+              setRepository(value);
               setOffset(0);
             }}
           />
-        </div>
-        <Group grow align="end">
           <TextInput
             type="datetime-local"
             step="1"
             label="Fact time (UTC)"
             value={factDraft}
-            onChange={(e) => setFactDraft(e.target.value)}
+            onChange={(event) => setFactDraft(event.currentTarget.value)}
           />
           <TextInput
             type="datetime-local"
             step="1"
             label="Knowledge time (UTC)"
             value={knowledgeDraft}
-            onChange={(e) => setKnowledgeDraft(e.target.value)}
+            onChange={(event) => setKnowledgeDraft(event.currentTarget.value)}
           />
+          <Button variant="default" onClick={clear}>
+            Clear memory filters
+          </Button>
           <Button
-            variant="default"
             onClick={() => {
               setTimes({
                 fact_at: instant(factDraft) ?? undefined,
                 knowledge_at: instant(knowledgeDraft) ?? undefined,
               });
               setOffset(0);
+              setFiltering(false);
             }}
           >
-            Apply time filters
+            Apply filters
           </Button>
-        </Group>
-        <Failure error={claims.error} />
-        {claims.error && (
-          <Button
-            variant="subtle"
-            onClick={() => {
-              setMode("investigation");
-              setMemoryKind(null);
-              setEnvironment(null);
-              setRepository(null);
-              setTimes({});
-              setFactDraft("");
-              setKnowledgeDraft("");
-              setOffset(0);
-              void claims.refetch();
-            }}
-          >
-            Clear filters and retry
-          </Button>
-        )}
-        {claims.isPending && <Loader />}
-        {claims.data?.items.length === 0 &&
-          !claims.data?.unavailable?.length && (
-            <Text c="dimmed">
-              {claims.data.total_candidates
-                ? "No eligible claims on this page for these filters."
-                : "No claims recorded in this view."}
-            </Text>
+        </Stack>
+      </Drawer>
+      <Failure error={catalogue.error ?? claims.error} />
+      {(catalogue.error || claims.error) && (
+        <Button
+          variant="subtle"
+          onClick={() => {
+            void catalogue.refetch();
+            void claims.refetch();
+          }}
+        >
+          Retry memory
+        </Button>
+      )}
+      {claims.isPending && <Loader />}
+      {data && (
+        <>
+          {data.items.length === 0 && !data.unavailable?.length && (
+            <EmptyState
+              icon={BookMarked}
+              title={
+                query || filtered
+                  ? "No matching memory"
+                  : "Your knowledge will gather here"
+              }
+              description={
+                query || filtered
+                  ? "Try another phrase or adjust the filters. Historical and qualified records can be inspected separately."
+                  : "Recollect learns from permitted sources and agent activity. You can also add an evidence-backed memory yourself."
+              }
+            />
           )}
-        {claims.data?.items.map((view) => (
-          <Card withBorder key={view.revision.claim_id}>
-            <Stack gap="sm">
+          {!!data.items.length && (
+            <div className="feature-list">
+              {data.items.map((view) => (
+                <article className="memory-record" key={view.revision.claim_id}>
+                  <Stack gap="sm">
+                    <Group justify="space-between" align="start">
+                      <Button
+                        variant="subtle"
+                        justify="start"
+                        px={0}
+                        h="auto"
+                        className="memory-record-title"
+                        onClick={() => setSelected(view.revision.claim_id)}
+                      >
+                        {view.revision.content.subject} ·{" "}
+                        {view.revision.content.predicate}
+                      </Button>
+                      <Badge variant="light" color="gray">
+                        {memoryKinds.find(
+                          (item) => item.value === view.revision.content.kind,
+                        )?.label ?? label(view.revision.content.kind)}
+                      </Badge>
+                    </Group>
+                    <Text lineClamp={3} size="sm">
+                      {view.revision.content.value}
+                    </Text>
+                    <States view={view} />
+                    <Group justify="space-between">
+                      <Group gap="xs">
+                        <FileText size={iconSize.small} />
+                        <Text size="xs" c="dimmed">
+                          {view.evidence.length} evidence supports
+                        </Text>
+                      </Group>
+                      <Text size="xs" c="dimmed">
+                        Learned {time(view.revision.recorded_at)}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </article>
+              ))}
+            </div>
+          )}
+          {data.unavailable?.map((item) => (
+            <Card withBorder key={item.claim_id} mt="sm">
               <Button
                 variant="subtle"
-                justify="start"
-                h="auto"
-                py="xs"
-                className="claim-evidence-button"
-                onClick={() => setSelected(view.revision.claim_id)}
+                onClick={() => setSelected(item.claim_id)}
               >
-                {view.revision.content.subject} ·{" "}
-                {view.revision.content.predicate}
+                Unavailable memory · {item.claim_id.slice(0, 8)}
               </Button>
-              <Text lineClamp={3} size="sm">
-                {view.revision.content.value}
+              <Text size="sm" c="dimmed">
+                Content is unavailable. Inspect its remaining history and erased
+                intervals.
               </Text>
-              <States view={view} />
-              <Text size="xs" c="dimmed">
-                {view.evidence.length} evidence supports · learned{" "}
-                {time(view.revision.recorded_at)}
-              </Text>
-            </Stack>
-          </Card>
-        ))}
-        {claims.data?.unavailable?.map((item) => (
-          <Card withBorder key={item.claim_id}>
-            <Button variant="subtle" onClick={() => setSelected(item.claim_id)}>
-              {label(item.revision.state)} claim · learned{" "}
-              {time(item.revision.recorded_at)}
-            </Button>
-            <Text size="sm" c="dimmed">
-              Content is unavailable. Inspect its remaining history and erased
-              intervals.
-            </Text>
-          </Card>
-        ))}
-        <Pages
-          offset={offset}
-          total={claims.data?.total_candidates ?? 0}
-          onChange={setOffset}
+            </Card>
+          ))}
+          <Pages
+            offset={offset}
+            total={data.total_candidates}
+            onChange={setOffset}
+          />
+        </>
+      )}
+      <Text size="xs" c="dimmed" mt="md">
+        Memory search matches the recorded assertion. Evidence, review,
+        freshness and operational assessment remain separate.
+      </Text>
+      {noting && (
+        <MemoryNoteDialog
+          brain={brain}
+          close={() => setNoting(false)}
+          structured={() => {
+            setNoting(false);
+            setCreating(true);
+          }}
         />
-        {creating && (
-          <ClaimEditor
-            brain={brain}
-            catalogue={catalogue.data}
-            onClose={() => setCreating(false)}
-            onSaved={(id) => {
-              setCreating(false);
-              refresh();
-              setSelected(id);
-            }}
-          />
-        )}
-        {selected && (
-          <ClaimDialog
-            brain={brain}
-            id={selected}
-            catalogue={catalogue.data}
-            knowledgeAt={times.knowledge_at}
-            factAt={times.fact_at}
-            onClose={() => setSelected(null)}
-            onSaved={refresh}
-          />
-        )}
-      </Stack>
-    </Card>
+      )}
+      {creating && !catalogue.error && (
+        <ClaimEditor
+          brain={brain}
+          catalogue={catalogue.data}
+          onClose={() => setCreating(false)}
+          onSaved={(id) => {
+            setCreating(false);
+            refresh();
+            setSelected(id);
+          }}
+        />
+      )}
+      {selected && !catalogue.error && (
+        <ClaimDialog
+          key={selected}
+          brain={brain}
+          id={selected}
+          catalogue={catalogue.data}
+          knowledgeAt={times.knowledge_at}
+          factAt={times.fact_at}
+          revisionId={route.revision}
+          onKnowledgeChange={(knowledge, revision) =>
+            patchRoute({
+              knowledge: knowledge ?? null,
+              revision: revision ?? null,
+            })
+          }
+          onClose={() => setSelected(null)}
+          onSaved={refresh}
+        />
+      )}
+    </section>
   );
 }

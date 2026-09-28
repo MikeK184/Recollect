@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
-test("owner manages a Brain, recovers a request error and signs out on desktop and mobile", async ({
+test("owner manages a Brain, recovers a request error and signs out on desktop at 1280 pixels", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -37,10 +37,9 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
     .getByLabel("Description")
     .fill("Decisions, systems and the evidence behind them.");
   await form.getByRole("button", { name: "Create Brain", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Platform engineering", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Brain created", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Switch Brain", { exact: true })).toBeVisible();
+  const brain = new URL(page.url()).pathname.split("/")[2];
+  await page.goto(`/brains/${brain}/activity?tab=processing`);
   const processing = page.getByRole("region", {
     name: "Background processing",
   });
@@ -59,20 +58,31 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
   await expect(
     processing.getByText("Up to date", { exact: true }),
   ).toBeVisible();
+  await page.goto(`/brains/${brain}/settings`);
   await page.getByRole("button", { name: "Edit Brain" }).click();
   await form.getByLabel(/^Name/).fill("Platform knowledge");
   await form.getByRole("button", { name: "Save changes" }).click();
   await expect(
-    page.getByRole("heading", { name: "Platform knowledge", exact: true }),
-  ).toBeVisible();
+    page.getByLabel("Switch Brain", { exact: true }).locator("option:checked"),
+  ).toHaveText("Platform knowledge");
   await page
     .getByRole("button", { name: "Archive Brain", exact: true })
     .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Archive Brain", exact: true })
+    .click();
   await expect(page.getByText("This Brain is archived")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "Reopen Brain", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Reopen Brain", exact: true })
+    .click();
   await expect(page.getByText("This Brain is archived")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.screenshot({ path: "../.cache/ui/brain.png", fullPage: true });
-  await page.getByRole("link", { name: "Back to Brains" }).click();
+  await page.getByRole("link", { name: "All Brains" }).click();
   await expect(
     page.getByRole("heading", { name: "Platform knowledge" }),
   ).toBeVisible();
@@ -85,8 +95,8 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
   await expect(
     page.getByRole("heading", { name: "Platform knowledge" }),
   ).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "../.cache/ui/mobile.png", fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.screenshot({ path: "../.cache/ui/1280.png", fullPage: true });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );

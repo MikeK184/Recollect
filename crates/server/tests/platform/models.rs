@@ -1,4 +1,6 @@
 use super::*;
+#[path = "answers.rs"]
+mod answers;
 #[path = "autonomous.rs"]
 mod autonomous;
 #[path = "capture.rs"]
@@ -19,7 +21,7 @@ use std::sync::{
 
 pub(crate) struct Provider {
     pub(crate) calls: AtomicUsize,
-    delay: AtomicU64,
+    pub(crate) delay: AtomicU64,
     mode: AtomicUsize,
     pub(crate) candidates: Mutex<Value>,
     pub(crate) bodies: Mutex<Vec<Value>>,
@@ -187,7 +189,12 @@ pub(crate) async fn configure_provider(
     h.router = app(h.state.clone());
     (provider, task)
 }
-async fn allow(h: &Harness, owner: &Login, base: &str, mutate: impl FnOnce(&mut Value)) -> Value {
+pub(crate) async fn allow(
+    h: &Harness,
+    owner: &Login,
+    base: &str,
+    mutate: impl FnOnce(&mut Value),
+) -> Value {
     let mut settings = ok(
         h,
         "GET",

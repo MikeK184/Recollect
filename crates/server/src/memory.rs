@@ -302,6 +302,7 @@ pub(crate) mod inspection;
 
 #[derive(Default, Deserialize)]
 pub struct ClaimQuery {
+    pub q: Option<String>,
     pub operation_id: Option<Uuid>,
     pub kind: Option<String>,
     pub repository_id: Option<Uuid>,
@@ -464,13 +465,14 @@ fn include(view: &ClaimView, mode: Option<&str>) -> bool {
         _ => view.eligibility.investigation,
     }
 }
-#[utoipa::path(get,path="/api/brains/{brain}/claims",operation_id="claims",params(("brain"=Uuid,Path),("operation_id"=Option<Uuid>,Query),("repository_id"=Option<Uuid>,Query),("environment_id"=Option<Uuid>,Query),("area_id"=Option<Uuid>,Query),("fact_at"=Option<DateTime<Utc>>,Query),("knowledge_at"=Option<DateTime<Utc>>,Query),("mode"=Option<String>,Query),("kind"=Option<String>,Query),("offset"=Option<i64>,Query)),responses((status=200,body=ClaimPage)))]
+#[utoipa::path(get,path="/api/brains/{brain}/claims",operation_id="claims",params(("brain"=Uuid,Path),("operation_id"=Option<Uuid>,Query),("repository_id"=Option<Uuid>,Query),("environment_id"=Option<Uuid>,Query),("area_id"=Option<Uuid>,Query),("fact_at"=Option<DateTime<Utc>>,Query),("knowledge_at"=Option<DateTime<Utc>>,Query),("mode"=Option<String>,Query),("kind"=Option<String>,Query),("q"=Option<String>,Query),("offset"=Option<i64>,Query)),responses((status=200,body=ClaimPage)))]
 pub async fn list(
     State(state): State<AppState>,
     auth: Auth,
     Path(brain): Path<Uuid>,
     Query(query): Query<ClaimQuery>,
 ) -> Result<Json<ClaimPage>> {
+    let search = publication::list_query(query.q.as_deref())?;
     let offset = publication::offset(&publication::Page {
         offset: query.offset,
     })?;
@@ -498,7 +500,9 @@ pub async fn list(
     );
     let filtered = format!(
         "{filtered} AND ($6::jsonb IS NULL OR (r.revision#>'{{content,selection}}' IS NOT NULL
-        AND recollect_recall_scope(r.revision#>'{{content,selection}}',$6)))"
+        AND recollect_recall_scope(r.revision#>'{{content,selection}}',$6)))
+        AND ($7='' OR (recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
+          AND position(lower($7) in lower(concat_ws(' ',r.revision#>>'{{content,subject}}',r.revision#>>'{{content,predicate}}',r.revision#>>'{{content,value}}',r.revision#>>'{{content,rationale}}')))>0))"
     );
     let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) {filtered}"))
         .bind(brain)
@@ -507,10 +511,11 @@ pub async fn list(
         .bind(query.repository_id)
         .bind(query.area_id)
         .bind(scope.as_ref().map(SqlJson))
+        .bind(&search)
         .fetch_one(&mut *tx)
         .await?;
     let revisions: Vec<PrivateRevision> = sqlx::query_as(&format!(
-        "SELECT r.id,r.claim_id,r.recorded_at,recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at) AS state,CASE WHEN recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' THEN r.revision END AS revision {filtered} ORDER BY recorded_at DESC,id LIMIT 20 OFFSET $7"
+        "SELECT r.id,r.claim_id,r.recorded_at,recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at) AS state,CASE WHEN recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' THEN r.revision END AS revision {filtered} ORDER BY recorded_at DESC,id LIMIT 20 OFFSET $8"
     ))
     .bind(brain)
     .bind(at)
@@ -518,6 +523,7 @@ pub async fn list(
     .bind(query.repository_id)
     .bind(query.area_id)
     .bind(scope.as_ref().map(SqlJson))
+    .bind(&search)
     .bind(offset)
     .fetch_all(&mut *tx)
     .await?;

@@ -1,5 +1,7 @@
 # Execute approved MCP tools
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 The [runtime contract](../contracts/mcp-runtime-and-credentials.md) governs managed
@@ -17,7 +19,7 @@ connector is installed by the test harnesses or this procedure.
 ## Procedure
 
 Start the local stack with `./scripts/dev.sh` and open
-<http://127.0.0.1:8787>. In a Brain, inspect an execution profile, open **Inspect
+<http://127.0.0.1:8787>. In a Brain, open **Connections → Profiles**, inspect an execution profile and open **Inspect
 cached tools**, select **Run tool**, and supply non-secret object arguments matching
 its schema. The selected environment/profile stays fixed. The desktop call
 inspector shows queue/start/run state, selected runner, outcome, eligible retained

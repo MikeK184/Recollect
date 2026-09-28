@@ -1,5 +1,7 @@
 # Discover workspaces and bind task context
 
+For the current route/menu map, see the [desktop guide](desktop-experience.md).
+
 ## Purpose and Prerequisites
 
 Use a paired native companion, installed Git and an accessible Brain. Publishing
@@ -39,12 +41,11 @@ Local/file origins remain unsupported; Git URLs are normalized without credentia
 Partial scans preserve unseen registrations; a full refresh marks missing paths
 as not seen without deleting their repository identities.
 
-In the Brain's **Workspace & tasks** panel, inspect **Repositories** and **Your
-checkouts**. Checkout paths are private to your account. Admins may **Add origin**
+In the Brain sidebar, open **Repositories** for published repositories and **Your checkouts**. Checkout paths are private to your account. Admins may **Add origin**
 for an explicitly confirmed alias or move. An origin already assigned to another
 repository fails rather than merging identities.
 
-Use **New task** to select repositories, areas and an environment. Empty dimensions
+Use **Agents → Your working contexts → New task scope** to select repositories, areas and an environment. Empty dimensions
 include the whole Brain for that dimension. **Start subagent** copies the selected
 parent into an independent child. **Change scope** affects future operations;
 **Recorded operations** and **Scope history** retain their original selections.

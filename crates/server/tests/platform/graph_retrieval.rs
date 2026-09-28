@@ -24,6 +24,112 @@ fn names(response: &Value) -> std::collections::BTreeSet<String> {
 
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
+async fn graph_backed_answer_preserves_exact_witness_and_suppresses_replaced_generation() {
+    use std::sync::atomic::Ordering;
+    let mut h = Harness::new().await;
+    let (provider, provider_task) = models::configure_provider(&mut h).await;
+    let owner = h.login().await;
+    let (brain, base) = base(&h, &owner).await;
+    models::allow(&h, &owner, &base, |p| {
+        p["purposes"] = json!(["answering"]);
+        p["content_classes"] = json!(["query", "repository"]);
+        p["daily_token_limit"] = json!(100000);
+    })
+    .await;
+    let (repo, snapshot, _) = combined::publish(
+        &h,
+        &owner,
+        &base,
+        "example.test/answer/graph",
+        'a',
+        exploration::facts(&[vec![1], vec![]]),
+    )
+    .await;
+    let original = build(&h, &owner, &base, "repository", Some(&snapshot)).await;
+    *provider.candidates.lock().unwrap() = json!({"summary":"Recorded call relationship.",
+        "statements":[{"text":"The committed structure records node_0 calling node_1; this does not establish deployed behavior.","citation_ids":["E1","E2"]}],
+        "limitations":["Graph proximity is not truth or runtime verification."]});
+    let input = || {
+        json!({"request_id":Uuid::new_v4(),"question":"What does node_0 call?",
+        "recall":{"query":"node_0","selection":{"repository_ids":[repo]},"channels":["exact","lexical","graph"],
+        "graph":{"kind":"repository","direction":"outgoing","max_hops":1,"relations":["calls"]},"limit":2}})
+    };
+    let path = format!("{base}/answer-requests");
+    let completed = ok(&h, "POST", &path, &owner, input()).await;
+    assert_eq!(completed["state"], "completed", "{completed}");
+    assert_eq!(
+        completed["recall"]["graph"]["view"]["generation"]["id"],
+        original["id"]
+    );
+    let cited = &completed["citations"][1]["evidence"];
+    assert_eq!(cited["label"], "node_1");
+    assert_eq!(cited["graph_match"]["edges"][0]["relation"], "calls");
+    assert_eq!(cited["graph_match"]["nodes"][0]["label"], "node_0");
+    assert_eq!(cited["graph_match"]["nodes"][1]["label"], "node_1");
+    assert!(
+        cited["qualifications"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("graph_proximity_not_truth"))
+    );
+    let body = provider.bodies.lock().unwrap()[0].clone();
+    let envelope: Value =
+        serde_json::from_str(body["input"].as_str().unwrap().lines().next().unwrap()).unwrap();
+    let packed: Value = serde_json::from_str(envelope["data"].as_str().unwrap()).unwrap();
+    assert_eq!(
+        packed["evidence"][1]["evidence"]["graph_match"],
+        cited["graph_match"]
+    );
+    assert!(body.get("tools").is_none());
+
+    // Only the projection changes: no memory edit/epoch change masks the
+    // graph-specific bundle check. The replacement uses the same exact inputs.
+    provider.delay.store(5000, Ordering::SeqCst);
+    let request = input();
+    let request_id = request["request_id"]
+        .as_str()
+        .unwrap()
+        .parse::<Uuid>()
+        .unwrap();
+    let pending = h.call("POST", &path, Some(&owner), request);
+    let replace = async {
+        tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            while provider.calls.load(Ordering::SeqCst) < 2 {
+                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let replacement = build(&h, &owner, &base, "repository", Some(&snapshot)).await;
+        assert_ne!(replacement["id"], original["id"]);
+        let epoch: i64 = sqlx::query_scalar(
+            "SELECT coalesce((SELECT epoch FROM memory_epochs WHERE brain_id=$1),0)",
+        )
+        .bind(brain)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+        assert_eq!(json!(epoch), completed["memory_epoch"]);
+    };
+    let (stale, ()) = tokio::join!(pending, replace);
+    assert_eq!(stale.1["state"], "stale", "{}", stale.1);
+    assert!(stale.1.get("answer").is_none());
+    let suppressed: bool = sqlx::query_scalar(
+        "SELECT suppressed FROM model_requests WHERE operation_id=$1 AND purpose='answering'",
+    )
+    .bind(request_id)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert!(suppressed);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
+    provider_task.abort();
+    cleanup(&h, brain).await;
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
 async fn graph_recall_candidate_cap_reports_partial_coverage_without_path_multiplicity_votes() {
     let h = Harness::new().await;
     let owner = h.login().await;

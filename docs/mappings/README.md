@@ -11,6 +11,16 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [SWEG direct Codex authentication repair, 2026-09-28](mcp-auth-repair-2026-09-28.md)
+- [Direct HTTP MCP, URL form and Context7 probe, 2026-09-28](mcp-direct-connections-2026-09-28.md)
+- [Public retrieval benchmark and Atlas lifecycle proof, 2026-09-28](public-memory-benchmark-2026-09-28.md)
+- [Managed autonomous setup and local UI proof, 2026-09-28](managed-memory-experience-2026-09-28.md)
+- [GitHub README presentation and discoverability, 2026-09-28](github-discoverability-2026-09-28.md)
+- [Desktop implementation, final local deployment and remaining acceptance, 2026-09-26](desktop-experience-implementation-2026-09-26.md)
+
+- [Desktop implementation authority handoff, 2026-09-26](desktop-experience-authority-2026-09-26.md)
+- [Desktop experience review and design concepts, 2026-09-26](desktop-experience-review-2026-09-26.md)
+- [Root Compose workflow and existing-data conversion, 2026-09-26](root-compose-2026-09-26.md)
 - [Integrated quality, workload and runtime evidence, 2026-09-26](integrated-evaluations-2026-09-26.md)
 - [Backup and recovery interfaces, 2026-09-26](recovery-2026-09-26.md)
 - [Managed observation reuse and interfaces, 2026-09-26](mcp-observations-2026-09-26.md)

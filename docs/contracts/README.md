@@ -8,6 +8,8 @@ source decision, and state explicit deferrals. Use `proposed`, `accepted`,
 Resolve conflicts with accepted ADRs before implementation. Evidence mappings
 support decisions but do not themselves authorize behavior.
 
+[Managed autonomous memory experience](memory-managed-experience.md) governs the 2026-09-28 agent-first setup correction.
+
 ## Index
 
 - [Repository governance](repository-governance.md)
@@ -35,6 +37,8 @@ support decisions but do not themselves authorize behavior.
 - [Bounded graph exploration](graph-exploration.md)
 - [Scoped graph retrieval and source-aware context](retrieval-graph-fusion.md)
 - [Desktop memory investigation](retrieval-investigation-ui.md)
+- [Contextual desktop experience](desktop-experience.md)
+- [Evidence-backed temporary answers](retrieval-answers.md)
 - [Approved MCP catalogue and execution profiles](mcp-catalogue-and-profiles.md)
 - [Managed MCP calls and credentials](mcp-runtime-and-credentials.md)
 - [Vault credentials and private runners](mcp-vault-and-private-runners.md)

@@ -3,6 +3,7 @@
 pub mod agent_tls;
 pub mod agent_transport;
 pub mod credentials;
+pub mod discovery;
 pub mod executor;
 mod http;
 pub mod manager;

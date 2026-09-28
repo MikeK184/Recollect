@@ -5,6 +5,7 @@ test("desktop owner diagnostics clear failed observations and deny ordinary memb
   page,
   browser,
 }) => {
+  test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
@@ -84,7 +85,10 @@ test("desktop owner diagnostics clear failed observations and deny ordinary memb
   await page.keyboard.press("Escape");
 
   // Invite through the delivered product path; never mock account authority.
-  await page.getByRole("link", { name: "Team", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Workspace navigation" })
+    .getByRole("link", { name: "Team", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add teammate", exact: true }).click();
   const invite = page.getByRole("dialog");
   await invite

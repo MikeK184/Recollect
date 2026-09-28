@@ -4,17 +4,43 @@
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
-| [repository-governance.md](repository-governance.md) | complete | Governance, foundations, Apache-2.0 license and simplified README delivered; GitHub remains private |
-| [developer-tooling.md](developer-tooling.md) | complete | Delivered CodeGraph, Atlas reference, Terme-derived documentation skills and the implementation-tooling assessment |
-| [product-platform.md](product-platform.md) | complete | Delivered Rust/React/database foundation, local/team identity, Brain grants, durable work and native device pairing |
-| [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Delivered collections, workspace/task scope, exact repository publication and native Codex/Claude capture with retention/replay |
-| [memory-lifecycle.md](memory-lifecycle.md) | complete | Delivered canonical lifecycle, autonomous maintenance and the Atlas capture provenance/session reconciliation repair |
-| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Delivered exact/lexical, semantic and graph fusion, source coverage/depth and desktop memory investigation with native graph navigation |
-| [graph-intelligence.md](graph-intelligence.md) | complete | Delivered canonical/combined graphs, queued native GDS analytics and bounded desktop graph/path exploration |
-| [mcp-coordination.md](mcp-coordination.md) | complete | Catalogue, central/local/private runtime, optional Vault, coding-host memory/workspace MCP and automatic managed observation capture delivered |
-| [operational-readiness.md](operational-readiness.md) | complete | Personal/shared installation, encrypted recovery, actual-model quality and concurrent workload accepted, with repaired admission/queries and explicit measured limits |
+| [repository-governance.md](repository-governance.md) | complete | README presentation and peer comparison delivered locally; description and 19 topics verified on the existing public GitHub repository |
+| [developer-tooling.md](developer-tooling.md) | active | Add OpenCode v2 support for the existing project instructions, skills, roles and Context7 |
+| [product-platform.md](product-platform.md) | complete | Desktop authority, shared light visual system, SVG identity, global/contextual routes and identity checks delivered |
+| [evidence-and-workspaces.md](evidence-and-workspaces.md) | active | Sources, repositories/manifests and agent/private workspace desktop workflows |
+| [memory-lifecycle.md](memory-lifecycle.md) | active | Readable memory/handovers and standing policy/capture/retention settings |
+| [hybrid-retrieval.md](hybrid-retrieval.md) | active | Governed temporary Ask and retained exact evidence search |
+| [graph-intelligence.md](graph-intelligence.md) | active | Canvas-first bounded graph workspace with exact scope and accessible inspection |
+| [mcp-coordination.md](mcp-coordination.md) | complete | SWEG direct authentication repaired and verified with installed Codex 0.157.1; Keychain/environment guidance deployed. OAuth and plugin packaging remain undelivered |
+| [operational-readiness.md](operational-readiness.md) | active | Authorized Activity presentation and complete desktop/API/runtime acceptance |
 
 ## Active frontier
+
+The [direct MCP setup](../execution/archive/mcp-direct-connections.md) and
+[public retrieval benchmark](../execution/archive/operations-public-benchmark.md)
+are locally delivered with dated runtime and measured evidence. OAuth/plugin
+packaging and the six desktop acceptance packs remain outside those closeouts.
+
+The 2026-09-28 [managed memory correction](../execution/archive/memory-managed-experience.md)
+is delivered locally: autonomous agent operation and managed defaults replace ordinary manual tuning.
+It preserves the remaining desktop verification scope.
+
+The user explicitly approved the [desktop experience](../desktop-experience/README.md)
+on 2026-09-26 and requested complete implementation plus an original SVG logo.
+[ADR 0014](../../adr/0014-desktop-experience-and-answers.md), the
+[desktop contract](../../contracts/desktop-experience.md) and
+[answer contract](../../contracts/retrieval-answers.md) govern the nine capability-owned slices. The authority slice is
+[shipped](../execution/archive/desktop-experience-contracts.md), together with the
+[shell](../execution/archive/platform-desktop-shell.md) and
+[MCP setup](../execution/archive/mcp-desktop-setup.md); six product and acceptance
+slices remain in progress. All twelve concepts are illustrative; actual behavior
+requires the [active packs](../execution/active/README.md)' tests. Existing
+completion records below describe the delivered baseline before this expansion.
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records the final local image at port 8787, preserved recorded inventory,
+completed desktop/identity/MCP/Ask/backend checks and the remaining domain and
+integrated verification. The deployment claim comes from actual readiness,
+browser and inventory proof, independently of authority approval or a build.
 
 The repository/foundation bootstrap is delivered locally. The accepted
 foundation documents capture the accepted independent Rust memory/MCP product
@@ -40,7 +66,9 @@ Mobile views are deferred
 by the user's explicit 2026-09-22 instruction; current UI work targets desktop.
 The Atlas implementation audit also delivered one bounded repair slice,
 `memory-capture-reconciliation`, before further retrieval consumers. The full
-29-slice implementation is delivered locally; there is no remaining active pack.
+29-slice implementation is delivered locally. The user-requested
+`operations-root-compose` follow-up is also delivered locally. The accepted desktop
+expansion is the current active work; it does not rewrite those closeout records.
 The CodeGraph developer-tooling slice is delivered locally and ready for use.
 The Atlas reference checkout is also available locally, with the requested
 pattern and comparison pages verified against the published site.
@@ -56,9 +84,9 @@ packs are listed in [archive](../execution/archive/README.md).
 
 Implementation started with `platform-bootstrap` in
 [Product Platform and Access](product-platform.md). Its accepted ADR, contract and
-archived pack record delivery. All stages below are complete. The final
-`operations-integrated-evaluations` pack is archived; further product expansion
-or external deployment requires a new scoped assignment.
+archived pack record delivery. All original stages below are complete. The final
+`operations-integrated-evaluations` pack is archived; the subsequent desktop
+assignment adds the nine scoped packs above. External deployment remains excluded.
 
 | Stage | Capability milestone and handoff |
 | --- | --- |
@@ -128,8 +156,8 @@ desktop workflows passed. Migration 026 orders Brain admission; statement-local
 capture reuse and bounded lineage joins repair the observed recall bottlenecks.
 Recall p95 was 863 ms, with explicit backpressure and a 4.9-second maximum; all
 accepted writes were readable within 8.1 seconds. These are bounded synthetic
-observations, not production capacity. The final pack and all seven product epics
-are complete. See the [handoff](../../../CONTINUE_HERE.md) for live startup/state
+observations, not production capacity. The final original pack and seven product epics were complete at that closeout;
+the subsequent desktop assignment now reopens their named slices. See the [handoff](../../../CONTINUE_HERE.md) for live startup/state
 and the [evaluation](../../mappings/integrated-evaluations-2026-09-26.md) for current
 versus carried checks, preserved failures, paid usage and known limits.
 Future changes follow the [lifecycle](../../README.md) and resolve their own

@@ -166,6 +166,7 @@ async fn resolve(
     brain: Uuid,
     inv: &Invocation,
     limit: usize,
+    bundle: Option<&crate::retrieval::answer_bundle::Bundle>,
 ) -> Result<(Vec<ResolvedText>, Vec<String>, Vec<InputRef>)> {
     if inv.inputs.len() > 20 || inv.inputs.is_empty() && inv.query.is_none() {
         return Err(Error::invalid("Select bounded canonical model inputs."));
@@ -173,6 +174,20 @@ async fn resolve(
     let mut texts = Vec::new();
     let mut classes = Vec::new();
     let mut dependencies = Vec::new();
+    if let Some(bundle) = bundle {
+        if bundle.response().brain_id != brain {
+            return Err(Error::invalid(
+                "The retrieval bundle belongs to another Brain.",
+            ));
+        }
+        let (data, allowed_classes, references) = bundle.resolve(state, tx).await?;
+        texts.push(ResolvedText {
+            data,
+            provenance: json!({"kind":"canonical_retrieval_bundle"}),
+        });
+        classes.extend(allowed_classes);
+        dependencies.extend(references);
+    }
     let mut seen = std::collections::HashSet::new();
     for input in &inv.inputs {
         if !seen.insert((&input.kind, input.id)) {
@@ -292,7 +307,7 @@ fn body(
         format => {
             if !matches!(
                 inv.purpose.as_str(),
-                "extraction" | "synthesis" | "reranking"
+                "extraction" | "synthesis" | "reranking" | "answering"
             ) {
                 return Err(Error::invalid("Unsupported text purpose."));
             }
@@ -538,7 +553,7 @@ async fn suppress(state: &AppState, id: Uuid, token: Uuid) -> Result<()> {
     Ok(())
 }
 pub async fn invoke(state: &AppState, context: Context, inv: Invocation) -> Result<Response> {
-    invoke_inner(state, context, inv, None).await
+    invoke_inner(state, context, inv, None, None, None).await
 }
 
 pub async fn invoke_for_policy(
@@ -547,7 +562,27 @@ pub async fn invoke_for_policy(
     inv: Invocation,
     policy: Uuid,
 ) -> Result<Response> {
-    invoke_inner(state, context, inv, Some(policy)).await
+    invoke_inner(state, context, inv, Some(policy), None, None).await
+}
+
+pub(crate) async fn invoke_answer(
+    state: &AppState,
+    context: Context,
+    inv: Invocation,
+    policy: Uuid,
+    bundle: &crate::retrieval::answer_bundle::Bundle,
+) -> Result<Response> {
+    invoke_inner(state, context, inv, Some(policy), Some(bundle), None).await
+}
+
+pub(crate) async fn invoke_answer_embedding(
+    state: &AppState,
+    context: Context,
+    inv: Invocation,
+    policy: Uuid,
+    answer: &crate::answers::Guard<'_>,
+) -> Result<Response> {
+    invoke_inner(state, context, inv, Some(policy), None, Some(answer)).await
 }
 
 async fn invoke_inner(
@@ -555,6 +590,8 @@ async fn invoke_inner(
     context: Context,
     inv: Invocation,
     expected_policy: Option<Uuid>,
+    bundle: Option<&crate::retrieval::answer_bundle::Bundle>,
+    answer: Option<&crate::answers::Guard<'_>>,
 ) -> Result<Response> {
     if !policy::PURPOSES.contains(&inv.purpose.as_str())
         || !policy::identifier(&inv.prompt_label, 80)
@@ -564,7 +601,24 @@ async fn invoke_inner(
             "Unsupported application model purpose or provenance label.",
         ));
     }
+    if (inv.purpose == "answering") != bundle.is_some()
+        || (bundle.is_some() && !inv.inputs.is_empty())
+    {
+        return Err(Error::invalid(
+            "Answering requires a server-owned retrieval bundle.",
+        ));
+    }
     let mut tx = authorize(state, context).await?;
+    if let Some(answer) = answer {
+        if inv.purpose != "embedding" || !inv.inputs.is_empty() {
+            return Err(Error::invalid(
+                "The answer query guard is only for query embedding.",
+            ));
+        }
+        answer
+            .revalidate(state, &mut tx, context, inv.operation)
+            .await?;
+    }
     let version = policy::current(state, &mut tx, context.brain).await?;
     if expected_policy.is_some_and(|id| id != version.change_id) {
         return Err(policy::failure(
@@ -578,7 +632,7 @@ async fn invoke_inner(
         version.policy.max_input_bytes
     };
     let (texts, classes, dependencies) =
-        resolve(state, &mut tx, context.brain, &inv, limit as usize).await?;
+        resolve(state, &mut tx, context.brain, &inv, limit as usize, bundle).await?;
     policy::permits(state, &version.policy, &inv.purpose, &classes)?;
     sqlx::query("SELECT recollect_expire_model_requests($1)")
         .bind(context.brain)
@@ -649,6 +703,9 @@ async fn invoke_inner(
         sqlx::query("INSERT INTO model_request_inputs(request_id,brain_id,kind,input_id) VALUES($1,$2,$3,$4)")
             .bind(id).bind(context.brain).bind(&input.kind).bind(input.id).execute(&mut *tx).await?;
     }
+    if let Some(bundle) = bundle {
+        bundle.admitted(&mut tx, id).await?;
+    }
     tx.commit().await?;
     let result = provider(state, &inv, &version.policy, request, texts.len()).await;
     let outcome = if result.uncertain {
@@ -686,6 +743,11 @@ async fn invoke_inner(
     }
     let checked: Result<ModelRequest> = async {
         let mut tx = authorize(state, context).await?;
+        if let Some(answer) = answer {
+            answer
+                .revalidate(state, &mut tx, context, inv.operation)
+                .await?;
+        }
         let current = policy::current(state, &mut tx, context.brain).await?;
         if current.change_id != version.change_id {
             return Err(policy::failure(
@@ -693,7 +755,8 @@ async fn invoke_inner(
                 "Model policy changed during this call. Its output was discarded.",
             ));
         }
-        let (_, classes, _) = resolve(state, &mut tx, context.brain, &inv, limit as usize).await?;
+        let (_, classes, _) =
+            resolve(state, &mut tx, context.brain, &inv, limit as usize, bundle).await?;
         policy::permits(state, &current.policy, &inv.purpose, &classes)?;
         let request = policy::request(&mut tx, context.brain, id).await?;
         if request.suppressed {

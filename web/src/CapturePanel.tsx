@@ -1,9 +1,11 @@
 import { useState } from "react";
+import "./features/feature-views.css";
 import {
   Alert,
   Badge,
   Button,
   Card,
+  Drawer,
   Code,
   Group,
   Loader,
@@ -379,8 +381,17 @@ export function CapturedSource({
     </Modal>
   );
 }
-export function CapturePanel({ brain }: { brain: Brain }) {
+export function CapturePanel({
+  brain,
+  section = "sessions",
+  simple = false,
+}: {
+  brain: Brain;
+  section?: "sessions" | "settings";
+  simple?: boolean;
+}) {
   const [editing, setEditing] = useState(false);
+  const [coverage, setCoverage] = useState(false);
   const [setup, setSetup] = useState(false);
   const [kind, setKind] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
@@ -389,6 +400,7 @@ export function CapturePanel({ brain }: { brain: Brain }) {
   const path = { brain: brain.id };
   const managed = useQuery({
     queryKey: ["capture-managed", brain.id],
+    enabled: section === "sessions" && coverage,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/capture/managed", {
@@ -409,6 +421,7 @@ export function CapturePanel({ brain }: { brain: Brain }) {
   });
   const devices = useQuery({
     queryKey: ["capture-devices", brain.id, deviceOffset],
+    enabled: section === "sessions" && coverage,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/capture/devices", {
@@ -419,6 +432,7 @@ export function CapturePanel({ brain }: { brain: Brain }) {
   });
   const events = useQuery({
     queryKey: ["capture-events", brain.id, offset, kind],
+    enabled: section === "sessions",
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/capture/events", {
@@ -428,24 +442,52 @@ export function CapturePanel({ brain }: { brain: Brain }) {
     refetchInterval: 4000,
   });
   return (
-    <Card withBorder component="section" aria-label="Session capture">
+    <section
+      className={section === "settings" ? "feature-setting" : "feature-view"}
+      aria-label="Session capture"
+    >
       <Stack>
         <Group justify="space-between">
-          <Title order={2}>Session capture</Title>
+          <Title order={3}>
+            {section === "settings"
+              ? simple
+                ? "Connect agent capture"
+                : "Capture policy"
+              : "Captured sessions"}
+          </Title>
           <Group>
-            {brain.role !== "reader" && !brain.archived && (
-              <Button variant="light" onClick={() => setSetup(true)}>
-                Connect capture
-              </Button>
-            )}
-            {brain.role === "admin" && !brain.archived && (
-              <Button
-                variant="light"
-                disabled={!policy.data}
-                onClick={() => setEditing(true)}
-              >
-                Capture policy
-              </Button>
+            {section === "settings" &&
+              brain.role !== "reader" &&
+              !brain.archived && (
+                <Button variant="light" onClick={() => setSetup(true)}>
+                  Connect capture
+                </Button>
+              )}
+            {section === "settings" &&
+              !simple &&
+              brain.role === "admin" &&
+              !brain.archived && (
+                <Button
+                  variant="light"
+                  disabled={!policy.data}
+                  onClick={() => setEditing(true)}
+                >
+                  Capture policy
+                </Button>
+              )}
+            {section === "sessions" && (
+              <>
+                <Button variant="default" onClick={() => setCoverage(true)}>
+                  Capture coverage
+                </Button>
+                <Button
+                  variant="subtle"
+                  component="a"
+                  href={`/brains/${brain.id}/settings?tab=capture`}
+                >
+                  Capture settings
+                </Button>
+              </>
             )}
           </Group>
         </Group>
@@ -457,7 +499,14 @@ export function CapturePanel({ brain }: { brain: Brain }) {
         <Failure
           error={policy.error ?? devices.error ?? events.error ?? managed.error}
         />
-        {policy.data ? (
+        {simple && !policy.error && policy.data && (
+          <Text size="sm">
+            {policy.data.policy.enabled
+              ? "Supported prompts, replies and tool results are captured automatically once your agent is connected. Secrets are redacted before storage."
+              : "Enable autonomous memory once under AI & automation, then connect your agent here. No capture tuning is required."}
+          </Text>
+        )}
+        {!simple && !policy.error && policy.data ? (
           <Group>
             <Badge color={policy.data.policy.enabled ? "teal" : "gray"}>
               {policy.data.policy.enabled
@@ -484,140 +533,175 @@ export function CapturePanel({ brain }: { brain: Brain }) {
         ) : (
           policy.isPending && <Loader size="sm" />
         )}
-        {managed.data && (
-          <Stack gap={2}>
-            <Text size="sm">
-              Visible managed calls: {managed.data.pending} pending ·{" "}
-              {managed.data.errors} retrying · {managed.data.published}{" "}
-              published · {managed.data.filtered} without retained text ·{" "}
-              {managed.data.skipped} skipped
-            </Text>
-            {!!managed.data.unknown && (
-              <Text size="sm" c="dimmed">
-                {managed.data.unknown} outcomes remain unknown; later receipts
-                have separate records.
-              </Text>
+        <Drawer
+          className="feature-drawer"
+          opened={coverage}
+          onClose={() => setCoverage(false)}
+          position="right"
+          title="Capture coverage"
+          size="lg"
+        >
+          <Stack>
+            {!managed.error && managed.data && (
+              <Stack gap={2}>
+                <Text size="sm">
+                  Visible managed calls: {managed.data.pending} pending ·{" "}
+                  {managed.data.errors} retrying · {managed.data.published}{" "}
+                  published · {managed.data.filtered} without retained text ·{" "}
+                  {managed.data.skipped} skipped
+                </Text>
+                {!!managed.data.unknown && (
+                  <Text size="sm" c="dimmed">
+                    {managed.data.unknown} outcomes remain unknown; later
+                    receipts have separate records.
+                  </Text>
+                )}
+                {managed.data.last_publication && (
+                  <Text size="xs" c="dimmed">
+                    Last managed publication:{" "}
+                    {time(managed.data.last_publication)}
+                  </Text>
+                )}
+                {managed.data.oldest_pending && (
+                  <Text size="xs" c="dimmed">
+                    Oldest pending outcome: {time(managed.data.oldest_pending)}
+                  </Text>
+                )}
+              </Stack>
             )}
-            {managed.data.last_publication && (
-              <Text size="xs" c="dimmed">
-                Last managed publication: {time(managed.data.last_publication)}
-              </Text>
+            {devices.data?.total === 0 && (
+              <Alert color="gray">
+                No capture companion is configured for this Brain.
+              </Alert>
             )}
-            {managed.data.oldest_pending && (
-              <Text size="xs" c="dimmed">
-                Oldest pending outcome: {time(managed.data.oldest_pending)}
-              </Text>
+            {!devices.error &&
+              devices.data?.items.map((item) => (
+                <Companion key={item.device_id} item={item} />
+              ))}
+            {devices.data && (
+              <Pages
+                offset={deviceOffset}
+                total={devices.data.total}
+                change={setDeviceOffset}
+              />
             )}
           </Stack>
+        </Drawer>
+        {section === "settings" && !simple && (
+          <Text size="sm" c="dimmed">
+            Capture permission allows supported events to be recorded. Sending
+            those records to a model requires a separate AI policy. Expiry and
+            erasure are controlled in Retention &amp; privacy.
+          </Text>
         )}
-        {devices.data?.total === 0 && (
-          <Alert color="gray">
-            No capture companion is configured for this Brain.
-          </Alert>
+        {section === "sessions" && (
+          <>
+            <Group justify="space-between">
+              <Title order={3}>Published activity</Title>
+              <Select
+                aria-label="Capture event kind"
+                placeholder="All event kinds"
+                clearable
+                data={kinds}
+                value={kind}
+                onChange={(v) => {
+                  setKind(v);
+                  setOffset(0);
+                }}
+              />
+            </Group>
+            {events.isPending ? (
+              <Loader size="sm" />
+            ) : (
+              events.data?.total === 0 && (
+                <Text size="sm" c="dimmed">
+                  No published events match this view. A configured hook does
+                  not prove delivery.
+                </Text>
+              )
+            )}
+            {!events.error &&
+              !policy.error &&
+              events.data?.items.map((item) => (
+                <Card withBorder padding="sm" key={item.receipt.event_id}>
+                  <Stack gap="xs">
+                    <Group justify="space-between">
+                      <Text fw={600}>
+                        {item.event ? label(item.event.kind) : "Removed event"}{" "}
+                        · {label(item.host)}
+                      </Text>
+                      <Badge
+                        color={
+                          item.receipt.state === "accepted" ? "teal" : "gray"
+                        }
+                      >
+                        {item.receipt.state}
+                      </Badge>
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      {item.event
+                        ? time(item.event.captured_at)
+                        : time(item.receipt.received_at)}{" "}
+                      · host {item.host_version}
+                    </Text>
+                    <Text size="sm">
+                      Scope:{" "}
+                      {!item.selection.repository_ids?.length &&
+                      !item.selection.area_ids?.length &&
+                      !item.selection.environment_id
+                        ? "Brain-wide"
+                        : `${item.selection.repository_ids?.length ?? 0} repositories · ${item.selection.area_ids?.length ?? 0} areas${item.selection.environment_id ? " · selected environment" : ""}`}
+                    </Text>
+                    {item.managed_call_id && (
+                      <Text size="xs">Managed call {item.managed_call_id}</Text>
+                    )}
+                    {item.event && (
+                      <Text size="sm">
+                        {label(item.event.host_event)} ·{" "}
+                        {label(item.event.outcome)}
+                        {item.event.tool_name
+                          ? ` · ${item.event.tool_name}`
+                          : ""}
+                      </Text>
+                    )}
+                    {!!item.event?.coverage.length && (
+                      <Text size="xs" c="dimmed">
+                        Coverage: {item.event.coverage.map(label).join(" · ")}
+                      </Text>
+                    )}
+                    {item.receipt.expires_at && (
+                      <Text size="xs">
+                        Content deadline: {time(item.receipt.expires_at)}
+                      </Text>
+                    )}
+                    {item.source_available &&
+                    item.receipt.source_id &&
+                    item.receipt.source_version_id ? (
+                      <Button
+                        variant="subtle"
+                        size="compact-sm"
+                        onClick={() => setViewing(item)}
+                      >
+                        View captured source
+                      </Button>
+                    ) : (
+                      <Text size="xs" c="dimmed">
+                        No retained source text
+                      </Text>
+                    )}
+                  </Stack>
+                </Card>
+              ))}
+            {events.data && (
+              <Pages
+                offset={offset}
+                total={events.data.total}
+                change={setOffset}
+              />
+            )}
+          </>
         )}
-        {devices.data?.items.map((item) => (
-          <Companion key={item.device_id} item={item} />
-        ))}
-        {devices.data && (
-          <Pages
-            offset={deviceOffset}
-            total={devices.data.total}
-            change={setDeviceOffset}
-          />
-        )}
-        <Group justify="space-between">
-          <Title order={3}>Published activity</Title>
-          <Select
-            aria-label="Capture event kind"
-            placeholder="All event kinds"
-            clearable
-            data={kinds}
-            value={kind}
-            onChange={(v) => {
-              setKind(v);
-              setOffset(0);
-            }}
-          />
-        </Group>
-        {events.isPending ? (
-          <Loader size="sm" />
-        ) : (
-          events.data?.total === 0 && (
-            <Text size="sm" c="dimmed">
-              No published events match this view. A configured hook does not
-              prove delivery.
-            </Text>
-          )
-        )}
-        {events.data?.items.map((item) => (
-          <Card withBorder padding="sm" key={item.receipt.event_id}>
-            <Stack gap="xs">
-              <Group justify="space-between">
-                <Text fw={600}>
-                  {item.event ? label(item.event.kind) : "Removed event"} ·{" "}
-                  {label(item.host)}
-                </Text>
-                <Badge
-                  color={item.receipt.state === "accepted" ? "teal" : "gray"}
-                >
-                  {item.receipt.state}
-                </Badge>
-              </Group>
-              <Text size="xs" c="dimmed">
-                {item.event
-                  ? time(item.event.captured_at)
-                  : time(item.receipt.received_at)}{" "}
-                · host {item.host_version}
-              </Text>
-              <Text size="sm">
-                Scope:{" "}
-                {!item.selection.repository_ids?.length &&
-                !item.selection.area_ids?.length &&
-                !item.selection.environment_id
-                  ? "Brain-wide"
-                  : `${item.selection.repository_ids?.length ?? 0} repositories · ${item.selection.area_ids?.length ?? 0} areas${item.selection.environment_id ? " · selected environment" : ""}`}
-              </Text>
-              {item.managed_call_id && (
-                <Text size="xs">Managed call {item.managed_call_id}</Text>
-              )}
-              {item.event && (
-                <Text size="sm">
-                  {label(item.event.host_event)} · {label(item.event.outcome)}
-                  {item.event.tool_name ? ` · ${item.event.tool_name}` : ""}
-                </Text>
-              )}
-              {!!item.event?.coverage.length && (
-                <Text size="xs" c="dimmed">
-                  Coverage: {item.event.coverage.map(label).join(" · ")}
-                </Text>
-              )}
-              {item.receipt.expires_at && (
-                <Text size="xs">
-                  Content deadline: {time(item.receipt.expires_at)}
-                </Text>
-              )}
-              {item.source_available &&
-              item.receipt.source_id &&
-              item.receipt.source_version_id ? (
-                <Button
-                  variant="subtle"
-                  size="compact-sm"
-                  onClick={() => setViewing(item)}
-                >
-                  View captured source
-                </Button>
-              ) : (
-                <Text size="xs" c="dimmed">
-                  No retained source text
-                </Text>
-              )}
-            </Stack>
-          </Card>
-        ))}
-        {events.data && (
-          <Pages offset={offset} total={events.data.total} change={setOffset} />
-        )}
-        {editing && policy.data && (
+        {editing && policy.data && !policy.error && (
           <PolicyEditor
             brain={brain.id}
             settings={policy.data}
@@ -634,6 +718,6 @@ export function CapturePanel({ brain }: { brain: Brain }) {
           />
         )}
       </Stack>
-    </Card>
+    </section>
   );
 }

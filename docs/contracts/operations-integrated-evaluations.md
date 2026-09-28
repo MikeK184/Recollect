@@ -2,6 +2,29 @@
 
 Status: accepted
 
+## Public retrieval benchmark (2026-09-28)
+
+The user requested benchmarks informed by Cognee and Atlas. A separate opt-in
+HotpotQA retrieval harness may use the first 50 validation distractor rows,
+frozen by SHA-256 before running, with every supplied context paragraph pooled
+into one isolated Brain. Import public paragraphs only; questions, answers and
+supporting-fact labels remain outside memory. Use canonical product ingestion
+and recall with the same ten-item/16-KiB budget per query. Report supporting
+document recall, complete supporting-document coverage, precision, latency and
+index readiness. This is pooled-corpus evidence retrieval, not official HotpotQA
+answer EM/F1, a BEAM memory score or a head-to-head Cognee comparison.
+
+Keep lexical-only and semantic-enabled lanes named explicitly, recording model
+usage and failures without discarding misses. Begin with the model-free baseline;
+an opt-in semantic comparison may use the installed embedding model, an isolated
+500,000-token daily limit and at most two concurrent calls, without extraction,
+learning, generation or LLM judging. Persist request identities before dispatch
+and stop uncertain attempts instead of resending. Use identical questions and
+budgets without changing the retriever after seeing the gold labels. Do not
+insert synthetic claims or tune the index for individual questions. Atlas lifecycle
+invariants are separate production-handler positive/negative tests. Preserve
+normal Brains and credentials by using the owned ephemeral proof database.
+
 ## Source
 
 The user's full-product goal authorizes this final slice and its routine acceptance

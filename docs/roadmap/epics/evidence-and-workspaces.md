@@ -1,6 +1,6 @@
 # Evidence, Collections and Workspaces
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -10,6 +10,8 @@ repository snapshots, and capture permitted session evidence durably.
 
 ## Governing Sources
 
+- [Desktop contract](../../contracts/desktop-experience.md)
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
 - [Collections contract](../../contracts/evidence-collections.md)
 - [Workspace scope contract](../../contracts/evidence-workspace-scope.md)
 - [Committed publication decision](../../adr/0004-committed-repository-publication.md)
@@ -69,6 +71,7 @@ it does not place a selector in the customer workspace.
 | `evidence-workspace-scope` | shipped | contract-backed | pack | Delivered nearest/nested discovery, private checkout catalogue, shared repository identities and independent immutable task/subagent operation scope with CLI/browser proof |
 | `evidence-repository-publication` | shipped | adr-backed, contract-backed | pack | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real SWEG proof |
 | `evidence-session-capture` | shipped | contract-backed | pack | Delivered actual Codex/Claude hooks, native setup/launch and durable delivery, original-scope learning, browser coverage/source controls and local/central retention with replay proof |
+| `evidence-desktop-workflows` | in-progress | adr-backed, contract-backed | pack | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
 
 ## Slice Dependencies
 
@@ -78,6 +81,7 @@ it does not place a selector in the customer workspace.
 | `evidence-workspace-scope` | `evidence-collections`, `platform-device-pairing` |
 | `evidence-repository-publication` | `evidence-workspace-scope` |
 | `evidence-session-capture` | `evidence-workspace-scope`, `memory-retention-and-erasure` |
+| `evidence-desktop-workflows` | `platform-desktop-shell` |
 
 ## Completion Criteria
 
@@ -92,3 +96,12 @@ it does not place a selector in the customer workspace.
 - Capture survives interruption/retry without false event attribution or secret
   persistence. The 30-day default, Brain override and supporting-excerpt policy
   work locally and centrally; erasure fences queued publication.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the verified final local image separately
+from remaining current-code domain and integrated acceptance. The
+[desktop guide](../../runbooks/desktop-experience.md) documents the current function
+locations. Product/proof slices stay in progress until their required checks pass;
+prior shipped domain records remain historical evidence rather than redesign proof.

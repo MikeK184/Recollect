@@ -1,6 +1,6 @@
 # Hybrid Retrieval and Investigation
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -10,6 +10,9 @@ engineers an investigation UI with explicit disagreement and strict modes.
 
 ## Governing Sources
 
+- [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
+- [Temporary answers](../../contracts/retrieval-answers.md)
+- [Desktop contract](../../contracts/desktop-experience.md)
 - [Canonical exact and lexical recall](../../contracts/retrieval-exact-and-lexical.md)
 - [Governed semantic representations and recall](../../contracts/retrieval-semantic.md)
 - [Scoped graph fusion and source-aware context](../../contracts/retrieval-graph-fusion.md)
@@ -63,6 +66,7 @@ host bridge is integrated.
 | `retrieval-semantic` | shipped | contract-backed | pack | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
 | `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
 | `retrieval-investigation-ui` | shipped | contract-backed | pack | Desktop result/disagreement/source views, frozen history, exact evidence and scoped native graph links; expiry/access/epoch clearing and actual retained SWEG proof |
+| `retrieval-ask-experience` | in-progress | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
 
 ## Slice Dependencies
 
@@ -72,6 +76,7 @@ host bridge is integrated.
 | `retrieval-semantic` | `retrieval-exact-and-lexical`, `memory-provider-policy-and-learning` |
 | `retrieval-graph-fusion` | `retrieval-semantic`, `graph-cross-repository-views` |
 | `retrieval-investigation-ui` | `retrieval-graph-fusion`, `memory-procedures-and-handovers` |
+| `retrieval-ask-experience` | `desktop-experience-contracts`, `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows` |
 
 ## Completion Criteria
 
@@ -86,3 +91,12 @@ host bridge is integrated.
   are reported alongside latency and cost, without a superiority claim by default.
 - Host-facing retrieval can react to scope changes and preserve concurrent task
   isolation. End-to-end host proof is completed with the MCP epic.
+
+## Desktop implementation evidence, 2026-09-26
+
+The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
+records implemented routes/assets and the verified final local image separately
+from remaining current-code domain and integrated acceptance. The
+[desktop guide](../../runbooks/desktop-experience.md) documents the current function
+locations. Product/proof slices stay in progress until their required checks pass;
+prior shipped domain records remain historical evidence rather than redesign proof.

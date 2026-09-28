@@ -7,7 +7,172 @@ Read this file first, then `AGENTS.md`, `docs/README.md`, the accepted foundatio
 the relevant contracts and the active execution pack. This is a dated handoff,
 not a declaration that unfinished work is shipped.
 
-## Current continuation — 2026-09-26
+## Current SWEG MCP repair — 2026-09-28
+
+Image **385793c54044** is locally deployed at **http://127.0.0.1:8787**.
+The reported SWEG Codex failure was a missing credential handoff: its access
+token had been placed in `bearer_token_env_var`, which expects a variable name.
+Only SWEG's Recollect credential setting was changed, to Codex's standard HTTP
+header helper backed by macOS Keychain. The secret is no longer in that config.
+No Recollect launcher, global host config or shell-profile change is required.
+
+**Installed Codex 0.157.1 completed `workspace.list` from the actual SWEG
+directory and returned one workspace and 79 repositories**, with the token
+environment variable absent. A loopback synthetic model selected the read; no
+customer content was sent to an external model. The user's existing failed
+Codex process was not interrupted: restart/resume it in a fresh process to load
+the repaired configuration. The UI now gives concrete Keychain or hidden-input
+environment instructions. See [the repair evidence](docs/mappings/mcp-auth-repair-2026-09-28.md).
+
+Three focused browser cases, frontend checks and 32 governance tests passed.
+Live readiness passed and recorded before/after Brain IDs and memory counts
+are equal. All seven Brains remain. The six desktop acceptance packs, OAuth and
+plugin packaging remain open/undelivered. Work remains local and uncommitted.
+
+## Earlier MCP and benchmark handover — 2026-09-28
+
+Open **http://127.0.0.1:8787**. Image **56202feeeabb** is locally deployed.
+**Connections → Coding agents** now provides ordinary HTTP MCP configuration
+for Codex/Claude Code and a revocable access token. The companion is optional
+for local discovery/session capture. OAuth browser login and a published plugin
+are still not implemented; Codex's OpenAI login does not authenticate Recollect.
+
+**Connections → MCP servers → Add connection** now accepts a name and URL,
+discovers tools and creates the connector/connection. Context7 is configured
+without an API key in **Autonomous session reconciliation demo**. Live metadata
+discovery found both tools. An actual isolated runtime documentation probe was
+quota-blocked by Context7; do not claim useful anonymous documentation access.
+Saving did not grant profile Use permissions or install software.
+
+The frozen public HotpotQA retrieval test ran 50 questions against 491 pooled
+documents. Exact+lexical found 5/100 supporting documents; adding semantic search
+found 100/100, with all support present for 50/50 questions. Median latency was
+239 ms versus 1,091 ms. Semantic indexing/querying used 97 embedding calls and
+78,323 tokens; no learning, generation or judge calls. These are small document-
+retrieval results, not an official HotpotQA answer score or a Cognee/BEAM ranking.
+The [benchmark mapping](docs/mappings/public-memory-benchmark-2026-09-28.md)
+records methodology, limits, reports and lifecycle proof.
+
+Six focused MCP browser cases, the owner/member/device authority check, three
+correction/access/erasure production-handler cases, frontend checks and Rust
+clippy/format checks passed. Live readiness passed. Equal before/after inventory
+preserves seven Brains, sixteen sources, seventeen versions, eleven claims,
+seventeen claim revisions and recorded grant/policy digests. This snapshot
+supersedes the counts in the earlier handoff below. Owned proof databases and
+private artifacts were reconciled and removed; public reports remain in `.cache`.
+
+The [MCP proof](docs/mappings/mcp-direct-connections-2026-09-28.md) distinguishes
+configured, metadata/protocol verified and useful documentation blocked. These
+two slices are closed; the six earlier desktop/combined acceptance packs remain
+open. Everything is local and uncommitted; nothing was pushed or released.
+
+## Earlier managed-memory handover — 2026-09-28
+
+Open **http://127.0.0.1:8787**. The user's agent-first correction is implemented
+and locally deployed in image **0dce46b9b9e3**. The primary sidebar has five links;
+Connections starts with Codex/Claude Code setup; Ask/search and manual memory
+entry are simple; ordinary settings describe automatic behavior with detailed
+overrides collapsed.
+
+New browser-created Brains include bounded managed defaults for learning,
+semantic indexing, Ask and supported capture. Existing Brains have a single
+**Enable autonomous memory** action in Ask or **Settings → AI & automation**.
+Adoption preserves existing exclusions and retention. MCP servers can be
+registered by the installation owner from the empty catalogue; registration
+requires a valid Recollect connector manifest and does not install/run it.
+Tool groups are the existing independent-grant profiles under a clearer label.
+
+Readiness passed. Parsed before/after inventories are equal: all seven Brains,
+sixteen sources, seventeen versions, ten claims, fourteen revisions and recorded
+grant/policy digests. No existing Brain was bulk-enabled. New setup API/browser
+checks, the controlled autonomous lifecycle proof, provider/MCP authority,
+Ask/Claims, navigation/accessibility, retention and investigation checks passed
+across documented runs. Final Capture/Recall reruns passed; 26 distinct browser
+cases passed in total. The managed-experience slice is closed; use
+the [dated evidence](docs/mappings/managed-memory-experience-2026-09-28.md) for
+the exact results and initial failures.
+
+The six earlier desktop/combined acceptance packs still own remaining graph,
+publication, activity, evidence/claims, real-provider learning UI and combined
+question → citation → correction → recall sign-off. Do not treat this focused
+correction as complete product acceptance. Changes remain local and uncommitted;
+nothing was pushed or released.
+
+## Earlier desktop handover — 2026-09-26
+
+Open **http://127.0.0.1:8787**. The final Atlas-inspired desktop implementation is
+running from `recollect-dev:local`, image manifest-list prefix **5126dccc**, with
+the contextual sidebar, reusable light theme, pinned Newsreader/Manrope/DM Mono
+fonts and original SVG Recollect identity. Use `./scripts/stack.sh up`, `stop`,
+`status`, `logs`, or `up --build`; sign-in details remain in ignored `.env`.
+
+The final deployment recreated only API/worker, both healthy with readiness true.
+Parsed `.cache/desktop-upgrade/before.json` and `final-inventory.json` are equal:
+seven Brain identities, sixteen sources, seventeen versions, ten claims,
+fourteen revisions and the recorded Brain/group grant, model-policy/head,
+retention and capture digests. Existing answering permissions were not enabled
+for demonstration. The final live graph shows separated labels; browser checking
+found no JavaScript errors, only the Cytoscape wheel-sensitivity advisory.
+
+The desktop shell and MCP setup packs are closed. Seven desktop cases passed
+across six successful cases plus a targeted corrected font-fallback rerun; real
+owned-Dex identity/invitation tests passed two, Ask five, MCP setup three and
+runtime three. Workspace clippy/unit, assets and backend Ask/provider evidence
+are recorded in the [dated mapping](docs/mappings/desktop-experience-implementation-2026-09-26.md).
+This was not one uninterrupted all-green suite: initial accessibility issues,
+a font-extension test mistake, earlier selector/timing failures and one paid
+answer-quality rubric mismatch have their fixes/reruns preserved there.
+
+**Remaining verification:** six feature/integrated packs stay active. Finish the
+corrected Recall, Graph/analytics, Publication, Retention, Operations and
+Evidence/Claims runs, the relocated model-policy/autonomous-learning UI checks,
+and the integrated question → citation → correction → subsequent recall journey.
+The [remaining list](docs/mappings/desktop-experience-implementation-2026-09-26.md#remaining-acceptance-and-operating-boundary)
+is the current checklist; earlier original-product completion below does not
+close this later desktop assignment. Do not archive unverified criteria.
+
+A transient Neo4j startup window interrupted cleanup/setup for two UI fixtures.
+Dependency health recovered; both owned databases and attributable graph/artifact/
+journal state were reconciled and removed. Migration preflight passed at 20:29 UTC.
+This required no product fix and did not remove user Brain data. Keep live data
+separate from disposable fixtures. Version is N/A and these changes are
+uncommitted; no new commit, push or external deployment was performed.
+
+See the [desktop guide](docs/runbooks/desktop-experience.md) for the function tree,
+shared component gallery and operating/recovery guidance.
+
+## Root Compose conversion record — earlier on 2026-09-26
+
+The user requested one Compose stack for the normal local app. The root
+`compose.yaml` now runs UI/API, worker, PostgreSQL and Neo4j in the **recollect**
+group, with a successful one-shot migration. Open **http://127.0.0.1:8787**;
+owner login remains in ignored `.env`.
+
+Use `./scripts/stack.sh up`, `stop`, `status` and `logs`. Use
+`./scripts/stack.sh up --build` after backend/UI changes. The existing PostgreSQL
+volume, graph mounts, artifacts and journals are preserved. Native PIDs 9749/9750
+were gracefully retired after ownership verification; do not restart them beside
+the container writers. Native `./scripts/dev.sh` remains an alternative after
+stopping the container stack, and Ctrl+C drains its API and worker.
+
+Actual Chrome owner login/dashboard/diagnostics, readiness, migration-failure
+gating and complete stop/start passed. All seven Brain IDs, the owner account,
+26 migrations, 33 existing model-request rows and MCP counts are preserved,
+with no new model call. The user's subsequent cleanup request removed 50 unused
+proof containers, their 49 exclusive data volumes, nine networks and ten saved
+fixture directories. Only the normal four services run, plus the retained
+successful migration container. Cognee and external Vault are unchanged.
+Earlier proof installation references below are historical; their deleted data
+and saved configuration cannot be restarted without recreating the fixtures.
+See [the runbook](docs/runbooks/installation.md),
+[evidence](docs/mappings/root-compose-2026-09-26.md) and private
+`.cache/root-compose-20260926/` reports. This follow-up is local and uncommitted;
+no new release or push was requested.
+
+## Product completion record — 2026-09-26
+
+Runtime references below describe the state before the root Compose follow-up.
+Use the current startup section above for operations.
 
 Latest repository decision: Apache-2.0 is selected, with a simplified root README.
 Keep GitHub private. Public visibility and the proposed private-archive rename
