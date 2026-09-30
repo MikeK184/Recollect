@@ -18,6 +18,9 @@ hidden-prompt/export/launch sequence and distinguish variable names from values.
 It inherits the account's current
 Brain grants, as existing device credentials do. A configured endpoint selects
 one Brain; this is not a claim that the token is restricted to that Brain.
+The checked-in local plugin source under `plugins/recollect` carries memory
+skills and setup guidance; its wire behavior is governed by
+[plugin direct auth](mcp-plugin-direct-auth.md).
 
 The companion is optional for local repository discovery and session hooks.
 Direct MCP can recall and deliberately contribute memory without a companion,

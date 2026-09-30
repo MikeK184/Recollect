@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "servers": {
+      "recollect": {
+        "type": "remote",
+        "url": "$RECOLLECT_URL/api/brains/$BRAIN_ID/mcp/agent",
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer {env:RECOLLECT_MCP_TOKEN}"
+        }
+      }
+    }
+  }
+}

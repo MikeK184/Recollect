@@ -880,8 +880,8 @@ export function RecallPanel({
                 }
               >
                 {answer.status === "no_match"
-                  ? "Try a different phrase or exact identifier."
-                  : "No result fits the selected scope, trust and context budget. Inspect the qualifications before changing these filters."}
+                  ? "Try a different phrase or exact identifier; Search matches recorded assertion text."
+                  : "No result fits scope/trust/budget. Check qualifications, widen scope, or add evidence and let autonomous learning process it."}
               </Alert>
             )}
             <RecallResults

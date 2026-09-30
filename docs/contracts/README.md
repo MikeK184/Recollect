@@ -10,6 +10,10 @@ support decisions but do not themselves authorize behavior.
 
 [Managed autonomous memory experience](memory-managed-experience.md) governs the 2026-09-28 agent-first setup correction.
 
+[Tiered desktop surface](desktop-knowledge-surface.md) and
+[Irreversible Brain deletion](platform-brain-deletion.md) govern the 2026-09-29
+knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
+
 ## Index
 
 - [Repository governance](repository-governance.md)
@@ -18,6 +22,7 @@ support decisions but do not themselves authorize behavior.
 - [Durable commands and workers](platform-durable-work.md)
 - [Team identity and effective access](platform-team-access.md)
 - [Companion pairing and device authority](platform-device-pairing.md)
+- [Irreversible Brain deletion](platform-brain-deletion.md)
 - [Collections and retained evidence](evidence-collections.md)
 - [Workspace discovery and immutable task scope](evidence-workspace-scope.md)
 - [Repository snapshots and revision manifests](evidence-repository-publication.md)
@@ -38,12 +43,15 @@ support decisions but do not themselves authorize behavior.
 - [Scoped graph retrieval and source-aware context](retrieval-graph-fusion.md)
 - [Desktop memory investigation](retrieval-investigation-ui.md)
 - [Contextual desktop experience](desktop-experience.md)
+- [Tiered desktop knowledge, Ask, wiring and assurance surface](desktop-knowledge-surface.md)
 - [Evidence-backed temporary answers](retrieval-answers.md)
 - [Approved MCP catalogue and execution profiles](mcp-catalogue-and-profiles.md)
 - [Managed MCP calls and credentials](mcp-runtime-and-credentials.md)
 - [Vault credentials and private runners](mcp-vault-and-private-runners.md)
 - [Agent memory and workspace MCP tools](mcp-memory-and-workspace-tools.md)
+- [Plugin/MCP direct user authentication](mcp-plugin-direct-auth.md)
 - [Automatic managed MCP observation capture](mcp-observation-capture.md)
 - [Personal/shared installation and diagnostics](operations-local-and-shared.md)
 - [Encrypted backup, upgrade and recovery](operations-recovery-drills.md)
 - [Integrated product acceptance and measured limits](operations-integrated-evaluations.md)
+- [LongMemEval answer-level benchmark protocol](operations-longmemeval-protocol.md) (proposed; not governing until accepted with user cost approval)

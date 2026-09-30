@@ -58,6 +58,35 @@ benchmark-specific prompts and cannot be compared to this score.
 Correction, re-ingestion, erasure and access isolation are separately verified by
 the production-handler tests and the [evaluation contract](../contracts/operations-integrated-evaluations.md).
 
+## Atlas lifecycle proof
+
+The benchmarks page's own two specified tests run as a deterministic, judge-free
+pass/fail matrix through the product API in a separate owned proof database:
+
+```sh
+RECOLLECT_ATLAS_LIFECYCLE=1 RECOLLECT_TEST_MODEL_WORKER=1 \
+  ./scripts/test-ui.sh tests/atlas-lifecycle.spec.ts
+```
+
+`web/tests/atlas-lifecycle.spec.ts` covers §6 deletion steps 1–10 (write →
+retrieve → erase → probe all four recall modes → re-ingest the original source
+material → background sweep → derived-store leak probes → audit) and the §7
+contradiction matrix (replacement, polarity flip, retraction, partial
+supersession, bounded validity, equal-weight contradiction scored on
+current-delivery, hygiene, durability, history and derived reach, plus
+adversarial re-entry). It requires zero model calls and asserts the Brain's
+usage stays at 0. Erased records answer as value-free tombstones by design, so
+the probes accept tombstone reads rather than 404s; untested paths (propagated
+copies, semantic/handover stores without a model) are declared `N/A` with a
+reason. Reports land in `.cache/atlas-lifecycle-<run-id>/report.json`.
+
+The [2026-09-29 result](../mappings/atlas-lifecycle-proof-2026-09-29.md)
+records the 40-cell green matrix, the measured write-to-readable lag and recall
+latencies, the digit-for-digit HotpotQA reproduction of the 2026-09-28 numbers,
+and the harness calibration record. An answer-level LongMemEval run is governed
+by the separate [proposed protocol](../contracts/operations-longmemeval-protocol.md)
+and requires explicit user cost approval before dispatch.
+
 The [2026-09-28 result](../mappings/public-memory-benchmark-2026-09-28.md)
 records the paired lexical/semantic measurement, provider usage, lifecycle proof
 and comparison limits.

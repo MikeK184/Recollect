@@ -1,0 +1,167 @@
+/* Graph view chrome: the canvas owns the Knowledge surface region. Controls
+   live in compact chrome rows and overlays attached to the canvas instead of
+   stacked forms above it. Presentation only; every control stays reachable. */
+
+.knowledge-surface[data-knowledge-view="graph"] {
+  height: calc(100vh - 200px);
+  gap: var(--mantine-spacing-md);
+}
+/* The shared inspector region stays present and visible in the graph view; it
+   only tightens its placeholder padding so the canvas keeps the dominant
+   vertical share. */
+.knowledge-surface[data-knowledge-view="graph"] .knowledge-inspector {
+  padding: var(--mantine-spacing-sm);
+}
+/* The Knowledge views lead with content; the graph view keeps a tighter page
+   heading so the canvas region stays dominant at the tested widths. */
+.knowledge-surface[data-knowledge-view="graph"] .page-heading {
+  margin-bottom: var(--mantine-spacing-sm);
+}
+.knowledge-surface[data-knowledge-view="graph"] .knowledge-view-region {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.graph-surface {
+  flex: 1;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+.graph-surface .feature-toolbar {
+  margin-bottom: var(--mantine-spacing-xs);
+}
+.graph-surface .feature-scope {
+  margin-bottom: var(--mantine-spacing-xs);
+}
+/* One shared shape for every canvas chrome row so tests can measure the
+   combined chrome height against the canvas region. */
+.graph-chrome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-xs);
+  min-width: 0;
+}
+.graph-surface .empty-state {
+  flex: 1;
+  min-height: 0;
+}
+.graph-stage-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.knowledge-surface[data-knowledge-view="graph"] .graph-explorer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.knowledge-surface[data-knowledge-view="graph"] .graph-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.knowledge-surface[data-knowledge-view="graph"] .graph-canvas {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+/* Canvas chrome that floats on the stage edge; it never pushes the canvas
+   down, and each control keeps its own surface background. */
+.graph-stage-overlay {
+  position: absolute;
+  top: var(--mantine-spacing-sm);
+  left: var(--mantine-spacing-sm);
+  right: var(--mantine-spacing-sm);
+  z-index: 1;
+  pointer-events: none;
+}
+.graph-stage-overlay > * {
+  pointer-events: auto;
+}
+.graph-stage-overlay .graph-entity-search {
+  width: 16rem;
+  flex: 0 1 auto;
+}
+.graph-list-toolbar {
+  padding: var(--mantine-spacing-sm);
+}
+/* Layout, fit, zoom and focus float on the canvas corner; they never reserve
+   a row below it, and keep their own surface so labels stay readable. */
+.graph-canvas-controls {
+  position: absolute;
+  right: var(--mantine-spacing-sm);
+  bottom: var(--mantine-spacing-sm);
+  z-index: 1;
+  padding: 4px var(--mantine-spacing-xs);
+  border: 1px solid var(--rc-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--rc-surface);
+}
+.graph-canvas-controls .mantine-InputWrapper-root {
+  width: 10rem;
+}
+.graph-explorer-status {
+  padding-top: 4px;
+}
+.graph-stage-overlay .graph-relationship-search {
+  width: 14rem;
+  flex: 0 1 auto;
+}
+.graph-display-note {
+  margin-left: auto;
+  text-align: right;
+}
+/* The keyboard-accessible list alternative fills the stage area and scrolls
+   inside it instead of stretching the page. */
+.graph-list-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-sm);
+}
+.graph-list-view .graph-node-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+}
+/* Coverage and eligibility limitations collapse to one persistent indicator
+   that expands on demand; it stays visible while collapsed. */
+.graph-coverage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  min-width: 0;
+}
+.graph-coverage-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--rc-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--rc-surface);
+  color: var(--rc-ink);
+  font-size: var(--mantine-font-size-xs);
+  cursor: pointer;
+}
+.graph-coverage-toggle:hover,
+.graph-coverage-toggle:focus-visible {
+  border-color: var(--rc-accent);
+  outline: none;
+}
+.graph-coverage-reasons {
+  color: var(--rc-muted);
+  font-size: var(--mantine-font-size-xs);
+  overflow-wrap: anywhere;
+}

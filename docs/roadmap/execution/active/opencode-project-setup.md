@@ -20,15 +20,20 @@ Work type: governance
 ## Scope
 
 - In scope: OpenCode v2 project config, six equivalent roles, shared instructions
-  and skills, Context7, existing CodeGraph access, startup and verification guide.
-- Out of scope: Home configuration, extra MCP servers, skill duplication,
+  and skills, Context7, secret-free chrome-devtools MCP for browser control,
+  existing CodeGraph access, startup and verification guide.
+- Out of scope: Home configuration, further MCP servers beyond Context7 and
+  chrome-devtools, skill duplication,
   new automatic delegation, product runtime and reference checkout changes.
-- Blockers: None; user explicitly authorized host parity on 2026-09-28.
+- Blockers: None; user explicitly authorized host parity on 2026-09-28 and
+  OpenCode chrome-devtools browser control on 2026-09-29.
 
 ## Surface and Interface Changes
 
 - Interfaces: Root `opencode.json`; `.opencode/agents/*.md`; `opencode` from the
-  repository. Native v2 `mcp.servers` configuration, local stdio Context7.
+  repository. Native v2 `mcp.servers` configuration, local stdio Context7 and
+  secret-free local stdio chrome-devtools (`npx -y chrome-devtools-mcp@latest`
+  with `--isolated` and `--no-usage-statistics`).
 - Storage: N/A; no product persistence change.
 - Ownership: Developer tooling. Codex definitions remain supported and unchanged.
 
@@ -57,8 +62,11 @@ Work type: governance
 
 ## Integrations and Runtime Inputs
 
-- Providers: Installed OpenCode v2.0.18, Node/npx, existing Context7 stdio package.
+- Providers: Installed OpenCode v2.0.19, Node/npx, existing Context7 stdio package,
+  `chrome-devtools-mcp@latest` stdio package, and local Chrome for browser control.
 - Environment: `CONTEXT7_API_KEY` may be inherited by the MCP subprocess.
+  chrome-devtools needs no project secret; `CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS`
+  may be set locally to silence update checks without changing checked-in files.
 - Secrets: No secret material in checked-in files or proof output.
 - Failure handling: Use the host's normal MCP timeouts and reconnect behaviour;
   record actual tool-call failure rather than claiming config as connectivity.
@@ -67,15 +75,18 @@ Work type: governance
 
 - Automated: JSON/TOML/Markdown parity checks, installed-host config/agent/skill
   discovery from root and nested directory, read-only Context7 lookup,
+  chrome-devtools discovery plus a read-only `list_pages` call,
   `./scripts/validate.sh`, and `git diff --check`.
 - Manual: Document startup and explicit specialist/skill use.
 - Acceptance: Six role definitions and two shared skills are discoverable, root
-  instructions are available, and Context7 completes a read-only call through
-  OpenCode. Codex setup and unrelated dirty work remain intact.
+  instructions are available, Context7 completes a read-only call through
+  OpenCode, and chrome-devtools connects with a successful `list_pages` call.
+  Codex setup and unrelated dirty work remain intact.
 
 ## Closeout
 
-- Planned: OpenCode parity for the existing repository developer setup.
+- Planned: OpenCode parity for the existing repository developer setup plus
+  secret-free chrome-devtools browser control.
 - Shipped: Pending installed-host verification.
 - Not shipped: Product changes, global settings, commit, push or deployment.
 - New blockers: None.

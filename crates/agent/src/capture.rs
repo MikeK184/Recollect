@@ -607,6 +607,24 @@ impl Inbox {
         tx.commit()?;
         Ok(count)
     }
+    /// Brain-deletion fence: every inbox event for this Brain is removed and
+    /// fenced by identity so a replayed hook cannot resurrect it. Only
+    /// product-owned inbox rows are touched.
+    pub fn apply_deletion(&mut self, brain: Uuid) -> Result<usize> {
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let count = tx.execute(
+            "UPDATE events SET body=NULL,bytes=0,state='removed',error_code=NULL WHERE binding IN (SELECT id FROM bindings WHERE brain=?1) AND state<>'removed'",
+            [brain.to_string()],
+        )?;
+        tx.execute(
+            "INSERT OR IGNORE INTO fences(brain,event,binding,native_key) SELECT ?1,e.id,e.binding,e.native_key FROM events e WHERE e.binding IN (SELECT id FROM bindings WHERE brain=?1)",
+            [brain.to_string()],
+        )?;
+        tx.commit()?;
+        Ok(count)
+    }
     pub fn failed_delivery(
         &mut self,
         id: Uuid,
@@ -1071,5 +1089,44 @@ mod tests {
         drop(inbox);
         fixture.assert_absent("must not replace queued content");
         fixture.assert_absent("stale permission must not retain this");
+    }
+    #[test]
+    fn inbox_brain_deletion_fence_removes_payloads_and_blocks_replayed_hooks() {
+        let fixture = Fixture::new();
+        let now = Utc::now();
+        let device = Uuid::new_v4();
+        let config = saved(device, now);
+        let mut inbox = Inbox::open(&fixture.0, ENDPOINT, device).unwrap();
+        inbox.remember(&config).unwrap();
+        capture(
+            &mut inbox,
+            config.binding.id,
+            &prompt("t1", "deletion fence payload one"),
+            now,
+        );
+        capture(
+            &mut inbox,
+            config.binding.id,
+            &prompt("t2", "deletion fence payload two"),
+            now,
+        );
+        assert_eq!(inbox.status().unwrap().pending, 2);
+        let removed = inbox.apply_deletion(config.binding.brain_id).unwrap();
+        assert_eq!(removed, 2);
+        assert!(inbox.pending(now).unwrap().is_empty());
+        assert_eq!(inbox.status().unwrap().removed, 2);
+        // A replayed hook for the fenced Brain is refused.
+        let replay = inbox.capture(
+            config.binding.id,
+            &serde_json::to_vec(&prompt("t1", "deletion fence payload one")).unwrap(),
+            &[],
+            now + Duration::seconds(5),
+        );
+        assert!(replay.is_err());
+        // The fence is idempotent: a second pass removes nothing new.
+        assert_eq!(inbox.apply_deletion(config.binding.brain_id).unwrap(), 0);
+        drop(inbox);
+        fixture.assert_absent("deletion fence payload one");
+        fixture.assert_absent("deletion fence payload two");
     }
 }

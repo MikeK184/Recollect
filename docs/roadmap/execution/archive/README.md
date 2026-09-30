@@ -7,7 +7,10 @@ local capability does not establish a deployed or published service.
 | --- | --- |
 | [mcp-direct-auth-repair.md](mcp-direct-auth-repair.md) | shipped |
 | [mcp-direct-connections.md](mcp-direct-connections.md) | shipped |
+| [mcp-plugin-direct-auth.md](mcp-plugin-direct-auth.md) | shipped |
+| [mcp-successor-cleanup.md](mcp-successor-cleanup.md) | shipped |
 | [operations-public-benchmark.md](operations-public-benchmark.md) | shipped |
+| [operations-atlas-lifecycle-proof.md](operations-atlas-lifecycle-proof.md) | shipped |
 | [memory-managed-experience.md](memory-managed-experience.md) | shipped |
 | [platform-desktop-shell.md](platform-desktop-shell.md) | shipped |
 | [mcp-desktop-setup.md](mcp-desktop-setup.md) | shipped |

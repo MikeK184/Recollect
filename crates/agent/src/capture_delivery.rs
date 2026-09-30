@@ -23,6 +23,9 @@ pub struct DrainReport {
     pub denied: usize,
     pub failures: Vec<(Uuid, &'static str)>,
     pub inbox: InboxStatus,
+    /// Applied Brain-deletion fences; reported separately from central
+    /// completion so offline companion copies stay visibly incomplete.
+    pub deletion_fences: Vec<privacy::DeletionFence>,
 }
 fn failed(status: reqwest::StatusCode, code: Option<&str>) -> (&'static str, bool) {
     if status.is_server_error() || status == reqwest::StatusCode::TOO_MANY_REQUESTS {
@@ -88,6 +91,7 @@ pub async fn run_once(
         denied: 0,
         failures: vec![],
         inbox: inbox.status()?,
+        deletion_fences: vec![],
     };
     let access: std::result::Result<Vec<Brain>, (&'static str, bool)> = async {
         let response = client
@@ -122,6 +126,21 @@ pub async fn run_once(
     let mut refreshed = BTreeSet::new();
     let report_brains = brains.clone();
     for brain in brains {
+        // A deleted Brain is absent from the listing, so its fence must be
+        // applied before the access check; it never reaches capture delivery.
+        if let Some(fence) = privacy::deletion_fence(client, device, brain).await? {
+            let bundles =
+                privacy::apply_deletion(root, &client.endpoint, device.device_id, brain).await?;
+            let events = inbox.apply_deletion(brain)?;
+            report.deletion_fences.push(privacy::DeletionFence {
+                brain_id: fence.brain_id,
+                deletion_id: fence.deletion_id,
+                sequence: fence.sequence,
+                removed_bundles: bundles,
+                removed_events: events,
+            });
+            continue;
+        }
         let access = accessible.iter().find(|b| b.id == brain);
         let Some(access) = access else {
             report.failures.push((brain, "capture_denied"));

@@ -239,7 +239,8 @@ function Setup({ brain, close }: { brain: string; close: () => void }) {
           <Text size="sm">
             The launch registers Recollect's capture plugin through Codex. It
             stays inactive in sessions that were not launched with a Recollect
-            capture binding.
+            capture binding. The bundle also carries memory skills describing
+            the existing scoped MCP tools; skills grant no authority.
           </Text>
         )}
         <Text size="sm">

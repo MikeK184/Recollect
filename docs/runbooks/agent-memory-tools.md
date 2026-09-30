@@ -2,10 +2,10 @@
 
 ## Purpose and Prerequisites
 
-For ordinary MCP access, open **Connections → Coding agents** and select Codex
-or Claude Code. Copy the direct HTTP configuration into the project's
-`.codex/config.toml` or `.mcp.json`, preserving other servers. Create a revocable
-access token and save it using the dialog's credential steps. On macOS, Codex
+For ordinary MCP access, open **Connections → Coding agents** and select Codex,
+Claude Code, or OpenCode. Copy the direct HTTP configuration into the project's
+`.codex/config.toml`, `.mcp.json`, or `opencode.json`, preserving other servers.
+Create a revocable access token and save it using the dialog's credential steps. On macOS, Codex
 defaults to Keychain: copy the **Keychain secret**, run the displayed native
 `security add-generic-password ... -w` command, and paste at the hidden password
 prompt (again if asked to confirm). Keep `-w` last so the secret is not a command
@@ -25,10 +25,14 @@ current Brain grants. No companion is required for recall, deliberate contributi
 or published workspace metadata. A successful tool call, not saving settings,
 confirms access.
 
-Native OAuth browser login is not implemented by Recollect yet. Codex and
+Native OAuth browser login is not implemented by Recollect. Codex and
 Claude can support OAuth, but the server must expose its discovery, authorization
 and token endpoints. A Recollect pairing code is the existing device-approval
-flow, not a substitute for those endpoints. A packaged plugin is not published.
+flow, not a substitute for those endpoints. Do not label token setup as OAuth.
+The checked-in local plugin source under `plugins/recollect` carries the same
+memory skills for plugin-only clients; Codex managed launches additionally
+install the local generated plugin with capture hooks, as described under
+automatic capture.
 
 The following optional path adds local workspace discovery and host capture:
 
@@ -52,7 +56,44 @@ one host's settings, supplying the intended Brain UUID and absolute workspace:
 ```sh
 recollect-agent mcp-config codex --brain BRAIN_UUID --directory /absolute/workspace
 recollect-agent mcp-config claude --brain BRAIN_UUID --directory /absolute/workspace
+recollect-agent mcp-config opencode --brain BRAIN_UUID --directory /absolute/workspace
 ```
+
+Merge the OpenCode output's `mcp.servers` into the project's `opencode.json`;
+its `local` stdio command runs the same paired bridge. OpenCode session capture
+is not provided; capture setup remains Codex or Claude Code only.
+
+Plugin-only clients with no companion binary use the remote HTTP shape, one
+server entry per Brain. Render it without credential access (needs only the
+Brain UUID and endpoint):
+
+```sh
+recollect-agent mcp-config codex-remote --brain BRAIN_UUID
+recollect-agent mcp-config claude-remote --brain BRAIN_UUID
+recollect-agent mcp-config opencode-remote --brain BRAIN_UUID
+```
+
+The checked-in `plugins/recollect` marketplace root adds the
+`recollect-memory` skill for the same tools:
+
+```sh
+codex plugin marketplace add ./plugins/recollect
+codex plugin add recollect-memory@recollect
+```
+
+Without a browser at setup time, start a device-code request with plain HTTPS
+(no Recollect binary), approve the returned code in the browser, then poll and
+finish to receive the token:
+
+```sh
+curl -s -X POST "$RECOLLECT_URL/api/devices/pairings" \
+  -H 'content-type: application/json' \
+  -d '{"name":"Codex plugin · personal laptop"}'
+```
+
+The full per-host flow, including the Claude `.mcp.json` template and the
+OpenCode snippet, is in `plugins/recollect/README.md`. The token inherits the
+account's current Brain grants and is not restricted to the selected Brain.
 
 Use the returned `host_arguments` for that host launch, or put the returned
 configuration in its project MCP settings. Rendering with an explicit Brain UUID
@@ -73,7 +114,17 @@ change affects future operations; existing operations and child scopes remain
 bound to their original selections. Models cannot supply another Brain or
 override the selection carried by an operation.
 
+A managed Codex capture launch and a direct-HTTP `mcp_servers.recollect`
+project entry cannot share one server name: the launch refuses before any side
+effect when that entry exists. Keep the direct entry for companion-free memory
+use, or remove it to run managed capture with hooks in that directory.
+
 ## Verification
+
+Three credentials stay separate: the server's `OPENAI_API_KEY` (operator-only,
+never in host config), your `RECOLLECT_MCP_TOKEN` (the only plugin credential),
+and the host's own model billing (ChatGPT/Claude/OpenCode provider). A host
+"out of credits" error is host billing, never a Recollect defect.
 
 A connected host discovers `workspace.list` and `memory.recall` and completes a
 tool call. A successful scope change returns `context.state=ready` with the same

@@ -79,6 +79,22 @@ configured endpoint or mocked provider cannot count as a fresh external call.
 Complete a desktop workflow on the final application build, including review,
 scope and provenance; preserve existing failure/unavailable behavior.
 
+### Atlas lifecycle proof (2026-09-29)
+
+Under the user's benchmark request, a separate opt-in deterministic harness
+(`RECOLLECT_ATLAS_LIFECYCLE=1` through the owned ephemeral proof database) may
+execute the agent-memory-atlas benchmarks page §6 deletion sequence and §7
+contradiction matrix as a machine-scored pass/fail matrix through the product
+API: recall qualifications, claim state, erasure status, conflict gates, graph
+view, evidence catalogue, audit events and model-usage assertion — never an
+LLM judge, never a model call. Verdicts follow the page's semantics: absent or
+qualified stale values pass, unqualified current assertions and silent picks
+fail, and untested paths are declared `N/A` with a reason rather than scored
+zero. Results are dated mapping evidence, not a universal memory score. The
+answer-level complement (LongMemEval) stays deferred to the
+[proposed protocol](operations-longmemeval-protocol.md), which requires
+explicit user cost approval before any dispatch.
+
 ### Fixed-corpus retrieval and generation quality
 
 Reuse the checked-in seven-document/ten-claim fusion corpus and its eight declared

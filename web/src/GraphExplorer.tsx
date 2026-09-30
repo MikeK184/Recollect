@@ -1,7 +1,6 @@
 import { iconSize } from "./design/tokens";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
-  Accordion,
   Alert,
   Badge,
   Button,
@@ -18,7 +17,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { Search, Settings2, Network } from "lucide-react";
+import { Search, Settings2, Network, TriangleAlert } from "lucide-react";
 import { EmptyState } from "./components/AsyncState";
 import "./features/feature-views.css";
 import { useQuery } from "@tanstack/react-query";
@@ -93,6 +92,7 @@ export function GraphExplorer({
   const [choice, setChoice] = useState<GraphChoice>(null);
   const [showPath, setShowPath] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [coverageOpen, setCoverageOpen] = useState(false);
   const read = useQuery({
     queryKey: [
       "graph-explore",
@@ -123,6 +123,7 @@ export function GraphExplorer({
   useEffect(() => {
     setChoice(null);
     setShowPath(false);
+    setCoverageOpen(false);
   }, [request, path]);
   useEffect(() => {
     const deadline = read.data?.expires_at;
@@ -228,189 +229,200 @@ export function GraphExplorer({
       .toLocaleLowerCase()
       .includes(entitySearch.toLocaleLowerCase()),
   );
+  // Canvas chrome: entity search, the keyboard list alternative, exploration
+  // and path controls. On the canvas it floats on the stage edge; in the list
+  // it is a compact row above the list so the switch stays reachable.
+  const canvasChrome = (
+    <div
+      className={
+        representation === "canvas"
+          ? "graph-chrome graph-stage-overlay"
+          : "graph-chrome graph-list-toolbar"
+      }
+      data-graph-chrome=""
+    >
+      <Select
+        className="graph-entity-search"
+        aria-label="Inspect graph entity"
+        placeholder="Find an entity…"
+        leftSection={<Search size={iconSize.small} />}
+        searchable
+        clearable
+        limit={50}
+        value={choice?.kind === "node" ? choice.id : null}
+        data={nodes.map((node) => ({
+          value: node.key,
+          label: `${node.evidence.label} · ${label(node.evidence.kind)}`,
+        }))}
+        onChange={(id) => setChoice(id ? { kind: "node", id } : null)}
+      />
+      <Select
+        className="graph-relationship-search"
+        aria-label="Inspect graph relationship"
+        placeholder="Search directed relationships"
+        searchable
+        clearable
+        limit={50}
+        value={choice?.kind === "edge" ? choice.id : null}
+        data={edges.map((edge) => ({
+          value: edge.id,
+          label: `${nodeMap.get(edge.from)?.evidence.label} → ${nodeMap.get(edge.to)?.evidence.label} · ${label(edge.relation)}`,
+        }))}
+        onChange={(id) => setChoice(id ? { kind: "edge", id } : null)}
+      />
+      <SegmentedControl
+        aria-label="Graph presentation"
+        value={representation}
+        onChange={setRepresentation}
+        data={[
+          { value: "canvas", label: "Canvas" },
+          { value: "list", label: "List" },
+        ]}
+      />
+      <Button
+        variant="default"
+        leftSection={<Settings2 size={iconSize.small} />}
+        onClick={() => setControlsOpened(true)}
+      >
+        Explore from an entity
+      </Button>
+    </div>
+  );
   return (
     <section
       className="graph-explorer"
       aria-label="Interactive graph exploration"
     >
-      <Stack gap="md">
-        <div className="graph-explorer-toolbar">
-          <Select
-            className="graph-entity-search"
-            label="Inspect graph entity"
-            placeholder="Find an entity…"
-            leftSection={<Search size={iconSize.small} />}
-            searchable
-            clearable
-            limit={50}
-            value={choice?.kind === "node" ? choice.id : null}
-            data={nodes.map((node) => ({
-              value: node.key,
-              label: `${node.evidence.label} · ${label(node.evidence.kind)}`,
-            }))}
-            onChange={(id) => setChoice(id ? { kind: "node", id } : null)}
-          />
-          <SegmentedControl
-            aria-label="Graph presentation"
-            value={representation}
-            onChange={setRepresentation}
-            data={[
-              { value: "canvas", label: "Canvas" },
-              { value: "list", label: "List" },
-            ]}
-          />
-          <Button
-            variant="default"
-            leftSection={<Settings2 size={iconSize.small} />}
-            onClick={() => setControlsOpened(true)}
-          >
-            Explore from an entity
-          </Button>
-          {path?.status === "path" && data && (
-            <Button
-              variant="light"
-              onClick={() => {
-                setShowPath((value) => !value);
-                setChoice(null);
-              }}
-            >
-              {inPath
-                ? "Return to exploration"
-                : "Show shortest path on canvas"}
-            </Button>
-          )}
-        </div>
-        {read.isFetching && (
-          <Group role="status">
-            <Loader size="sm" />
-            <Text>Reading the qualified graph…</Text>
-          </Group>
-        )}
-        {read.error && (
-          <Alert color="red" title="Graph could not be displayed">
-            {read.error.message}
-          </Alert>
-        )}
-        {expired && (
-          <Alert color="yellow">
-            An input reached its retention deadline. Load the current graph
-            again.
-          </Alert>
-        )}
-        {data && (
-          <>
-            <Group justify="space-between">
-              <Text size="xs" c="dimmed" data-testid="exploration-counts">
-                {nodes.length} displayed entities · {edges.length} directed
-                relationships
-              </Text>
-              <Badge variant="light">
-                {inPath
-                  ? "Shortest eligible path"
-                  : data.center
-                    ? "Bounded reachability"
-                    : "Eligible overview"}
-              </Badge>
-            </Group>
-            {shownView!.coverage.partial && (
-              <Alert color="yellow" title="Coverage limits">
-                {shownView!.coverage.reasons.map(label).join(" · ")}
-              </Alert>
-            )}
-            {nodes.length === 0 ? (
-              <EmptyState
-                icon={Network}
-                title="No eligible entities"
-                description="This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."
-              />
-            ) : (
-              <>
-                {data.center && nodes.length === 1 && (
-                  <Text size="sm">
-                    No other eligible entity is reachable within this direction
-                    and hop bound.
-                  </Text>
-                )}
-                {representation === "canvas" ? (
-                  <Suspense
-                    fallback={
-                      <Group role="status">
-                        <Loader size="sm" />
-                        <Text>Loading graph renderer…</Text>
-                      </Group>
-                    }
-                  >
-                    <GraphCanvas
-                      nodes={nodes}
-                      edges={edges}
-                      choice={choice}
-                      onChoose={setChoice}
-                      pathNodes={pathNodes}
-                      pathEdges={pathEdges}
-                    />
-                  </Suspense>
-                ) : (
-                  <>
-                    <TextInput
-                      label="Filter displayed entities"
-                      placeholder="Search the displayed graph…"
-                      value={entitySearch}
-                      onChange={(event) =>
-                        setEntitySearch(event.currentTarget.value)
-                      }
-                      leftSection={<Search size={iconSize.small} />}
-                    />
-                    <Text size="xs" c="dimmed">
-                      {listedNodes.length} matches in the {nodes.length}{" "}
-                      displayed entities. Select an item to inspect its evidence
-                      and relationships.
-                    </Text>
-                    <div className="graph-node-list">
-                      {listedNodes.map((node) => (
-                        <button
-                          className="graph-node-button"
-                          key={node.key}
-                          onClick={() =>
-                            setChoice({ kind: "node", id: node.key })
-                          }
-                        >
-                          <strong>{node.evidence.label}</strong>
-                          <span className="feature-meta">
-                            {label(node.evidence.kind)}
-                          </span>
-                          <span className="feature-meta">
-                            {node.evidence.qualifications
-                              .map(label)
-                              .join(" · ")}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-                <Select
-                  label="Inspect graph relationship"
-                  placeholder="Search directed relationships"
-                  searchable
-                  clearable
-                  limit={50}
-                  value={choice?.kind === "edge" ? choice.id : null}
-                  data={edges.map((edge) => ({
-                    value: edge.id,
-                    label: `${nodeMap.get(edge.from)?.evidence.label} → ${nodeMap.get(edge.to)?.evidence.label} · ${label(edge.relation)}`,
-                  }))}
-                  onChange={(id) => setChoice(id ? { kind: "edge", id } : null)}
+      {read.isFetching && (
+        <Group role="status">
+          <Loader size="sm" />
+          <Text>Reading the qualified graph…</Text>
+        </Group>
+      )}
+      {read.error && (
+        <Alert color="red" title="Graph could not be displayed">
+          {read.error.message}
+        </Alert>
+      )}
+      {expired && (
+        <Alert color="yellow">
+          An input reached its retention deadline. Load the current graph
+          again.
+        </Alert>
+      )}
+      {data && nodes.length === 0 && (
+        <EmptyState
+          icon={Network}
+          title="No eligible entities"
+          description="This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."
+        />
+      )}
+      {data && nodes.length > 0 && (
+        <>
+          <div className="graph-stage-area">
+            {canvasChrome}
+            {representation === "canvas" ? (
+              <Suspense
+                fallback={
+                  <Group role="status">
+                    <Loader size="sm" />
+                    <Text>Loading graph renderer…</Text>
+                  </Group>
+                }
+              >
+                <GraphCanvas
+                  nodes={nodes}
+                  edges={edges}
+                  choice={choice}
+                  onChoose={setChoice}
+                  pathNodes={pathNodes}
+                  pathEdges={pathEdges}
                 />
-              </>
+              </Suspense>
+            ) : (
+              <div className="graph-list-view">
+                <TextInput
+                  label="Filter displayed entities"
+                  placeholder="Search the displayed graph…"
+                  value={entitySearch}
+                  onChange={(event) =>
+                    setEntitySearch(event.currentTarget.value)
+                  }
+                  leftSection={<Search size={iconSize.small} />}
+                />
+                <Text size="xs" c="dimmed">
+                  {listedNodes.length} matches in the {nodes.length}{" "}
+                  displayed entities. Select an item to inspect its evidence
+                  and relationships.
+                </Text>
+                <div className="graph-node-list">
+                  {listedNodes.map((node) => (
+                    <button
+                      className="graph-node-button"
+                      key={node.key}
+                      onClick={() =>
+                        setChoice({ kind: "node", id: node.key })
+                      }
+                    >
+                      <strong>{node.evidence.label}</strong>
+                      <span className="feature-meta">
+                        {label(node.evidence.kind)}
+                      </span>
+                      <span className="feature-meta">
+                        {node.evidence.qualifications
+                          .map(label)
+                          .join(" · ")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-            <Text size="xs" c="dimmed">
-              Recorded relationships describe this evidence; they do not
-              establish runtime impact or confirm a claim. Display limit: 500
-              entities and 2,000 relationships.
+          </div>
+          {data.center && nodes.length === 1 && (
+            <Text size="sm">
+              No other eligible entity is reachable within this direction and
+              hop bound.
             </Text>
-          </>
-        )}
-      </Stack>
+          )}
+          <div className="graph-chrome graph-explorer-status" data-graph-chrome="">
+            <Text size="xs" c="dimmed" data-testid="exploration-counts">
+              {nodes.length} displayed entities · {edges.length} directed
+              relationships
+            </Text>
+            <Badge variant="light">
+              {inPath
+                ? "Shortest eligible path"
+                : data.center
+                  ? "Bounded reachability"
+                  : "Eligible overview"}
+            </Badge>
+            {shownView!.coverage.partial && (
+              <span className="graph-coverage">
+                <button
+                  type="button"
+                  className="graph-coverage-toggle"
+                  aria-expanded={coverageOpen}
+                  onClick={() => setCoverageOpen((value) => !value)}
+                >
+                  <TriangleAlert size={iconSize.small} />
+                  Coverage limits
+                </button>
+                {coverageOpen && (
+                  <span className="graph-coverage-reasons">
+                    {shownView!.coverage.reasons.map(label).join(" · ")}
+                  </span>
+                )}
+              </span>
+            )}
+            <Text size="xs" c="dimmed" className="graph-display-note">
+              Blue repository · amber memory · sage source; recorded edges
+              describe this evidence only. Limit: 500 entities, 2,000
+              relationships.
+            </Text>
+          </div>
+        </>
+      )}
       <Drawer
         className="feature-drawer"
         opened={controlsOpened}
@@ -444,6 +456,20 @@ export function GraphExplorer({
           >
             Show eligible overview
           </Button>
+          {path?.status === "path" && data && (
+            <Button
+              variant="light"
+              onClick={() => {
+                setShowPath((value) => !value);
+                setChoice(null);
+                setControlsOpened(false);
+              }}
+            >
+              {inPath
+                ? "Return to exploration"
+                : "Show shortest path on canvas"}
+            </Button>
+          )}
           {data && (
             <Text size="xs" className="feature-meta">
               Generation {shownView!.generation.id} · {label(shownView!.state)}{" "}

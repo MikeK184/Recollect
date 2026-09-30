@@ -16,6 +16,9 @@ pub mod mcp;
 pub mod mcp_bridge;
 pub mod mcp_cli;
 pub mod mcp_host;
+#[cfg(target_os = "macos")]
+pub mod os_store;
+pub mod plugin;
 pub mod privacy;
 pub mod publication;
 pub mod publication_cli;
@@ -31,8 +34,12 @@ pub struct StoredDevice {
 }
 
 pub struct CredentialSlot {
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    account: String,
+    #[cfg(not(target_os = "macos"))]
     entry: keyring::Entry,
 }
+const COMPANION_SERVICE: &str = "recollect-companion";
 fn storage_error() -> anyhow::Error {
     anyhow!(
         "The OS credential store is unavailable or locked. Unlock it and retry; no file fallback is used."
@@ -44,11 +51,24 @@ impl CredentialSlot {
             !profile.is_empty() && profile.len() <= 80 && !profile.chars().any(char::is_control),
             "Use a local device profile between 1 and 80 printable bytes"
         );
-        let entry = keyring::Entry::new("recollect-companion", &format!("{endpoint}#{profile}"))
-            .map_err(|_| storage_error())?;
-        Ok(Self { entry })
+        let account = format!("{endpoint}#{profile}");
+        #[cfg(target_os = "macos")]
+        return Ok(Self { account });
+        #[cfg(not(target_os = "macos"))]
+        let entry =
+            keyring::Entry::new(COMPANION_SERVICE, &account).map_err(|_| storage_error())?;
+        #[cfg(not(target_os = "macos"))]
+        return Ok(Self { account, entry });
     }
     pub fn load(&self) -> Result<Option<StoredDevice>> {
+        #[cfg(target_os = "macos")]
+        let data = os_store::load(COMPANION_SERVICE, &self.account)?;
+        #[cfg(target_os = "macos")]
+        return match data {
+            Some(data)=>Ok(Some(serde_json::from_slice(&data).map_err(|_|anyhow!("This profile's stored credential is unreadable. Use forget, revoke it in Devices and pair again."))?)),
+            None=>Ok(None),
+        };
+        #[cfg(not(target_os = "macos"))]
         match self.entry.get_password() {
             Ok(data)=>Ok(Some(serde_json::from_str(&data).map_err(|_|anyhow!("This profile's stored credential is unreadable. Use forget, revoke it in Devices and pair again."))?)),
             Err(keyring::Error::NoEntry)=>Ok(None),
@@ -56,11 +76,25 @@ impl CredentialSlot {
         }
     }
     pub fn save(&self, device: &StoredDevice) -> Result<()> {
+        #[cfg(target_os = "macos")]
+        return os_store::save(
+            COMPANION_SERVICE,
+            &self.account,
+            serde_json::to_string(device)?.as_bytes(),
+        )
+        .map_err(|_| storage_error());
+        #[cfg(not(target_os = "macos"))]
         self.entry
             .set_password(&serde_json::to_string(device)?)
             .map_err(|_| storage_error())
     }
     pub fn forget(&self) -> Result<()> {
+        #[cfg(target_os = "macos")]
+        return match os_store::delete(COMPANION_SERVICE, &self.account) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(storage_error()),
+        };
+        #[cfg(not(target_os = "macos"))]
         match self.entry.delete_credential() {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(_) => Err(storage_error()),

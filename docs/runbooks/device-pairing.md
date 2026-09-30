@@ -17,7 +17,10 @@ cargo run -p recollect-agent -- pair "Development laptop"
 Open the printed link, sign in if needed, compare the public code with the
 companion, and choose **Approve device**. The companion writes its credential
 to the OS store, acknowledges pairing and verifies an authenticated call.
-No token is printed. Inspect the result from fresh processes:
+No token is printed. On macOS the stored item trusts the companion, bridge,
+and runner binaries, so one pairing approval covers later setup, run, and
+bridge loads; approve it for the intended profile only. Items saved before
+this behavior need one fresh pairing to gain it. Inspect the result from fresh processes:
 
 ```sh
 cargo run -p recollect-agent -- whoami
@@ -42,7 +45,9 @@ cargo run -p recollect-agent -- unpair
 
 Pairing expires after five minutes. Decline/cancel requires a new request. Up to
 20 live devices may belong to an account; revoke unused devices before adding
-more. A claimed device expires after 30 days and must be paired again.
+more. Re-pairing with the same device name (case-insensitive, ignoring
+surrounding whitespace) reuses that device record and rotates its credential
+instead of adding a row; the expiry resets to 30 days. A claimed device expires after 30 days and must be paired again.
 
 Locked/unavailable OS storage fails explicitly. Unlock the store and retry;
 there is no credential-file fallback. Connection errors preserve an existing

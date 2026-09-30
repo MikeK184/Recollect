@@ -82,6 +82,27 @@ async fn main() -> Result<()> {
     let client =
         Client::new(&std::env::var("RECOLLECT_URL").unwrap_or("http://127.0.0.1:8787".into()))?;
     let profile = std::env::var("RECOLLECT_DEVICE_PROFILE").unwrap_or("default".into());
+    if let Some(host) = host {
+        // Remote plugin-only configuration needs no companion binary, no
+        // bridge process, and no paired profile: the user token travels in
+        // the host environment. Only the Brain UUID and endpoint matter.
+        if matches!(host, "codex-remote" | "claude-remote" | "opencode-remote") {
+            ensure!(
+                capture_setup.is_none() && capture_launch.is_none(),
+                "Standalone configuration cannot replace a managed capture launch."
+            );
+            let brain = brain.ok_or_else(|| anyhow!("Remote configuration needs --brain UUID."))?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&recollect_agent::mcp_host::configuration_remote(
+                    host,
+                    &client.endpoint,
+                    brain
+                )?)?
+            );
+            return Ok(());
+        }
+    }
     let directory = tokio::fs::canonicalize(directory.unwrap_or(std::env::current_dir()?))
         .await
         .map_err(|_| anyhow!("Choose an existing workspace directory."))?;

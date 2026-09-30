@@ -8,6 +8,10 @@
         "environment": {
           "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
         }
+      },
+      "chrome-devtools": {
+        "type": "local",
+        "command": ["npx", "-y", "chrome-devtools-mcp@latest", "--isolated", "--no-usage-statistics"]
       }
     }
   }

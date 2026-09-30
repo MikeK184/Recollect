@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteBrain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/answer-requests": {
         parameters: {
             query?: never;
@@ -366,6 +382,54 @@ export interface paths {
         get: operations["claimReviewHistory"];
         put?: never;
         post: operations["reviewClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/deletions/fence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["brainDeletionFence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/deletions/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewBrainDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/deletions/{request}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["brainDeletionStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2413,6 +2477,151 @@ export interface components {
         BrainAccess: {
             group_grants: components["schemas"]["GroupGrant"][];
             members: components["schemas"]["EffectiveAccess"][];
+        };
+        /**
+         * @description Per-class dependent identity counts. The keys mirror the migration-owned
+         *     preview document exactly; a drift here is a schema break, not a default.
+         */
+        BrainDeletionCounts: {
+            /** Format: int64 */
+            analytics_reports: number;
+            /** Format: int64 */
+            areas: number;
+            /** Format: int64 */
+            artifacts: number;
+            /** Format: int64 */
+            calls: number;
+            /** Format: int64 */
+            capture_bindings: number;
+            /** Format: int64 */
+            capture_events: number;
+            /** Format: int64 */
+            capture_reports: number;
+            /** Format: int64 */
+            checkouts: number;
+            /** Format: int64 */
+            chunks: number;
+            /** Format: int64 */
+            claim_revisions: number;
+            /** Format: int64 */
+            claims: number;
+            /** Format: int64 */
+            collections: number;
+            /** Format: int64 */
+            connections: number;
+            /** Format: int64 */
+            environments: number;
+            /** Format: int64 */
+            excerpts: number;
+            /** Format: int64 */
+            facts: number;
+            /** Format: int64 */
+            graph_generations: number;
+            /** Format: int64 */
+            group_members: number;
+            /** Format: int64 */
+            handover_runs: number;
+            /** Format: int64 */
+            learning_runs: number;
+            /** Format: int64 */
+            manifest_revisions: number;
+            /** Format: int64 */
+            manifests: number;
+            /** Format: int64 */
+            members: number;
+            /** Format: int64 */
+            memberships: number;
+            /** Format: int64 */
+            policies: number;
+            /** Format: int64 */
+            private_runners: number;
+            /** Format: int64 */
+            profile_grants: number;
+            /** Format: int64 */
+            profiles: number;
+            /** Format: int64 */
+            rejected_rules: number;
+            /** Format: int64 */
+            repositories: number;
+            /** Format: int64 */
+            review_decisions: number;
+            /** Format: int64 */
+            semantic_entries: number;
+            /** Format: int64 */
+            semantic_profiles: number;
+            /** Format: int64 */
+            snapshots: number;
+            /** Format: int64 */
+            source_versions: number;
+            /** Format: int64 */
+            sources: number;
+            /** Format: int64 */
+            tasks: number;
+            /** Format: int64 */
+            workspaces: number;
+        };
+        /** @description Companion fence for a paired device's next check-in. */
+        BrainDeletionFence: {
+            /** Format: uuid */
+            brain_id: string;
+            /** Format: uuid */
+            deletion_id: string;
+            /** Format: int64 */
+            sequence: number;
+        };
+        BrainDeletionInput: {
+            /** Format: int64 */
+            closure: number;
+            confirmation: string;
+        };
+        BrainDeletionPreview: {
+            archived: boolean;
+            /** Format: int32 */
+            backup_days: number;
+            /** Format: uuid */
+            brain_id: string;
+            /** Format: int64 */
+            closure: number;
+            counts: components["schemas"]["BrainDeletionCounts"];
+            name: string;
+            /** Format: int64 */
+            pending_work: number;
+            repository_content_allowed: boolean;
+        };
+        /**
+         * @description DELETE response: the request status plus the backup window that applies to
+         *     retained copies, captured before the deletion removes the policy row.
+         */
+        BrainDeletionResult: {
+            /** Format: int32 */
+            backup_days: number;
+            request: components["schemas"]["BrainDeletionStatus"];
+        };
+        /** @description Bounded, content-free deletion status derived from the retained journal. */
+        BrainDeletionStatus: {
+            /** Format: int64 */
+            acknowledged_devices: number;
+            /** Format: uuid */
+            actor_id?: string | null;
+            /** Format: uuid */
+            brain_id: string;
+            /** Format: int64 */
+            closure: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            deleted_at: string;
+            disposition: string;
+            error_code?: string | null;
+            graph_pending: boolean;
+            /** Format: uuid */
+            id: string;
+            journaled: boolean;
+            /** Format: int64 */
+            pending_artifacts: number;
+            /** Format: int64 */
+            sequence: number;
+            state: string;
         };
         CaptureBinding: {
             /** Format: uuid */
@@ -5133,6 +5342,63 @@ export interface operations {
             };
         };
     };
+    deleteBrain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrainDeletionInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrainDeletionResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     answerBrain: {
         parameters: {
             query?: never;
@@ -5690,6 +5956,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewOutcome"];
+                };
+            };
+        };
+    };
+    brainDeletionFence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrainDeletionFence"];
+                };
+            };
+        };
+    };
+    previewBrainDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrainDeletionPreview"];
+                };
+            };
+        };
+    };
+    brainDeletionStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                request: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrainDeletionStatus"];
                 };
             };
         };

@@ -26,6 +26,16 @@ pub struct Cleanup {
     pub retained: usize,
     pub acknowledged: bool,
 }
+/// One applied Brain-deletion fence, reported separately from central
+/// completion so offline copies stay visibly incomplete.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeletionFence {
+    pub brain_id: Uuid,
+    pub deletion_id: Uuid,
+    pub sequence: i64,
+    pub removed_bundles: usize,
+    pub removed_events: usize,
+}
 #[derive(Deserialize)]
 struct BundleHeader {
     endpoint: String,
@@ -143,6 +153,76 @@ pub async fn cleanup_known(
     } else {
         Ok(None)
     }
+}
+/// Fetch the deletion fence for one Brain on the next check-in. Absence of a
+/// fence (live Brain, or no visibility) is a normal 404, not an error.
+pub async fn deletion_fence(
+    client: &Client,
+    device: &StoredDevice,
+    brain: Uuid,
+) -> Result<Option<DeletionFence>> {
+    let response = client
+        .send(
+            Method::GET,
+            &format!("/api/brains/{brain}/deletions/fence"),
+            Some(device.token),
+            None,
+        )
+        .await?;
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    let fence: DeletionFence = decode(response).await?;
+    ensure!(
+        fence.brain_id == brain,
+        "Deletion fence belongs to another Brain."
+    );
+    Ok(Some(fence))
+}
+/// Remove only product-owned local files for a deleted Brain: the cached
+/// privacy position and prepared publication bundles. Git objects and customer
+/// working trees are never touched; unreadable bundle identity is an error so
+/// incomplete cleanup stays visible.
+pub async fn apply_deletion(
+    root: &Path,
+    endpoint: &str,
+    device: Uuid,
+    brain: Uuid,
+) -> Result<usize> {
+    let cache = cache_path(root, device, brain).await?;
+    if fs::try_exists(&cache).await? {
+        fs::remove_file(cache).await?;
+    }
+    let root = publication::private_root(root).await?;
+    let mut files = fs::read_dir(&root).await?;
+    let mut removed = 0;
+    while let Some(file) = files.next_entry().await? {
+        let name = file.file_name();
+        let name = name.to_string_lossy();
+        let Some(id) = name
+            .strip_suffix(".json")
+            .and_then(|s| s.parse::<Uuid>().ok())
+        else {
+            continue;
+        };
+        let bytes = publication::artifact(&file.path(), PUBLICATION_MAX_BYTES + 8192).await?;
+        let header: BundleHeader = serde_json::from_slice(&bytes).map_err(|_| {
+            anyhow!(
+                "A prepared bundle has unreadable identity metadata; deletion cleanup remains incomplete."
+            )
+        })?;
+        ensure!(
+            header.input.publication_id == id && git_object_id(&header.input.revision),
+            "Prepared bundle identity is invalid; deletion cleanup remains incomplete."
+        );
+        if header.endpoint != endpoint || header.device_id != device || header.brain_id != brain {
+            continue;
+        }
+        fs::remove_file(file.path()).await?;
+        removed += 1;
+    }
+    fs::File::open(&root).await?.sync_all().await?;
+    Ok(removed)
 }
 pub async fn synchronize(
     client: &Client,

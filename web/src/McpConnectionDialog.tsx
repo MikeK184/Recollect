@@ -16,6 +16,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { McpCatalogue } from "./McpPanel";
@@ -25,6 +26,17 @@ import { usePrivateRunners } from "./McpPrivateRunners";
 
 type Detail = components["schemas"]["McpConnectionDetail"];
 type Input = components["schemas"]["McpConnectionInput"];
+
+// The catalogue stores placement as `central`, `local` or `private`
+// (mcp-catalogue-and-profiles). Render the plain-language concept instead of the
+// stored noun, and say what each one decides: which network can reach the target.
+const placementLabel: Record<string, string> = {
+  central: "Central service · the Recollect service reaches the target",
+  local: "Paired device · your device's companion reaches the target",
+  private: "Private-network runner · a registered device on a private network",
+};
+export const placementText = (value: string) =>
+  placementLabel[value] ?? `Runs on: ${value}`;
 type Props = {
   brain: Brain;
   id: string;
@@ -185,7 +197,7 @@ function ConnectionForm({
       (!definition.data?.placements.includes(input.placement) ||
         (input.placement !== "central" && !input.runner_reference))
     )
-      return "Choose an approved execution placement and its runner reference.";
+      return "Choose where this connection runs and the runner that serves it.";
     return null;
   };
   const advance = () => {
@@ -318,12 +330,13 @@ function ConnectionForm({
             {show(3) && (
               <>
                 <Select
-                  label="Execution placement"
+                  label="Where this connection runs"
+                  description="This decides which network can reach the target. The chosen place never falls back to another."
                   required
                   value={input.placement}
                   data={definition.data.placements.map((p) => ({
                     value: p,
-                    label: p,
+                    label: placementText(p),
                   }))}
                   onChange={(v) =>
                     patch({
@@ -335,6 +348,7 @@ function ConnectionForm({
                 {input.placement === "local" && (
                   <TextInput
                     label="Runner reference"
+                    description="Name the runner on your paired device. Offline devices apply nothing."
                     required
                     maxLength={200}
                     value={input.runner_reference ?? ""}
@@ -359,8 +373,9 @@ function ConnectionForm({
                     {!privateRunners.error &&
                       privateRunners.data?.length === 0 && (
                         <Alert color="yellow">
-                          Register a private runner for this Brain before
-                          enabling this connection.
+                          This Brain has no private runner. Register one for a
+                          paired device on the Runners tab first; until then
+                          this target has nothing that can reach it.
                         </Alert>
                       )}
                     <Select
@@ -396,7 +411,17 @@ function ConnectionForm({
                     />
                     <Text size="sm" c="dimmed">
                       Offline runners keep calls queued until the runner
-                      connects or the queue deadline expires.
+                      connects or the queue deadline expires. A registration is
+                      metadata: it proves nothing until a call succeeds there.
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      Each runner is bound to one paired device. Register or
+                      rename it on the Runners tab, and manage the device itself
+                      in{" "}
+                      <Link to="/devices" search={{ code: undefined }}>
+                        Devices
+                      </Link>
+                      .
                     </Text>
                   </>
                 )}
@@ -461,7 +486,7 @@ function ConnectionForm({
                       </dd>
                       <dt>Execution</dt>
                       <dd>
-                        {input.placement}
+                        {placementText(input.placement)}
                         {input.runner_reference
                           ? ` · ${input.runner_reference}`
                           : ""}

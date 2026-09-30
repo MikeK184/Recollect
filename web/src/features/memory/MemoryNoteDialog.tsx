@@ -20,7 +20,7 @@ export function MemoryNoteDialog({
 }: {
   brain: Brain;
   close: () => void;
-  structured: () => void;
+  structured?: () => void;
 }) {
   const [text, setText] = useState("");
   const command = useIdempotency();
@@ -105,14 +105,16 @@ export function MemoryNoteDialog({
             to contributions made through the plugin.
           </Text>
           <ErrorState error={save.error ?? settings.error} />
-          <Group justify="space-between">
-            <Button
-              variant="subtle"
-              onClick={structured}
-              disabled={save.isPending}
-            >
-              Structured entry
-            </Button>
+          <Group justify={structured ? "space-between" : "flex-end"}>
+            {structured && (
+              <Button
+                variant="subtle"
+                onClick={structured}
+                disabled={save.isPending}
+              >
+                Structured entry
+              </Button>
+            )}
             <Button
               type="submit"
               loading={save.isPending}

@@ -44,7 +44,9 @@ target/debug/recollect-agent capture run /absolute/path/to/capture.json
 Append host arguments after `--`, for example `-- exec 'Describe this project'`
 for Codex. Normal host sign-in and workspace trust still apply. Codex's explicit
 managed launch registers the generated Recollect plugin through Codex's own
-installer. Other plugins/settings are preserved. The installed hook captures
+installer. Other plugins/settings are preserved. The bundle also carries the
+`recollect-memory` skill, which describes the existing scoped MCP tools for that
+Brain; skills grant no authority and change no capture behavior. The installed hook captures
 only when that launch supplies its setup binding; ordinary unbound Codex sessions
 do not inherit a Brain destination. Claude loads the generated settings directly.
 

@@ -838,12 +838,11 @@ export function ClaimDialog({
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(
     null,
   );
-  const [editing, setEditing] = useState(false);
+  const [reviewing, setReviewing] = useState<View | null>(null);
   const [contribution, setContribution] = useState<{
     id: string;
     at: string;
   } | null>(null);
-  const [reviewing, setReviewing] = useState<View | null>(null);
   const query = useQuery({
     queryKey: ["claim", brain.id, id, knowledge, factAt, offset],
     queryFn: async ({ signal }) =>
@@ -939,30 +938,8 @@ export function ClaimDialog({
         brain={brain}
         view={reviewing}
         catalogue={catalogue}
-        current={reviewing.revision.id === query.data?.current_revision}
-        Editor={ClaimEditor}
         EvidenceViewer={EvidenceDialog}
         onClose={() => setReviewing(null)}
-        onSaved={() => {
-          onSaved();
-          void query.refetch();
-        }}
-      />
-    );
-  if (editing && view)
-    return (
-      <ClaimEditor
-        brain={brain}
-        catalogue={catalogue}
-        revision={view.revision}
-        evidence={view.evidence}
-        onClose={() => setEditing(false)}
-        onSaved={() => {
-          setEditing(false);
-          setKnowledge(undefined);
-          onSaved();
-          void query.refetch();
-        }}
       />
     );
   const r = view?.revision;
@@ -1186,17 +1163,12 @@ export function ClaimDialog({
                   : ""}
               </Button>
             ))}
-            {brain.role !== "reader" &&
-              !brain.archived &&
-              r.id === query.data?.current_revision &&
-              r.review === "proposed" &&
-              r.lifecycle !== "withdrawn" && (
-                <Button variant="light" onClick={() => setEditing(true)}>
-                  Revise proposal
-                </Button>
-              )}
+            <Alert color="blue">
+              New input is handled by autonomous learning. See Activity →
+              Model usage and learning for recent learning.
+            </Alert>
             <Button variant="light" onClick={() => setReviewing(view)}>
-              Review and corrections
+              Review history
             </Button>
           </>
         )}
@@ -1268,7 +1240,6 @@ export function ClaimsPanel({
     () => setOffset(0),
     [mode, memoryKind, environment, repository, route.fact, route.knowledge],
   );
-  const [creating, setCreating] = useState(false);
   const [noting, setNoting] = useState(false);
   const selected =
     selectedId === undefined ? (route.claim ?? null) : selectedId;
@@ -1609,26 +1580,7 @@ export function ClaimsPanel({
         freshness and operational assessment remain separate.
       </Text>
       {noting && (
-        <MemoryNoteDialog
-          brain={brain}
-          close={() => setNoting(false)}
-          structured={() => {
-            setNoting(false);
-            setCreating(true);
-          }}
-        />
-      )}
-      {creating && !catalogue.error && (
-        <ClaimEditor
-          brain={brain}
-          catalogue={catalogue.data}
-          onClose={() => setCreating(false)}
-          onSaved={(id) => {
-            setCreating(false);
-            refresh();
-            setSelected(id);
-          }}
-        />
+        <MemoryNoteDialog brain={brain} close={() => setNoting(false)} />
       )}
       {selected && !catalogue.error && (
         <ClaimDialog
