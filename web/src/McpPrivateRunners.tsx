@@ -16,6 +16,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
@@ -69,8 +70,18 @@ export function McpPrivateRunners({
         )}
       </Group>
       <Text size="sm" c="dimmed">
-        Run this Brain's approved connections on a paired device that can reach
-        your private services.
+        A private runner is the place your Brain chooses for targets on a
+        network the central service cannot reach. Each registration binds this
+        Brain to one paired device, and that device decides which network can
+        reach the target. Registering or renaming a runner is metadata only: it
+        starts nothing and proves no connectivity.
+      </Text>
+      <Text size="sm" c="dimmed">
+        Manage the device itself in{" "}
+        <Link to="/devices" search={{ code: undefined }}>
+          Devices
+        </Link>
+        .
       </Text>
       {runners.isPending && <Loader size="sm" />}
       {runners.error && (
@@ -135,7 +146,10 @@ export function McpPrivateRunners({
                     block
                   >{`recollect-agent private-runner ${runner.id} /path/to/private/receipts`}</Code>
                   <Text size="xs" c="dimmed">
-                    Paired device: {runner.device_id}
+                    Paired device: {runner.device_id} ·{" "}
+                    <Link to="/devices" search={{ code: undefined }}>
+                      open the device record in Devices
+                    </Link>
                   </Text>
                 </details>
               </>

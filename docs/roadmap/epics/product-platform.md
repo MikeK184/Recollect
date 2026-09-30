@@ -1,6 +1,6 @@
 # Product Platform and Access
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -12,6 +12,10 @@ Personal use and internal-team use share one application and permission model.
 
 - [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
 - [Desktop contract](../../contracts/desktop-experience.md)
+- [Knowledge surface ADR](../../adr/0017-desktop-knowledge-and-ask-experience.md)
+- [Tiered surface contract](../../contracts/desktop-knowledge-surface.md)
+- [Brain deletion ADR](../../adr/0016-brain-deletion.md)
+- [Brain deletion contract](../../contracts/platform-brain-deletion.md)
 - [Runtime ADR](../../adr/0003-product-runtime.md)
 - [Bootstrap contract](../../contracts/platform-bootstrap.md)
 - [Durable-work contract](../../contracts/platform-durable-work.md)
@@ -74,6 +78,8 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-device-pairing` | shipped | contract-backed | pack | Native companion enrollment with individually revocable credentials and shared protocol types |
 | `desktop-experience-contracts` | shipped | adr-backed, contract-backed | pack | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
 | `platform-desktop-shell` | shipped | adr-backed, contract-backed | pack | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
+| `platform-brain-deletion` | planned | adr-backed, contract-backed | pack | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
+| `desktop-knowledge-surface` | planned | adr-backed, contract-backed | pack | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 
 ## Slice Dependencies
 
@@ -89,6 +95,8 @@ one acyclic implementation order.
 | `platform-device-pairing` | `platform-bootstrap` |
 | `desktop-experience-contracts` | `operations-integrated-evaluations` |
 | `platform-desktop-shell` | `desktop-experience-contracts` |
+| `platform-brain-deletion` | `platform-bootstrap`, `memory-retention-and-erasure` |
+| `desktop-knowledge-surface` | `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace` |
 
 ## Completion Criteria
 
@@ -111,3 +119,18 @@ remaining cross-domain acceptance. The [platform-desktop-shell closeout](../exec
 records this owner’s completed checks. The [desktop guide](../../runbooks/desktop-experience.md)
 documents current function locations. Other owners keep unfinished criteria active;
 prior shipped domain records remain historical evidence rather than redesign proof.
+
+## 2026-09-29 deletion and surface amendment
+
+The user decided that a Brain must be permanently deletable with total erasure,
+that Memory, Sources and Graph must merge into one improved surface, and that
+Agents and Connections must separate. [ADR 0016](../../adr/0016-brain-deletion.md)
+and [ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) record those
+decisions; [brain deletion](../../contracts/platform-brain-deletion.md) and the
+[tiered surface](../../contracts/desktop-knowledge-surface.md) contracts specify them.
+
+This epic reopens from complete to active because it owns the deletion command and
+the coordinated presentation layer spanning the memory, evidence and graph domains.
+Domain authority does not move here: each capability keeps its handlers,
+permissions, retention and proof obligations, following the coordination precedent
+`desktop-experience-contracts` already established.

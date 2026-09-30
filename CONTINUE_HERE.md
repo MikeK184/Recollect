@@ -7,6 +7,45 @@ Read this file first, then `AGENTS.md`, `docs/README.md`, the accepted foundatio
 the relevant contracts and the active execution pack. This is a dated handoff,
 not a declaration that unfinished work is shipped.
 
+## Desktop IA and Brain deletion decisions — 2026-09-29
+
+Planning only. **No product code changed in this step**; the live stack at
+**http://127.0.0.1:8787** (image deployed, API and worker healthy) was walked route
+by route in a browser to gather the evidence, and the observations are recorded in
+[ADR 0017](docs/adr/0017-desktop-knowledge-and-ask-experience.md) and the
+[desktop plan amendment](docs/roadmap/desktop-experience/README.md#2026-09-29-amendment).
+
+The user decided three things:
+
+1. **Delete a Brain outright.** [ADR 0016](docs/adr/0016-brain-deletion.md) and
+   [brain deletion](docs/contracts/platform-brain-deletion.md) specify total erasure
+   through the existing canonical mutation, journal and cleanup path. Archive stays
+   the reversible action. No Vault token or lease is revoked.
+2. **Merge Memory, Sources, Graph and Repositories into one improved surface, and
+   lead Ask with the question.** [ADR 0017](docs/adr/0017-desktop-knowledge-and-ask-experience.md)
+   and [tiered desktop surface](docs/contracts/desktop-knowledge-surface.md) specify
+   four tiers, one shared lineage inspector, graph controls in the canvas chrome,
+   list density, and an exception-first assurance band.
+3. **Split Agents from Connections.** Agents is the sole incoming-connect home;
+   Connections owns outbound Brain-managed MCP only. This resolves the accepted
+   conflict between the desktop contract and the managed-experience amendment, which
+   is why the live app offered two setup paths for one action.
+
+Five planned packs now sit in [active](docs/roadmap/execution/active/README.md):
+`platform-brain-deletion`, `desktop-knowledge-surface`, `desktop-ask-primary`,
+`desktop-connection-authority` and `desktop-assurance-pulse`. Product platform
+reopened from complete to active. `desktop-ask-primary` deliberately follows
+`retrieval-ask-experience`, because the accepted plan keeps the default-Ask cutover
+behind real answer acceptance; the shipped
+[successor cleanup](docs/roadmap/execution/archive/mcp-successor-cleanup.md) search-first
+default is amended, and that pack's closeout is left as history.
+
+Verified: governance lint plus all 32 checker tests passed, dependency graph has no
+cycle or dangling predecessor across 55 slices, and `git diff --check` is clean.
+Version is N/A and everything is uncommitted. Not yet proven: any of the above
+behavior in code, and no Ask answer was exercised end-to-end because that would
+issue a paid provider call.
+
 ## Current SWEG MCP repair — 2026-09-28
 
 Image **385793c54044** is locally deployed at **http://127.0.0.1:8787**.

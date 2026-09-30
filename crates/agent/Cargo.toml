@@ -10,7 +10,6 @@ publish.workspace = true
 tracing-subscriber.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
-keyring = "4"
 recollect-protocol.workspace = true
 recollect-mcp-runtime = { path = "../mcp-runtime" }
 rmcp = { version = "3.4", default-features = false, features = ["client", "server", "transport-io"] }
@@ -26,3 +25,11 @@ tree-sitter-hcl = "=1.1.0"
 
 [dev-dependencies]
 axum.workspace = true
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+keyring = "4"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-foundation-sys = "0.8"
+security-framework = "3"

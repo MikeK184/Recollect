@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Button,
-  Group,
-  Select,
-  Stack,
-  Text,
-  px,
-  useMantineTheme,
-} from "@mantine/core";
+import { Button, Group, Select, px, useMantineTheme } from "@mantine/core";
 import cytoscape, { type Core, type StylesheetJson } from "cytoscape";
 import { palette, fonts, iconSize } from "./design/tokens";
 import { Maximize, ZoomIn, ZoomOut, Focus } from "lucide-react";
@@ -218,73 +210,70 @@ export default function GraphCanvas({
       });
   }
   return (
-    <Stack gap="xs" style={{ minWidth: 0 }}>
-      <div className="graph-stage">
-        <div
-          ref={container}
-          className="graph-canvas"
-          role="img"
-          aria-label={`Interactive graph: ${nodes.length} entities and ${edges.length} directed relationships. Use the entity search or List view for keyboard inspection.`}
-          data-testid="graph-canvas"
-          data-ready={ready}
+    <div className="graph-stage">
+      <div
+        ref={container}
+        className="graph-canvas"
+        role="img"
+        aria-label={`Interactive graph: ${nodes.length} entities and ${edges.length} directed relationships. Use the entity search or List view for keyboard inspection.`}
+        data-testid="graph-canvas"
+        data-ready={ready}
+      />
+      <Group
+        className="graph-canvas-controls"
+        align="end"
+        justify="end"
+        data-graph-chrome=""
+      >
+        <Select
+          aria-label="Graph layout"
+          value={layout}
+          onChange={(value) => setLayout(value ?? "cose")}
+          data={[
+            { value: "cose", label: "Connected clusters" },
+            { value: "breadthfirst", label: "Directed layers" },
+            { value: "grid", label: "Grid" },
+          ]}
         />
-        <Group className="graph-canvas-controls" align="end" justify="end">
-          <Select
-            label="Graph layout"
-            value={layout}
-            onChange={(value) => setLayout(value ?? "cose")}
-            data={[
-              { value: "cose", label: "Connected clusters" },
-              { value: "breadthfirst", label: "Directed layers" },
-              { value: "grid", label: "Grid" },
-            ]}
-          />
-          <Button
-            variant="subtle"
-            aria-label="Fit graph"
-            onClick={() => core.current && fitGraph(core.current)}
-          >
-            <Maximize size={iconSize.small} />
-          </Button>
-          <Button
-            variant="subtle"
-            aria-label="Zoom graph in"
-            onClick={() => zoom(1.3)}
-          >
-            <ZoomIn size={iconSize.small} />
-          </Button>
-          <Button
-            variant="subtle"
-            aria-label="Zoom graph out"
-            onClick={() => zoom(1 / 1.3)}
-          >
-            <ZoomOut size={iconSize.small} />
-          </Button>
-          <Button
-            variant="subtle"
-            disabled={!choice}
-            onClick={() => {
-              if (choice) {
-                const cy = core.current;
-                if (cy)
-                  fitGraph(
-                    cy,
-                    cy.getElementById(choice.id).closedNeighborhood(),
-                    65,
-                  );
-              }
-            }}
-          >
-            Focus selection
-          </Button>
-        </Group>
-      </div>
-      <Text size="xs" c="dimmed">
-        Drag to pan; scroll to zoom; select an entity or arrow to inspect. Blue:
-        repository evidence · amber: memory · sage: source. Dark outlines mark
-        selection; sage outlines mark the path. Layout position does not
-        indicate trust or importance.
-      </Text>
-    </Stack>
+        <Button
+          variant="subtle"
+          aria-label="Fit graph"
+          onClick={() => core.current && fitGraph(core.current)}
+        >
+          <Maximize size={iconSize.small} />
+        </Button>
+        <Button
+          variant="subtle"
+          aria-label="Zoom graph in"
+          onClick={() => zoom(1.3)}
+        >
+          <ZoomIn size={iconSize.small} />
+        </Button>
+        <Button
+          variant="subtle"
+          aria-label="Zoom graph out"
+          onClick={() => zoom(1 / 1.3)}
+        >
+          <ZoomOut size={iconSize.small} />
+        </Button>
+        <Button
+          variant="subtle"
+          disabled={!choice}
+          onClick={() => {
+            if (choice) {
+              const cy = core.current;
+              if (cy)
+                fitGraph(
+                  cy,
+                  cy.getElementById(choice.id).closedNeighborhood(),
+                  65,
+                );
+            }
+          }}
+        >
+          Focus selection
+        </Button>
+      </Group>
+    </div>
   );
 }

@@ -6,24 +6,37 @@
 | --- | --- | --- |
 | [repository-governance.md](repository-governance.md) | complete | README presentation and peer comparison delivered locally; description and 19 topics verified on the existing public GitHub repository |
 | [developer-tooling.md](developer-tooling.md) | active | Add OpenCode v2 support for the existing project instructions, skills, roles and Context7 |
-| [product-platform.md](product-platform.md) | complete | Desktop authority, shared light visual system, SVG identity, global/contextual routes and identity checks delivered |
+| [product-platform.md](product-platform.md) | active | Desktop authority, shared light visual system, SVG identity, global/contextual routes and identity checks delivered; reopened for irreversible Brain deletion and the tiered knowledge surface |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | active | Sources, repositories/manifests and agent/private workspace desktop workflows |
 | [memory-lifecycle.md](memory-lifecycle.md) | active | Readable memory/handovers and standing policy/capture/retention settings |
 | [hybrid-retrieval.md](hybrid-retrieval.md) | active | Governed temporary Ask and retained exact evidence search |
 | [graph-intelligence.md](graph-intelligence.md) | active | Canvas-first bounded graph workspace with exact scope and accessible inspection |
-| [mcp-coordination.md](mcp-coordination.md) | complete | SWEG direct authentication repaired and verified with installed Codex 0.157.1; Keychain/environment guidance deployed. OAuth and plugin packaging remain undelivered |
-| [operational-readiness.md](operational-readiness.md) | active | Authorized Activity presentation and complete desktop/API/runtime acceptance |
+| [mcp-coordination.md](mcp-coordination.md) | active | SWEG direct authentication repaired and verified with installed Codex 0.157.1; Keychain/environment guidance deployed. OAuth and plugin packaging remain undelivered. Codex memory skills and OpenCode MCP rendering in progress. Planned: direct plugin/MCP user auth with no CLI download |
+| [operational-readiness.md](operational-readiness.md) | active | Authorized Activity presentation and complete desktop/API/runtime acceptance; Atlas §6/§7 lifecycle matrix and HotpotQA reproduction shipped, LongMemEval run blocked on cost approval |
 
 ## Active frontier
 
-The [direct MCP setup](../execution/archive/mcp-direct-connections.md) and
+The [direct MCP setup](../execution/archive/mcp-direct-connections.md),
 [public retrieval benchmark](../execution/archive/operations-public-benchmark.md)
+and [Atlas lifecycle proof](../execution/archive/operations-atlas-lifecycle-proof.md)
 are locally delivered with dated runtime and measured evidence. OAuth/plugin
 packaging and the six desktop acceptance packs remain outside those closeouts.
 
 The 2026-09-28 [managed memory correction](../execution/archive/memory-managed-experience.md)
 is delivered locally: autonomous agent operation and managed defaults replace ordinary manual tuning.
 It preserves the remaining desktop verification scope.
+
+The user's 2026-09-29 decisions add three product directions and five planned packs.
+[ADR 0016](../../adr/0016-brain-deletion.md) makes a Brain irreversibly deletable
+with total erasure through the canonical mutation, journal and cleanup path, which
+reopens [Product platform and access](product-platform.md) from complete.
+[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) merges Memory,
+Sources, Graph and Repositories into one knowledge surface with a shared lineage
+inspector, makes the Ask question composer the default, splits Agents from
+Connections, and adds an exception-first assurance band. The live desktop was walked
+route by route on the running local stack to establish the evidence for those changes;
+the observations are summarized in the [desktop plan](../desktop-experience/README.md)
+amendment note rather than restated here.
 
 The user explicitly approved the [desktop experience](../desktop-experience/README.md)
 on 2026-09-26 and requested complete implementation plus an original SVG logo.

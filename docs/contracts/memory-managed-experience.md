@@ -48,6 +48,13 @@ workers retain responsibility for revision, expiry, erasure and recovery fences.
 
 ### Human and agent experience
 
+Amended 2026-09-29 by [ADR 0017](../adr/0017-desktop-knowledge-and-ask-experience.md)
+and the [tiered surface amendment](desktop-knowledge-surface.md): the agent
+connection cards named below no longer live inside Connections. Agents is the
+sole home for connecting a coding tool, and Connections owns outbound
+Brain-managed MCP only. The managed preset, progressive disclosure and owner
+connector approval behavior in the rest of this section are unchanged.
+
 The primary Brain sidebar shows Ask, Memory, Sources, Graph and Connections.
 Repositories, Agents, Activity and Settings remain reachable in a collapsed
 workspace group that opens on their routes. Connections starts with supported

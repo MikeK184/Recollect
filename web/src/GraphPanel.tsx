@@ -508,8 +508,10 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       : undefined;
   const needsSelection = missingExactSelection(scope);
   return (
-    <section className="feature-view" aria-label="Evidence graphs">
-      <div className="feature-toolbar">
+    <section className="feature-view graph-surface" aria-label="Evidence graphs">
+      {/* Canvas chrome: kind selection, filters, path, insights, status and
+          entity pages live in one compact row above the canvas region. */}
+      <div className="feature-toolbar graph-chrome" data-graph-chrome="">
         <SegmentedControl
           aria-label="Graph kind"
           value={scope.kind}
@@ -552,8 +554,16 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         >
           Graph status
         </Button>
+        <Button
+          variant="subtle"
+          ml="auto"
+          leftSection={<List size={iconSize.small} />}
+          onClick={() => setDrawer("entities")}
+        >
+          Browse eligible entity pages
+        </Button>
       </div>
-      <div className="feature-scope">
+      <div className="feature-scope graph-chrome" data-graph-chrome="">
         <Badge variant="light" color="gray">
           {scope.mode === "investigation"
             ? "Include uncertainties"
@@ -661,15 +671,6 @@ export function GraphPanel({ brain }: { brain: Brain }) {
               setDrawer("path");
             }}
           />
-          <Button
-            mt="md"
-            size="compact-sm"
-            variant="subtle"
-            leftSection={<List size={iconSize.small} />}
-            onClick={() => setDrawer("entities")}
-          >
-            Browse eligible entity pages
-          </Button>
         </>
       )}
       <Drawer

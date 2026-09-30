@@ -469,6 +469,28 @@ textarea {
 .brain-card h3 {
   overflow-wrap: anywhere;
 }
+.brain-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.brain-cell > .brain-link {
+  flex: 1 1 auto;
+}
+/* Machine identifiers live here, collapsed, instead of occupying a list row. */
+.record-identity {
+  border-top: 1px solid var(--rc-border);
+  padding-top: 8px;
+}
+.record-identity > summary {
+  cursor: pointer;
+  color: var(--rc-muted);
+  font-size: 0.75rem;
+  margin-bottom: 6px;
+}
+.collapse-notice {
+  margin: -16px 0 20px;
+}
 .count-pill {
   background: var(--rc-sidebar);
   color: var(--rc-muted);
@@ -862,6 +884,3 @@ textarea {
     animation-duration: 0s !important;
   }
 }
-
-.nav-secondary { margin-top: 1.25rem; }
-.nav-secondary > summary { cursor: pointer; padding: 0.75rem; font-size: 0.75rem; color: var(--mantine-color-dimmed); }

@@ -14,6 +14,24 @@ design approval is not a shipment or runtime claim. The user also explicitly
 requested one original reusable Recollect SVG logo, inspired by gathering memories
 again, with consistent SVG/icons, fonts, sizes and headings throughout the product.
 
+## 2026-09-29 amendment
+
+The user reviewed the running product route by route and decided three things that
+change this plan's presentation scope while leaving its token, typography, icon,
+route-ownership, desktop-only and read-only-answer decisions intact:
+[ADR 0016](../../adr/0016-brain-deletion.md) adds irreversible Brain deletion, and
+[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) with the
+[tiered surface contract](../../contracts/desktop-knowledge-surface.md) merges
+Memory, Sources, Graph and Repositories into one knowledge surface with a shared
+lineage inspector, makes the Ask question composer the default view, splits Agents
+from Connections, and adds an exception-first assurance band.
+
+The nine-peer navigation tree and the page-by-page specification below remain the
+historical approved plan and the source of each page's required behavior. Where they
+describe four peer knowledge pages or a search-first Ask landing, the amendment
+supersedes placement only. Five planned packs sit alongside the six in-progress ones
+in [active](../execution/active/README.md); none of this is a delivery claim.
+
 ## Recommendation
 
 Make Recollect a place to ask questions, inspect what it knows, and configure

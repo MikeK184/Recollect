@@ -12,7 +12,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { Bot, Check, Copy, ShieldCheck } from "lucide-react";
 import { useBrain } from "../../app/context";
-import { McpAgentSetup } from "../../McpAgentSetup";
+import { McpAgentSetup, agentMemoryReadCheck } from "../../McpAgentSetup";
 import { WorkspacePanel } from "../../WorkspacePanel";
 import { CapturePanel } from "../../CapturePanel";
 import { PageHeader } from "../../components/PageHeader";
@@ -22,18 +22,16 @@ const tabs = [
   { value: "sessions", label: "Captured sessions" },
   { value: "contexts", label: "Your working contexts" },
 ] as const;
+const tabValues = tabs.map((tab) => tab.value);
 export function AgentsPage() {
   const brain = useBrain();
-  const [tab, setTab] = useFeatureTab(
-    tabs.map((t) => t.value),
-    "setup",
-  );
-  const check = `Use Recollect workspace.list to verify access to Brain ${brain.id}. Then start a task for this workspace and use memory.recall to find a piece of knowledge from it. Report the actual result and its citations. Do not change permissions or call connected tools.`;
+  const [tab, setTab] = useFeatureTab(tabValues, "setup");
+  const check = agentMemoryReadCheck(brain);
   return (
     <>
       <PageHeader
         title="Agents"
-        description="Give your coding agent a memory. Connect once, then let it handle the routine work."
+        description="The only place to connect a coding tool that works as you. Connect once, then let it handle the routine work."
       />
       <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
         {tab === "setup" && (
@@ -41,10 +39,11 @@ export function AgentsPage() {
             <div className="onboarding-grid">
               <Card withBorder p="lg">
                 <span className="onboarding-step">1</span>
-                <Title order={3}>Connect over MCP</Title>
+                <Title order={3}>Choose a host and connect</Title>
                 <Text size="sm" c="dimmed">
-                  Add Recollect to Codex or Claude Code using a server URL and
-                  access token. No companion is needed for memory tools.
+                  Pick Codex, Claude Code or OpenCode, bind this Brain, create
+                  your access token and add it to your host. Memory tools need no
+                  companion; automatic session capture pairs one.
                 </Text>
                 <Group mt="lg">
                   <McpAgentSetup brain={brain} />
@@ -52,10 +51,31 @@ export function AgentsPage() {
               </Card>
               <Card withBorder p="lg">
                 <span className="onboarding-step">2</span>
-                <Title order={3}>Verify a memory read</Title>
+                <Title order={3}>Set its working context</Title>
                 <Text size="sm" c="dimmed">
-                  Ask your host to retrieve real evidence. A saved configuration
-                  alone is not a connection check.
+                  Your restarted agent lists this Brain&apos;s repositories,
+                  areas and environments, then starts a task with explicit scope.
+                  Those scopes stay private to your account, including from Brain
+                  admins.
+                </Text>
+                <Group mt="lg">
+                  <Link
+                    to="/brains/$brainId/agents"
+                    params={{ brainId: brain.id }}
+                    search={{ tab: "contexts" }}
+                  >
+                    Your working contexts
+                  </Link>
+                </Group>
+              </Card>
+              <Card withBorder p="lg">
+                <span className="onboarding-step">3</span>
+                <Title order={3}>Verify a real memory read</Title>
+                <Text size="sm" c="dimmed">
+                  Run this in your host and read its actual answer. A setup card
+                  on screen, a saved configuration or a created token is
+                  configured only. It is connected once this call returns, and
+                  healthy only once repeated calls succeed.
                 </Text>
                 <CopyButton value={check}>
                   {({ copied, copy }) => (
@@ -90,7 +110,10 @@ export function AgentsPage() {
               </Group>
               <Text size="sm" c="dimmed">
                 Capturing sessions, sending content to a model, and calling
-                external tools have separate permissions.
+                external tools have separate permissions. Captured sessions and
+                coverage gaps are evidence of delivery, never of configuration:
+                a hook that has published nothing shows as a gap. The capture
+                policy has one editor, in Settings.
               </Text>
               <Group mt="lg">
                 <Link
@@ -109,9 +132,9 @@ export function AgentsPage() {
                 </Link>
               </Group>
             </Card>
-            <details className="setup-details">
+            <details className="feature-advanced">
               <summary>What the verification checks</summary>
-              <Code block mt="md">
+              <Code block data-testid="agent-verification-summary">
                 {check}
               </Code>
             </details>

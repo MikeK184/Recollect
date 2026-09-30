@@ -41,7 +41,11 @@ import {
 } from "./api";
 import { Brand } from "./components/Brand";
 import { ErrorState as Failure } from "./components/AsyncState";
-import { brainNavigation, globalNavigation } from "./app/navigation";
+import {
+  brainNavigation,
+  brainTiers,
+  globalNavigation,
+} from "./app/navigation";
 import { WorkspaceContext } from "./app/context";
 import { OperationsDialog } from "./OperationsDialog";
 
@@ -346,62 +350,36 @@ function Workspace({ user }: { user: Session }) {
                 </span>
               </div>
               <nav aria-label="Brain navigation" className="workspace-nav">
-                {brainNavigation
-                  .filter((n) =>
-                    [
-                      "ask",
-                      "memory",
-                      "sources",
-                      "graph",
-                      "connections",
-                    ].includes(n.section),
-                  )
-                  .map(({ section: value, label, icon: Icon }) => (
-                    <Link
-                      key={value}
-                      to={`/brains/$brainId/${value}`}
-                      params={{ brainId }}
-                      search={{}}
-                      className={`nav-item ${section === value ? "selected" : ""}`}
-                      aria-current={section === value ? "page" : undefined}
+                {brainTiers.map((tier) => (
+                  <div
+                    key={tier}
+                    className="nav-group"
+                    role="group"
+                    aria-labelledby={`nav-tier-${tier.toLowerCase()}`}
+                  >
+                    <span
+                      className="nav-label"
+                      id={`nav-tier-${tier.toLowerCase()}`}
                     >
-                      <Icon size={18} />
-                      <span>{label}</span>
-                    </Link>
-                  ))}
-                <details
-                  className="nav-secondary"
-                  open={[
-                    "repositories",
-                    "agents",
-                    "activity",
-                    "settings",
-                  ].includes(section)}
-                >
-                  <summary>Workspace &amp; settings</summary>
-                  {brainNavigation
-                    .filter((n) =>
-                      [
-                        "repositories",
-                        "agents",
-                        "activity",
-                        "settings",
-                      ].includes(n.section),
-                    )
-                    .map(({ section: value, label, icon: Icon }) => (
-                      <Link
-                        key={value}
-                        to={`/brains/$brainId/${value}`}
-                        params={{ brainId }}
-                        search={{}}
-                        className={`nav-item ${section === value ? "selected" : ""}`}
-                        aria-current={section === value ? "page" : undefined}
-                      >
-                        <Icon size={18} />
-                        <span>{label}</span>
-                      </Link>
-                    ))}
-                </details>
+                      {tier}
+                    </span>
+                    {brainNavigation
+                      .filter((n) => n.tier === tier)
+                      .map(({ section: value, label, icon: Icon }) => (
+                        <Link
+                          key={value}
+                          to={`/brains/$brainId/${value}`}
+                          params={{ brainId }}
+                          search={{}}
+                          className={`nav-item ${section === value ? "selected" : ""}`}
+                          aria-current={section === value ? "page" : undefined}
+                        >
+                          <Icon size={18} />
+                          <span>{label}</span>
+                        </Link>
+                      ))}
+                  </div>
+                ))}
               </nav>
             </>
           ) : (

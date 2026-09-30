@@ -11,6 +11,10 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Atlas lifecycle proof and public benchmark reproduction, 2026-09-29](atlas-lifecycle-proof-2026-09-29.md)
+- [Codex memory skills and OpenCode MCP rendering, 2026-09-28](codex-plugin-skills-2026-09-28.md)
+- [Plugin/MCP direct auth without CLI, 2026-09-29](plugin-direct-auth-2026-09-29.md)
+- [Successor cleanup verification, 2026-09-29](successor-cleanup-2026-09-29.md)
 - [SWEG direct Codex authentication repair, 2026-09-28](mcp-auth-repair-2026-09-28.md)
 - [Direct HTTP MCP, URL form and Context7 probe, 2026-09-28](mcp-direct-connections-2026-09-28.md)
 - [Public retrieval benchmark and Atlas lifecycle proof, 2026-09-28](public-memory-benchmark-2026-09-28.md)

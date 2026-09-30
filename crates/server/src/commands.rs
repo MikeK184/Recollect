@@ -76,6 +76,28 @@ pub async fn reserve<T: DeserializeOwned>(
     Ok(None)
 }
 
+/// Bind a reserved receipt to its Brain before an operation that removes the
+/// Brain. The existing apply chain invalidates receipts by brain_id (key kept,
+/// input and response emptied) while the Brain row still exists; a post-deletion
+/// write would violate the receipt row-level security policy, which requires a
+/// live role for a non-null brain_id.
+pub async fn bind_brain(
+    tx: &mut Transaction<'_, Postgres>,
+    key: Option<&str>,
+    brain: Uuid,
+) -> Result<()> {
+    if let Some(key) = key {
+        sqlx::query(
+            "UPDATE command_receipts SET brain_id=$2 WHERE actor_id=recollect_actor() AND key=$1",
+        )
+        .bind(key)
+        .bind(brain)
+        .execute(&mut **tx)
+        .await?;
+    }
+    Ok(())
+}
+
 pub async fn finish<T: Serialize>(
     tx: &mut Transaction<'_, Postgres>,
     key: Option<&str>,

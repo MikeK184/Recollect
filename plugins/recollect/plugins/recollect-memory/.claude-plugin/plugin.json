@@ -1,0 +1,9 @@
+{
+  "name": "recollect-memory",
+  "version": "0.1.0",
+  "description": "Scoped Recollect Brain memory over MCP: recall evidence-backed knowledge and contribute findings with your own access token.",
+  "author": {
+    "name": "Recollect"
+  },
+  "skills": "./skills/"
+}

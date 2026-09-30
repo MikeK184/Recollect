@@ -11,6 +11,10 @@ measured resource/quality limits. This epic owns final product readiness evidenc
 ## Governing Sources
 
 - [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
+- [Knowledge surface ADR](../../adr/0017-desktop-knowledge-and-ask-experience.md)
+- [Tiered surface contract](../../contracts/desktop-knowledge-surface.md)
+- [Brain deletion ADR](../../adr/0016-brain-deletion.md)
+- [Brain deletion contract](../../contracts/platform-brain-deletion.md)
 - [Desktop contract](../../contracts/desktop-experience.md)
 - [Answer contract](../../contracts/retrieval-answers.md)
 - [Integrated acceptance contract](../../contracts/operations-integrated-evaluations.md)
@@ -65,6 +69,8 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
 | `operations-public-benchmark` | shipped | contract-backed | pack | Frozen 50-question lexical/semantic evidence retrieval reports, provider usage and Atlas lifecycle proof; not a universal memory score |
+| `operations-atlas-lifecycle-proof` | shipped | contract-backed | pack | Deterministic Atlas §6 deletion sequence and §7 contradiction matrix as a 40-cell pass/fail matrix through the product API with zero model calls, plus digit-for-digit HotpotQA reproduction |
+| `operations-longmemeval-bench` | blocked | needs-contract | pack | Official LongMemEval-S answer-level run under the [proposed protocol](../../contracts/operations-longmemeval-protocol.md); blocked on user acceptance of that contract with explicit cost approval; three accuracies, pinned judge, frozen dataset hashes |
 | `operations-local-and-shared` | shipped | adr-backed, contract-backed | pack | Actual personal/shared UI/API, HTTPS native pairing/MCP, persistent state, migration failure, dependency outage, graceful drain and diagnostics verified |
 | `operations-recovery-drills` | shipped | adr-backed, contract-backed | pack | Actual encrypted SFTP, offline restore, journal continuity, erasure/replay, failed upgrade, interrupted resume, graph/recall and desktop proof |
 | `operations-integrated-evaluations` | shipped | contract-backed | pack | Actual-model quality, seven-capability matrix, unchanged 50-repository/200-document/eight-caller workload, repaired admission/queries, final restore/desktop and normal upgrade verified |
@@ -72,6 +78,7 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | `operations-proof-cleanup` | shipped | contract-backed | small-fix: explicitly authorized removal of verified disposable local fixtures; no product implementation or schema change | Removed 50 containers, 49 volumes, 9 networks and 10 fixture directories; current seven-Brain inventory and readiness preserved |
 | `operations-desktop-activity` | in-progress | adr-backed, contract-backed | pack | Authorized bounded Activity feeds and diagnostics with canonical detail/recovery links |
 | `desktop-experience-acceptance` | in-progress | adr-backed, contract-backed | pack | Real desktop/API/agent regression, answer quality/privacy, resource measurements and rollout/rollback evidence |
+| `desktop-assurance-pulse` | planned | adr-backed, contract-backed | pack | Exception-first assurance band over existing authorized feeds, with Activity reordered as its drill-down |
 
 ## Slice Dependencies
 
@@ -81,10 +88,13 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | `operations-recovery-drills` | `operations-local-and-shared`, `evidence-session-capture`, `graph-exploration`, `retrieval-investigation-ui`, `mcp-observation-capture` |
 | `operations-integrated-evaluations` | `operations-recovery-drills`, `memory-capture-reconciliation` |
 | `operations-public-benchmark` | `operations-integrated-evaluations` |
+| `operations-atlas-lifecycle-proof` | `operations-public-benchmark` |
+| `operations-longmemeval-bench` | `operations-atlas-lifecycle-proof` |
 | `operations-root-compose` | `operations-local-and-shared` |
 | `operations-proof-cleanup` | `operations-root-compose` |
 | `operations-desktop-activity` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup` |
-| `desktop-experience-acceptance` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup`, `retrieval-ask-experience`, `operations-desktop-activity` |
+| `desktop-assurance-pulse` | `operations-desktop-activity`, `desktop-knowledge-surface` |
+| `desktop-experience-acceptance` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup`, `retrieval-ask-experience`, `operations-desktop-activity`, `platform-brain-deletion`, `desktop-knowledge-surface`, `desktop-ask-primary`, `desktop-connection-authority`, `desktop-assurance-pulse` |
 
 ## Completion Criteria
 
@@ -113,3 +123,15 @@ from remaining current-code domain and integrated acceptance. The
 [desktop guide](../../runbooks/desktop-experience.md) documents the current function
 locations. Product/proof slices stay in progress until their required checks pass;
 prior shipped domain records remain historical evidence rather than redesign proof.
+
+## 2026-09-29 assurance band and deletion restore proof
+
+[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) adds the
+exception-first assurance band, delivered by `desktop-assurance-pulse` over
+existing authorized feeds only; any figure without a verified response field is
+omitted and recorded rather than estimated. [ADR 0016](../../adr/0016-brain-deletion.md)
+extends this epic's integrated acceptance obligation with a new negative evaluation:
+a deleted Brain must stay absent from every listing, retrieval, graph, audit and MCP
+path, and must not reappear after restore from an older backup with the retained
+journal applied. `desktop-experience-acceptance` now names all five successor slices
+as predecessors.

@@ -25,7 +25,7 @@ for RECOLLECT_UI_SPEC in "$@"; do
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
   # Recall reads processed canonical chunks while the browser test is running.
-  if [[ "${RECOLLECT_UI_SPEC##*/}" == desktop.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall-graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == investigation.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-combined.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-analytics.spec.ts ]]; then
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == desktop.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall-graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == investigation.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-chrome.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-combined.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-analytics.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-debug.spec.ts ]]; then
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
 done

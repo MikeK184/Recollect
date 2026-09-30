@@ -437,7 +437,11 @@ async fn actual_hosts_capture_prompt_reply_tool_and_lifecycle_with_native_hooks(
                 .unwrap();
             assert_eq!(report["exit_code"], 17);
             let verified = publication::project_root().join(".cache/verified-capture-plugin");
-            for name in [".codex-plugin/plugin.json", "hooks/hooks.json"] {
+            for name in [
+                ".codex-plugin/plugin.json",
+                "hooks/hooks.json",
+                "skills/recollect-memory/SKILL.md",
+            ] {
                 let target = verified.join(name);
                 fs::create_dir_all(target.parent().unwrap()).unwrap();
                 fs::copy(dir.join("plugins/recollect-capture").join(name), target).unwrap();

@@ -18,6 +18,9 @@ pub async fn run(
         setup.endpoint == client.endpoint && setup.device_id == device.device_id,
         "Use this capture setup's original endpoint and paired device profile."
     );
+    if setup.host == "codex" {
+        capture_setup::reject_conflicting_mcp_server(&setup.working_directory).await?;
+    }
     let installed = capture_setup::version(&setup.host).await?;
     let (setup_path, setup) = capture_setup::refresh_version(
         client,

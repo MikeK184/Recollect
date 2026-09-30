@@ -11,6 +11,8 @@ engineers an investigation UI with explicit disagreement and strict modes.
 ## Governing Sources
 
 - [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
+- [Knowledge surface ADR](../../adr/0017-desktop-knowledge-and-ask-experience.md)
+- [Tiered surface contract](../../contracts/desktop-knowledge-surface.md)
 - [Temporary answers](../../contracts/retrieval-answers.md)
 - [Desktop contract](../../contracts/desktop-experience.md)
 - [Canonical exact and lexical recall](../../contracts/retrieval-exact-and-lexical.md)
@@ -67,6 +69,7 @@ host bridge is integrated.
 | `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
 | `retrieval-investigation-ui` | shipped | contract-backed | pack | Desktop result/disagreement/source views, frozen history, exact evidence and scoped native graph links; expiry/access/epoch clearing and actual retained SWEG proof |
 | `retrieval-ask-experience` | in-progress | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
+| `desktop-ask-primary` | planned | adr-backed, contract-backed | pack | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
 
 ## Slice Dependencies
 
@@ -77,6 +80,7 @@ host bridge is integrated.
 | `retrieval-graph-fusion` | `retrieval-semantic`, `graph-cross-repository-views` |
 | `retrieval-investigation-ui` | `retrieval-graph-fusion`, `memory-procedures-and-handovers` |
 | `retrieval-ask-experience` | `desktop-experience-contracts`, `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows` |
+| `desktop-ask-primary` | `retrieval-ask-experience` |
 
 ## Completion Criteria
 
@@ -100,3 +104,13 @@ from remaining current-code domain and integrated acceptance. The
 [desktop guide](../../runbooks/desktop-experience.md) documents the current function
 locations. Product/proof slices stay in progress until their required checks pass;
 prior shipped domain records remain historical evidence rather than redesign proof.
+
+## 2026-09-29 Ask default
+
+[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) makes the
+question composer the default Ask view, amending the search-first landing recorded
+in the shipped [successor cleanup pack](../execution/archive/mcp-successor-cleanup.md).
+The `desktop-ask-primary` slice owns the change and follows `retrieval-ask-experience`,
+because the accepted plan keeps the default-Ask cutover behind real answer
+acceptance. Answer semantics, citation enforcement and conversation temporariness
+are unchanged.

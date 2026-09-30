@@ -107,11 +107,6 @@ test("desktop destinations are real routes with browser history and isolated fea
     };
     page.on("request", track);
     const start = performance.now();
-    if (["repositories", "agents", "activity", "settings"].includes(suffix))
-      await openDetails(
-        page.getByRole("navigation", { name: "Brain navigation" }),
-        "Workspace & settings",
-      );
     await page
       .getByRole("navigation", { name: "Brain navigation" })
       .getByRole("link", { name: label, exact: true })
@@ -608,11 +603,6 @@ test("repeated local navigation and canonical recall observations record sample 
       };
       page.on("request", track);
       const start = performance.now();
-      if (["repositories", "agents", "activity", "settings"].includes(suffix))
-        await openDetails(
-          page.getByRole("navigation", { name: "Brain navigation" }),
-          "Workspace & settings",
-        );
       await page
         .getByRole("navigation", { name: "Brain navigation" })
         .getByRole("link", { name: label, exact: true })

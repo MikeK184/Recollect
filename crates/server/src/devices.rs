@@ -135,31 +135,59 @@ pub async fn approve(
         "declined"
     };
     let device_id = if input.approve {
-        let count:i64=sqlx::query_scalar("SELECT count(*) FROM devices WHERE account_id=$1 AND revoked_at IS NULL AND expires_at>now()").bind(auth.user.id).fetch_one(&mut *tx).await?;
-        if count >= 20 {
-            return Err(Error(
-                StatusCode::TOO_MANY_REQUESTS,
-                "device_capacity",
-                "Revoke an unused device before pairing another. The account limit is 20.",
-            ));
-        }
-        let id = Uuid::new_v4();
-        sqlx::query("INSERT INTO devices(id,account_id,name,token) VALUES($1,$2,$3,$4)")
+        let trimmed = name.trim().to_owned();
+        let existing: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM devices WHERE account_id=$1 AND lower(name)=lower($2) AND revoked_at IS NULL AND expires_at>now() ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+        )
+        .bind(auth.user.id)
+        .bind(&trimmed)
+        .fetch_optional(&mut *tx)
+        .await?;
+        if let Some(id) = existing {
+            sqlx::query(
+                "UPDATE devices SET token=$2, expires_at=now()+interval '30 days', claimed=false, name=$3 WHERE id=$1",
+            )
             .bind(id)
-            .bind(auth.user.id)
-            .bind(&name)
             .bind(Uuid::new_v4())
+            .bind(&trimmed)
             .execute(&mut *tx)
             .await?;
-        team::audit(
-            &mut tx,
-            auth.user.id,
-            id,
-            "device.approve",
-            "awaiting_companion",
-        )
-        .await?;
-        Some(id)
+            team::audit(
+                &mut tx,
+                auth.user.id,
+                id,
+                "device.approve",
+                "awaiting_companion (reused)",
+            )
+            .await?;
+            Some(id)
+        } else {
+            let count:i64=sqlx::query_scalar("SELECT count(*) FROM devices WHERE account_id=$1 AND revoked_at IS NULL AND expires_at>now()").bind(auth.user.id).fetch_one(&mut *tx).await?;
+            if count >= 20 {
+                return Err(Error(
+                    StatusCode::TOO_MANY_REQUESTS,
+                    "device_capacity",
+                    "Revoke an unused device before pairing another. The account limit is 20.",
+                ));
+            }
+            let id = Uuid::new_v4();
+            sqlx::query("INSERT INTO devices(id,account_id,name,token) VALUES($1,$2,$3,$4)")
+                .bind(id)
+                .bind(auth.user.id)
+                .bind(&trimmed)
+                .bind(Uuid::new_v4())
+                .execute(&mut *tx)
+                .await?;
+            team::audit(
+                &mut tx,
+                auth.user.id,
+                id,
+                "device.approve",
+                "awaiting_companion",
+            )
+            .await?;
+            Some(id)
+        }
     } else {
         team::audit(&mut tx, auth.user.id, pairing, "device.decline", "declined").await?;
         None

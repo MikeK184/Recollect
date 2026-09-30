@@ -42,8 +42,9 @@ is required simply to author or validate documentation.
 
 The UI uses static assets served by Rust. A Next.js-specific development MCP is
 not selected. Reuse existing browser inspection before adding another integration.
-Any project development MCP registration belongs in .codex/config.toml; product
-Brain connections and execution profiles belong in Recollect's runtime model.
+Codex project development MCP registration belongs in .codex/config.toml;
+OpenCode project development MCP registration belongs in root `opencode.json`;
+product Brain connections and execution profiles belong in Recollect's runtime model.
 
 ## Skills assessment
 
@@ -77,7 +78,8 @@ skills.
 ## MCP assessment
 
 No additional development MCP is required to begin the accepted implementation
-sequence. Keep the existing Context7 server and CodeGraph CLI. This is a tooling
+sequence beyond the user-authorized OpenCode chrome-devtools browser control.
+Keep the existing Context7 server and CodeGraph CLI. This is a tooling
 recommendation based on the selected stack and available workflows, not proof
 that future product integrations already work.
 
@@ -86,17 +88,19 @@ that future product integrations already work.
 | Context7 | Keep; real library resolution and documentation queries succeeded in this session. Pair responses with current primary sources when incomplete or inconsistent. |
 | CodeGraph MCP | No additional server now; the pinned local CLI already supplies navigation. Rust source coverage must be checked when Rust code exists. |
 | OpenAI documentation MCP | Optional if sustained OpenAI-specific work warrants it; current official browsing and Context7 cover this assessment. No product model provider is selected merely by using Codex. |
-| Browser/Playwright MCP | Use the available browser skill/tools when the UI runs. Add a dedicated integration only for a demonstrated missing capability; no UI connection was tested here. |
+| Browser/Playwright MCP | OpenCode uses secret-free local `chrome-devtools` (`chrome-devtools-mcp@latest --isolated --no-usage-statistics`) per the 2026-09-29 user request for browser control; Codex remains Context7-only. Add further browser integrations only for a demonstrated missing capability. |
 | PostgreSQL, Neo4j or Docker MCPs | No extra server for scaffolding; direct clients, Compose and integration fixtures should prove the actual application paths. Client installation alone does not prove service readiness. |
 | GitHub/GitLab or issue-tracker MCPs | Revisit when an actual remote/CI/review workflow needs capabilities beyond Git and the relevant CLI; no remote service was connected here. |
 | Vault, Kubernetes, Terraform, Confluence or customer MCPs | These are possible product-managed connections or integration fixtures. Their presence in the vision does not require developer credentials or registration in this repository. |
 | Cognee or another memory-engine MCP | Not required by Recollect's independent Rust baseline; reference material does not create a runtime dependency. |
 
-Any later development MCP belongs in `.codex/config.toml`, with named environment
+Any later Codex development MCP belongs in `.codex/config.toml`, and any later
+OpenCode development MCP belongs in root `opencode.json`, with named environment
 inputs and a successful call recorded before claiming connectivity. The current
-governance checker permits exactly Context7; a future approved addition must
+governance checker permits exactly Context7 in `.codex/config.toml`; it does not
+constrain `opencode.json`. A future approved Codex addition must
 update its configuration contract and focused tests together. Brain-managed
-connections belong to product contracts/runtime rather than this Codex file.
+connections belong to product contracts/runtime rather than these host files.
 
 See [dated sources and verification](../mappings/documentation-skills-and-tooling-2026-09-13.md)
 for the source adaptation, installed-tool snapshot and limits. Reference-repo

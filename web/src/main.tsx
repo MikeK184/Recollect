@@ -17,6 +17,7 @@ import "./styles.css";
 import "./design/typography.css";
 import { App } from "./App";
 import { BrainLayout } from "./app/BrainLayout";
+import { KnowledgeSurface } from "./features/knowledge/KnowledgeSurface";
 import { validateBrainSearch } from "./app/useBrainSearch";
 import { theme, cssVariablesResolver } from "./design/theme";
 
@@ -55,8 +56,16 @@ const ask = createRoute({
     "AskPage",
   ),
 });
-const memory = createRoute({
+// One Knowledge surface hosts the four knowledge views as a pathless layout, so
+// every contracted URL keeps its own path while sharing one shell and one
+// inspector region. The views stay lazily bundled per route.
+const knowledge = createRoute({
   getParentRoute: () => brain,
+  id: "knowledge",
+  component: KnowledgeSurface,
+});
+const memory = createRoute({
+  getParentRoute: () => knowledge,
   path: "memory",
   component: lazyRouteComponent(
     () => import("./features/memory/MemoryPage"),
@@ -64,7 +73,7 @@ const memory = createRoute({
   ),
 });
 const sources = createRoute({
-  getParentRoute: () => brain,
+  getParentRoute: () => knowledge,
   path: "sources",
   component: lazyRouteComponent(
     () => import("./features/sources/SourcesPage"),
@@ -72,7 +81,7 @@ const sources = createRoute({
   ),
 });
 const graph = createRoute({
-  getParentRoute: () => brain,
+  getParentRoute: () => knowledge,
   path: "graph",
   component: lazyRouteComponent(
     () => import("./features/graph/GraphPage"),
@@ -80,7 +89,7 @@ const graph = createRoute({
   ),
 });
 const repositories = createRoute({
-  getParentRoute: () => brain,
+  getParentRoute: () => knowledge,
   path: "repositories",
   component: lazyRouteComponent(
     () => import("./features/repositories/RepositoriesPage"),
@@ -155,10 +164,7 @@ const router = createRouter({
     brain.addChildren([
       brainIndex,
       ask,
-      memory,
-      sources,
-      graph,
-      repositories,
+      knowledge.addChildren([memory, sources, graph, repositories]),
       agents,
       connections,
       activity,

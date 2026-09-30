@@ -53,8 +53,7 @@ test("new Brain has managed defaults, compact navigation and simple agent setup"
   expect(data.models.current.policy.automatic_embedding).toBe(true);
   expect(data.capture.policy.enabled).toBe(true);
   const nav = page.getByRole("navigation", { name: "Brain navigation" });
-  await expect(nav.getByRole("link")).toHaveCount(5);
-  await openDetails(nav, "Workspace & settings");
+  await expect(nav.getByRole("link")).toHaveCount(9);
   await expect(
     nav.getByRole("link", { name: "Settings", exact: true }),
   ).toBeVisible();

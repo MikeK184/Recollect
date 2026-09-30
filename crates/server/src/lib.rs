@@ -4,6 +4,7 @@ pub mod artifacts;
 pub mod auth;
 mod automation;
 pub mod autonomous;
+pub mod brain_deletion;
 pub mod brains;
 pub mod capture;
 pub mod commands;
@@ -260,6 +261,10 @@ impl AppState {
         privacy::retry,
         privacy::device_sync,
         privacy::device_ack,
+        brain_deletion::preview,
+        brain_deletion::delete,
+        brain_deletion::status,
+        brain_deletion::fence,
         memory_evidence::list,
         memory_evidence::detail
     ),
@@ -382,7 +387,12 @@ pub(crate) fn api_routes() -> Router<AppState> {
         .route("/devices/{id}", axum::routing::delete(devices::revoke))
         .route("/devices/revoke-self", post(devices::revoke_self))
         .route("/brains", get(brains::list).post(brains::create))
-        .route("/brains/{id}", get(brains::get).patch(brains::update))
+        .route(
+            "/brains/{id}",
+            get(brains::get)
+                .patch(brains::update)
+                .delete(brain_deletion::delete),
+        )
         .route("/brains/{id}/audit", get(brains::audit))
         .route("/brains/{id}/access", get(access::get))
         .route("/brains/{id}/grants", post(access::by_name))
@@ -652,6 +662,18 @@ pub(crate) fn api_routes() -> Router<AppState> {
         .route(
             "/brains/{brain}/privacy-sync",
             get(privacy::device_sync).post(privacy::device_ack),
+        )
+        .route(
+            "/brains/{brain}/deletions/preview",
+            post(brain_deletion::preview),
+        )
+        .route(
+            "/brains/{brain}/deletions/fence",
+            get(brain_deletion::fence),
+        )
+        .route(
+            "/brains/{brain}/deletions/{request}",
+            get(brain_deletion::status),
         )
         .route("/brains/{brain}/claim-evidence", get(memory_evidence::list))
         .route(

@@ -1,6 +1,6 @@
 # MCP Coordination, Vault and Private Runners
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -12,10 +12,14 @@ delivery, local/central/private execution and safe process lifecycle.
 
 - [Desktop contract](../../contracts/desktop-experience.md)
 - [Desktop ADR](../../adr/0014-desktop-experience-and-answers.md)
+- [Knowledge surface ADR](../../adr/0017-desktop-knowledge-and-ask-experience.md)
+- [Tiered surface contract](../../contracts/desktop-knowledge-surface.md)
 - [Managed observation ADR](../../adr/0012-managed-tool-observations.md)
 - [Automatic managed observation capture](../../contracts/mcp-observation-capture.md)
 - [Agent memory MCP ADR](../../adr/0010-agent-memory-mcp.md)
+- [Direct plugin user auth ADR](../../adr/0015-direct-plugin-user-auth.md)
 - [Agent memory/workspace tools](../../contracts/mcp-memory-and-workspace-tools.md)
+- [Plugin direct-auth contract](../../contracts/mcp-plugin-direct-auth.md)
 - [Vault/private ADR](../../adr/0009-vault-and-private-execution.md)
 - [Vault/private contract](../../contracts/mcp-vault-and-private-runners.md)
 - [Managed runtime ADR](../../adr/0008-managed-mcp-runtime.md)
@@ -75,6 +79,10 @@ universal catalogue of customer connectors is introduced.
 | `mcp-memory-and-workspace-tools` | shipped | adr-backed, contract-backed | pack | Stateless paired MCP, native bridge, scoped memory/graph/handover tools and fresh capture defaults proven through real coding hosts |
 | `mcp-observation-capture` | shipped | adr-backed, contract-backed | pack | Actual central/local/private receipts become scoped canonical evidence; automatic learning, separate reconciliation, retries, native erasure synchronization, older-state replay and desktop state verified; normal migration 024 preserved |
 | `mcp-desktop-setup` | shipped | adr-backed, contract-backed | pack | Guided approved connection setup, profiles/runners and uncertain-call inspection without widening grants |
+| `mcp-codex-plugin` | in-progress | adr-backed, contract-backed | pack | Local Codex memory skills in the generated capture plugin and stdio MCP rendering for OpenCode |
+| `mcp-plugin-direct-auth` | shipped | adr-backed, contract-backed | pack | Direct plugin/MCP user auth (API token or browser device code, Cognee-style) with no CLI download; companion stays capture-only |
+| `mcp-successor-cleanup` | shipped | adr-backed, contract-backed | pack | Device dedupe by normalized name, review-UI removal to autonomous learning log, Ask/Search read-only simplification |
+| `desktop-connection-authority` | planned | adr-backed, contract-backed | pack | Agents as the sole incoming-connect home, Connections outbound-MCP only, plain-language placement and tool-group naming with session/context views |
 
 ## Slice Dependencies
 
@@ -87,7 +95,11 @@ universal catalogue of customer connectors is introduced.
 | `mcp-memory-and-workspace-tools` | `mcp-runtime-and-credentials`, `retrieval-graph-fusion`, `memory-procedures-and-handovers`, `evidence-session-capture` |
 | `mcp-observation-capture` | `mcp-vault-and-private-runners`, `mcp-memory-and-workspace-tools` |
 | `mcp-desktop-setup` | `platform-desktop-shell` |
+| `mcp-codex-plugin` | `mcp-memory-and-workspace-tools`, `evidence-session-capture` |
+| `mcp-plugin-direct-auth` | `mcp-memory-and-workspace-tools`, `mcp-runtime-and-credentials` |
 | `mcp-direct-connections` | `mcp-desktop-setup`, `mcp-memory-and-workspace-tools` |
+| `mcp-successor-cleanup` | `mcp-plugin-direct-auth` |
+| `desktop-connection-authority` | `mcp-desktop-setup`, `evidence-desktop-workflows`, `desktop-knowledge-surface` |
 
 ## Completion Criteria
 
@@ -112,3 +124,13 @@ remaining cross-domain acceptance. The [mcp-desktop-setup closeout](../execution
 records this owner’s completed checks. The [desktop guide](../../runbooks/desktop-experience.md)
 documents current function locations. Other owners keep unfinished criteria active;
 prior shipped domain records remain historical evidence rather than redesign proof.
+
+## 2026-09-29 wiring split
+
+[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) resolves the
+placement conflict between the desktop contract and the managed-experience
+amendment: Agents becomes the sole incoming-connection home and Connections owns
+outbound Brain-managed MCP only. The `desktop-connection-authority` slice delivers
+it. Device authority, profile grants, runner trust, credential handling and the
+shipped device dedupe behavior are untouched; this is presentation and route
+resolution only.

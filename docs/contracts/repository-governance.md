@@ -30,7 +30,9 @@ Status: accepted
   instructions from `.codex/agents/`: `default` is the primary agent and the
   five specialist roles are subagents invoked only at the user's request.
   Both hosts use the same root `AGENTS.md`, `.agents/skills/` and CodeGraph CLI.
-  The only configured development MCP remains Context7. Keep credentials and
+  The configured development MCPs are Context7 on both hosts plus secret-free
+  local stdio chrome-devtools on OpenCode only for browser control. Codex
+  remains Context7-only. Keep credentials and
   personal model, provider, permission and UI settings out of project files.
 - Repo-local `recollect-doc-router` and `recollect-doc-maintainer` skills live
   in `.agents/skills/`. The router identifies applicable authority, ownership,

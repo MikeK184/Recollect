@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "recollect": {
+      "type": "http",
+      "url": "$RECOLLECT_URL/api/brains/$BRAIN_ID/mcp/agent",
+      "headers": {
+        "Authorization": "Bearer ${RECOLLECT_MCP_TOKEN}"
+      }
+    }
+  }
+}
