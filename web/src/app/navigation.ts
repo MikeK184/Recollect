@@ -10,7 +10,6 @@ import {
   Settings2,
   Boxes,
   Users,
-  Laptop,
 } from "lucide-react";
 
 // Ordered sidebar tiers. The order here is the rendered order and is contractual:
@@ -54,10 +53,14 @@ export const brainNavigation = [
   { section: "activity", label: "Activity", tier: "Assurance", icon: History },
 ] as const;
 export type BrainSection = (typeof brainNavigation)[number]["section"];
+// Devices is intentionally absent from global navigation: it remains a
+// direct-URL surface for pairing-approval deep links, while per-Brain agent
+// management lives on each Brain's Agents surface. The global Agents page is
+// the account-level roster with cross-Brain usage.
 export const globalNavigation = [
   { to: "/", label: "Brains", icon: Boxes },
+  { to: "/agents", label: "Agents", icon: Bot },
   { to: "/team", label: "Team", icon: Users },
-  { to: "/devices", label: "Devices", icon: Laptop },
 ] as const;
 
 // The Knowledge surface's documented default. An unrecognized view value falls

@@ -145,7 +145,7 @@ impl BindingRow {
 }
 async fn own_binding(tx: &mut Tx<'_>, brain: Uuid, id: Uuid, auth: &Auth) -> Result<BindingRow> {
     let row: BindingRow = sqlx::query_as(
-        "SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1 AND id=$2 AND actor_id=$3",
+        "SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND id=$2 AND actor_id=$3",
     )
     .bind(brain)
     .bind(id)
@@ -167,7 +167,7 @@ pub async fn bind(
 ) -> Result<Json<CaptureBinding>> {
     let device = auth.device_id.ok_or_else(Error::forbidden)?;
     if input.id.is_nil()
-        || !matches!(input.host.as_str(), "codex" | "claude_code")
+        || !matches!(input.host.as_str(), "codex" | "claude_code" | "opencode")
         || !capture_identity(&input.host_version)
         || input.host_version.len() > 120
     {
@@ -179,7 +179,7 @@ pub async fn bind(
     let mut tx = auth.tx(&state.pool).await?;
     db::require_writer(&mut tx, brain).await?;
     let existing: Option<BindingRow> =
-        sqlx::query_as("SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1 AND id=$2")
+        sqlx::query_as("SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND id=$2")
             .bind(brain)
             .bind(input.id)
             .fetch_optional(&mut *tx)
@@ -218,7 +218,7 @@ pub async fn bind(
         ));
     }
     let count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1 AND device_id=$2",
+        "SELECT count(*) FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND device_id=$2",
     )
     .bind(brain)
     .bind(device)
@@ -279,7 +279,7 @@ pub async fn report_device(
     }
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
-    let owns: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1 AND device_id=$2 AND actor_id=$3)")
+    let owns: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND device_id=$2 AND actor_id=$3)")
         .bind(brain).bind(device).bind(auth.user.id).fetch_one(&mut *tx).await?;
     if !owns {
         return Err(Error::missing());
@@ -308,12 +308,12 @@ pub async fn devices(
         last_publication: Option<DateTime<Utc>>,
     }
     let total = sqlx::query_scalar(
-        "SELECT count(DISTINCT device_id) FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1",
+        "SELECT count(DISTINCT device_id) FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1",
     )
     .bind(brain)
     .fetch_one(&mut *tx)
     .await?;
-    let rows = sqlx::query_as::<_, Row>("WITH configured AS (SELECT device_id,count(*) bindings FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1 GROUP BY device_id), activity AS (SELECT b.device_id,max(e.received_at) last_publication FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE e.brain_id=$1 GROUP BY b.device_id) SELECT c.device_id,c.bindings,s.reported_at,s.report,a.last_publication FROM configured c LEFT JOIN capture_device_reports s ON s.device_id=c.device_id AND s.brain_id=$1 LEFT JOIN activity a ON a.device_id=c.device_id ORDER BY s.reported_at DESC NULLS LAST,c.device_id LIMIT 20 OFFSET $2")
+    let rows = sqlx::query_as::<_, Row>("WITH configured AS (SELECT device_id,count(*) bindings FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 GROUP BY device_id), activity AS (SELECT b.device_id,max(e.received_at) last_publication FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE e.brain_id=$1 GROUP BY b.device_id) SELECT c.device_id,c.bindings,s.reported_at,s.report,a.last_publication FROM configured c LEFT JOIN capture_device_reports s ON s.device_id=c.device_id AND s.brain_id=$1 LEFT JOIN activity a ON a.device_id=c.device_id ORDER BY s.reported_at DESC NULLS LAST,c.device_id LIMIT 20 OFFSET $2")
         .bind(brain).bind(offset).fetch_all(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(CaptureDevicePage {
@@ -343,7 +343,7 @@ pub async fn bindings(
     })?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
-    let rows: Vec<BindingRow> = sqlx::query_as("SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code') AND brain_id=$1 AND actor_id=$2 AND ($3::uuid IS NULL OR device_id=$3) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $4")
+    let rows: Vec<BindingRow> = sqlx::query_as("SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND actor_id=$2 AND ($3::uuid IS NULL OR device_id=$3) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $4")
         .bind(brain).bind(auth.user.id).bind(auth.device_id).bind(offset).fetch_all(&mut *tx).await?;
     let mut items = Vec::new();
     for row in rows {

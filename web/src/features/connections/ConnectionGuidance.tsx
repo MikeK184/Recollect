@@ -20,7 +20,7 @@ function Heading({ title, children }: { title: string; children: string }) {
 }
 
 /** Where an approved outbound connection executes, and what that decides. */
-export function WhereItRuns() {
+export function WhereItRuns({ brainId }: { brainId: string }) {
   const places = [
     {
       key: "central",
@@ -32,7 +32,7 @@ export function WhereItRuns() {
       key: "local",
       icon: Laptop,
       name: "Paired device",
-      body: "One of your paired devices runs the tool through its companion, so the target can be reachable from that machine's network. The device must be online and approved; an offline device applies nothing.",
+      body: "One of your paired devices runs the tool through its plugin runner, so the target can be reachable from that machine's network. The device must be online and approved; an offline device applies nothing.",
     },
     {
       key: "private",
@@ -42,7 +42,8 @@ export function WhereItRuns() {
     },
   ];
   return (
-    <section aria-label="Where a connection runs">
+    <details className="feature-details" aria-label="Where a connection runs">
+      <summary>Where a connection runs</summary>
       <Stack gap="md" mb="lg">
         <Heading title="Where a connection runs">
           Every outbound connection you approve executes in exactly one of these
@@ -52,7 +53,12 @@ export function WhereItRuns() {
         </Heading>
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
           {places.map((place) => (
-            <Card withBorder p="md" key={place.key} data-testid={`placement-${place.key}`}>
+            <Card
+              withBorder
+              p="md"
+              key={place.key}
+              data-testid={`placement-${place.key}`}
+            >
               <Stack gap="xs">
                 <Group gap="xs">
                   <place.icon size={iconSize.small} aria-hidden />
@@ -66,16 +72,15 @@ export function WhereItRuns() {
           ))}
         </SimpleGrid>
         <Text size="xs" c="dimmed">
-          Device identity stays global: your paired devices are listed and
-          managed in{" "}
-          <Link to="/devices" search={{ code: undefined }}>
-            Devices
+          Device identity stays global: your agents are listed and managed in{" "}
+          <Link to="/brains/$brainId/agents" params={{ brainId }}>
+            this Brain&apos;s Agents list
           </Link>
           . A saved connection reads as configured until a real tool call
           succeeds under an explicit Use grant.
         </Text>
       </Stack>
-    </section>
+    </details>
   );
 }
 
@@ -100,13 +105,18 @@ export function ToolGroupGrants() {
       <Stack gap="md" mb="lg">
         <Heading title="Tool groups and their three grants">
           A tool group is the named set of MCP connections an agent may be
-          allowed to use together — the same record the editor calls an
-          execution profile. Use, Manage and Share are independent rights: none
-          implies another, and current Brain access is always a prerequisite.
+          allowed to use together. Use, Manage and Share are independent rights:
+          none implies another, and current Brain access is always a
+          prerequisite.
         </Heading>
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
           {grants.map((grant) => (
-            <Card withBorder p="md" key={grant.name} data-testid={`grant-${grant.name}`}>
+            <Card
+              withBorder
+              p="md"
+              key={grant.name}
+              data-testid={`grant-${grant.name}`}
+            >
               <Stack gap="xs">
                 <Text fw={600}>{grant.name}</Text>
                 <Text size="sm" c="dimmed">

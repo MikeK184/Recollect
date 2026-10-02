@@ -1,7 +1,7 @@
 {
   "name": "recollect-memory",
   "version": "0.1.0",
-  "description": "Scoped Recollect Brain memory over MCP: recall evidence-backed knowledge and contribute findings with your own access token.",
+  "description": "Automatic Recollect memory: connect once, capture permitted sessions and recall relevant evidence in normal coding sessions.",
   "author": {
     "name": "Recollect"
   },
@@ -10,9 +10,14 @@
     "displayName": "Recollect memory",
     "shortDescription": "Scoped engineering memory over MCP",
     "category": "Productivity",
-    "longDescription": "Recall evidence-backed knowledge and contribute findings through scoped Recollect MCP tools. Connect with an access token first; no companion required.",
+    "longDescription": "Automatic Recollect memory: connect once, capture permitted sessions and recall relevant evidence in normal coding sessions.",
     "developerName": "Recollect",
-    "capabilities": ["Read", "Write"],
-    "defaultPrompt": "Check Recollect memory access with workspace.list."
-  }
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": "Connect this Recollect plugin to my Brain."
+  },
+  "hooks": "./hooks/codex.json",
+  "mcpServers": "./.mcp.json"
 }

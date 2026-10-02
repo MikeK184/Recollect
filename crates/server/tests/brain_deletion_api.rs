@@ -587,7 +587,11 @@ async fn brain_deletion_api_authorization_and_pre_write_rejections() {
     assert_eq!(preview["repository_content_allowed"], false);
     assert_eq!(preview["backup_days"], 7);
     assert_eq!(preview["pending_work"], 5);
-    let closure = preview["closure"].as_i64().expect("preview counter");
+    let closure = preview["closure"]
+        .as_str()
+        .expect("opaque preview counter")
+        .parse::<i64>()
+        .unwrap();
     assert!(closure > 0);
     let counts = &preview["counts"];
     for key in COUNT_KEYS {
@@ -752,13 +756,13 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
             Value::Null,
         )
         .await;
-    let closure = preview["closure"].as_i64().unwrap();
+    let closure = preview["closure"].as_str().unwrap().parse::<i64>().unwrap();
     let (status, deleted) = h
         .keyed(
             "DELETE",
             &format!("/api/brains/{}", f.a),
             Some(&owner),
-            json!({"closure":closure,"confirmation":"Alpha"}),
+            json!({"closure":closure.to_string(),"confirmation":"Alpha"}),
             Some("brain-delete-key-1"),
         )
         .await;
@@ -766,7 +770,7 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
     let rid: Uuid = deleted["request"]["id"].as_str().unwrap().parse().unwrap();
     assert_eq!(deleted["request"]["brain_id"], f.a.to_string());
     assert_eq!(deleted["request"]["actor_id"], owner_account.to_string());
-    assert_eq!(deleted["request"]["closure"], closure);
+    assert_eq!(deleted["request"]["closure"], closure.to_string());
     assert_eq!(deleted["request"]["disposition"], "deleted");
     assert_eq!(deleted["request"]["state"], "pending");
     assert_eq!(deleted["request"]["journaled"], false);
@@ -802,7 +806,7 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
             "DELETE",
             &format!("/api/brains/{}", f.a),
             Some(&owner),
-            json!({"closure":closure,"confirmation":"Alpha"}),
+            json!({"closure":closure.to_string(),"confirmation":"Alpha"}),
             Some("brain-delete-key-1"),
         )
         .await;
@@ -831,7 +835,7 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
             "DELETE",
             &format!("/api/brains/{}", f.a),
             Some(&owner),
-            json!({"closure":closure,"confirmation":"Alpha"}),
+            json!({"closure":closure.to_string(),"confirmation":"Alpha"}),
         )
         .await;
     assert_eq!(
@@ -852,7 +856,7 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
     assert_eq!(row["id"], rid.to_string());
     assert_eq!(row["brain_id"], f.a.to_string());
     assert_eq!(row["actor_id"], owner_account.to_string());
-    assert_eq!(row["closure"], closure);
+    assert_eq!(row["closure"], closure.to_string());
     assert_eq!(row["disposition"], "deleted");
     assert_eq!(row["state"], "pending");
     assert_eq!(row["acknowledged_devices"], 0);
@@ -939,7 +943,7 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
                 method,
                 path,
                 Some(&member),
-                json!({"closure":closure,"confirmation":"Alpha"}),
+                json!({"closure":closure.to_string(),"confirmation":"Alpha"}),
             )
             .await;
         assert_eq!(
@@ -950,7 +954,7 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
     }
 
     // --- Companion fence: device-only, visibility-driven. ---
-    let (_, owner_device) = h.pair_device(&owner, "Fence laptop").await;
+    let (owner_device_id, owner_device) = h.pair_device(&owner, "Fence laptop").await;
     let (status, fence) = h
         .bearer(
             "GET",
@@ -963,6 +967,32 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
     assert_eq!(fence["brain_id"], f.a.to_string());
     assert_eq!(fence["deletion_id"], rid.to_string());
     assert!(fence["sequence"].as_i64().is_some());
+    // Exercise the actual companion decoder, not just the server's JSON shape.
+    // Local cleanup counts are computed by the companion after this read.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = format!("http://{}", listener.local_addr().unwrap());
+    let router = h.router.clone();
+    let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let client = recollect_agent::Client::new(&endpoint).unwrap();
+    let device = recollect_agent::StoredDevice {
+        endpoint,
+        device_id: owner_device_id,
+        token: owner_device.parse().unwrap(),
+    };
+    let decoded = recollect_agent::privacy::deletion_fence(&client, &device, f.a)
+        .await
+        .unwrap()
+        .expect("authorized deleted Brain fence");
+    assert_eq!(decoded.deletion_id, rid);
+    assert_eq!(decoded.removed_bundles, 0);
+    assert_eq!(decoded.removed_events, 0);
+    assert!(
+        recollect_agent::privacy::deletion_fence(&client, &device, f.b)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    serving.abort();
     // The member's device cannot see the tombstone: unknown, not forbidden.
     assert_eq!(
         h.bearer(

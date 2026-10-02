@@ -10,15 +10,17 @@ contributor history; raw file text needs explicit selection and admin policy.
 This is local extraction and shared evidence, not verification of a remote origin
 or deployment. See the [contract](../contracts/evidence-repository-publication.md).
 
-Start Recollect with `./scripts/dev.sh`. Use a paired writer/admin companion,
-Git, and the repo-owned Enola installation:
+Connect the [packaged plugin](../../plugins/recollect/README.md) with writer/admin
+access and install Git. The package includes its native Enola extractor. Select
+the installed runtime for the commands below:
 
 ```sh
-python3 scripts/setup-enola.py
-cargo build -p recollect-agent
+PLUGIN_RUNTIME=/absolute/installed/plugin/bin/recollect-plugin
 ```
 
-Setup installs the tested official Enola adapter in `.cache/enola-tools/`.
+Source-checkout developers can still run `python3 scripts/setup-enola.py` and
+`cargo build -p recollect-agent`, then use `target/debug/recollect-agent` with the
+legacy paired profile. That setup installs Enola in `.cache/enola-tools/`.
 `RECOLLECT_ENOLA_BIN` can select another executable; its declared build and
 extractor labels are retained without a strict version handshake. Git and Enola
 run locally. No OpenAI credential or model call is needed for static extraction.
@@ -28,13 +30,13 @@ run locally. No OpenAI credential or model call is needed for static extraction.
 Register checkout metadata through the [workspace workflow](workspace-scope.md),
 then obtain the Brain and repository UUIDs from Workspace & tasks. An existing
 registration may be used with an explicit Brain without placing a new selector
-in a customer directory. Select the endpoint/profile used for pairing.
+in a customer directory. The plugin uses its connected endpoint and OS credential.
 
 Substitute the uppercase arguments with their actual UUIDs and checkout path:
 
 ```sh
-target/debug/recollect-agent scope start BRAIN "Committed publication" --repository REPOSITORY
-target/debug/recollect-agent repository publish BRAIN REPOSITORY TASK /path/to/checkout
+"$PLUGIN_RUNTIME" scope start BRAIN "Committed publication" --repository REPOSITORY
+"$PLUGIN_RUNTIME" repository publish BRAIN REPOSITORY TASK /path/to/checkout
 ```
 
 The scope command returns `task.id`. Publication creates its capture operation
@@ -47,7 +49,7 @@ Use `--revision REF` to select another locally available commit. Optional source
 retention is a separate deliberate choice:
 
 ```sh
-target/debug/recollect-agent repository publish BRAIN REPOSITORY TASK /path/to/checkout --revision REF --retain-file src/lib.rs
+"$PLUGIN_RUNTIME" repository publish BRAIN REPOSITORY TASK /path/to/checkout --revision REF --retain-file src/lib.rs
 ```
 
 Repeat `--retain-file` for up to 20 permitted text files. First enable **Allow
@@ -60,10 +62,10 @@ contributors. Reprocessing uses retained artifacts with current authority. The
 native inspection commands are:
 
 ```sh
-target/debug/recollect-agent repository snapshots BRAIN REPOSITORY
-target/debug/recollect-agent repository snapshot BRAIN SNAPSHOT
-target/debug/recollect-agent repository manifests BRAIN
-target/debug/recollect-agent repository manifest BRAIN MANIFEST
+"$PLUGIN_RUNTIME" repository snapshots BRAIN REPOSITORY
+"$PLUGIN_RUNTIME" repository snapshot BRAIN SNAPSHOT
+"$PLUGIN_RUNTIME" repository manifests BRAIN
+"$PLUGIN_RUNTIME" repository manifest BRAIN MANIFEST
 ```
 
 Create an environment in **Sources → Manage views**, then use **Repositories → Environments → New manifest**. Select repositories and published snapshots, or explicitly enter an
@@ -95,12 +97,14 @@ cargo test -p recollect-agent --test publication
 
 ## Failure and Recovery
 
-- Upload interrupted: the companion prints a bundle UUID. Resume with
-  `target/debug/recollect-agent repository resume BRAIN BUNDLE_UUID` using the
+- Upload interrupted: the runtime prints a bundle UUID. Resume with
+  `"$PLUGIN_RUNTIME" repository resume BRAIN BUNDLE_UUID` using the
   original endpoint and paired device. It uploads the sanitized prepared input,
   keeping its original operation/idempotency identity despite checkout changes.
-- Local staging defaults to `.data/publications/`; `RECOLLECT_PUBLICATION_DIR`
-  must remain inside Recollect. Successful uploads remove their own bundle and
+- The plugin stages inside its private application-data directory (or explicit
+  `RECOLLECT_PLUGIN_DATA`). The legacy companion defaults to `.data/publications/`;
+  its `RECOLLECT_PUBLICATION_DIR` override must remain inside Recollect.
+  Successful uploads remove their own bundle and
   normal preparation removes its exclusively created staging tree. Crash leftovers
   remain private. Do not bulk-delete unknown paths; reconcile an identified owned
   bundle/stage explicitly. The later erasure slice consumes this boundary too.

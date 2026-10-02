@@ -1,6 +1,6 @@
 # Product Platform and Access
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -78,8 +78,8 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-device-pairing` | shipped | contract-backed | pack | Native companion enrollment with individually revocable credentials and shared protocol types |
 | `desktop-experience-contracts` | shipped | adr-backed, contract-backed | pack | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
 | `platform-desktop-shell` | shipped | adr-backed, contract-backed | pack | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
-| `platform-brain-deletion` | planned | adr-backed, contract-backed | pack | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
-| `desktop-knowledge-surface` | planned | adr-backed, contract-backed | pack | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
+| `platform-brain-deletion` | shipped | adr-backed, contract-backed | pack | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
+| `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | pack | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 
 ## Slice Dependencies
 
@@ -134,3 +134,9 @@ the coordinated presentation layer spanning the memory, evidence and graph domai
 Domain authority does not move here: each capability keeps its handlers,
 permissions, retention and proof obligations, following the coordination precedent
 `desktop-experience-contracts` already established.
+
+## 2026-10-01 local closeout
+
+[desktop-knowledge-surface](../execution/archive/desktop-knowledge-surface.md), [platform-brain-deletion](../execution/archive/platform-brain-deletion.md) are locally delivered with [dated validation and runtime limits](../../mappings/desktop-continuation-2026-10-01.md).
+The user prioritizes normal laptop and larger desktop displays; additional
+small-screen and keyboard polish is optional under the [desktop contract](../../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01).

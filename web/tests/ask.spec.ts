@@ -185,7 +185,12 @@ test("disabled answering offers useful canonical search without enabling transmi
   page,
 }) => {
   const f = await setup(page, false);
-  await page.goto(`/brains/${f.brain}/ask`);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/brains/${f.brain}`);
+  await expect(page).toHaveURL(new RegExp(`/brains/${f.brain}/ask$`));
+  await expect(
+    page.getByRole("button", { name: "Ask Brain", exact: true }),
+  ).toBeInViewport();
   await expect(
     page.getByRole("region", { name: "Autonomous memory setup" }),
   ).toBeVisible();
@@ -390,14 +395,23 @@ test("production no-evidence answer and metadata replay never call a model", asy
     question,
     recall: { query: question, channels: ["exact", "lexical"] },
   });
-  expect(first.state).toBe("no_evidence");
+  // Ordinary browser fixtures run without a paid provider credential. That
+  // authority gate precedes retrieval; the Rust provider fixture separately
+  // proves the ready-provider no-evidence branch without an external call.
+  const installed = (await command(page, `${f.base}/models/policy`)).installed;
+  const terminal = installed.credentials_present
+    ? "no_evidence"
+    : "unavailable";
+  expect(first.state).toBe(terminal);
+  if (!installed.credentials_present)
+    expect(first.failure_code).toBe("model_credentials_missing");
   expect(first.provider_may_have_run).toBe(false);
   const replay: Answer = await command(page, `${f.base}/answer-requests`, {
     request_id,
     question,
     recall: { query: question, channels: ["exact", "lexical"] },
   });
-  expect(replay.state).toBe("no_evidence");
+  expect(replay.state).toBe(terminal);
   expect(replay.answer).toBeUndefined();
   expect(replay.recall).toBeUndefined();
   expect(

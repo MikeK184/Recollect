@@ -1,6 +1,6 @@
 # Sources, repositories and agent workspaces
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/evidence-and-workspaces.md`
 Work type: product
 
@@ -65,10 +65,10 @@ Work type: product
 ## Closeout
 
 - Planned: Sources list/title search, exact source versions/import/edit/views; repositories/snapshots/environments/private checkouts; Agents onboarding, published session coverage and own task scopes. Canonical capture editing links to Settings.
-- Shipped: Not yet. Sources, exact versions and URL grouping filters, repositories/manifests, Agents, capture sessions and private contexts are implemented and present in the final local image. Evidence, workspace and capture journeys passed at their recorded revision; current exact-source reload/Back/foreign-ID/filter tests also passed.
-- Not shipped: The final corrected Publication and Evidence regression runs remain open, including their manifest/task/privacy acceptance boundaries. Direct source inspection without catalogue metadata intentionally exposes title/group edits through the real Sources row. Explicit product non-goals remain excluded.
-- New blockers: No unresolved product decision is known. Implementation refinements and verification are tracked in the [dated mapping](../../../mappings/desktop-experience-implementation-2026-09-26.md).
-- Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](../../../mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
-- Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
+- Shipped: Sources, exact immutable versions, grouping, repositories/manifests, Agents and private workspace contexts are delivered and deployed locally. Corrected Evidence and Publication regressions pass.
+- Not shipped: No remaining slice acceptance; explicit product non-goals remain excluded.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: The completed 65-case browser matrix includes Evidence, Publication, Workspace and Capture. Production workspace integration proves foreign-account task/path isolation; current exact-source reload, history and foreign-Brain tests pass. Final repository checks are recorded in the linked evidence.
 - Version: N/A: no release requested.
-- Commit: uncommitted.
+- Commit: Uncommitted.

@@ -71,7 +71,7 @@ async function setup(page: Page) {
   await grant(true);
   await page.goto(`/brains/${brain.id}/connections?tab=profiles`);
   const panel = page.getByRole("region", {
-    name: "MCP connections and profiles",
+    name: "MCP connections and tool groups",
     exact: true,
   });
   await panel
@@ -231,7 +231,11 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
   page.on("pageerror", (e) => errors.push(e.message));
   const f = await setup(page);
   await page.goto(`/brains/${f.brain.id}/settings?tab=capture`);
-  const capture = page.getByRole("region", {
+  const advanced = page.locator("details").filter({
+    has: page.locator("summary", { hasText: "Advanced capture controls" }),
+  });
+  await advanced.locator("summary").click();
+  const capture = advanced.getByRole("region", {
     name: "Session capture",
     exact: true,
   });
@@ -284,7 +288,7 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
       name: "Inspect captured evidence",
       exact: true,
     }),
-  ).toBeFocused();
+  ).toBeVisible();
   await page.screenshot({
     path: "../.cache/ui-managed-call-desktop.png",
     animations: "disabled",
@@ -295,14 +299,18 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
     page.getByRole("dialog", { name: "Tool runtime diagnostics", exact: true }),
   ).toBeVisible();
   await page.goto(`/brains/${f.brain.id}/agents?tab=sessions`);
-  await capture
+  const sessions = page.getByRole("region", {
+    name: "Session capture",
+    exact: true,
+  });
+  await sessions
     .getByRole("button", { name: "Capture coverage", exact: true })
     .click();
   await expect(
     page.getByRole("dialog", { name: "Capture coverage", exact: true }),
   ).toContainText("1 published");
   await page.keyboard.press("Escape");
-  await expect(capture).toContainText("Managed tool");
+  await expect(sessions).toContainText("Managed tool");
   await page.screenshot({
     path: "../.cache/ui-managed-activity-desktop.png",
     animations: "disabled",

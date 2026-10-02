@@ -94,6 +94,19 @@ pub fn profile_root(evidence_root: &Path, device: Uuid) -> PathBuf {
 }
 impl Inbox {
     pub fn open(root: &Path, endpoint: &str, device: Uuid) -> Result<Self> {
+        // Connect starts delivery while the first native hook can open the same
+        // empty inbox. Serialize schema/profile initialization so neither process
+        // mistakes a half-created profile for another destination's database.
+        private(root, true)?;
+        let initialization = crate::plugin_storage::private_file(
+            &fs::canonicalize(root)?.join("inbox-open.lock"),
+            false,
+        )?;
+        let until = std::time::Instant::now() + Wait::from_millis(750);
+        while initialization.try_lock().is_err() {
+            ensure!(std::time::Instant::now() < until, "capture_storage_busy");
+            std::thread::sleep(Wait::from_millis(5));
+        }
         let path = root.join("inbox.sqlite");
         if let Ok(meta) = fs::symlink_metadata(&path) {
             ensure!(
@@ -103,6 +116,7 @@ impl Inbox {
             if meta.len() > 0 {
                 let existing =
                     Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+                existing.busy_timeout(Wait::from_millis(250))?;
                 let matches: bool = existing
                     .query_row(
                         "SELECT endpoint=?1 AND device=?2 FROM profile WHERE id=1",
@@ -235,6 +249,19 @@ impl Inbox {
             .map_err(|_| anyhow!("capture_launch_missing"))?;
         Ok(current.parse()?)
     }
+    pub fn launch_original(&self, launch: Uuid) -> Result<Option<Uuid>> {
+        let original: Option<String> = self
+            .db
+            .query_row(
+                "SELECT original FROM launch_defaults WHERE id=?1",
+                [launch.to_string()],
+                |row| row.get(0),
+            )
+            .optional()?;
+        original
+            .map(|id| id.parse().map_err(Into::into))
+            .transpose()
+    }
     /// Move one launch's future default only. Immutable setup, turn and tool rows
     /// are never rewritten, and competing publishers must inspect a lost CAS.
     pub fn advance_launch(
@@ -315,7 +342,50 @@ impl Inbox {
         let agent = event.agent_id.as_deref().unwrap_or("");
         let matching_agent = cached.agent_id.as_deref().unwrap_or("") == agent;
         let session = &event.host_session_id;
-        if event.host_event == "UserPromptSubmit"
+        // OpenCode creates the assistant message after its context hook. The
+        // adapter retains that request's immutable binding and supplies it when
+        // the documented API reports the completed visible reply. Never infer
+        // its scope from the later current default or accept another task's ID.
+        if let Some(requested) =
+            serde_json::from_slice::<serde_json::Value>(raw)?.get("recollect_capture_binding")
+        {
+            ensure!(
+                host == "opencode"
+                    && matches!(event.host_event.as_str(), "Stop" | "StepStart")
+                    && launch.is_some(),
+                "invalid_capture_binding_reference"
+            );
+            let requested: Uuid = requested
+                .as_str()
+                .ok_or_else(|| anyhow!("invalid_capture_binding_reference"))?
+                .parse()?;
+            let original = binding(&tx, requested)?;
+            ensure!(
+                original.binding.host == *host
+                    && original.binding.device_id == cached.binding.device_id
+                    && original.binding.brain_id == cached.binding.brain_id
+                    && original.binding.operation.task_id == cached.binding.operation.task_id
+                    && original.agent_id == cached.agent_id
+                    && matching_agent,
+                "capture_route_mismatch"
+            );
+            let turn = event
+                .turn_id
+                .as_ref()
+                .ok_or_else(|| anyhow!("missing_turn_identity"))?;
+            tx.execute("INSERT OR IGNORE INTO turns(host,session,turn,agent,binding) VALUES(?1,?2,?3,?4,?5)",params![host,session,turn,agent,requested.to_string()])?;
+            let recorded: String = tx.query_row(
+                "SELECT binding FROM turns WHERE host=?1 AND session=?2 AND turn=?3 AND agent=?4",
+                params![host, session, turn, agent],
+                |r| r.get(0),
+            )?;
+            ensure!(
+                recorded == requested.to_string(),
+                "capture_identity_conflict"
+            );
+        }
+        if (event.host_event == "UserPromptSubmit"
+            || (host == "opencode" && event.host_event == "StepStart"))
             && matching_agent
             && let Some(turn) = &event.turn_id
         {
@@ -562,7 +632,7 @@ impl Inbox {
                                     parts.len() == 6
                                         && matches!(
                                             parts[0].as_str(),
-                                            Some("codex" | "claude_code")
+                                            Some("codex" | "claude_code" | "opencode")
                                         )
                                         && parts.iter().skip(1).all(|p| {
                                             p.is_null()
@@ -861,6 +931,97 @@ mod tests {
         assert_eq!(resumed.pending(now).unwrap().len(), 6);
     }
     #[test]
+    fn opencode_completed_reply_retains_request_scope_and_rejects_foreign_binding() {
+        let fixture = Fixture::new();
+        let now = Utc::now();
+        let device = Uuid::new_v4();
+        let mut original = saved(device, now);
+        original.binding.host = "opencode".into();
+        let mut next = original.clone();
+        next.binding.id = Uuid::new_v4();
+        next.binding.operation.id = Uuid::new_v4();
+        next.binding.operation.scope.id = Uuid::new_v4();
+        let mut foreign = saved(device, now);
+        foreign.binding.host = "opencode".into();
+        let launch = Uuid::new_v4();
+        let mut inbox = Inbox::open(&fixture.0, ENDPOINT, device).unwrap();
+        for value in [&original, &next, &foreign] {
+            inbox.remember(value).unwrap();
+        }
+        inbox.start_launch(launch, original.binding.id).unwrap();
+        inbox
+            .advance_launch(
+                launch,
+                original.binding.id,
+                original.binding.id,
+                next.binding.id,
+            )
+            .unwrap();
+        let record = |inbox: &mut Inbox, turn: &str, binding: Uuid, text: &str| {
+            inbox.capture_in_launch(
+                original.binding.id,
+                Some(launch),
+                &serde_json::to_vec(&json!({
+                    "hook_event_name":"Stop", "session_id":"observed-session", "prompt_id":turn,
+                    "recollect_capture_binding":binding,"last_assistant_message":text,
+                }))
+                .unwrap(),
+                &[],
+                now,
+            )
+        };
+        let old = record(
+            &mut inbox,
+            "assistant-original",
+            original.binding.id,
+            "Original request observation",
+        )
+        .unwrap();
+        assert!(
+            record(
+                &mut inbox,
+                "foreign-assistant",
+                foreign.binding.id,
+                "Forbidden foreign request content"
+            )
+            .is_err()
+        );
+        assert!(
+            record(
+                &mut inbox,
+                "assistant-original",
+                next.binding.id,
+                "Conflicting relabelled reply"
+            )
+            .is_err()
+        );
+        let new = record(
+            &mut inbox,
+            "assistant-new",
+            next.binding.id,
+            "Independent new request",
+        )
+        .unwrap();
+        let events = inbox.pending(now).unwrap();
+        let old = events.iter().find(|event| event.id == old).unwrap();
+        assert_eq!(old.binding_id, original.binding.id);
+        assert_eq!(
+            old.event.content.as_deref(),
+            Some("Original request observation")
+        );
+        assert_eq!(
+            events
+                .iter()
+                .find(|event| event.id == new)
+                .unwrap()
+                .binding_id,
+            next.binding.id
+        );
+        drop(inbox);
+        fixture.assert_absent("Forbidden foreign request content");
+        fixture.assert_absent("Conflicting relabelled reply");
+    }
+    #[test]
     fn managed_launch_scope_switch_is_durable_and_preserves_pins_and_other_launches() {
         let fixture = Fixture::new();
         let now = Utc::now();
@@ -968,6 +1129,41 @@ mod tests {
             a.binding.operation.scope.id
         );
         fixture.assert_absent("must stay unattributed");
+    }
+    #[test]
+    fn concurrent_first_open_never_observes_a_partial_profile() {
+        let fixture = Fixture::new();
+        let device = Uuid::new_v4();
+        let now = Utc::now();
+        let config = saved(device, now);
+        let ready = std::sync::Arc::new(std::sync::Barrier::new(8));
+        let mut workers = Vec::new();
+        for index in 0..8 {
+            let root = fixture.0.clone();
+            let config = config.clone();
+            let ready = ready.clone();
+            workers.push(std::thread::spawn(move || {
+                ready.wait();
+                let mut inbox = Inbox::open(&root, ENDPOINT, device).unwrap();
+                inbox.remember(&config).unwrap();
+                capture(
+                    &mut inbox,
+                    config.binding.id,
+                    &prompt(
+                        &format!("initial-{index}"),
+                        "Independent first-open observation",
+                    ),
+                    now,
+                );
+            }));
+        }
+        for worker in workers {
+            worker.join().unwrap();
+        }
+        let mut inbox = Inbox::open(&fixture.0, ENDPOINT, device).unwrap();
+        assert_eq!(inbox.pending(now).unwrap().len(), 8);
+        drop(inbox);
+        assert!(Inbox::open(&fixture.0, ENDPOINT, Uuid::new_v4()).is_err());
     }
     #[test]
     fn inbox_concurrent_hooks_acknowledgment_expiry_and_erasure_remove_payload_bytes() {
@@ -1089,6 +1285,59 @@ mod tests {
         drop(inbox);
         fixture.assert_absent("must not replace queued content");
         fixture.assert_absent("stale permission must not retain this");
+    }
+    #[test]
+    fn opencode_privacy_fence_erases_content_and_refuses_replay() {
+        let fixture = Fixture::new();
+        let now = Utc::now();
+        let device = Uuid::new_v4();
+        let mut config = saved(device, now);
+        config.binding.host = "opencode".into();
+        let mut inbox = Inbox::open(&fixture.0, ENDPOINT, device).unwrap();
+        inbox.remember(&config).unwrap();
+        let erased = json!({"hook_event_name":"UserPromptSubmit","session_id":"opencode-session",
+            "prompt_id":"erased","prompt":"Removed OpenCode observation"});
+        let kept = json!({"hook_event_name":"UserPromptSubmit","session_id":"opencode-session",
+            "prompt_id":"kept","prompt":"Independent OpenCode observation"});
+        let id = capture(&mut inbox, config.binding.id, &erased, now);
+        let kept_id = capture(&mut inbox, config.binding.id, &kept, now);
+        let original = inbox
+            .pending(now)
+            .unwrap()
+            .into_iter()
+            .find(|event| event.id == id)
+            .unwrap();
+        let sync = PrivacyDeviceSync {
+            brain_id: config.binding.brain_id,
+            policy: config.retention.clone(),
+            sequence: 1,
+            publication_fences: vec![],
+            capture_event_fences: vec![recollect_protocol::CaptureFence {
+                event_id: id,
+                binding_id: config.binding.id,
+                native_key: capture_native_key("opencode", &original.event),
+            }],
+        };
+        assert_eq!(inbox.apply_privacy(&sync, now).unwrap(), 1);
+        assert!(
+            inbox
+                .capture(
+                    config.binding.id,
+                    &serde_json::to_vec(&erased).unwrap(),
+                    &[],
+                    now
+                )
+                .is_err()
+        );
+        let retained = inbox.pending(now).unwrap();
+        assert_eq!(retained.len(), 1);
+        assert_eq!(retained[0].id, kept_id);
+        assert_eq!(
+            retained[0].event.content.as_deref(),
+            Some("Independent OpenCode observation")
+        );
+        drop(inbox);
+        fixture.assert_absent("Removed OpenCode observation");
     }
     #[test]
     fn inbox_brain_deletion_fence_removes_payloads_and_blocks_replayed_hooks() {

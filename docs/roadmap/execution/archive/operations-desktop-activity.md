@@ -1,6 +1,6 @@
 # Authorized desktop activity and diagnostics
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/operational-readiness.md`
 Work type: product
 
@@ -65,10 +65,10 @@ Work type: product
 ## Closeout
 
 - Planned: Authorized Activity tabs, owner diagnostics and safe canonical links.
-- Shipped: Not yet. Selected authorized audit/processing/tool/model/removal consumers and canonical target links are implemented in the final local image. MCP runtime recovery and current route/accessibility checks passed; source/claim exact links were independently exercised.
-- Not shipped: Final Operations/feed role combinations, private-data canaries, current-error/late-response and exact recovery browser proof remain open. Generic route scans and MCP tests do not replace those Activity acceptance checks. Explicit product non-goals remain excluded.
-- New blockers: No unresolved product decision is known. Implementation refinements and verification are tracked in the [dated mapping](../../../mappings/desktop-experience-implementation-2026-09-26.md).
-- Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](../../../mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
-- Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
+- Shipped: Authorized Activity feeds, current-blocker overview, owner diagnostics and canonical recovery links are deployed with focused acceptance complete.
+- Not shipped: No new unified event store, widened permissions, global event completeness or mandatory human queue.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: Operations proves owner diagnostics, stale-data clearing, retry and ordinary-member denial. Five Assurance cases cover private-output canaries, admin role loss, current blockers/history, partial feeds, canonical links and late Brain-switch responses. Three MCP-runtime cases cover actual permitted calls, recovery, cancellation, expiry and Use revocation; workspace platform integration covers foreign-account private tasks/paths. Final repository checks are recorded in the linked evidence.
 - Version: N/A: no release requested.
-- Commit: uncommitted.
+- Commit: Uncommitted.

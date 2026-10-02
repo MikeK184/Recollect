@@ -4,6 +4,14 @@ cd "$(dirname "$0")/.."
 set -a
 source .env
 set +a
+# The disposable database gets a disposable owner credential too. Browser
+# failure artifacts must never contain the installation owner's password.
+export RECOLLECT_OWNER_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+# Provider tests opt in explicitly. Ordinary UI fixtures never spend the
+# installation's provider allowance just because a new Brain has managed defaults.
+if [[ "${RECOLLECT_TEST_OPENAI:-0}" != 1 ]]; then
+  unset OPENAI_API_KEY
+fi
 if [[ $# == 0 ]]; then
   for RECOLLECT_UI_FILE in web/tests/*.spec.ts; do
     ./scripts/test-ui.sh "${RECOLLECT_UI_FILE#web/}"
@@ -21,11 +29,11 @@ for RECOLLECT_UI_SPEC in "$@"; do
     RECOLLECT_UI_MCP_RUNTIME=1
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
-  if [[ "${RECOLLECT_UI_SPEC##*/}" == public-benchmark.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == mcp-direct.spec.ts ]]; then
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == public-benchmark.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == mcp-direct.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == brain-deletion.spec.ts ]]; then
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
   # Recall reads processed canonical chunks while the browser test is running.
-  if [[ "${RECOLLECT_UI_SPEC##*/}" == desktop.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall-graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == investigation.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-chrome.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-combined.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-analytics.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-debug.spec.ts ]]; then
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == desktop.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == recall-graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == investigation.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-chrome.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-combined.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-analytics.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == graph-debug.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == knowledge-lineage.spec.ts ]]; then
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
 done
@@ -41,6 +49,11 @@ RECOLLECT_UI_PID=''
 RECOLLECT_UI_WORKER_PID=''
 cleanup() {
   local RECOLLECT_UI_EXIT_STATUS=$?
+  if [[ "$RECOLLECT_UI_EXIT_STATUS" != 0 && -d .cache/ui-test-results ]]; then
+    mkdir -p ".cache/ui-failures/$RECOLLECT_TEST_DB"
+    cp -R .cache/ui-test-results/. ".cache/ui-failures/$RECOLLECT_TEST_DB/"
+    printf 'Browser failure artifacts: .cache/ui-failures/%s\n' "$RECOLLECT_TEST_DB" >&2
+  fi
   if [[ -n "$RECOLLECT_UI_WORKER_PID" ]]; then
     # Background children may inherit ignored SIGINT before Tokio initializes.
     # TERM also uses the server's durable drain path once its handler is ready.
@@ -106,10 +119,13 @@ fi
 mkdir -p .cache/ui
 env -u VAULT_TOKEN target/debug/recollect-server serve > .cache/ui/server.log 2>&1 &
 RECOLLECT_UI_PID=$!
-for attempt in {1..50}; do
-  if curl -fsS "$RECOLLECT_UI_TEST_ORIGIN/health/live" >/dev/null 2>&1; then break; fi
-  sleep 0.1
+RECOLLECT_UI_READY=0
+for attempt in {1..180}; do
+  if curl -fsS "$RECOLLECT_UI_TEST_ORIGIN/health/live" >/dev/null 2>&1; then RECOLLECT_UI_READY=1; break; fi
+  if ! kill -0 "$RECOLLECT_UI_PID" 2>/dev/null; then break; fi
+  sleep 1
 done
+[[ "$RECOLLECT_UI_READY" == 1 ]] || { printf 'Owned UI server did not become ready; inspect .cache/ui/server.log\n' >&2; exit 1; }
 if [[ "$RECOLLECT_UI_NEEDS_WORKER" == 1 ]]; then
   env -u VAULT_TOKEN target/debug/recollect-server worker > .cache/ui/worker.log 2>&1 &
   RECOLLECT_UI_WORKER_PID=$!
@@ -119,10 +135,14 @@ if [[ -z "$RECOLLECT_UI_WORKER_PID" ]]; then
   env -u VAULT_TOKEN target/debug/recollect-server worker > .cache/ui/worker.log 2>&1 &
   RECOLLECT_UI_WORKER_PID=$!
 fi
-for attempt in {1..200}; do
+# macOS can delay a newly started native binary before main; use the same
+# bounded startup allowance as the HTTP fixture, and still require an empty queue.
+RECOLLECT_UI_DRAIN_DEADLINE=$((SECONDS + 180))
+while (( SECONDS < RECOLLECT_UI_DRAIN_DEADLINE )); do
   RECOLLECT_PENDING="$(./scripts/docker.sh compose exec -T postgres psql -U recollect_admin -d "$RECOLLECT_TEST_DB" -Atqc "SELECT count(*) FROM jobs WHERE state IN ('queued','running')")"
   if [[ "$RECOLLECT_PENDING" == 0 ]]; then break; fi
-  sleep 0.1
+  if ! kill -0 "$RECOLLECT_UI_WORKER_PID" 2>/dev/null; then break; fi
+  sleep 0.5
 done
 [[ "$RECOLLECT_PENDING" == 0 ]] || { printf 'Native worker did not drain queued UI work\n' >&2; exit 1; }
 printf 'Native worker drained the persisted UI queue.\n'

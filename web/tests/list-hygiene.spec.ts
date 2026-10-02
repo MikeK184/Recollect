@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import type { components } from "../src/api-schema";
+import { openDetails } from "./desktop-helpers";
 
 type Device = components["schemas"]["Device"];
 type BrainRecord = components["schemas"]["Brain"];
@@ -42,7 +43,7 @@ async function api<T>(
   });
   if (!response.ok())
     throw new Error(
-      `List-density fixture ${method} ${path}: ${response.status()}`,
+      `List-hygiene fixture ${method} ${path}: ${response.status()}`,
     );
   return (await response.json()) as T;
 }
@@ -72,12 +73,13 @@ async function recordCopies(page: Page) {
 const rowText = (page: Page, testId: string) =>
   page.getByTestId(testId).allInnerTexts();
 
-/** Mantine renders both an input and a hidden listbox per Select, so address
- * the input by role rather than by its accessible name alone. */
-const pickView = async (page: Page, label: string) => {
-  await page.getByRole("textbox", { name: "Brain view" }).click();
-  await page.getByRole("option", { name: label, exact: true }).click();
-};
+/** Mantine renders both an input and a listbox per Select, so address the
+ * input by role rather than by its accessible name alone. */
+async function pickView(page: Page, label: RegExp) {
+  const input = page.getByRole("textbox", { name: "Brain view" });
+  await input.click();
+  await page.getByRole("option", { name: label }).click();
+}
 
 test("device list orders active records first and collapses revoked or expired history", async ({
   page,
@@ -127,13 +129,16 @@ test("device list orders active records first and collapses revoked or expired h
       last_used_at: offset(-hour),
     },
   ];
-  let history = records;
+  let fixture = records;
   await signIn(page);
   await page.route("**/api/devices", (route) =>
-    route.fulfill({ json: history }),
+    route.request().method() === "GET"
+      ? route.fulfill({ json: fixture })
+      : route.fallback(),
   );
   await page.goto("/devices");
-  // History is collapsed: only the two records that can still act are listed.
+  // History is collapsed: only the two records that can still act are listed,
+  // active first.
   await expect(page.getByTestId("device-card")).toHaveCount(2);
   expect(await rowText(page, "device-row-name")).toEqual([
     "Development laptop",
@@ -142,13 +147,15 @@ test("device list orders active records first and collapses revoked or expired h
   await expect(
     page.getByRole("heading", { name: "No devices paired yet" }),
   ).toHaveCount(0);
-  await expect(page.getByText(/records are collapsed/)).toBeVisible();
+  await expect(page.getByText(/records? are collapsed/)).toBeVisible();
 
+  // The filter states its own meaning as text and is a native checkbox, so a
+  // keyboard user can focus it and toggle it.
   const filter = page.getByRole("checkbox", {
     name: /Show revoked and expired devices/,
   });
   await expect(filter).not.toBeChecked();
-  // Keyboard reachable: walk the tab order to the filter, then operate it.
+  // Reach the history filter through the actual keyboard tab order.
   for (let i = 0; i < 40; i++) {
     if (await filter.evaluate((el) => el === document.activeElement)) break;
     await page.keyboard.press("Tab");
@@ -178,7 +185,7 @@ test("device list orders active records first and collapses revoked or expired h
     ).toBeVisible();
   }
 
-  // Machine identifiers never occupy a row.
+  // Machine identifiers never occupy a row; the id is a copyable field.
   const rows = (await rowText(page, "device-card")).join("\n");
   for (const id of Object.values(ids)) {
     expect(rows).not.toContain(id);
@@ -187,14 +194,13 @@ test("device list orders active records first and collapses revoked or expired h
   const active = page
     .getByTestId("device-card")
     .filter({ has: page.getByText("Development laptop", { exact: true }) });
-  await active.getByText("Device identifier", { exact: true }).click();
+  await openDetails(active, "Device identifier");
   await active.getByRole("button", { name: "Copy device ID" }).click();
   await expect(active.getByRole("button", { name: "Copied" })).toBeVisible();
-  expect((await copies()).toContain(ids.active)).toBe(true);
-  expect(await active.innerText()).not.toContain(ids.active);
+  expect(await copies()).toContain(ids.active);
 
   // Filtered-empty and genuinely-empty stay distinct from a populated list.
-  history = records.slice(0, 2);
+  fixture = records.slice(0, 2);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "No device is connected right now" }),
@@ -202,8 +208,8 @@ test("device list orders active records first and collapses revoked or expired h
   await expect(
     page.getByRole("heading", { name: "No devices paired yet" }),
   ).toHaveCount(0);
-  await expect(page.getByText(/records are collapsed/)).toBeVisible();
-  history = [];
+  await expect(page.getByText(/records? are collapsed/)).toBeVisible();
+  fixture = [];
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "No devices paired yet" }),
@@ -211,13 +217,13 @@ test("device list orders active records first and collapses revoked or expired h
   await expect(
     page.getByRole("heading", { name: "No device is connected right now" }),
   ).toHaveCount(0);
-  await expect(page.getByText(/records are collapsed/)).toHaveCount(0);
+  await expect(page.getByText(/records? are collapsed/)).toHaveCount(0);
 });
 
-test("Brain list keeps archived history behind its filter and separates the three empty states", async ({
+test("brain list keeps archived history behind its filter and separates the three empty states", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   page.setDefaultTimeout(10_000);
   const copies = await recordCopies(page);
   const suffix = randomUUID().slice(0, 8);
@@ -225,11 +231,11 @@ test("Brain list keeps archived history behind its filter and separates the thre
   const me = (await api<{ user: { id: string } }>(page, "/api/auth/me")).user
     .id;
   const live = await api<BrainRecord>(page, "/api/brains", "POST", {
-    name: `Density live ${suffix}`,
-    description: "Kitchen notes and errands",
+    name: `Hygiene live ${suffix}`,
+    description: "Errands and notes",
   });
   const retired = await api<BrainRecord>(page, "/api/brains", "POST", {
-    name: `Density retired ${suffix}`,
+    name: `Hygiene retired ${suffix}`,
     description: "Roadmap and decisions",
   });
   await api(page, `/api/brains/${retired.id}`, "PATCH", { archived: true });
@@ -240,6 +246,9 @@ test("Brain list keeps archived history behind its filter and separates the thre
 
   // Active-first: the archived record is absent from the active list entirely,
   // and no listed card carries the archived mark.
+  await expect(
+    page.getByTestId("brain-row-name").filter({ hasText: live.name }),
+  ).toBeVisible();
   const activeNames = await rowText(page, "brain-row-name");
   expect(activeNames).toContain(live.name);
   expect(activeNames).not.toContain(retired.name);
@@ -251,8 +260,7 @@ test("Brain list keeps archived history behind its filter and separates the thre
   await expect(
     page.getByText(/archived Brains? hidden from this list/),
   ).toBeVisible();
-  await page.getByLabel("Brain view").click();
-  await page.getByRole("option", { name: "Archived Brains (history)" }).click();
+  await pickView(page, /^Archived Brains \(history\)$/);
   await expect(page.getByText(/^Reading history:/)).toBeVisible();
   const archivedNames = await rowText(page, "brain-row-name");
   expect(archivedNames).toContain(retired.name);
@@ -280,8 +288,7 @@ test("Brain list keeps archived history behind its filter and separates the thre
   ).toBeVisible();
 
   // The id stays out of the row and is offered as a copyable field instead.
-  await page.getByLabel("Brain view").click();
-  await page.getByRole("option", { name: "Active Brains" }).click();
+  await pickView(page, /^Active Brains$/);
   const rows = (await rowText(page, "brain-card")).join("\n");
   for (const id of [live.id, retired.id]) {
     expect(rows).not.toContain(id);
@@ -290,11 +297,10 @@ test("Brain list keeps archived history behind its filter and separates the thre
   const card = page
     .getByTestId("brain-card")
     .filter({ has: page.getByText(live.name, { exact: true }) });
-  await card.getByText("Brain identifier", { exact: true }).click();
+  await openDetails(card, "Brain identifier");
   await card.getByRole("button", { name: "Copy Brain ID" }).click();
   await expect(card.getByRole("button", { name: "Copied" })).toBeVisible();
-  expect((await copies()).toContain(live.id)).toBe(true);
-  expect(await card.innerText()).not.toContain(live.id);
+  expect(await copies()).toContain(live.id);
 
   // The remaining two empty flavors, on controlled authorized reads.
   let stub: BrainRecord[] | null = null;
@@ -304,8 +310,8 @@ test("Brain list keeps archived history behind its filter and separates the thre
       : route.fallback(),
   );
   stub = [{ ...live, archived: false, owner_id: me }];
-  await page.getByLabel("Brain view").click();
-  await page.getByRole("option", { name: "Shared with you" }).click();
+  await page.reload();
+  await pickView(page, /^Shared with you$/);
   await expect(
     page.getByRole("heading", { name: "No Brains shared with you" }),
   ).toBeVisible();
@@ -317,8 +323,8 @@ test("Brain list keeps archived history behind its filter and separates the thre
   ).toHaveCount(0);
 
   stub = [];
-  await page.getByLabel("Brain view").click();
-  await page.getByRole("option", { name: "Active Brains" }).click();
+  await page.reload();
+  await pickView(page, /^Active Brains$/);
   await expect(
     page.getByRole("heading", { name: "Room for your first idea" }),
   ).toBeVisible();

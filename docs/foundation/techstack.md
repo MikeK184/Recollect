@@ -2,6 +2,8 @@
 
 Status: accepted
 
+October 1 integration amendment: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md) packages the Rust local memory runtime inside host plugins. Separate companion setup is replaced by plugin-managed capture and recall; independent execution remains an explicit optional runner. Existing backend and evidence guarantees remain.
+
 Current development override: [ADR 0003](../adr/0003-product-runtime.md) records
 the user's later instruction to omit product hashing and strict version/pinning
 gates during this implementation goal. The remaining baseline stays in force.

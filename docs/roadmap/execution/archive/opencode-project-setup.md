@@ -1,6 +1,6 @@
 # OpenCode project setup
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/developer-tooling.md`
 Work type: governance
 
@@ -62,7 +62,7 @@ Work type: governance
 
 ## Integrations and Runtime Inputs
 
-- Providers: Installed OpenCode v2.0.19, Node/npx, existing Context7 stdio package,
+- Providers: Installed OpenCode v2.0.21, Node/npx, existing Context7 stdio package,
   `chrome-devtools-mcp@latest` stdio package, and local Chrome for browser control.
 - Environment: `CONTEXT7_API_KEY` may be inherited by the MCP subprocess.
   chrome-devtools needs no project secret; `CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS`
@@ -87,11 +87,10 @@ Work type: governance
 
 - Planned: OpenCode parity for the existing repository developer setup plus
   secret-free chrome-devtools browser control.
-- Shipped: Pending installed-host verification.
-- Not shipped: Product changes, global settings, commit, push or deployment.
-- New blockers: None.
-- Docs updated: Governance authority and developer-tooling lifecycle; setup guide
-  and dated host evidence will accompany verification.
-- Validation: Pending.
-- Version: N/A; developer configuration only.
+- Shipped: OpenCode 2.0.21 discovers all six equivalent roles, both shared skills and root instructions from the root and web directory. An actual model session completed Context7 React resolution and chrome-devtools list_pages.
+- Not shipped: Product MCP/capture, personal provider defaults and marketplace publication remain outside this developer-setup slice.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: Six role bodies match Codex exactly; root/nested installed-host discovery and both actual MCP calls passed. The one-off proof selected a working OpenAI model in its dedicated process; the user's unavailable custom default was not changed. Final repository checks are recorded in the linked evidence.
+- Version: N/A: no release requested.
 - Commit: Uncommitted.

@@ -20,7 +20,13 @@ export async function openGraphDrawer(
   button: string,
 ) {
   const drawer = page.getByRole("dialog", { name: title, exact: true });
-  if (await drawer.isVisible()) return drawer;
+  // A drawer that is closing is still "visible" during its exit transition.
+  // Let the animation settle so we never interact with an unmounting dialog
+  // or skip the open click for a drawer that is already gone.
+  if (await drawer.isVisible()) {
+    await page.waitForTimeout(300);
+    if (await drawer.isVisible()) return drawer;
+  }
   for (let i = 0; i < 4 && (await page.getByRole("dialog").count()); i++) {
     await page.keyboard.press("Escape");
     await page.waitForTimeout(180);

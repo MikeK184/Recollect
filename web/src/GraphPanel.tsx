@@ -187,7 +187,10 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           event.type === "updated" &&
           (event.action.type === "invalidate" ||
             (event.action.type === "setState" &&
-              event.query.state.data === undefined))
+              event.query.state.data === undefined &&
+              ["graph", "graph-read", "graph-path"].includes(
+                String(event.query.queryKey[0]),
+              )))
         ) {
           setSubmitted(null);
           setPathSubmitted(null);
@@ -508,7 +511,10 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       : undefined;
   const needsSelection = missingExactSelection(scope);
   return (
-    <section className="feature-view graph-surface" aria-label="Evidence graphs">
+    <section
+      className="feature-view graph-surface"
+      aria-label="Evidence graphs"
+    >
       {/* Canvas chrome: kind selection, filters, path, insights, status and
           entity pages live in one compact row above the canvas region. */}
       <div className="feature-toolbar graph-chrome" data-graph-chrome="">

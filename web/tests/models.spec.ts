@@ -50,11 +50,10 @@ test("OpenAI policy, selected models and governed source learning", async ({
     return { brain: brain.id, source: source.id };
   });
   await page.goto("/brains/" + fixture.brain + "/settings?tab=ai");
+  await openDetails(page, "Advanced model controls");
   await expect(
     page.getByText("Transmission disabled", { exact: true }),
   ).toBeVisible();
-  await page.goto(`/brains/${fixture.brain}/settings?tab=ai`);
-  await openDetails(page, "Advanced model controls");
   await page
     .getByRole("button", { name: "Edit model policy", exact: true })
     .click();
@@ -100,6 +99,9 @@ test("OpenAI policy, selected models and governed source learning", async ({
   await page.goto(`/brains/${fixture.brain}/sources`);
   await page
     .getByRole("button", { name: /Synthetic literal configuration/ })
+    .click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
     .click();
   await openDetails(page, "More source actions");
   await page

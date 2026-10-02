@@ -1,9 +1,77 @@
-# Recollect memory plugin (no companion required)
+# Recollect automatic memory plugin
 
-Connect Codex, Claude Code, or OpenCode to a hosted Recollect server through
-the plugin/MCP integration alone. No CLI download, no companion pairing. The
-plugin carries memory skills and setup guidance; it grants no authority. The
-local companion remains only for optional automatic session capture.
+The packaged plugin owns connection setup, native session capture and automatic
+memory recall. Start Codex, Claude Code or OpenCode normally after connecting.
+The [completed integration](../../docs/roadmap/execution/archive/mcp-plugin-session-memory.md)
+was verified through actual installed hosts. See the [evidence and platform limits](../../docs/mappings/plugin-session-memory-2026-10-01.md).
+
+## Build an installable package
+
+Maintainers run `python3 scripts/package-plugin.py` from the repository root.
+It prints a fresh package directory containing a native executable, manifests,
+hooks and skills. Build on each supported target platform. The receiving machine
+needs the coding host and plugin package, not Cargo or a separate companion.
+The package also includes the platform's Enola extractor and its license/notice
+for repository publication. `repository` uses this bundled executable; it does
+not search the original build checkout.
+
+Install the printed package with the host's plugin installer:
+
+- Codex: `codex plugin marketplace add PACKAGE_DIRECTORY`, then
+  `codex plugin add recollect-memory@recollect`.
+- Claude Code: `claude plugin marketplace add PACKAGE_DIRECTORY`, then
+  `claude plugin install recollect-memory@recollect`.
+- OpenCode V2: add the package's
+  `plugins/recollect-memory/opencode/index.mjs` to the project's `plugins` array.
+
+Use the `recollect-connect` skill to choose the Recollect URL and Brain and
+complete the browser device authorization. Credentials go to the OS store.
+Trust the plugin's hooks through the host's normal review. Hooks cannot be
+trusted silently. Then use the coding host normally; no `capture run` wrapper.
+
+Independent local/private tool execution is optional. Add `--with-runner` during
+connection setup; use `--runner-id UUID` for an existing private registration.
+Without the flag, memory use starts no execution runner. Existing connector grants,
+approved targets and Vault credentials remain required.
+
+The runtime is bundled under `plugins/recollect-memory/bin/recollect-plugin`.
+Its `status` command checks the connection and reports delivery state.
+`workspace discover DIRECTORY` inspects local checkout metadata without connecting
+or uploading. `workspace refresh DIRECTORY` publishes that metadata with current
+Brain access; `scope` and `repository` retain the existing explicit workflows.
+`RECOLLECT_PLUGIN_DATA` optionally selects a private managed data directory.
+Normal installs use the user's application data directory automatically.
+Connection records the installed executable's absolute path in a private
+`runtime-path` file there. The Codex/Claude MCP bootstrap reads that pointer with
+a quoted `exec`; Codex 0.154.0 does not expand plugin path variables in legacy
+MCP command fields. Moving the package requires reconnecting from its new path.
+OpenCode 2.0.21 uses native MCP tools (`codemode: false`): its Code Mode catalogue
+can omit plugin-added tools on first startup even when their server is connected.
+This preserves the same scoped tools and host permissions.
+
+Before replacing a legacy setup, drain its pending captures using the original
+setup file and credential. Remove that host's previous first-party `recollect`
+MCP entry, enable the plugin, then verify a successful read and capture delivery.
+Retain old setup files until their pending count is zero. Never run the old
+`capture run` wrapper and the complete plugin for the same session. Installation
+does not overwrite host configuration or migrate queues to a different Brain.
+`status` reports detected Codex/Claude legacy entries by path without printing
+their configuration values. Plugin hooks with a conflicting setup withhold
+capture; OpenCode rejects an existing incompatible first-party MCP entry through
+its native configuration transform. Other servers/plugins are left alone.
+
+Changing the plugin's selected account or server preserves original destination
+and OS-credential references for pending plugin captures. Background delivery
+retries each original destination; it never relabels those events into the new
+Brain. Invalid connection attempts leave the previous configuration and credential
+intact. Credentials remain in the OS store; destination records contain references
+only. Explicit revocation, policy expiry and Brain deletion still fence delivery.
+
+## Advanced direct HTTP transport
+
+The following transport remains available for clients that only need explicit MCP
+calls. It does not install automatic capture or prompt-context hooks. Avoid a
+second `recollect` server entry when the complete plugin is installed.
 
 ## 0. Three separate credentials (read this first)
 
@@ -20,8 +88,9 @@ local companion remains only for optional automatic session capture.
 
 ## 1. Create an access token
 
-In Recollect, open Connections, choose your coding host, and use Create
-access token. The token is shown once. It inherits your current Brain grants
+In Recollect, open Agents, choose Connect coding agent, expand Advanced · Direct
+MCP connection and choose your host, then create an access token. The token is
+shown once. It inherits your current Brain grants
 and is not restricted to one Brain. Revoke it under Devices when it is no
 longer needed.
 
@@ -34,19 +103,11 @@ curl -s -X POST "$RECOLLECT_URL/api/devices/pairings" \
   -d '{"name":"Codex plugin · personal laptop"}'
 ```
 
-## 2. Install the skills plugin
+## 2. Connect MCP transport
 
-From this repository root:
-
-```sh
-codex plugin marketplace add ./plugins/recollect
-codex plugin add recollect-memory@recollect
-```
-
-This installs the `recollect-memory` skill. It bundles no MCP server entry
-because the endpoint URL is deployment-specific; the next step connects it.
-
-## 3. Connect MCP transport
+Direct HTTP needs no plugin installation. The current packaged plugin already
+provides an MCP entry; do not add the direct entry alongside it. Source manifests
+without a built runtime are not an installable memory plugin.
 
 Export the token in the terminal that starts your agent (an already running
 agent does not receive it):
@@ -84,7 +145,7 @@ Copy-paste configuration without a companion binary is also available from
 --brain BRAIN_UUID`, and from the Recollect coding-agent dialog, which
 additionally covers OpenCode.
 
-## 4. Verify
+## 3. Verify
 
 Ask the agent to run Recollect's `workspace.list`. A successful tool call
 confirms the connection; saving settings does not. Then work in a task scope
@@ -98,5 +159,4 @@ contribute deliberately (`memory.contribute`) as the bundled skill describes.
 - This is not OAuth: Recollect authenticates the header bearer token only.
 - One server entry selects one Brain. The token itself works for every Brain
   your account may access.
-- Optional automatic session capture still needs the companion and its host
-  hooks; see the session-capture runbook.
+- Automatic capture and prompt recall belong to the complete packaged plugin above.

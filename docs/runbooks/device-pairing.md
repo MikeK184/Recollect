@@ -1,12 +1,59 @@
-# Pair and manage a native companion
+# Connect and manage a Recollect device
 
-## Purpose and Prerequisites
+> Plugin migration: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md)
+> makes the packaged plugin the normal install/connect path for Codex, Claude Code
+> and OpenCode. [Package instructions](../../plugins/recollect/README.md) describe
+> the delivered implementation. Native ordinary-launch acceptance passed; the
+> legacy procedures remain for draining existing queues and advanced use.
+> Do not remove an old setup or revoke its device before its pending captures have
+> drained under their original endpoint, Brain, task and binding. Do not enable both
+> capture paths for one session. No credentials or host trust settings are migrated
+> silently.
+
+## Connect the packaged plugin
+
+Use **Agents → Connect coding agent** and the [package instructions](../../plugins/recollect/README.md).
+The bundled `recollect-plugin connect --url URL --brain UUID` starts the existing
+browser device-approval flow, saves the approved credential in the OS store and
+verifies access to the Brain. Normal coding sessions then load that credential
+automatically. For an existing access token, `--token-stdin` accepts it through
+standard input; never put the value in arguments or host configuration.
+
+macOS SecurityAgent is the operating system's credential-consent dialog. A prompt
+for `recollect-plugin` asks whether that executable may read the stored Recollect
+credential. It is not a Recollect reasoning agent, a memory-quality test or a
+request for an LLM password. Approve only the intended executable and profile.
+Replaced binaries can require renewed OS consent. Linux uses an unlocked Secret
+Service session; there is no plaintext credential fallback.
+
+`recollect-plugin status` checks the selected connection. `disconnect` disables
+the owned runner, revokes the current device and removes its OS-store credential.
+Drain intended pending captures before disconnecting; revocation blocks their
+publication. Switching Brain/device through `connect` preserves original queue
+references. Each Brain's **Agents** list shows its agents with per-Brain last use
+and supports revocation (account-wide); the **Devices** route, reachable by
+direct URL, lists the complete account device set. Pairing never creates
+execution grants or changes Brain membership.
+
+Ordinary memory starts no execution runner. `connect --with-runner` enables one;
+reconnect without that flag to disable it. A private registration additionally
+uses `--runner-id UUID`. See [scoped tools](agent-memory-tools.md).
+
+## Legacy native profile compatibility
+
+The commands below operate the earlier standalone companion profile. Keep that
+credential while draining any original capture queue; plugin setup does not
+silently copy or revoke it. Previous companion proof does not establish the new
+packaged install: use the [plugin evidence mapping](../mappings/plugin-session-memory-2026-10-01.md)
+for current acceptance status.
+
+### Legacy prerequisites
 
 Use the delivered companion with a running Recollect installation and a signed-in
-account. macOS native-store integration was verified locally. Other OS stores
-are supplied by the keyring library but have not been exercised here.
+account. macOS native-store integration was verified locally. Linux Secret Service also has isolated native-host fixture coverage; other OS
+stores are not implied by those tests.
 
-## Procedure
+### Legacy procedure
 
 From the repository root, with `./scripts/dev.sh` running:
 
@@ -17,10 +64,13 @@ cargo run -p recollect-agent -- pair "Development laptop"
 Open the printed link, sign in if needed, compare the public code with the
 companion, and choose **Approve device**. The companion writes its credential
 to the OS store, acknowledges pairing and verifies an authenticated call.
-No token is printed. On macOS the stored item trusts the companion, bridge,
-and runner binaries, so one pairing approval covers later setup, run, and
-bridge loads; approve it for the intended profile only. Items saved before
-this behavior need one fresh pairing to gain it. Inspect the result from fresh processes:
+No token is printed. On macOS the stored item names the companion, bridge and
+runner as trusted applications. Approve any Keychain prompt only for the intended
+executable and profile; use Always Allow when you want that trusted binary to load
+the credential on later launches. Rebuilding or replacing a binary can change its
+identity. A fresh pairing refreshes the trusted list; old items are not silently
+rewritten. Verify access from fresh processes rather than treating the saved list
+or browser pairing approval as connection proof:
 
 ```sh
 cargo run -p recollect-agent -- whoami

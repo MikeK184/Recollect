@@ -136,6 +136,14 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "029_brain_deletion",
         include_str!("../migrations/029_brain_deletion.sql"),
     ),
+    (
+        "030_plugin_session_memory",
+        include_str!("../migrations/030_plugin_session_memory.sql"),
+    ),
+    (
+        "031_devices_host_kind",
+        include_str!("../migrations/031_devices_host_kind.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

@@ -3,6 +3,7 @@ import { FilterBar } from "./components/FilterBar";
 import { ScopeSummary } from "./components/ScopeSummary";
 import { DetailInspector } from "./components/DetailInspector";
 import { ActionMenu } from "./components/ActionMenu";
+import { StatusBadge } from "./components/StatusBadge";
 import { iconSize } from "./design/tokens";
 import { useEffect, useState } from "react";
 import { useBrainSearch } from "./app/useBrainSearch";
@@ -29,13 +30,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BookMarked,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  FileText,
-} from "lucide-react";
+import { BookMarked, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
@@ -127,6 +122,33 @@ function States({ view }: { view: View }) {
         <Badge color="yellow">Unresolved conflict</Badge>
       )}
     </Group>
+  );
+}
+/** One composite status mark for dense list rows. The three dimensions keep
+ * their separate order and meaning inside the text, so no distinction relies
+ * on color alone; the full dimension set stays in the inspector. */
+function CompositeStatus({ view }: { view: View }) {
+  const flags: string[] = [];
+  if (view.revision.lifecycle === "withdrawn") flags.push("Withdrawn");
+  if (view.eligibility.rule_ids?.length) flags.push("Blocked by review rule");
+  if (view.eligibility.conflicting_claim_ids?.length)
+    flags.push("Unresolved conflict");
+  const text = [
+    `Review: ${label(view.revision.review)}`,
+    `Freshness: ${label(view.eligibility.effective_freshness)}`,
+    `Operational: ${label(view.revision.content.operational)}`,
+    ...flags,
+  ].join(" · ");
+  const state = flags.length
+    ? "attention"
+    : view.revision.review === "accepted" &&
+        view.eligibility.effective_freshness === "current"
+      ? "positive"
+      : "neutral";
+  return (
+    <div className="memory-record-status">
+      <StatusBadge state={state}>{text}</StatusBadge>
+    </div>
   );
 }
 export function EvidenceDialog({
@@ -839,6 +861,7 @@ export function ClaimDialog({
     null,
   );
   const [reviewing, setReviewing] = useState<View | null>(null);
+  const [editing, setEditing] = useState(false);
   const [contribution, setContribution] = useState<{
     id: string;
     at: string;
@@ -924,6 +947,21 @@ export function ClaimDialog({
         onSaved={onSaved}
       />
     );
+  if (view && editing)
+    return (
+      <ClaimEditor
+        brain={brain}
+        catalogue={catalogue}
+        revision={view.revision}
+        evidence={view.evidence}
+        onClose={() => setEditing(false)}
+        onSaved={() => {
+          setEditing(false);
+          void query.refetch();
+          onSaved();
+        }}
+      />
+    );
   if (view && selectedEvidence)
     return (
       <EvidenceDialog
@@ -938,8 +976,14 @@ export function ClaimDialog({
         brain={brain}
         view={reviewing}
         catalogue={catalogue}
+        current={reviewing.revision.id === query.data?.current_revision}
+        Editor={ClaimEditor}
         EvidenceViewer={EvidenceDialog}
         onClose={() => setReviewing(null)}
+        onSaved={() => {
+          void query.refetch();
+          onSaved();
+        }}
       />
     );
   const r = view?.revision;
@@ -1164,12 +1208,21 @@ export function ClaimDialog({
               </Button>
             ))}
             <Alert color="blue">
-              New input is handled by autonomous learning. See Activity →
-              Model usage and learning for recent learning.
+              New input is handled by autonomous learning. See Activity → Model
+              usage and learning for recent learning.
             </Alert>
             <Button variant="light" onClick={() => setReviewing(view)}>
-              Review history
+              Review and corrections
             </Button>
+            {!knowledge &&
+              !view.knowledge_until &&
+              r.review === "proposed" &&
+              brain.role !== "reader" &&
+              !brain.archived && (
+                <Button variant="default" onClick={() => setEditing(true)}>
+                  Revise proposal
+                </Button>
+              )}
           </>
         )}
         {query.data && (
@@ -1241,10 +1294,11 @@ export function ClaimsPanel({
     [mode, memoryKind, environment, repository, route.fact, route.knowledge],
   );
   const [noting, setNoting] = useState(false);
+  const [structuring, setStructuring] = useState(false);
   const selected =
     selectedId === undefined ? (route.claim ?? null) : selectedId;
   const setSelected = (value: string | null) => {
-    patchRoute({ claim: value, revision: null });
+    patchRoute({ claim: value, revision: null, detail: null });
     onSelectedIdChange?.(value);
   };
   const catalogue = useQuery({
@@ -1515,8 +1569,11 @@ export function ClaimsPanel({
             <div className="feature-list">
               {data.items.map((view) => (
                 <article className="memory-record" key={view.revision.claim_id}>
-                  <Stack gap="sm">
-                    <Group justify="space-between" align="start">
+                  {/* Dense row: one primary identifier line plus one composite
+                      status line. Value, evidence and knowledge time move to
+                      the shared lineage inspector. */}
+                  <Stack gap="xs">
+                    <Group justify="space-between" align="start" gap="xs">
                       <Button
                         variant="subtle"
                         justify="start"
@@ -1534,21 +1591,7 @@ export function ClaimsPanel({
                         )?.label ?? label(view.revision.content.kind)}
                       </Badge>
                     </Group>
-                    <Text lineClamp={3} size="sm">
-                      {view.revision.content.value}
-                    </Text>
-                    <States view={view} />
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <FileText size={iconSize.small} />
-                        <Text size="xs" c="dimmed">
-                          {view.evidence.length} evidence supports
-                        </Text>
-                      </Group>
-                      <Text size="xs" c="dimmed">
-                        Learned {time(view.revision.recorded_at)}
-                      </Text>
-                    </Group>
+                    <CompositeStatus view={view} />
                   </Stack>
                 </article>
               ))}
@@ -1580,27 +1623,58 @@ export function ClaimsPanel({
         freshness and operational assessment remain separate.
       </Text>
       {noting && (
-        <MemoryNoteDialog brain={brain} close={() => setNoting(false)} />
-      )}
-      {selected && !catalogue.error && (
-        <ClaimDialog
-          key={selected}
+        <MemoryNoteDialog
           brain={brain}
-          id={selected}
-          catalogue={catalogue.data}
-          knowledgeAt={times.knowledge_at}
-          factAt={times.fact_at}
-          revisionId={route.revision}
-          onKnowledgeChange={(knowledge, revision) =>
-            patchRoute({
-              knowledge: knowledge ?? null,
-              revision: revision ?? null,
-            })
-          }
-          onClose={() => setSelected(null)}
-          onSaved={refresh}
+          close={() => setNoting(false)}
+          structured={() => {
+            setNoting(false);
+            setStructuring(true);
+          }}
         />
       )}
+      {structuring && !catalogue.error && (
+        <ClaimEditor
+          brain={brain}
+          catalogue={catalogue.data}
+          onClose={() => setStructuring(false)}
+          onSaved={(id) => {
+            setStructuring(false);
+            patchRoute({ claim: id, revision: null, detail: "record" });
+            refresh();
+          }}
+        />
+      )}
+      {selected &&
+        !catalogue.error &&
+        (route.detail === "record" ||
+          !!route.knowledge ||
+          !!route.revision) && (
+          <ClaimDialog
+            key={selected}
+            brain={brain}
+            id={selected}
+            catalogue={catalogue.data}
+            knowledgeAt={times.knowledge_at}
+            factAt={times.fact_at}
+            revisionId={route.revision}
+            onKnowledgeChange={(knowledge, revision) =>
+              patchRoute({
+                detail: "record",
+                knowledge: knowledge ?? null,
+                revision: revision ?? null,
+              })
+            }
+            onClose={() =>
+              patchRoute({
+                claim: null,
+                detail: null,
+                knowledge: null,
+                revision: null,
+              })
+            }
+            onSaved={refresh}
+          />
+        )}
     </section>
   );
 }

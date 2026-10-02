@@ -1,6 +1,6 @@
 # Desktop experience integrated acceptance
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/operational-readiness.md`
 Work type: product
 
@@ -64,10 +64,10 @@ Work type: product
 ## Closeout
 
 - Planned: Complete approved desktop implementation, governed Ask and actual local runtime proof.
-- Shipped: Not yet. Final local image 5126dccc is ready at port 8787 and preserves seven Brain identities, sixteen sources, seventeen versions, ten claims, fourteen revisions and all recorded policy/grant digests. Desktop seven, real Team/OIDC two, Ask five, MCP setup three/runtime three and completed domain cases are recorded. Workspace clippy/unit, assets, backend Ask fixtures, actual provider samples and bounded timing proof passed.
-- Not shipped: Corrected remaining domain runs, relocated model-policy/autonomous UI and the integrated citation/correction/subsequent-recall journey are still required. Native browser-chrome zoom, general canvas interaction p95, universal performance and external installation/recovery reruns are not claimed. Keep required incomplete checks visible; explicit product non-goals remain excluded.
-- New blockers: No unresolved product decision is known. Neo4j startup temporarily interrupted two owned UI fixtures; dependency health recovered, both fixtures were reconciled/removed, and migration preflight passed at 20:29 UTC. The remaining limitation is unfinished verification, not a claimed product fix.
-- Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](../../../mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
-- Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
+- Shipped: The completed desktop and final backend are deployed on the existing local installation. API and worker share image 64d06daac505; migration and readiness passed. The pre/post deployment inventory preserves all 16 Brains, 26 sources, 27 versions, 29 claims, 37 revisions and recorded policy/grant digests.
+- Not shipped: External deployment/recovery and OIDC opt-in reruns were not required or repeated; their earlier proof remains separately dated. No production capacity, native browser zoom, small-screen or extra keyboard-polish claim.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: Complete 65-pass/7-opt-in-skipped browser matrix, followed by 2 real-provider cases and the new correction case; deployed question/citation/correction/recall and disabled fallback; independent owner review of all twelve routes at 1280/1440/1920. Carried and fresh Rust, installed-host, performance and provider boundaries are detailed in the mapping. Final repository checks are recorded in the linked evidence.
 - Version: N/A: no release requested.
-- Commit: uncommitted.
+- Commit: Uncommitted.

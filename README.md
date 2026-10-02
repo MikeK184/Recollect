@@ -89,15 +89,17 @@ For Docker installation and shared HTTPS access, see the
 
 ## Connect your coding agent
 
-Open **Connections → Coding agents** for Codex or Claude Code. Copy the standard
-HTTP MCP configuration and create a revocable access token; ordinary memory
-tools need no companion. The optional native companion adds supported session
-capture and local workspace discovery. Native MCP OAuth login and a published
-plugin are not available yet.
+Open **Agents → Connect coding agent** for Codex, Claude Code or OpenCode.
+Install the [packaged plugin](plugins/recollect/README.md), connect once to your
+Brain, then start your coding host normally. The plugin bundles automatic capture,
+cited memory recall, local checkout discovery and repository publication.
+Independent local/private tool execution is optional through `--with-runner`.
+Advanced direct HTTP MCP remains available. Public marketplace distribution and
+native MCP OAuth login are not available yet.
 
 | Start here | Guide |
 | --- | --- |
-| Connect Codex or Claude Code to a Brain | [Agent memory and MCP setup](docs/runbooks/agent-memory-tools.md) |
+| Connect Codex, Claude Code or OpenCode to a Brain | [Agent memory and MCP setup](docs/runbooks/agent-memory-tools.md) |
 | Capture supported sessions and tool observations | [Automatic session capture](docs/runbooks/session-capture.md) |
 | Work across repositories, areas and environments | [Workspace scope](docs/runbooks/workspace-scope.md) |
 | Configure managed tools, credentials and private runners | [MCP catalogue](docs/runbooks/mcp-catalogue.md) and [runtime](docs/runbooks/mcp-runtime.md) |
@@ -129,7 +131,7 @@ relevant context for the coding agent or UI, retaining links to that evidence.
 
 PostgreSQL owns canonical records and policy state, pgvector supports semantic
 retrieval, and Neo4j/GDS supports graph traversal and analytics. Rust powers the
-API, workers and native companion; React provides the desktop UI. The same stack
+API, workers and bundled plugin runtime; React provides the desktop UI. The same stack
 runs locally or on a private server.
 
 Recollect owns its Rust core. [Cognee](https://github.com/topoteretes/cognee) and

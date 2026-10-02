@@ -73,12 +73,12 @@ test("new Brain has managed defaults, compact navigation and simple agent setup"
   await expect(
     page.getByRole("button", { name: "Edit retention", exact: true }),
   ).toHaveCount(0);
-  await page.goto(`/brains/${brain}/connections`);
+  await page.goto(`/brains/${brain}/agents`);
   await page
-    .getByRole("button", { name: "Connect Codex", exact: true })
+    .getByRole("button", { name: "Connect coding agent", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Connect Codex",
+    name: "Connect a coding agent",
     exact: true,
   });
   await expect(dialog.getByTestId("agent-setup-command")).toContainText(
@@ -201,5 +201,5 @@ test("empty connector catalogue has a working owner registration path", async ({
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "Tool groups", exact: true }).click();
-  await expect(page.getByText(/Profiles are tool groups/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tool groups and their three grants", exact: true })).toBeVisible();
 });

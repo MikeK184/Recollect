@@ -1,6 +1,6 @@
 # Irreversible Brain deletion
 
-Status: planned
+Status: shipped
 Owning epic: `docs/roadmap/epics/product-platform.md`
 Work type: product
 
@@ -27,13 +27,13 @@ Work type: product
 
 ## Scope
 
-- In scope: `DELETE /api/brains/{brain}`, `POST /api/brains/{brain}/deletions/preview` and `GET /api/brains/{brain}/deletions/{request}`; Brain-wide closure composed from existing per-class erasure rules; tombstone and journal entries; read and recall denial across every consumer; physical cleanup queue participation; companion fence synchronization on next check-in; restore-barrier proof; Settings General delete control separated from archive.
+- In scope: `DELETE /api/brains/{brain}`, `POST /api/brains/{brain}/deletions/preview` and `GET /api/brains/{brain}/deletions/{request}` and the paired-companion `GET /api/brains/{brain}/deletions/fence`; Brain-wide closure composed from existing per-class erasure rules; tombstone and journal entries; read and recall denial across every consumer; physical cleanup queue participation; companion fence synchronization on next check-in; restore-barrier proof; Settings General delete control separated from archive.
 - Out of scope: Account deletion and bulk deletion; undo, recycle bin or restoration; changing retention classes, per-record closure, the journal format, Withdraw or Erase; Vault token or lease revocation; deleting global device or account rows; Brains and Devices list ordering and density, which `desktop-knowledge-surface` owns; any new mutation boundary.
 - Blockers: None. [ADR 0016](../../../adr/0016-brain-deletion.md) and its contract are accepted with the user's 2026-09-29 decision recorded.
 
 ## Surface and Interface Changes
 
-- Interfaces: Three new endpoints above, generated OpenAPI client and TypeScript types; the existing `GET/PATCH /api/brains/{id}` pair keeps its current rename/archive/reopen meaning with no delete alias.
+- Interfaces: Four deletion and companion-fence endpoints above, generated OpenAPI client and TypeScript types; closure counters serialize as lossless decimal strings; the existing `GET/PATCH /api/brains/{id}` pair keeps its current rename/archive/reopen meaning with no delete alias.
 - Storage: New minimal tombstone and deletion-request rows carrying identity, actor, time, disposition, closure counter and cleanup state only; no controlled content. Existing deletion journal gains Brain-wide target entries using its current fields. Migration adds no name, description or content column.
 - Ownership: Command authorization, closure orchestration and audit live in the server platform module beside Brain administration; per-class dependent removal stays with each domain owner's existing erasure helpers; physical artifact and graph-generation cleanup stays in the existing worker lanes; companion fence application stays in the agent crate; the browser delete control lives in the Settings feature with the shared confirmation flow.
 
@@ -70,10 +70,10 @@ Work type: product
 ## Closeout
 
 - Planned: Deletion endpoints, Brain-wide closure, tombstone and journal behavior, read and recall denial, physical cleanup participation, companion fence, restore proof, and the Settings and Brains browser surface.
-- Shipped: Not yet implemented. This pack is the specification; delivery evidence is recorded here only after the checks above run.
-- Not shipped: Account deletion, bulk deletion, undo and credential revocation remain deferred by contract.
-- New blockers: None recorded at authoring time.
-- Docs updated: Owning epic slice map and dependencies, active execution index, ADR index, contract index and the desktop and bootstrap navigation touched by this change.
-- Validation: Not yet executed for this slice.
-- Version: N/A: no release policy exists.
-- Commit: Uncommitted.
+- Shipped: Locally delivered on 2026-10-01. Migration 029 and four deletion/fence endpoints; Brain closure, tombstone/journal, unknown reads, queued-work fencing and physical cleanup; companion synchronization; Settings preview, exact-name confirmation, stale-preview recovery and content-free cleanup receipt. The closure counter now crosses JSON as a lossless decimal string, and companion cleanup counts are local fields. See the [continuation evidence](../../../mappings/desktop-continuation-2026-10-01.md).
+- Not shipped: Account deletion, bulk deletion, undo and Vault credential revocation remain excluded. Offline copies await companion check-in and backup copies retain their documented lifetime. Final backend changes are not deployed to the existing port-8787 installation.
+- New blockers: None for this slice. Unrelated desktop acceptance packs and the held Ask slice remain open.
+- Docs updated: Governing desktop priority amendment, dated evidence, desktop/agent/capture runbooks as applicable, this pack, owning epic and epic/execution indexes, and CONTINUE_HERE.md.
+- Validation: Four focused Rust HTTP/companion deletion cases passed, including authorization, replay, closure and restore/fence behavior. Disposable browser deletion passed wrong-name rejection, stale preview, absence from listing and direct reads, cleanup completion and reader restrictions. Fresh/upgrade migration evidence is retained from the implementation handover; current disposable database migration also passed. Web design/typecheck/build, workspace Rust tests, platform integration with documented focused reruns, Clippy, formatting, all 32 governance checker tests and git diff --check passed. The evidence mapping distinguishes opt-in skips, real external results and current deployment.
+- Version: N/A: no release policy or version bump in this scope.
+- Commit: Uncommitted; no commit, push or release performed.

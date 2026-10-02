@@ -395,7 +395,7 @@ function AskConversation({
     (request.selection?.environment_id ? 1 : 0) +
     (request.collection_id ? 1 : 0);
   return (
-    <div className="ask-page">
+    <div className={`ask-page ${!turns.length && !pending ? "is-empty" : ""}`}>
       <Group justify="space-between" className="ask-toolbar">
         <Group gap="xs">
           <Badge color="gray">

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "recollect": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "data=${RECOLLECT_PLUGIN_DATA:-}; if [ -z \"$data\" ]; then case \"$(uname -s)\" in Darwin) data=\"$HOME/Library/Application Support/Recollect/plugin\";; *) data=\"${XDG_DATA_HOME:-$HOME/.local/share}/recollect/plugin\";; esac; fi; [ -f \"$data/runtime-path\" ] && [ ! -L \"$data/runtime-path\" ] || exit 1; IFS= read -r runtime < \"$data/runtime-path\"; case \"$runtime\" in /*) ;; *) exit 1;; esac; [ -f \"$runtime\" ] && [ -x \"$runtime\" ] && [ ! -L \"$runtime\" ] || exit 1; exec \"$runtime\" mcp"
+      ],
+      "type": "stdio",
+      "env_vars": [
+        "RECOLLECT_PLUGIN_DATA",
+        "DBUS_SESSION_BUS_ADDRESS",
+        "XDG_DATA_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME"
+      ]
+    }
+  }
+}

@@ -28,13 +28,21 @@ pub struct Cleanup {
 }
 /// One applied Brain-deletion fence, reported separately from central
 /// completion so offline copies stay visibly incomplete.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct DeletionFence {
     pub brain_id: Uuid,
     pub deletion_id: Uuid,
     pub sequence: i64,
     pub removed_bundles: usize,
     pub removed_events: usize,
+}
+/// The server supplies the fence identity only. Cleanup counts belong to the
+/// local application of that fence and cannot be required from the wire.
+#[derive(Deserialize)]
+struct RemoteDeletionFence {
+    brain_id: Uuid,
+    deletion_id: Uuid,
+    sequence: i64,
 }
 #[derive(Deserialize)]
 struct BundleHeader {
@@ -172,12 +180,18 @@ pub async fn deletion_fence(
     if response.status() == reqwest::StatusCode::NOT_FOUND {
         return Ok(None);
     }
-    let fence: DeletionFence = decode(response).await?;
+    let fence: RemoteDeletionFence = decode(response).await?;
     ensure!(
         fence.brain_id == brain,
         "Deletion fence belongs to another Brain."
     );
-    Ok(Some(fence))
+    Ok(Some(DeletionFence {
+        brain_id: fence.brain_id,
+        deletion_id: fence.deletion_id,
+        sequence: fence.sequence,
+        removed_bundles: 0,
+        removed_events: 0,
+    }))
 }
 /// Remove only product-owned local files for a deleted Brain: the cached
 /// privacy position and prepared publication bundles. Git objects and customer

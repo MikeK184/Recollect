@@ -18,10 +18,8 @@ use uuid::Uuid;
 
 const TOOL_PATH: &str = "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin";
 pub fn project_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .expect("Recollect project directory")
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    path.canonicalize().unwrap_or(path)
 }
 pub fn default_enola() -> PathBuf {
     project_root().join(".cache/enola-tools/v0.4.19/enola")
@@ -53,6 +51,15 @@ impl Drop for OwnedStage {
     }
 }
 pub async fn private_root(path: &Path) -> Result<PathBuf> {
+    // A distributed plugin has no source checkout. Its explicitly selected,
+    // private application-data tree is the additional owned storage boundary.
+    if let Ok(plugin) = crate::plugin_storage::root()
+        && path.is_absolute()
+        && path.starts_with(&plugin)
+    {
+        crate::plugin_storage::directory(path)?;
+        return Ok(path.to_owned());
+    }
     let project = project_root();
     let requested = if path.is_absolute() {
         path.to_owned()

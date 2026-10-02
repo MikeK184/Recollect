@@ -14,6 +14,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { client, result, type Brain } from "./api";
+import { PluginAgentSetup } from "./PluginAgentSetup";
 import { ErrorState } from "./components/AsyncState";
 
 const shell = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
@@ -46,7 +47,7 @@ function Stage({
   );
 }
 
-export function McpAgentSetup({
+function DirectAgentSetup({
   brain,
   initialHost,
   buttonLabel = "Connect coding agent",
@@ -118,10 +119,9 @@ export function McpAgentSetup({
       const pairing = result(
         await client.POST("/api/devices/pairings", {
           body: {
-            name: `${hostLabel} MCP · ${brain.name}`.slice(
-              0,
-              120,
-            ),
+            name: `${hostLabel} MCP · ${brain.name}`.slice(0, 120),
+            host_kind: host === "claude" ? "claude_code" : host,
+            integration: "mcp",
           },
         }),
       );
@@ -188,8 +188,7 @@ export function McpAgentSetup({
         <Stack gap="lg">
           <Stage step={1} title="Choose your coding host">
             <Text size="sm">
-              Memory tools work over a standard MCP connection. No Recollect
-              companion is required for this step.
+              Memory tools work over a standard MCP connection.
             </Text>
             {!initialHost && (
               <Select
@@ -228,7 +227,13 @@ export function McpAgentSetup({
               cannot drift onto another Brain. Creating the access token pairs
               it as a device record that acts as you, with your current Brain
               permissions. Manage or revoke it later in{" "}
-              <Link to="/devices">Devices</Link>; nothing here revokes anything.
+              <Link
+                to="/brains/$brainId/agents"
+                params={{ brainId: brain.id }}
+              >
+                this Brain&apos;s Agents list
+              </Link>
+              ; nothing here revokes anything.
             </Text>
             {token ? (
               <>
@@ -262,7 +267,10 @@ export function McpAgentSetup({
                 </Alert>
               </>
             ) : (
-              <Button loading={create.isPending} onClick={() => create.mutate()}>
+              <Button
+                loading={create.isPending}
+                onClick={() => create.mutate()}
+              >
                 Create access token
               </Button>
             )}
@@ -289,16 +297,17 @@ export function McpAgentSetup({
             {!keychain && (
               <Text size="sm">
                 Keep <code>RECOLLECT_MCP_TOKEN</code> exactly as written in the
-                configuration. It is a variable name; your access token goes into
-                the hidden terminal prompt below.
+                configuration. It is a variable name; your access token goes
+                into the hidden terminal prompt below.
               </Text>
             )}
             {keychain ? (
               <>
                 <Text size="sm">
                   Copy the Keychain secret, run this command in Terminal, and
-                  paste at the hidden password prompt. Paste it again if asked to
-                  confirm. This saves the credential for this Brain in Keychain.
+                  paste at the hidden password prompt. Paste it again if asked
+                  to confirm. This saves the credential for this Brain in
+                  Keychain.
                 </Text>
                 <Code block data-testid="agent-credential-command">
                   {`/usr/bin/security add-generic-password -U -a recollect -s ${shell(keychainService)} -w`}
@@ -313,8 +322,8 @@ export function McpAgentSetup({
                 <Text size="sm">
                   Copy the access token. In a bash or zsh terminal in your
                   project, run this block and paste the token at the hidden
-                  prompt. The agent starts with the token; repeat this step for a
-                  new terminal.
+                  prompt. The agent starts with the token; repeat this step for
+                  a new terminal.
                 </Text>
                 <Code block data-testid="agent-credential-command">
                   {`printf 'Recollect access token: '\nread -r -s RECOLLECT_MCP_TOKEN\nprintf '\\n'\nexport RECOLLECT_MCP_TOKEN\n${host}`}
@@ -356,36 +365,23 @@ export function McpAgentSetup({
             </details>
           </Stage>
           <Text size="xs" c="dimmed">
-            The token uses your current Brain permissions. Revoke it under
-            Devices. This connection selects {brain.name}.
+            The token uses your current Brain permissions. Revoke it in this
+            Brain&apos;s Agents list. This connection selects {brain.name}.
           </Text>
-          <details className="feature-advanced">
-            <summary>Automatic session capture</summary>
-            <Stack gap="sm">
-              <Text size="sm">
-                MCP gives your agent memory tools. Capturing supported
-                conversations and discovering local repositories also needs the
-                Recollect companion and its host hooks. Capture policy has one
-                editor, in this Brain&apos;s Settings.
-              </Text>
-              <Code
-                block
-              >{`RECOLLECT_URL=${shell(window.location.origin)} recollect-agent pair\nRECOLLECT_URL=${shell(window.location.origin)} recollect-agent capture setup ${host} . --brain ${brain.id}`}</Code>
-              <Text size="sm">
-                Pairing uses a short browser approval code. Codex managed
-                launches also install a local plugin carrying memory skills
-                (see automatic capture setup). A checked-in local plugin
-                source is also available under plugins/recollect with the
-                same memory skills and no companion required; native MCP
-                OAuth sign-in remains out of scope.
-              </Text>
-              <Link to="/brains/$brainId/settings" params={{ brainId: brain.id }} search={{ tab: "capture" }}>
-                Open capture settings
-              </Link>
-            </Stack>
-          </details>
         </Stack>
       </Modal>
     </>
+  );
+}
+export function McpAgentSetup(props: {
+  brain: Brain;
+  initialHost?: string;
+  buttonLabel?: string;
+}) {
+  return (
+    <PluginAgentSetup
+      {...props}
+      advanced={<DirectAgentSetup {...props} buttonLabel="Set up direct MCP" />}
+    />
   );
 }

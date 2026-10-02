@@ -208,6 +208,8 @@ impl AppState {
         devices::finish,
         devices::cancel,
         devices::list,
+        devices::brain_agents,
+        devices::account_agents,
         devices::revoke,
         devices::revoke_self,
         evidence::catalogue,
@@ -463,6 +465,8 @@ pub(crate) fn api_routes() -> Router<AppState> {
             "/brains/{brain}/capture/devices",
             get(capture::devices).post(capture::report_device),
         )
+        .route("/brains/{brain}/agents", get(devices::brain_agents))
+        .route("/agents", get(devices::account_agents))
         .route(
             "/brains/{brain}/models/policy",
             get(model_policy::get).put(model_policy::update),

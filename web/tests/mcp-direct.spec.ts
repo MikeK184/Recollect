@@ -40,11 +40,52 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
   page,
 }) => {
   const { brain, base, api } = await setup(page, "Direct MCP proof");
-  await page.goto(`/brains/${brain.id}/connections`);
+  await page.goto(`/brains/${brain.id}/connections?tab=coding-agents`);
+  await expect(page).toHaveURL(
+    new RegExp(`/brains/${brain.id}/agents\\?tab=setup$`),
+  );
   await page
-    .getByRole("button", { name: "Connect Codex", exact: true })
+    .getByRole("button", { name: "Connect coding agent", exact: true })
     .click();
-  const dialog = page.getByRole("dialog");
+  await expect(page.getByRole("dialog")).toContainText(
+    "Install the Recollect plugin",
+  );
+  await expect(page.getByRole("dialog")).toContainText(
+    "Optional execution runner",
+  );
+  for (const [width, height] of [
+    [1280, 800],
+    [1440, 900],
+    [1920, 1080],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const setup = page.getByRole("dialog");
+    await setup
+      .getByText("Step 1 · Install the Recollect plugin", { exact: true })
+      .scrollIntoViewIfNeeded();
+    expect(
+      await setup.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `../.cache/ui/plugin-setup-${width}-top.png`,
+    });
+    await setup
+      .getByText("Optional execution runner", { exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: `../.cache/ui/plugin-setup-${width}-bottom.png`,
+    });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page
+    .getByText("Advanced · Direct MCP connection", { exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Set up direct MCP", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog").last();
   await dialog.getByLabel("Store your access token", { exact: true }).click();
   await page
     .getByRole("option", { name: "Environment variable", exact: true })
@@ -173,7 +214,7 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
   expect(forbidden.status()).toBe(403);
   await page.keyboard.press("Escape");
   await page
-    .getByRole("button", { name: "Connect Codex", exact: true })
+    .getByRole("button", { name: "Connect coding agent", exact: true })
     .click();
   await expect(
     page.getByLabel("Access token · shown once", { exact: true }),
@@ -355,23 +396,76 @@ test("Context7 anonymous documentation probe through Recollect", async ({
     },
     "PUT",
   );
-  const run = await api(base + "/mcp/calls", {
-    request_id: randomUUID(),
-    profile_id: profile.id,
-    connection_id: connection.id,
-    tool_name: "resolve-library-id",
-    arguments: { libraryName: "react", query: "React useState documentation" },
-    environment_id: null,
-    operation_id: null,
-    client_session_id: randomUUID(),
-    timeout_seconds: 60,
+  const pairing = await api("/api/devices/pairings", {
+    name: "Context7 MCP host proof",
+  });
+  await api(`/api/devices/pairings/${pairing.user_code}/approve`, {
+    approve: true,
+  });
+  const issued = await api("/api/devices/pairings/poll", {
+    device_code: pairing.device_code,
+  });
+  await api("/api/devices/pairings/finish", {
+    device_code: pairing.device_code,
+  });
+  // Use the host-facing MCP transport, not the browser's managed-call endpoint.
+  const rpc = async (method: string, params: unknown) => {
+    const response = await page.request.post(base + "/mcp/agent", {
+      headers: {
+        Authorization: `Bearer ${issued.token}`,
+        Accept: "application/json, text/event-stream",
+        "MCP-Protocol-Version": "2025-11-25",
+      },
+      data: { jsonrpc: "2.0", id: 1, method, params },
+    });
+    expect(response.status()).toBe(200);
+    const reply = await response.json();
+    expect(reply.error).toBeUndefined();
+    expect(reply.result.isError ?? false).toBe(false);
+    return reply.result;
+  };
+  await rpc("initialize", {
+    protocolVersion: "2025-11-25",
+    capabilities: {},
+    clientInfo: { name: "context7-through-recollect-proof", version: "1" },
+  });
+  const tool = async (name: string, args: unknown) =>
+    (await rpc("tools/call", { name, arguments: args })).structuredContent;
+  const task = await tool("workspace.start_task", {
+    input: {
+      label: "Public documentation lookup",
+      selection: { repository_ids: [], area_ids: [], environment_id: null },
+    },
+    context_query: "React useState documentation",
+  });
+  const operation = await tool("workspace.begin", {
+    id: task.task.id,
+    input: { kind: "tool" },
+  });
+  const run = await tool("mcp.call", {
+    operation_id: operation.id,
+    input: {
+      request_id: randomUUID(),
+      profile_id: profile.id,
+      connection_id: connection.id,
+      tool_name: "resolve-library-id",
+      arguments: {
+        libraryName: "react",
+        query: "React useState documentation",
+      },
+      client_session_id: randomUUID(),
+      timeout_seconds: 60,
+    },
   });
   const callId = run.call?.id ?? run.id;
   let complete;
   await expect
     .poll(
       async () => {
-        complete = await api(`${base}/mcp/calls/${callId}`);
+        complete = await tool("mcp.status", {
+          operation_id: operation.id,
+          id: callId,
+        });
         return complete.call?.state ?? complete.state;
       },
       { timeout: 85000, intervals: [500, 1000] },

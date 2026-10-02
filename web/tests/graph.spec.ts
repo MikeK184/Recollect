@@ -184,15 +184,14 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     await expect(
       page.getByRole("option", { name: /^Amber graph service ·/ }),
     ).toBeVisible();
-    await selection.press("ArrowDown");
-    await selection.press("Enter");
+    await page.getByRole("option", { name: /^Amber graph service ·/ }).click();
     await expect(explorer.getByTestId("exploration-node")).toContainText(
       "Amber graph service",
     );
     graphInspections.push(Math.round((performance.now() - started) * 10) / 10);
     await page.keyboard.press("Escape");
     await expect(
-      page.getByRole("dialog", { name: "Graph entity", exact: true }),
+      page.getByRole("dialog", { name: "Knowledge lineage", exact: true }),
     ).not.toBeVisible();
   }
   const p95 = (values: number[]) =>
@@ -202,7 +201,7 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     "../.cache/ui/graph-repeated-measurements.json",
     JSON.stringify(
       {
-        note: "20 local samples against the real four-entity, two-edge graph fixture. Reads measure completed canonical graph/view responses; inspection measures keyboard selection to visible entity details. These are warm fixture observations, not capacity or a pre-redesign comparison.",
+        note: "20 local samples against the real four-entity, two-edge graph fixture. Reads measure completed canonical graph/view responses; inspection measures pointer selection to visible entity details. These are warm fixture observations, not capacity or a pre-redesign comparison.",
         canonical_view: {
           sample_count: graphReads.length,
           p95_ms: p95(graphReads),
@@ -219,7 +218,7 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     ),
   );
   // Use the installed renderer's geometry to make a real pointer selection;
-  // keyboard selection below is the independent accessible route.
+  // the entity and relationship selectors exercise the other pointer route.
   await canvas.scrollIntoViewIfNeeded();
   await page.evaluate(
     () =>
@@ -243,17 +242,17 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     JSON.stringify(point),
   ).toContainText(point.label);
   await page.keyboard.press("Escape");
+  // Let the drawer finish closing before the next selection.
+  await expect(
+    page.getByRole("dialog", { name: "Knowledge lineage", exact: true }),
+  ).not.toBeVisible();
   const entity = explorer.getByRole("textbox", {
     name: "Inspect graph entity",
     exact: true,
   });
   await entity.click();
   await entity.fill("Amber graph service");
-  await expect(
-    page.getByRole("option", { name: /^Amber graph service ·/ }),
-  ).toBeVisible();
-  await entity.press("ArrowDown");
-  await entity.press("Enter");
+  await page.getByRole("option", { name: /^Amber graph service ·/ }).click();
   await expect(explorer.getByTestId("exploration-node")).toContainText(
     "Amber graph service",
   );
@@ -264,14 +263,20 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     "2 displayed entities · 1 directed relationships",
   );
   await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("dialog", { name: "Knowledge lineage", exact: true }),
+  ).not.toBeVisible();
   const relationship = explorer.getByRole("textbox", {
     name: "Inspect graph relationship",
     exact: true,
   });
   await relationship.click();
   await relationship.fill("supported by");
-  await relationship.press("ArrowDown");
-  await relationship.press("Enter");
+  await page
+    .getByRole("option", {
+      name: /^Amber graph service.*Amber graph evidence · supported by$/,
+    })
+    .click();
   await expect(explorer.getByTestId("exploration-edge")).toContainText(
     "Amber graph service → Amber graph evidence",
   );
@@ -338,11 +343,9 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     panel.getByText("supported by · provenance", { exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await openGraphDrawer(
-    page,
-    "Explore relationships",
-    "Explore from an entity",
-  );
+  await expect(
+    page.getByRole("dialog", { name: "Find an evidence path", exact: true }),
+  ).not.toBeVisible();
   await explorer
     .getByRole("button", { name: "Show shortest path on canvas", exact: true })
     .click();
@@ -517,22 +520,38 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     "500 displayed entities · 2000 directed relationships",
   );
   await expect(canvas).toHaveAttribute("data-ready", "true");
+  await expect
+    .poll(() =>
+      canvas.evaluate((element) => {
+        const cy = (
+          element as HTMLElement & { _cyreg: { cy: import("cytoscape").Core } }
+        )._cyreg.cy;
+        return [cy.nodes().length, cy.edges().length];
+      }),
+    )
+    .toEqual([500, 2000]);
+  await entity.fill("Dense synthetic entity 499");
+  await page
+    .getByRole("option", { name: /^Dense synthetic entity 499 ·/ })
+    .click();
   expect(
     await canvas.evaluate((element) => {
       const cy = (
         element as HTMLElement & { _cyreg: { cy: import("cytoscape").Core } }
       )._cyreg.cy;
-      return [cy.nodes().length, cy.edges().length];
+      return cy.nodes(".chosen").map((node) => node.id());
     }),
-  ).toEqual([500, 2000]);
-  await entity.fill("Dense synthetic entity 499");
-  await entity.press("ArrowDown");
-  await entity.press("Enter");
+  ).toEqual(["claim:dense-499"]);
+  // These renderer-only identities are not canonical claims. The shared
+  // inspector must refuse to substitute another revision for a synthetic id.
   await expect(explorer.getByTestId("exploration-node")).toContainText(
-    "Dense synthetic entity 499",
+    "claim revision that no longer resolves",
   );
+  await expect(
+    explorer.getByRole("link", { name: "Show in Memory", exact: true }),
+  ).toHaveAttribute("href", /center=claim%3Adense-499$/);
   console.info(
-    `500-node/2000-edge renderer and keyboard selection: ${Date.now() - began} ms`,
+    `500-node/2000-edge renderer and pointer selection: ${Date.now() - began} ms`,
   );
   await page.keyboard.press("Escape");
   await canvas.scrollIntoViewIfNeeded();

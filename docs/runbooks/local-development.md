@@ -59,11 +59,12 @@ supports imports, source history and overlapping views; see
 [source evidence](evidence-collections.md). Artifacts live under
 `RECOLLECT_ARTIFACT_DIR`, default `.data/artifacts`, and must be available to both
 the API and worker.
-The [workspace panel and companion](workspace-scope.md) provide checkout
+The [workspace panel and plugin](workspace-scope.md) provide checkout
 registration and task/subagent scope without uploading ordinary source files.
 The [publication workflow](repository-publication.md) adds isolated committed
-extraction, shared snapshots and environment revision histories. Install the
-companion's Enola adapter with `python3 scripts/setup-enola.py` before publishing.
+extraction, shared snapshots and environment revision histories. The packaged
+plugin includes Enola; source-checkout developers install the adapter with
+`python3 scripts/setup-enola.py` before publishing.
 An optional [OpenAI connection probe](provider-preflight.md) uses the user's
 environment key with fixed synthetic text. The delivered [Brain model policy and
 autonomous maintenance](provider-learning.md) use the selected Luna/embedding-large
@@ -76,6 +77,26 @@ Use [combined repository graphs](graph-cross-repository-views.md) for exact
 manifest-selected repositories and parsed pinned dependency links.
 
 ## Verification
+
+The platform suite requires the owned encrypted-recovery fixture as well as
+PostgreSQL/Neo4j. Prepare it once for a test run:
+
+```sh
+python3 scripts/setup-recovery-tools.py
+./scripts/docker.sh build -t recollect-recovery-sftp:local infra/recovery
+python3 scripts/start-recovery-fixture.py
+export RECOLLECT_TEST_RECOVERY_FIXTURE=/absolute/path/printed/fixture.json
+```
+
+The fixture command prints its exact private JSON path and owned container name.
+After the tests, remove that named fixture container and its generated directory;
+do not use a blanket database/container cleanup. Failed fixture databases and
+independent journals must remain until their owned graph work is absent. The
+platform script builds the required native MCP example and fails early if the
+SFTP fixture was not selected. Native coding-host tests use their separate
+`./scripts/test-mcp-hosts.sh` fixture. Run the graph/interruption tests without
+concurrent builds or other full suites so their short controlled pauses remain
+meaningful.
 
 ```sh
 curl -fsS http://127.0.0.1:8787/health/ready

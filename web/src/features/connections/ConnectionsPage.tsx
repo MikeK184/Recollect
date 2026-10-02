@@ -56,13 +56,14 @@ export function ConnectionsPage() {
     tab === "profiles" ? "profiles" : tab === "runners" ? "runners" : "connections";
   return (
     <>
-      <PageHeader
-        title="Connections"
-        description="Outbound tools your Brain can use. Connect a coding agent in Agents."
-      />
+      <PageHeader title="Connections" description="Outbound tools your Brain can use." />
       <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
         <>
-          {section === "profiles" ? <ToolGroupGrants /> : <WhereItRuns />}
+          {section === "profiles" ? (
+            <ToolGroupGrants />
+          ) : (
+            <WhereItRuns brainId={brain.id} />
+          )}
           <McpPanel
             key={`${brain.id}-${section}`}
             brain={brain}

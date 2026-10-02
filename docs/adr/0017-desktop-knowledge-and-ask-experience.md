@@ -2,6 +2,16 @@
 
 Status: accepted
 
+The user's [2026-10-01 display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
+supersedes mandatory small-screen and keyboard-polish expectations. Prioritize
+normal laptops and larger desktop monitors, up to about 32 inches.
+
+The user's 2026-10-01 assurance clarification limits prominent warnings to
+current blockers, with historical failures retained in Activity. The
+[assurance contract](../contracts/desktop-knowledge-surface.md#assurance-band)
+records the current-status evidence required; an old failed job alone is not a
+current blocker.
+
 ## Decision
 
 Restructure the Brain experience by visit frequency and human role, not by

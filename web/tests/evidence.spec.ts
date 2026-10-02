@@ -97,6 +97,9 @@ test("import evidence, preserve history and share one source across collection v
     .click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole("button", { name: /Production Vault/ }).click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
+    .click();
   await expect(dialog.getByTestId("source-content")).toHaveText(original);
   expect(await page.evaluate(() => "evidenceExecuted" in window)).toBe(false);
   await promisify(execFile)("../target/debug/recollect-server", [
@@ -124,6 +127,9 @@ test("import evidence, preserve history and share one source across collection v
     .click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole("button", { name: /Production Vault/ }).click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
+    .click();
   await expect(dialog.getByTestId("source-content")).toHaveText(replacement);
   await openDetails(dialog, "Version history");
   await dialog
@@ -216,6 +222,9 @@ test("import evidence, preserve history and share one source across collection v
   await expect(dialog).toHaveCount(0);
   await page
     .getByRole("button", { name: /Controlled external reference/ })
+    .click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
     .click();
   await expect(
     dialog.getByText("Reference without retained text", { exact: true }),

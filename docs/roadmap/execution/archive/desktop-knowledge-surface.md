@@ -1,6 +1,6 @@
 # Tiered knowledge surface and shared lineage inspector
 
-Status: planned
+Status: shipped
 Owning epic: `docs/roadmap/epics/product-platform.md`
 Work type: product
 
@@ -50,6 +50,7 @@ Work type: product
 - No-access: A reader sees permitted content only; admin-only audit and profile outputs stay absent; losing access mid-session clears affected cached payloads.
 - Duplicate or replay: The same record reached from different views resolves to one identity and one inspector instance; returning to a prior view restores the selection without duplicating requests.
 - Stale data: Epoch change, advertised expiry and Brain switching cancel superseded requests; late responses cannot populate the new Brain or selection.
+- Regression repair: Preserve the optional correction, review and conflict controls required by the desktop and review contracts. The earlier history-only simplification removed them. Restore the existing canonical handlers behind the explicit inspector action; autonomous learning has no mandatory human review step.
 - Reconciliation divergence: A projection that lags canonical state is labeled as lagging rather than presented as current; a source whose derived records were erased shows the erasure, not an empty success.
 
 ## Integrations and Runtime Inputs
@@ -68,10 +69,10 @@ Work type: product
 ## Closeout
 
 - Planned: Tiered sidebar, Knowledge surface, shared lineage inspector, graph chrome reorganization, list density treatment, historical filters and the assurance band.
-- Shipped: Not yet implemented. This pack is the specification; delivery evidence is recorded here only after the checks above run.
-- Not shipped: Ask default, wiring split and Activity restructuring are named successor and sibling slices rather than absorbed here.
-- New blockers: None recorded at authoring time.
-- Docs updated: Owning epic slice map and dependencies, active execution index, desktop contract navigation paragraph, and the desktop runbook function map.
-- Validation: Not yet executed for this slice.
-- Version: N/A: no release policy exists.
-- Commit: Uncommitted.
+- Shipped: Locally delivered on 2026-10-01. Tiered sidebar, one Knowledge surface and canonical lineage inspector, exact cross-view selection, explicit record-history actions, readable graph chrome, list density and active-first Brain/device lists. Optional correction handlers are preserved behind the inspector; autonomous learning needs no human approval. The standing band is shared with the assurance slice. See the [continuation evidence](../../../mappings/desktop-continuation-2026-10-01.md).
+- Not shipped: Ask behavior remains held in desktop-ask-primary. Extra small-screen and keyboard/focus polish is optional under the user’s 2026-10-01 decision.
+- New blockers: None for this slice. Unrelated desktop acceptance packs and the held Ask slice remain open.
+- Docs updated: Governing desktop priority amendment, dated evidence, desktop/agent/capture runbooks as applicable, this pack, owning epic and epic/execution indexes, and CONTINUE_HERE.md.
+- Validation: Knowledge/lineage, graph/chrome, claims, investigation, history navigation, list hygiene, evidence and retention browser proof passed. Graph canvas measured 479px versus 174px combined chrome at 1440×900. The second agent approved owner visuals at 1280/1440/1920, exact cross-view links, draft cancellation and the final Latest knowledge fix. Web design/typecheck/build, workspace Rust tests, platform integration with documented focused reruns, Clippy, formatting, all 32 governance checker tests and git diff --check passed. The evidence mapping distinguishes opt-in skips, real external results and current deployment.
+- Version: N/A: no release policy or version bump in this scope.
+- Commit: Uncommitted; no commit, push or release performed.

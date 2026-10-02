@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import "./features/feature-views.css";
 import {
   Alert,
@@ -17,7 +18,6 @@ import {
   Switch,
   Text,
   Textarea,
-  TextInput,
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ const labels: Record<string, string> = {
   lifecycle: "Lifecycle",
   codex: "Codex",
   claude_code: "Claude Code",
+  opencode: "OpenCode",
   managed_mcp: "Managed tool",
   ManagedTool: "Tool outcome",
   ManagedReceipt: "Later receipt",
@@ -48,7 +49,6 @@ const kinds = ["prompt", "reply", "tool_result", "lifecycle"].map((value) => ({
   value,
   label: label(value),
 }));
-const word = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 function Failure({ error }: { error: Error | null }) {
   return error ? <Alert color="red">{error.message}</Alert> : null;
 }
@@ -199,60 +199,30 @@ function PolicyEditor({
   );
 }
 function Setup({ brain, close }: { brain: string; close: () => void }) {
-  const [host, setHost] = useState("codex");
-  const [directory, setDirectory] = useState(".");
-  const command = `cargo run -p recollect-agent -- capture setup ${host} ${word(directory)} --brain ${brain}`;
   return (
     <Modal opened onClose={close} title="Connect session capture" size="lg">
       <Stack>
         <Text size="sm">
-          Use your paired native companion. Run this command from the Recollect
-          checkout; the workspace can be an existing repository elsewhere on
-          this computer.
+          The Recollect plugin supplies automatic capture and memory recall in
+          normal Codex, Claude Code and OpenCode sessions. Install it and
+          connect once from Agents.
         </Text>
-        <Select
-          label="Agent host"
-          value={host}
-          onChange={(value) => setHost(value ?? "codex")}
-          data={[
-            { value: "codex", label: "Codex" },
-            { value: "claude_code", label: "Claude Code" },
-          ]}
-        />
-        <TextInput
-          label="Host workspace directory"
-          value={directory}
-          onChange={(e) => setDirectory(e.currentTarget.value)}
-        />
-        <Code
-          block
-          style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+        <Link
+          to="/brains/$brainId/agents"
+          params={{ brainId: brain }}
+          search={{ tab: "setup" }}
         >
-          {command}
-        </Code>
+          Connect an agent
+        </Link>
         <Text size="sm">
-          Setup returns the launch command and Brain URL. Run the launch command
-          to start the host with automatic background upload. To use an existing
-          task's scope, add <Code>--task TASK_UUID</Code> during setup.
-        </Text>
-        {host === "codex" && (
-          <Text size="sm">
-            The launch registers Recollect's capture plugin through Codex. It
-            stays inactive in sessions that were not launched with a Recollect
-            capture binding. The bundle also carries memory skills describing
-            the existing scoped MCP tools; skills grant no authority.
-          </Text>
-        )}
-        <Text size="sm">
-          The host's initial hook trust and workspace permissions still apply.
-          Check companion activity below for actual delivery. Unsupported events
-          and ambiguous child attribution are shown as coverage gaps.
+          Capture follows this Brain&apos;s policy. Delivered events and
+          coverage gaps appear here after the host runs.
         </Text>
       </Stack>
     </Modal>
   );
 }
-function Companion({ item }: { item: Device }) {
+function CaptureDevice({ item }: { item: Device }) {
   const stale = item.reported_at
     ? Date.now() - Date.parse(item.reported_at) > 30_000
     : false;
@@ -272,7 +242,7 @@ function Companion({ item }: { item: Device }) {
     <Card withBorder padding="sm">
       <Stack gap="xs">
         <Group justify="space-between">
-          <Text fw={600}>Companion {item.device_id.slice(0, 8)}</Text>
+          <Text fw={600}>Device {item.device_id.slice(0, 8)}</Text>
           <Badge
             color={
               !report || stale
@@ -292,12 +262,12 @@ function Companion({ item }: { item: Device }) {
           {item.bindings === 1 ? "binding" : "bindings"}
           {report
             ? ` · ${report.pending} queued · ${report.denied} denied`
-            : " · no companion report yet"}
+            : " · no delivery report yet"}
         </Text>
         {report?.issue && (
           <Text size="sm">
-            {label(report.issue)}. Restart the companion or run its drain
-            command after resolving access or connectivity.
+            {label(report.issue)}. Start the coding host again or run the plugin
+            drain command after resolving access or connectivity.
           </Text>
         )}
         {!!report?.device_gap_count && (
@@ -386,13 +356,15 @@ export function CapturePanel({
   brain,
   section = "sessions",
   simple = false,
+  initialCoverage = false,
 }: {
   brain: Brain;
   section?: "sessions" | "settings";
   simple?: boolean;
+  initialCoverage?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const [coverage, setCoverage] = useState(false);
+  const [coverage, setCoverage] = useState(initialCoverage);
   const [setup, setSetup] = useState(false);
   const [kind, setKind] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
@@ -572,12 +544,13 @@ export function CapturePanel({
             )}
             {devices.data?.total === 0 && (
               <Alert color="gray">
-                No capture companion is configured for this Brain.
+                No coding host has registered session capture for this Brain
+                yet.
               </Alert>
             )}
             {!devices.error &&
               devices.data?.items.map((item) => (
-                <Companion key={item.device_id} item={item} />
+                <CaptureDevice key={item.device_id} item={item} />
               ))}
             {devices.data && (
               <Pages

@@ -19,16 +19,18 @@ use std::{
 };
 use tokio::process::Command;
 
-const PROMPT: &str = "RECOLLECT_MCP_HOST_PROOF: inspect the workspace and change the given task to its new scope, then report refreshed context.";
+pub(super) const PROMPT: &str = "RECOLLECT_MCP_HOST_PROOF: inspect the workspace and change the given task to its new scope, then report refreshed context.";
 const MARKER: &str = "HOST_FRESH_SCOPE_B_CONTEXT";
 #[derive(Clone)]
-struct Model {
-    calls: usize,
-    args: Value,
-    saw_context: bool,
-    saw_recall_tool: bool,
-    names: Vec<String>,
-    bodies: Vec<Value>,
+pub(super) struct Model {
+    pub(super) automatic: bool,
+    pub(super) prompt: &'static str,
+    pub(super) calls: usize,
+    pub(super) args: Value,
+    pub(super) saw_context: bool,
+    pub(super) saw_recall_tool: bool,
+    pub(super) names: Vec<String>,
+    pub(super) bodies: Vec<Value>,
 }
 fn stream(events: Vec<(&str, Value)>) -> Response {
     let text: String = events
@@ -37,7 +39,7 @@ fn stream(events: Vec<(&str, Value)>) -> Response {
         .collect();
     ([("content-type", "text/event-stream")], text).into_response()
 }
-async fn provider(State(state): State<Arc<Mutex<Model>>>, request: Request) -> Response {
+pub(super) async fn provider(State(state): State<Arc<Mutex<Model>>>, request: Request) -> Response {
     let path = request.uri().path().to_string();
     let bytes = to_bytes(request.into_body(), 4 * 1024 * 1024)
         .await
@@ -81,8 +83,9 @@ async fn provider(State(state): State<Arc<Mutex<Model>>>, request: Request) -> R
         })
         .collect::<Vec<_>>();
     let mut model = state.lock().unwrap();
-    let main = body.to_string().contains(PROMPT)
-        && (path.ends_with("responses") || path.ends_with("messages"));
+    let main = body.to_string().contains(model.prompt)
+        && (path.ends_with("responses") || path.ends_with("messages"))
+        && (!model.automatic || !callable.is_empty());
     if !main {
         return axum::Json(json!({"id":"ancillary","type":"message","role":"assistant","model":"claude-sonnet-4-6","content":[{"type":"text","text":"Synthetic auxiliary reply"}],"stop_reason":"end_turn","usage":{"input_tokens":42,"output_tokens":8}})).into_response();
     }
@@ -101,7 +104,8 @@ async fn provider(State(state): State<Arc<Mutex<Model>>>, request: Request) -> R
     } else {
         "workspace_set_scope"
     };
-    let tool = if step < 2 {
+    let steps = if model.automatic { 1 } else { 2 };
+    let mut tool = if step < steps {
         callable
             .iter()
             .find(|(_, name)| name.replace('.', "_").ends_with(suffix))
@@ -109,14 +113,24 @@ async fn provider(State(state): State<Arc<Mutex<Model>>>, request: Request) -> R
     } else {
         None
     };
-    let args = if step == 0 {
+    let mut args = if step == 0 {
         json!({})
     } else {
         model.args.clone()
     };
+    // OpenCode V2 exposes MCP through its native execute tool by default.
+    // Exercise that installed default instead of changing host configuration.
+    if model.automatic
+        && step == 0
+        && tool.is_none()
+        && callable.iter().any(|(_, name)| name == "execute")
+    {
+        tool = Some((None, "execute".into()));
+        args = json!({"code":"return await tools.recollect.workspace_list({});"});
+    }
     let reply = "Verified fresh Recollect context.";
     if path.ends_with("responses") {
-        let item = if let Some((namespace, name)) = code_mode.filter(|_| step < 2) {
+        let item = if let Some((namespace, name)) = code_mode.filter(|_| step < steps) {
             let script = format!(
                 "const available = ALL_TOOLS.filter(t => t.name.includes('recollect'));\n\
                  text({{available_tool_names: ALL_TOOLS.map(t => t.name)}});\n\
@@ -325,7 +339,15 @@ async fn mcp_actual_hosts_native_tools_and_fresh_context() {
         )
         .await
         .unwrap();
+        assert!(
+            recollect_agent::privacy::deletion_fence(&client, &device, brain)
+                .await
+                .expect("live Brain fence read remains available to the capture companion")
+                .is_none()
+        );
         let model = Arc::new(Mutex::new(Model {
+            automatic: false,
+            prompt: PROMPT,
             calls: 0,
             args: json!({"id":task["task"]["id"],"input":{"base_scope":task["task"]["scope"]["id"],"selection":scopes[1]},"context_query":"Host context"}),
             saw_context: false,
@@ -457,9 +479,22 @@ async fn mcp_actual_hosts_native_tools_and_fresh_context() {
                         .unwrap(),
                 ]
         }));
+        if inbox.status().unwrap().delivered == 0 {
+            // A diagnostic drain runs only after the actual-host delivery
+            // proof has failed. It cannot turn that failure into acceptance.
+            let diagnostic = recollect_agent::capture_delivery::run_once(
+                &client,
+                &device,
+                &setup.evidence_root,
+                Some(brain),
+            )
+            .await;
+            panic!("{host}: actual hooks did not publish; diagnostic drain: {diagnostic:?}");
+        }
         assert!(
             inbox.status().unwrap().delivered > 0,
-            "actual hooks published captured evidence"
+            "{host}: actual hooks must publish captured evidence; local delivery metadata: {:?}",
+            inbox.status().unwrap()
         );
         let captured: Vec<(Uuid, i32)> = sqlx::query_as("SELECT v.artifact_id,v.byte_length FROM capture_events e JOIN source_versions v ON v.id=e.source_version_id WHERE e.brain_id=$1 AND v.artifact_id IS NOT NULL LIMIT 100")
             .bind(brain).fetch_all(&h.admin).await.unwrap();

@@ -20,24 +20,28 @@ import { McpPanel } from "../../McpPanel";
 import { RetentionPanel } from "../../RetentionPanel";
 import { PageHeader } from "../../components/PageHeader";
 import { FeatureTabs, useFeatureTab } from "../../components/FeatureTabs";
+import { useBrainSearch } from "../../app/useBrainSearch";
+import { AssuranceActivity } from "./Assurance";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../../components/AsyncState";
 const tabs = [
-  { value: "timeline", label: "Timeline" },
+  { value: "attention", label: "Overview" },
   { value: "processing", label: "Processing" },
   { value: "tools", label: "Tool calls" },
   { value: "models", label: "Model usage" },
   { value: "removal", label: "Data removal" },
+  { value: "timeline", label: "Timeline" },
 ] as const;
 export function ActivityPage() {
   const brain = useBrain();
   const session = useWorkspace();
+  const [search] = useBrainSearch();
   const [tab, setTab] = useFeatureTab(
     tabs.map((t) => t.value),
-    "timeline",
+    "attention",
   );
   return (
     <>
@@ -46,16 +50,31 @@ export function ActivityPage() {
         description="See what happened, understand exceptions, and follow the evidence."
       />
       <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
+        {tab === "attention" && <AssuranceActivity />}
         {tab === "timeline" && <Timeline />}
         {tab === "processing" && (
-          <JobsPanel id={brain.id} admin={brain.role === "admin"} />
+          <JobsPanel
+            id={brain.id}
+            admin={brain.role === "admin"}
+            selectedJob={search.job}
+          />
         )}
         {tab === "tools" && (
-          <McpPanel brain={brain} actor={session.user.id} section="activity" />
+          <McpPanel
+            key={search.call}
+            brain={brain}
+            actor={session.user.id}
+            section="activity"
+            initialCall={search.call}
+          />
         )}
         {tab === "models" && <ModelsPanel brain={brain} section="activity" />}
         {tab === "removal" && (
-          <RetentionPanel brain={brain} section="activity" />
+          <RetentionPanel
+            brain={brain}
+            section="activity"
+            selectedRequest={search.erasure}
+          />
         )}
       </FeatureTabs>
     </>

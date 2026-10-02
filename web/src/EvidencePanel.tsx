@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { useBrainSearch } from "./app/useBrainSearch";
 import { useDebouncedValue } from "@mantine/hooks";
 import { EmptyState } from "./components/AsyncState";
+import { StatusBadge } from "./components/StatusBadge";
 import { useContentDeadline } from "./useContentDeadline";
 import "./features/feature-views.css";
 import { EraseAction, ExcerptAction } from "./RetentionPanel";
@@ -49,6 +50,7 @@ import {
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
+import { useKnowledgeSelection } from "./features/knowledge/selection";
 
 type Source = components["schemas"]["SourceSummary"];
 type View = components["schemas"]["EvidenceGroup"];
@@ -90,6 +92,7 @@ const groupOptions = (views: View[]) =>
 
 export function EvidencePanel({ brain }: { brain: Brain }) {
   const cache = useQueryClient();
+  const { select } = useKnowledgeSelection();
   const [route, patchRoute] = useBrainSearch();
   const filters: Record<string, string | null> = {
     collection: route.collection ?? null,
@@ -113,6 +116,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
     patchRoute({
       source: source?.id ?? null,
       version: source?.version.id ?? null,
+      detail: null,
     });
   const versionReference = useQuery({
     queryKey: ["source-reference", brain.id, route.version],
@@ -141,6 +145,14 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
     (!versionReference.error
       ? versionReference.data?.evidence.source_id
       : null);
+  useEffect(() => {
+    select(
+      selectedSourceId
+        ? { kind: "source", id: selectedSourceId, version: route.version }
+        : null,
+    );
+  }, [selectedSourceId, route.version, select]);
+  useEffect(() => () => select(null), [select]);
 
   const [editing, setEditing] = useState<{
     source: Source;
@@ -330,59 +342,57 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           />
         ) : (
           <div className="feature-list">
-            <div
-              className="feature-list-heading source-record-heading"
-              aria-hidden="true"
-            >
-              <span />
-              <span>Source</span>
-              <span>Kind</span>
-              <span className="source-record-updated">Updated</span>
-              <span>Status</span>
-            </div>
             {catalogue.data.sources.map((source) => (
               <button
                 key={source.id}
-                className="source-row source-record"
+                className="source-row source-record source-record-dense"
                 onClick={() => setSelected(source)}
               >
-                <FileText size={iconSize.action} className="source-symbol" />
-                <span className="source-record-name">
-                  <Text fw={600} size="sm">
-                    {source.version.title}
+                {/* Dense row: one identifier line (title plus kind) and one
+                    status line (composite mark plus updated date). Group
+                    views, origin and version history move to the shared
+                    lineage inspector. */}
+                <span className="source-record-line">
+                  <FileText size={iconSize.action} className="source-symbol" />
+                  <span className="source-record-name">
+                    <Text fw={600} size="sm">
+                      {source.version.title}
+                    </Text>
+                  </span>
+                  <Badge size="xs" variant="light" color="gray">
+                    {source.version.availability === "reference_only"
+                      ? "Reference"
+                      : (
+                          source.version.retention_class ?? "document"
+                        ).replaceAll("_", " ")}
+                  </Badge>
+                </span>
+                <span className="source-record-line">
+                  <StatusBadge
+                    state={
+                      source.version.processing === "ready" &&
+                      source.version.availability === "retained"
+                        ? "positive"
+                        : [
+                              "failed",
+                              "missing",
+                              "unavailable",
+                              "unreadable",
+                            ].includes(source.version.processing) ||
+                            ["missing", "unavailable", "unreadable"].includes(
+                              source.version.availability,
+                            )
+                          ? "negative"
+                          : "neutral"
+                    }
+                  >
+                    {stateLabel(source.version)}
+                  </StatusBadge>
+                  <Text size="xs" c="dimmed">
+                    Updated{" "}
+                    {new Date(source.version.recorded_at).toLocaleDateString()}
                   </Text>
-                  <Group gap={5} mt={5}>
-                    {source.group_ids.slice(0, 3).map((id) => (
-                      <Badge size="xs" variant="light" color="gray" key={id}>
-                        {groups.find((group) => group.id === id)?.name ??
-                          "View"}
-                      </Badge>
-                    ))}
-                  </Group>
                 </span>
-                <span className="feature-meta">
-                  {source.version.availability === "reference_only"
-                    ? "Reference"
-                    : (source.version.retention_class ?? "document").replaceAll(
-                        "_",
-                        " ",
-                      )}
-                </span>
-                <span className="feature-meta source-record-updated">
-                  {new Date(source.version.recorded_at).toLocaleDateString()}
-                </span>
-                <Badge
-                  size="sm"
-                  variant="light"
-                  color={
-                    source.version.processing === "ready" &&
-                    source.version.availability === "retained"
-                      ? "teal"
-                      : "gray"
-                  }
-                >
-                  {stateLabel(source.version)}
-                </Badge>
               </button>
             ))}
           </div>
@@ -471,7 +481,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           )}
         </Drawer>
       )}
-      {selectedSourceId && (
+      {selectedSourceId && route.detail === "record" && (
         <SourceViewer
           key={selectedSourceId}
           brain={brain.id}
@@ -636,7 +646,8 @@ function GroupManager({
                     {view.name}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    {view.source_count} source{view.source_count === 1 ? "" : "s"}
+                    {view.source_count} source
+                    {view.source_count === 1 ? "" : "s"}
                   </Text>
                 </div>
                 <Group gap="xs">

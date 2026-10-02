@@ -2,10 +2,12 @@
 
 Status: accepted
 
+October 1 integration amendment: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md) packages the Rust local memory runtime inside host plugins. Separate companion setup is replaced by plugin-managed capture and recall; independent execution remains an explicit optional runner. Existing backend and evidence guarantees remain.
+
 Revised baseline: 2026-09-13, incorporating the user's approved Atlas-informed
 plan and clarification that the MCP coordinator, Vault integration, Brain areas,
 dataset-like collections and graphs remain product requirements. Rust is selected
-for Recollect's own backend and companion. This supersedes the mandatory Cognee
+for Recollect's own backend and host plugins. This supersedes the mandatory Cognee
 extension direction. These are intended capabilities, not delivered functionality.
 Product epics follow from these foundations.
 
@@ -16,7 +18,7 @@ person or an internal team and their coding agents. Brains organize personal,
 team, project or customer work across repositories, knowledge and environments.
 Customer users, multi-organization onboarding and SaaS federation are outside
 the initial scope. Support the same self-hosted stack locally or on a shared
-private server, with local companions and approved private-network runners.
+private server, with local host plugins and approved private-network runners.
 Recollect owns its identities, evidence, correction rules, permissions and
 execution model. Existing memory systems, extractors and libraries provide
 ideas and reusable components; Cognee is a reference and optional integration.
@@ -342,7 +344,7 @@ not ours to terminate; release only our connection.
 ## Deployment and access model
 
 Use the same memory service locally or on a shared private server, with mixed
-execution. Local companions discover checkouts, extract committed snapshots,
+execution. Local host plugins discover checkouts, extract committed snapshots,
 and run local MCPs. The central Recollect service
 stores knowledge, graphs, registries, and permissions, and may run API-only
 connections. Approved private-network runners support services unreachable
@@ -372,7 +374,7 @@ an engineer from an SSO group or role must not be assumed to revoke
 owner privileges or independently granted access. Choose a supported ownership
 arrangement before shared resource creation, and test every effective access path.
 
-Recollect authorizes operations through its APIs, companion, and managed MCP
+Recollect authorizes operations through its APIs, host plugins, and managed MCP
 connections. It does not restrict arbitrary shell commands or unrelated
 credentials available to an unrestricted local agent. Denying a production
 profile is therefore a boundary on Recollect-managed operations, not a claim

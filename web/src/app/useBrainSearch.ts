@@ -4,6 +4,11 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 // in shareable URLs. Questions, free-text searches and provider inputs do not.
 export type BrainSearch = {
   tab?: string;
+  detail?: "record";
+  job?: string;
+  call?: string;
+  erasure?: string;
+  device?: string;
   source?: string;
   version?: string;
   claim?: string;
@@ -27,6 +32,10 @@ export type BrainSearch = {
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ids = [
+  "job",
+  "call",
+  "erasure",
+  "device",
   "source",
   "version",
   "claim",
@@ -57,6 +66,7 @@ const modes = [
 
 export function validateBrainSearch(raw: Record<string, unknown>): BrainSearch {
   const parsed: BrainSearch = {};
+  if (raw.detail === "record") parsed.detail = "record";
   for (const key of ids)
     if (typeof raw[key] === "string" && uuid.test(raw[key]))
       parsed[key] = raw[key];

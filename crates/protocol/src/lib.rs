@@ -242,6 +242,62 @@ pub struct Device {
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct PairingRequest {
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub integration: Option<String>,
+}
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+pub struct BrainAgent {
+    pub device_id: Uuid,
+    pub name: String,
+    pub host_kind: Option<String>,
+    pub integration: String,
+    pub claimed: bool,
+    pub active: bool,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub last_used_on_brain_at: Option<DateTime<Utc>>,
+}
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+pub struct BrainAgentGroup {
+    pub user_name: String,
+    pub agents: Vec<BrainAgent>,
+}
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct BrainAgentRoster {
+    pub groups: Vec<BrainAgentGroup>,
+    pub hidden_count: i64,
+}
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+pub struct AgentBrainUsage {
+    pub brain_id: Uuid,
+    pub name: String,
+    pub last_used_at: DateTime<Utc>,
+}
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+pub struct AccountAgent {
+    pub device_id: Uuid,
+    pub name: String,
+    pub host_kind: Option<String>,
+    pub integration: String,
+    pub claimed: bool,
+    pub active: bool,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub brains: Vec<AgentBrainUsage>,
+}
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+pub struct AccountAgentGroup {
+    pub user_name: String,
+    pub agents: Vec<AccountAgent>,
+}
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct AccountAgentRoster {
+    pub groups: Vec<AccountAgentGroup>,
+    pub hidden_count: i64,
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct PairingStart {

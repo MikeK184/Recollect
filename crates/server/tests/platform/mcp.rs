@@ -3,6 +3,8 @@ use recollect_protocol::McpDefinitionManifest;
 use recollect_server::mcp::definitions;
 #[path = "mcp/host_tools.rs"]
 mod host_tools;
+#[path = "mcp/plugin_session.rs"]
+mod plugin_session;
 #[path = "mcp/runtime.rs"]
 mod runtime;
 #[path = "mcp/tools.rs"]
@@ -1175,3 +1177,6 @@ async fn mcp_concurrent_creation_stale_edits_capacity_and_atomic_audit() {
     );
     h.finish().await;
 }
+
+#[path = "mcp/plugin_hosts.rs"]
+mod plugin_hosts;

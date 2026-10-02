@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Code,
+  CopyButton,
   Divider,
   Group,
   Loader,
@@ -20,7 +21,14 @@ import {
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderGit2, GitBranch, Plus, RefreshCw } from "lucide-react";
+import {
+  Check,
+  Copy,
+  FolderGit2,
+  GitBranch,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { RepositoryDialog } from "./PublicationPanel";
@@ -101,9 +109,15 @@ function Pages({
 export function WorkspacePanel({
   brain,
   section = "tasks",
+  selectedId,
+  onSelectedIdChange,
 }: {
   brain: Brain;
   section?: "repositories" | "tasks";
+  /** Optional shared selection bridge for the Knowledge surface's lineage
+   * inspector. Other hosts (Agents) leave it unset. */
+  selectedId?: string | null;
+  onSelectedIdChange?: (id: string | null) => void;
 }) {
   const cache = useQueryClient();
   const [workspace, setWorkspace] = useState<string | null>(null);
@@ -167,7 +181,7 @@ export function WorkspacePanel({
         </div>
         {section === "repositories" ? (
           <Button variant="default" onClick={() => setPublishing(true)}>
-            Publish from companion
+            Publish from your host
           </Button>
         ) : (
           <Button
@@ -184,7 +198,7 @@ export function WorkspacePanel({
         {catalogue.dataUpdatedAt
           ? `Catalogue checked ${new Date(catalogue.dataUpdatedAt).toLocaleTimeString()}`
           : "Loading catalogue…"}
-        . Native workspace discovery runs on your paired device.
+        . Native workspace discovery runs on your connected devices.
       </Text>
       {handoff && (
         <Alert
@@ -272,49 +286,99 @@ export function WorkspacePanel({
               <Stack gap="md">
                 {data.repositories.length === 0 && (
                   <Text size="sm" c="dimmed">
-                    No repositories registered. Refresh a workspace from your
-                    paired companion to discover its local checkouts.
+                    No repositories registered. Start your coding host in the
+                    workspace; the Recollect plugin discovers its local
+                    checkouts.
                   </Text>
                 )}
-                {data.repositories.map((repo) => (
-                  <Card key={repo.id} withBorder p="md">
-                    <Group justify="space-between" align="start">
-                      <div className="workspace-repository">
-                        <Text fw={500} size="sm">
-                          {repo.canonical_origin}
-                        </Text>
-                        <Text size="xs" c="dimmed" mt="xs">
-                          Repository {repo.id}
-                        </Text>
-                        {repo.origins
-                          .filter((origin) => origin !== repo.canonical_origin)
-                          .map((origin) => (
-                            <Text key={origin} size="xs" mt="xs">
-                              Also known as {origin}
-                            </Text>
-                          ))}
-                      </div>
-                      <Group gap="xs">
-                        <Button
-                          size="xs"
-                          variant="light"
-                          onClick={() => setPublication(repo)}
-                        >
-                          Snapshots
-                        </Button>
-                        {brain.role === "admin" && !brain.archived && (
+                {data.repositories.map((repo) => {
+                  const extraOrigins = repo.origins.filter(
+                    (origin) => origin !== repo.canonical_origin,
+                  );
+                  return (
+                    <Card
+                      key={repo.id}
+                      withBorder
+                      p="md"
+                      data-testid="repository-card"
+                    >
+                      {/* Dense card: the canonical origin is the primary
+                          identifier; extra origins overflow into an explicit
+                          expansion and the UUID moves to a copyable field. */}
+                      <Group justify="space-between" align="start">
+                        <div className="workspace-repository">
+                          <Button
+                            variant="subtle"
+                            px={0}
+                            h="auto"
+                            className="repository-card-name"
+                            onClick={() => onSelectedIdChange?.(repo.id)}
+                          >
+                            {repo.canonical_origin}
+                          </Button>
+                          {extraOrigins.length > 0 && (
+                            <details className="record-identity">
+                              <summary>
+                                {extraOrigins.length} more origin
+                                {extraOrigins.length === 1 ? "" : "s"}
+                              </summary>
+                              {extraOrigins.map((origin) => (
+                                <Text
+                                  key={origin}
+                                  size="xs"
+                                  className="workspace-path"
+                                >
+                                  Also known as {origin}
+                                </Text>
+                              ))}
+                            </details>
+                          )}
+                        </div>
+                        <Group gap="xs">
                           <Button
                             size="xs"
                             variant="light"
-                            onClick={() => setAlias(repo)}
+                            onClick={() => setPublication(repo)}
                           >
-                            Add origin
+                            Snapshots
                           </Button>
-                        )}
+                          {brain.role === "admin" && !brain.archived && (
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={() => setAlias(repo)}
+                            >
+                              Add origin
+                            </Button>
+                          )}
+                        </Group>
                       </Group>
-                    </Group>
-                  </Card>
-                ))}
+                      {/* Machine identifiers stay out of the row; the
+                          copyable field offers them instead. */}
+                      <details className="record-identity">
+                        <summary>Repository identifier</summary>
+                        <CopyButton value={repo.id}>
+                          {({ copied, copy }) => (
+                            <Button
+                              size="xs"
+                              variant="default"
+                              onClick={copy}
+                              leftSection={
+                                copied ? (
+                                  <Check size={14} />
+                                ) : (
+                                  <Copy size={14} />
+                                )
+                              }
+                            >
+                              {copied ? "Copied" : "Copy repository ID"}
+                            </Button>
+                          )}
+                        </CopyButton>
+                      </details>
+                    </Card>
+                  );
+                })}
               </Stack>
             </Tabs.Panel>
             <Tabs.Panel value="checkouts" pt="lg">
@@ -331,10 +395,10 @@ export function WorkspacePanel({
                       root:
                     </Text>
                     <Code block>{`brain = "${brain.id}"`}</Code>
-                    <Text size="sm">Then use your paired companion:</Text>
-                    <Code block>
-                      recollect-agent workspace refresh /path/to/workspace
-                    </Code>
+                    <Text size="sm">
+                      Then start your coding host there — the Recollect plugin
+                      reports the workspace automatically.
+                    </Text>
                   </Stack>
                 ) : (
                   <>
@@ -433,18 +497,16 @@ export function WorkspacePanel({
       <Modal
         opened={publishing}
         onClose={() => setPublishing(false)}
-        title="Publish from your companion"
+        title="Publish from your host"
         size="lg"
       >
         <Stack>
           <Text>
-            Use the paired native companion from a task scoped to the
-            repository. Recollect publishes the selected committed tree, not
-            uncommitted working files.
+            Ask your agent, from a task scoped to this repository, to publish
+            the checkout. The Recollect plugin runs the publication for it.
+            Recollect publishes the selected committed tree, not uncommitted
+            working files.
           </Text>
-          <Code
-            block
-          >{`recollect-agent repository publish ${brain.id} REPOSITORY_ID TASK_ID /path/to/checkout --revision COMMIT`}</Code>
           <Text size="sm" c="dimmed">
             Replace the identifiers with your repository and task scope. File
             text stays local unless explicitly selected with --retain-file and

@@ -78,8 +78,8 @@ export function McpPrivateRunners({
       </Text>
       <Text size="sm" c="dimmed">
         Manage the device itself in{" "}
-        <Link to="/devices" search={{ code: undefined }}>
-          Devices
+        <Link to="/brains/$brainId/agents" params={{ brainId: brain.id }}>
+          this Brain&apos;s Agents list
         </Link>
         .
       </Text>
@@ -139,16 +139,16 @@ export function McpPrivateRunners({
                 <details>
                   <summary>Start on the registered device</summary>
                   <Text size="sm">
-                    Use the companion profile paired to this device. Choose a
-                    private directory for pending receipts.
+                    Connect the Recollect plugin with a runner on that device.
+                    Choose a private directory for pending receipts.
                   </Text>
                   <Code
                     block
-                  >{`recollect-agent private-runner ${runner.id} /path/to/private/receipts`}</Code>
+                  >{`recollect-plugin connect --url ${window.location.origin} --brain ${brain.id} --with-runner --runner-id ${runner.id}`}</Code>
                   <Text size="xs" c="dimmed">
-                    Paired device: {runner.device_id} ·{" "}
-                    <Link to="/devices" search={{ code: undefined }}>
-                      open the device record in Devices
+                    Device: {runner.device_id} ·{" "}
+                    <Link to="/brains/$brainId/agents" params={{ brainId: brain.id }}>
+                      see it in this Brain&apos;s Agents list
                     </Link>
                   </Text>
                 </details>
@@ -252,7 +252,7 @@ function RunnerDialog({
         <Stack>
           <Text size="sm">
             Registration binds this Brain's runner to one paired device. Start
-            the companion there to connect.
+            the plugin runner there to connect.
           </Text>
           {stale && (
             <Alert color="yellow">
@@ -291,8 +291,8 @@ function RunnerDialog({
               )}
               {!devices.isPending && !devices.error && !active.length && (
                 <Alert color="yellow">
-                  Pair an active companion from Devices before registering a
-                  private runner.
+                  Connect the Recollect plugin on an active device before
+                  registering a private runner.
                 </Alert>
               )}
               <Select

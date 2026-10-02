@@ -107,9 +107,10 @@ test("capture policy, companion delivery states and retained source erasure", as
     name: "Connect session capture",
     exact: true,
   });
+  await expect(dialog).toContainText("Recollect plugin");
   await expect(
-    dialog.getByText(/cargo run -p recollect-agent -- capture setup/),
-  ).toContainText(fixture.brain);
+    dialog.getByRole("link", { name: "Connect an agent", exact: true }),
+  ).toHaveAttribute("href", `/brains/${fixture.brain}/agents?tab=setup`);
   await page.keyboard.press("Escape");
   await openDetails(page, "Advanced capture controls");
   await panel

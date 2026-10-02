@@ -124,7 +124,7 @@ export function RepositoryDialog({
         {snapshots.isPending && <Loader size="sm" />}
         {snapshots.data?.items.length === 0 && (
           <Alert title="No snapshots published">
-            Use a paired companion with a task scoped to this repository.
+            Use a connected host with a task scoped to this repository.
             Publish an exact locally available commit from your checkout.
           </Alert>
         )}
@@ -1201,7 +1201,7 @@ export function RepositoryStoragePolicy({ brain }: { brain: Brain }) {
         <Title order={3}>Repository file storage</Title>
         <Text size="sm" c="dimmed">
           Published structure is separate from retained file text. Files require
-          explicit companion selection and this Brain's permission.
+          explicit host selection and this Brain's permission.
         </Text>
         <Failure error={policy.error} />
         <Failure error={updatePolicy.error} />

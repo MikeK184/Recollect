@@ -55,3 +55,5 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Encrypted backup, upgrade and recovery](operations-recovery-drills.md)
 - [Integrated product acceptance and measured limits](operations-integrated-evaluations.md)
 - [LongMemEval answer-level benchmark protocol](operations-longmemeval-protocol.md) (proposed; not governing until accepted with user cost approval)
+
+- [Plugin-managed coding-host memory](mcp-plugin-session-memory.md)

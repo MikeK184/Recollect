@@ -44,13 +44,19 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
     name: "Background processing",
   });
   await expect(processing.getByText("Queued", { exact: true })).toBeVisible();
-  await processing.getByRole("button", { name: "Cancel job" }).click();
+  const refreshJob = processing
+    .locator(".job-row")
+    .filter({
+      has: page.getByText("Update Brain details", { exact: true }),
+    })
+    .first(); // Managed creation also queues refreshes for its policy changes.
+  await refreshJob.getByRole("button", { name: "Cancel job" }).click();
   await expect(
-    processing.getByRole("button", { name: "Retry job" }),
+    refreshJob.getByRole("button", { name: "Retry job" }),
   ).toBeVisible();
-  await processing.getByRole("button", { name: "Retry job" }).click();
+  await refreshJob.getByRole("button", { name: "Retry job" }).click();
   await expect(
-    processing.getByRole("button", { name: "Cancel job" }),
+    refreshJob.getByRole("button", { name: "Cancel job" }),
   ).toBeVisible();
   await promisify(execFile)("../target/debug/recollect-server", [
     "worker-once",

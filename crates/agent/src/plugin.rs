@@ -1,8 +1,7 @@
 //! Validation for the checked-in static plugin source.
 //!
-//! `plugins/recollect` is the local marketplace root for plugin-only clients:
-//! memory skills and setup guidance with no companion binary. It grants no
-//! authority; the skill text only describes the existing MCP tools. Every
+//! `plugins/recollect` is the source marketplace for the packaged native plugin.
+//! Skills, hooks and a bundled runtime share the canonical MCP tools. Every
 //! shipped file must stay secret-free: only the variable name
 //! `RECOLLECT_MCP_TOKEN` is written down, never a value.
 use anyhow::{Result, anyhow, ensure};
@@ -99,8 +98,7 @@ pub fn validate_bundle(root: &Path) -> Result<()> {
         "workspace.list",
         "memory.recall",
         "memory.contribute",
-        "RECOLLECT_MCP_TOKEN",
-        "/api/devices/pairings",
+        "recollect-connect",
     ] {
         ensure!(
             skill.contains(required),
@@ -108,6 +106,60 @@ pub fn validate_bundle(root: &Path) -> Result<()> {
         );
     }
     secret_free("SKILL.md", &skill)?;
+    let connect = std::fs::read_to_string(plugin_dir.join("skills/recollect-connect/SKILL.md"))?;
+    frontmatter(&connect)?;
+    ensure!(
+        connect.contains("--with-runner") && connect.contains("OS store"),
+        "Connection skill must describe explicit runner opt-in and credential storage."
+    );
+    secret_free("connect skill", &connect)?;
+    for (manifest, host) in [(&plugin, "codex"), (&claude, "claude_code")] {
+        ensure!(
+            manifest["mcpServers"] == "./.mcp.json",
+            "Plugin must bundle its MCP adapter."
+        );
+        let hook_path = format!("./hooks/{host}.json");
+        ensure!(
+            manifest["hooks"] == hook_path,
+            "Plugin must select its native host hooks."
+        );
+        let text = std::fs::read_to_string(plugin_dir.join(&hook_path))?;
+        secret_free("hooks", &text)?;
+        let hooks: serde_json::Value = serde_json::from_str(&text)?;
+        for event in [
+            "SessionStart",
+            "UserPromptSubmit",
+            "PostToolUse",
+            "Stop",
+            "PreCompact",
+            "SessionEnd",
+        ] {
+            let hook = &hooks["hooks"][event][0]["hooks"][0];
+            ensure!(
+                hook["type"] == "command"
+                    && hook["command"]
+                        == format!("\"${{CLAUDE_PLUGIN_ROOT}}/bin/recollect-plugin\" hook {host}"),
+                "Native {event} hook must invoke only the packaged runtime."
+            );
+            ensure!(
+                hook["timeout"].as_u64().is_some_and(|v| v <= 10),
+                "Hooks must have bounded timeouts."
+            );
+        }
+    }
+    let mcp_text = std::fs::read_to_string(plugin_dir.join(".mcp.json"))?;
+    secret_free("bundled MCP", &mcp_text)?;
+    let mcp: serde_json::Value = serde_json::from_str(&mcp_text)?;
+    ensure!(
+        mcp["mcpServers"]["recollect"]["command"] == "sh"
+            && mcp["mcpServers"]["recollect"]["args"][0] == "-c"
+            && mcp["mcpServers"]["recollect"]["args"][1]
+                .as_str()
+                .is_some_and(|script| script.contains("runtime-path")
+                    && script.ends_with("exec \"$runtime\" mcp")
+                    && !script.contains("eval")),
+        "Bundled MCP must use the plugin-owned runtime pointer without eval."
+    );
     let template = std::fs::read_to_string(plugin_dir.join("mcp-template.json"))
         .map_err(|_| anyhow!("Static Claude MCP template is missing."))?;
     let template_json: serde_json::Value = serde_json::from_str(&template)?;

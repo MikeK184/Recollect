@@ -1,6 +1,6 @@
 # Development Tooling Assessment
 
-Revised: 2026-09-13. The [selected stack](../foundation/techstack.md) is Rust,
+Revised: 2026-10-01. The [selected stack](../foundation/techstack.md) is Rust,
 React/Vite, PostgreSQL/pgvector and Neo4j/GDS Community. The MCP coordinator uses
 rmcp; Cognee remains a reference. Earlier Python/FastMCP/Next.js recommendations
 belonged to the superseded extension baseline.
@@ -8,7 +8,8 @@ belonged to the superseded extension baseline.
 Governance validation, Context7 calls and local CodeGraph navigation have been
 exercised. The documentation router and maintainer are now repository-local
 skills. Installed Rust/Node/Docker client versions have been inspected; the
-product dependency matrix, UI and services remain unimplemented and unverified.
+product is now implemented and deployed locally; dated acceptance is recorded in the
+[final desktop evidence](../mappings/desktop-final-acceptance-2026-10-01.md).
 
 ## Available development capabilities
 
@@ -108,3 +109,25 @@ agent files and skills do not govern Recollect. No source checkout was modified.
 
 The Bash/Python governance tools remain valid and independent of the product
 language. Running their checks does not prove Rust, UI, database or MCP behavior.
+
+## OpenCode project startup and verified parity
+
+Start `opencode` from this repository or its `web` directory. Root `opencode.json`
+configures Context7 and secret-free isolated chrome-devtools; `.opencode/agents/`
+defines default, explorer, architect, worker, qa and reviewer with the same role
+bodies as Codex. Root `AGENTS.md` governs both hosts. Invoke a specialist explicitly
+when wanted; there is no automatic delegation requirement. The shared
+`recollect-doc-router` and `recollect-doc-maintainer` skills remain in `.agents/skills/`.
+
+Open a fresh session after changing project configuration and allow host discovery
+to finish. In OpenCode 2.0.21, initial implicit-location debug output could be empty;
+root/nested explicit-location discovery subsequently returned all six roles and
+both skills. Confirm a real MCP call before calling a tool connected: React library
+resolution and chrome-devtools `list_pages` passed through an actual model session.
+
+The current personal default provider tunnel failed DNS during verification. A
+one-off model selection on a dedicated proof server worked; no personal setting
+or provider account was changed. Select an available configured model if that
+personal default remains unavailable. This does not affect project role parity.
+See [host evidence and limits](../mappings/desktop-final-acceptance-2026-10-01.md).
+Product Brain connections and OpenCode capture remain separate from developer MCPs.

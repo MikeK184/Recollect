@@ -1,6 +1,6 @@
 # Developer Tooling
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -35,7 +35,7 @@ skills and MCPs. Use Terme's available pair as reference; keep all writes here.
 | `codegraph-local-navigation` | shipped | adr-backed, contract-backed | pack | Installed pinned local CLI, indexed Cognee from Recollect, verified a permissions flow and incremental refresh, and documented navigation |
 | `atlas-reference-checkout` | shipped | contract-backed | small-fix: explicit user-authorized reference clone with isolated ignore/docs changes; no application code or runtime integration | Cloned Agent Memory Atlas and verified the requested pattern/comparison sources and generated HTML against the live pages |
 | `documentation-skills` | shipped | adr-backed, contract-backed | pack | Adapted Terme's router and maintainer to Recollect, verified discovery, and assessed tooling against the accepted stack |
-| `opencode-project-setup` | in-progress | adr-backed, contract-backed | pack | Carry the existing project instructions, two skills, six roles and Context7 into OpenCode v2 plus secret-free chrome-devtools browser control and verify host discovery and read-only MCP calls |
+| `opencode-project-setup` | shipped | adr-backed, contract-backed | pack | Carry the existing project instructions, two skills, six roles and Context7 into OpenCode v2 plus secret-free chrome-devtools browser control and verify host discovery and read-only MCP calls |
 
 ## CodeGraph closeout
 
@@ -75,3 +75,7 @@ catalog discovery from the root and a nested directory. Governance lint and all
 future workflow-skill candidates and recommends no extra development MCP now.
 No product capability, external integration or independent agent evaluation is
 claimed. Version: N/A; commit: uncommitted.
+
+## Final desktop and tooling acceptance — 2026-10-01
+
+The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
