@@ -226,6 +226,7 @@ test("Brain learns, revises and refreshes its handover without individual review
     current.revision.id,
   );
   await page.reload();
+  await openDetails(page, "Advanced model controls");
   await expect(page.getByText(/Autonomous memory is configured/)).toBeVisible();
   await page.goto(`/brains/${fixture.brain}/activity?tab=models`);
   await page

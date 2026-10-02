@@ -237,37 +237,14 @@
 .feature-advanced > summary { cursor: pointer; color: var(--mantine-color-dimmed); padding: 0.75rem 0; font-size: 0.875rem; }
 .feature-advanced-content { padding-top: 1rem; }
 
-/* Knowledge surface shell: one view switcher, one view region, one inspector.
-   The hosted views keep their own markup; the shell owns only this frame. */
+/* Knowledge surface shell: one view region, one inspector. The contextual
+   sidebar is the sole navigation between views; hosted views keep their own
+   markup and the shell owns only this frame. */
 .knowledge-surface {
   display: flex;
   flex-direction: column;
   gap: var(--mantine-spacing-lg);
   min-width: 0;
-}
-.knowledge-switcher {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mantine-spacing-xs);
-  border-bottom: 1px solid var(--rc-border);
-  padding-bottom: var(--mantine-spacing-sm);
-}
-.knowledge-switcher-item {
-  padding: 6px 12px;
-  border-radius: var(--mantine-radius-sm);
-  font-size: var(--mantine-font-size-sm);
-  color: var(--rc-secondary);
-  text-decoration: none;
-}
-.knowledge-switcher-item:hover,
-.knowledge-switcher-item:focus-visible {
-  background: var(--rc-selection);
-  color: var(--rc-accent);
-}
-.knowledge-switcher-item.selected {
-  background: var(--rc-selection);
-  color: var(--rc-accent);
-  font-weight: 700;
 }
 .knowledge-view-region {
   min-width: 0;

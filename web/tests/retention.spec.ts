@@ -97,6 +97,9 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
     .click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
+    .click();
   await openDetails(page, "More source actions");
   await page
     .getByRole("button", { name: "Retain supporting excerpt", exact: true })
@@ -117,12 +120,18 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: /Browser retained excerpt/ }).click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
+    .click();
   await expect(page.getByTestId("source-content")).toHaveText(
     "Retained excerpt line.\n",
   );
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
+    .click();
+  await page
+    .getByRole("button", { name: "Source history & actions", exact: true })
     .click();
   await openDetails(page, "More source actions");
   await page.getByRole("button", { name: "Erase source", exact: true }).click();
@@ -194,6 +203,9 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
   await page.getByRole("button", { name: /^Unavailable memory ·/ }).click();
+  await page
+    .getByRole("button", { name: "Memory history & actions", exact: true })
+    .click();
   const erasedClaim = page.getByRole("dialog", {
     name: "Claim and knowledge history",
     exact: true,

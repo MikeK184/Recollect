@@ -242,7 +242,7 @@ test("one switcher and one inspector region serve all four views without remount
   await expect(page).toHaveURL(new RegExp(`/brains/${brain}/sources$`));
   expect(new URL(page.url()).search).toBe("");
   await expectAccessible(page, ".knowledge-switcher");
-  await expectAccessible(page, ".knowledge-inspector");
+  await expectAccessible(page, ".knowledge-inspector-region");
 });
 
 test("an unknown view value falls back to the documented default", async ({

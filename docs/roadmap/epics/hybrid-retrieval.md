@@ -1,6 +1,6 @@
 # Hybrid Retrieval and Investigation
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -68,8 +68,9 @@ host bridge is integrated.
 | `retrieval-semantic` | shipped | contract-backed | pack | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
 | `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
 | `retrieval-investigation-ui` | shipped | contract-backed | pack | Desktop result/disagreement/source views, frozen history, exact evidence and scoped native graph links; expiry/access/epoch clearing and actual retained SWEG proof |
-| `retrieval-ask-experience` | in-progress | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
-| `desktop-ask-primary` | planned | adr-backed, contract-backed | pack | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
+| `retrieval-ask-experience` | shipped | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
+| `desktop-ask-primary` | shipped | adr-backed, contract-backed | pack | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
+| `ask-chat-conversation` | shipped | contract-backed | pack | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
 
 ## Slice Dependencies
 
@@ -81,6 +82,7 @@ host bridge is integrated.
 | `retrieval-investigation-ui` | `retrieval-graph-fusion`, `memory-procedures-and-handovers` |
 | `retrieval-ask-experience` | `desktop-experience-contracts`, `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows` |
 | `desktop-ask-primary` | `retrieval-ask-experience` |
+| `ask-chat-conversation` | `desktop-ask-primary` |
 
 ## Completion Criteria
 
@@ -114,3 +116,23 @@ The `desktop-ask-primary` slice owns the change and follows `retrieval-ask-exper
 because the accepted plan keeps the default-Ask cutover behind real answer
 acceptance. Answer semantics, citation enforcement and conversation temporariness
 are unchanged.
+
+The user resumed Ask-primary and its remaining answer acceptance on 2026-10-01,
+together with the final local deployment and desktop acceptance closeout.
+
+## Final desktop and tooling acceptance — 2026-10-01
+
+The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
+
+## Ask as a chat conversation — 2026-10-03
+
+The user's 2026-10-03 direction asked for Ask to read like a chat with the
+Brain rather than a form. The model-grounded answer backend already synthesizes
+from retrieved evidence; the gap was presentation. Shipped 2026-10-03: the Ask
+landing centers the prompt in the conversation area with the composer beneath
+it (single-line start, growing with input), and the existing thread — question
+bubbles, cited answer turns, inline follow-ups, per-turn failure states — is
+retained. The [archived pack](../execution/archive/ask-chat-conversation.md)
+and [evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md)
+record the live SWEG Brain question-and-answer check; the contract amendment
+lands in the [desktop experience](../../contracts/desktop-experience.md).

@@ -147,6 +147,14 @@ const team = createRoute({
     "TeamPage",
   ),
 });
+const globalAgents = createRoute({
+  getParentRoute: () => root,
+  path: "/agents",
+  component: lazyRouteComponent(
+    () => import("./features/workspace/GlobalPages"),
+    "AgentsGlobalPage",
+  ),
+});
 const devices = createRoute({
   getParentRoute: () => root,
   path: "/devices",
@@ -172,6 +180,7 @@ const router = createRouter({
       unknownSection,
     ]),
     team,
+    globalAgents,
     devices,
   ]),
   parseSearch: (raw) => {

@@ -1,0 +1,129 @@
+.assurance-band {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.75rem;
+  border: 1px solid var(--rc-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--rc-surface);
+  color: var(--rc-ink);
+  font-size: 0.8rem;
+}
+.assurance-band > svg {
+  flex: 0 0 auto;
+  color: var(--rc-accent);
+}
+.assurance-attention {
+  background: var(--rc-attention);
+}
+.assurance-position {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+.assurance-position > span {
+  color: var(--rc-muted);
+  font-size: 0.73rem;
+}
+.assurance-counts {
+  display: grid;
+  gap: 0.25rem;
+}
+.assurance-counts small {
+  color: var(--rc-muted);
+  margin-left: 0.35rem;
+}
+.assurance-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--rc-accent);
+  white-space: nowrap;
+}
+.assurance-activity {
+  border-top: 1px solid var(--rc-border);
+  padding-top: 1.5rem;
+}
+.assurance-heading h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+.assurance-heading p,
+.assurance-quiet p {
+  color: var(--rc-muted);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+.assurance-exception {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--rc-border);
+  text-decoration: none;
+  color: var(--rc-ink);
+}
+.assurance-exception > div {
+  flex: 1;
+}
+.assurance-exception strong {
+  font-size: 0.9rem;
+}
+.assurance-exception p {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: var(--rc-muted);
+}
+.assurance-exception:hover {
+  color: var(--rc-accent);
+}
+.assurance-quiet {
+  display: flex;
+  gap: 1.25rem;
+  padding: 2.5rem 1rem;
+  max-width: 46rem;
+}
+.assurance-quiet > svg {
+  color: var(--rc-accent);
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+.assurance-quiet h3 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.assurance-quiet a {
+  color: var(--rc-accent);
+  font-size: 0.85rem;
+}
+.assurance-footnote {
+  color: var(--rc-muted);
+  font-size: 0.73rem;
+  line-height: 1.7;
+  max-width: 55rem;
+}
+.assurance-incomplete {
+  padding: 1rem;
+  background: var(--rc-attention);
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+.activity-selected {
+  outline: 2px solid var(--rc-accent);
+  outline-offset: 4px;
+  scroll-margin-top: 2rem;
+}
+@media (max-width: 1300px) {
+  .assurance-band {
+    flex-wrap: wrap;
+  }
+  .assurance-position {
+    flex-basis: 50%;
+  }
+  .assurance-counts {
+    margin-left: auto;
+  }
+}

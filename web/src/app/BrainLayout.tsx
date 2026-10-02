@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result } from "../api";
 import { BrainContext } from "./context";
 import { ErrorState, LoadingState } from "../components/AsyncState";
+import { AssuranceProvider } from "../features/activity/Assurance";
 
 export function BrainLayout() {
   const { brainId } = useParams({ strict: false });
@@ -47,7 +48,9 @@ function BrainBoundary({ id }: { id: string }) {
           continue using this space.
         </Alert>
       )}
-      <Outlet />
+      <AssuranceProvider key={`${query.data.role}-${query.data.updated_at}`}>
+        <Outlet />
+      </AssuranceProvider>
     </BrainContext.Provider>
   );
 }

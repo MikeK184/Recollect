@@ -14,25 +14,41 @@ and open `http://127.0.0.1:8787`. Sign in using the existing account. Do not cha
 policy merely to make a status look connected. Desktop is the supported design
 scope; dark mode and mobile/small-tablet redesign remain deferred.
 
+Prioritize normal laptop screens and larger desktop monitors up to about 32
+inches, as the user clarified on 2026-10-01. Small-screen polish and extra
+keyboard interaction work are optional; do not block functional delivery on
+them. See the [display priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
+for practical review sizes and the authority over older acceptance checklists.
+
+The assurance band warns only about a current blocker and names it. Historical
+failed jobs/tool calls, reported capture gaps and cleanup still in progress remain
+under Activity → Overview → History and pending work. An old failure alone does
+not mean the Brain currently needs intervention. No per-memory approval is required.
+
 ## Find a function
 
 ```text
 Workspace
 ├── Brains                 Create, find and open your knowledge spaces
-├── Team                   Installation accounts and invitations (owner only)
-└── Devices                Pair, approve or revoke your native identities
+└── Team                   Installation accounts and invitations (owner only)
+
+Devices is a direct-URL route (/devices) for pairing-approval deep links and the
+complete account device list; it is not in the navigation.
 
 Inside a Brain
-├── Ask                    Ask a supported question or Search evidence
-├── Memory                 Claims, decisions, procedures, handovers and history
-├── Sources                Original documents, references, versions and grouping
-├── Graph                  Recorded relationships, paths and evidence
-├── Connections            Coding agents, MCP servers, tool groups and runners
-└── Workspace & settings   Expand for these secondary destinations
-    ├── Repositories       Published snapshots and exact environment selections
-    ├── Agents             Captured sessions and your working scopes
-    ├── Activity           Processing, model/tool outcomes and data removal
-    └── Settings           Autonomous setup, access and optional advanced overrides
+├── Ask
+│   └── Ask                A supported question or Search evidence
+├── Knowledge
+│   ├── Memory             Claims, decisions, procedures, handovers and history
+│   ├── Sources            Original evidence, versions and derived records
+│   ├── Graph              Recorded relationships, paths and evidence
+│   └── Repositories       Published snapshots and environment selections
+├── Wiring
+│   ├── Agents             Agent roster, connect a host, captured sessions, private scopes
+│   ├── Connections        Outbound MCP servers, tool groups and runners
+│   └── Settings           Autonomous setup, access, retention and Brain deletion
+└── Assurance
+    └── Activity           Exceptions first, then authorized operational detail
 ```
 
 Each Brain destination has `/brains/<brain-id>/<destination>` as its own path.
@@ -44,6 +60,14 @@ Opaque exact identifiers and selected scope may be shareable; questions, answer
 text, free-text searches, private paths and credentials never belong in the URL.
 
 ## Read knowledge and evidence
+
+Memory, Sources, Graph and Repositories share a Knowledge view switcher and
+one lineage inspector. A memory selection shows its content, exact supporting
+evidence and bounded neighbours. A source selection shows its exact version and
+what derives from it. **Memory history & actions** and **Source history &
+actions** open the existing detailed controls. **Show in…** carries a resolvable
+selection to its corresponding Knowledge view; unrelated selections clear.
+Graph relationships and derived records are not independent corroboration.
 
 **Ask → Ask a question** sends the current self-contained question and selected
 scope only after the Brain's answering policy permits it. Each question retrieves
@@ -96,8 +120,8 @@ and reachability describe recorded relationships, not operational impact.
 **Repositories** contains published repositories and private **Your checkouts**.
 Snapshots expose Files/Facts/Coverage/Contributors/Insights/Receipt. **Environments**
 contains exact desired/observed revision manifests and history; it does not deploy
-anything. **Publish from companion** supplies the native command because the
-browser cannot scan arbitrary checkouts. Repository-scope memory links are wider
+anything. **Publish from your host** explains the plugin publication path because
+the browser cannot scan arbitrary checkouts. Repository-scope memory links are wider
 than one snapshot; inspect each memory's actual support.
 
 ## Configure automation once
@@ -108,10 +132,11 @@ live connection. **Captured sessions** shows deliberately published evidence;
 **Your working contexts** contains only the current account's tasks and checkouts.
 Normal agents manage scope and retrieve/contribute memory themselves.
 
-**Connections** starts with Codex and Claude Code cards. Ordinary memory access
-uses native HTTP MCP; the companion and its hooks are optional for session
-capture/local discovery. Native MCP OAuth and a published plugin are not yet
-available. **MCP servers → Add connection** takes a name and anonymous server
+**Connections** owns outbound MCP only; legacy coding-agent links resolve to
+Agents. Ordinary memory access uses native HTTP MCP; the plugin and its hooks
+provide session capture and local discovery. Native MCP OAuth and a
+published plugin remain separate delivery work. **MCP servers → Add connection**
+takes a name and anonymous server
 URL, discovers metadata and prepares a connection, with a Context7 preset.
 **Use registered connector** keeps the existing credential/runner setup, and
 **Import manifest** accepts an operator-authored definition. Saving calls no
@@ -136,6 +161,19 @@ Raw session/tool records default to 30 days; durable knowledge follows its evide
 lifecycle and does not disappear merely because it is old. **Activity** explains exceptions without becoming a mandatory work
 queue: Processing, Tool calls, Model usage and Data removal retain their own
 permissions and canonical recovery controls; the audit timeline is admin-only.
+
+The standing assurance band reports the latest completed learning run separately
+from Brain-wide captured-event totals. Its links open the corresponding job,
+tool call, removal request or device coverage. An unavailable read does not mean
+healthy; absent provider configuration and disabled automation remain explicit.
+
+**Settings → General → Delete Brain** is separate from Archive. Review the
+dependent-data preview and enter the exact name. If the Brain changes while
+confirmation is open, refresh its preview. Once accepted, the Brain disappears
+from normal reads immediately and the Brains page shows a content-free cleanup
+receipt. Physical cleanup, backup expiry and offline host copies have
+separate completion boundaries; deletion does not revoke Vault credentials or
+remove customer working trees. Use disposable Brains for verification.
 
 ## Develop the shared interface
 

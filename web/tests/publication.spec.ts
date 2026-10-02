@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
+import { openDetails } from "./desktop-helpers";
 
 test("native committed publication resumes and browser preserves manifest history", async ({
   page,
@@ -175,6 +176,7 @@ test("native committed publication resumes and browser preserves manifest histor
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.goto(`/brains/${brain}/settings?tab=privacy`);
+    await openDetails(page, "Advanced retention and storage controls");
     await page
       .getByRole("switch", {
         name: "Allow explicitly selected repository file text",

@@ -51,7 +51,9 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     page.getByText("Your knowledge will gather here", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Add memory", exact: true }).click();
-  await page.getByRole("button", { name: "Structured entry", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Structured entry", exact: true })
+    .click();
   let dialog = page.getByRole("dialog");
   await dialog
     .getByRole("textbox", { name: "Subject", exact: true })
@@ -114,6 +116,9 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
       name: "Vault production · authentication method",
       exact: true,
     })
+    .click();
+  await other
+    .getByRole("button", { name: "Memory history & actions", exact: true })
     .click();
   await other
     .getByRole("dialog")

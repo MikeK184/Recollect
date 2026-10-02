@@ -1,110 +1,71 @@
 # Connect coding hosts to scoped memory
 
-## Purpose and Prerequisites
+> Plugin migration: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md)
+> makes the packaged plugin the normal install/connect path for Codex, Claude Code
+> and OpenCode. [Package instructions](../../plugins/recollect/README.md) describe
+> the delivered implementation. Native ordinary-launch acceptance passed; the
+> legacy procedures remain for draining existing queues and advanced use.
+> Do not remove an old setup or revoke its device before its pending captures have
+> drained under their original endpoint, Brain, task and binding. Do not enable both
+> capture paths for one session. No credentials or host trust settings are migrated
+> silently.
 
-For ordinary MCP access, open **Connections → Coding agents** and select Codex,
-Claude Code, or OpenCode. Copy the direct HTTP configuration into the project's
-`.codex/config.toml`, `.mcp.json`, or `opencode.json`, preserving other servers.
-Create a revocable access token and save it using the dialog's credential steps. On macOS, Codex
-defaults to Keychain: copy the **Keychain secret**, run the displayed native
-`security add-generic-password ... -w` command, and paste at the hidden password
-prompt (again if asked to confirm). Keep `-w` last so the secret is not a command
-argument or shell-history entry. The stored value is authorization-header JSON;
-Codex's `http_headers_helper` reads it using the native `security` command.
-Start Codex normally after saving the project configuration. This needs no
-Recollect binary, shell-profile modification or environment export.
+## Plugin setup
 
-For Claude Code or environment-based Codex setup, keep `RECOLLECT_MCP_TOKEN`
-literally in the copied configuration. It is the **variable name**, not a place
-to paste the token. Follow the dialog's bash/zsh hidden-input, export and launch
-block in the same terminal. An already running agent does not receive newly
-exported variables; repeat this setup for a fresh terminal or use the host's
-supported secret-store integration.
-The token is displayed once; Devices lists and revokes it. It uses your account's
-current Brain grants. No companion is required for recall, deliberate contribution
-or published workspace metadata. A successful tool call, not saving settings,
-confirms access.
+Open **Agents → Connect coding agent**. Install the built package for the local
+computer, connect once to the server and Brain, then start the coding host
+normally. The [package guide](../../plugins/recollect/README.md) gives the native
+Codex/Claude installation commands and OpenCode V2 plugin entry. A source-only
+marketplace without its bundled executable is not an installable package.
 
-Native OAuth browser login is not implemented by Recollect. Codex and
-Claude can support OAuth, but the server must expose its discovery, authorization
-and token endpoints. A Recollect pairing code is the existing device-approval
-flow, not a substitute for those endpoints. Do not label token setup as OAuth.
-The checked-in local plugin source under `plugins/recollect` carries the same
-memory skills for plugin-only clients; Codex managed launches additionally
-install the local generated plugin with capture hooks, as described under
-automatic capture.
+The `recollect-connect` skill runs the bundled `recollect-plugin connect --url URL
+--brain UUID` command. Approve the displayed device code in the browser. The
+credential stays in the OS store; no personal shell export or host-launch wrapper
+is needed. Host plugin/hook trust remains the host's own explicit decision.
+A nearest `.recollect/workspace.toml` can select another accessible Brain; an
+invalid selector does not fall through to a different destination.
 
-The following optional path adds local workspace discovery and host capture:
+The plugin creates an independent task for each native session, injects bounded
+cited memory before prompts, captures permitted events and delivers them through
+a durable queue. Compaction triggers fresh scoped retrieval. Recalled context
+contains the task and scope identifiers to use for subsequent operations.
+The [capture guide](session-capture.md) explains delivery, expiry and migration.
 
-Use the native companion to expose one Brain's memory, workspaces, graphs and
-approved managed tools to Codex or Claude Code. Install `recollect-agent`,
-`recollect-mcp-bridge` and `recollect-mcp-runner` together. Pair a named device
-profile through the [existing pairing flow](device-pairing.md). The selected
-service must run a build containing this capability; an older running native
-process does not acquire it when its executable is rebuilt.
+Use the packaged executable's `status` command to inspect connection, current
+Brain, pending delivery and detected legacy configuration. Successful tools and
+server-confirmed capture prove functionality; installed files alone do not.
+The current [evidence mapping](../mappings/plugin-session-memory-2026-10-01.md)
+records exact native-host versions, verification and deployment boundaries.
 
-Vault is optional per managed connection. The bridge uses the paired credential
-in the OS store; Linux requires an unlocked Secret Service session. macOS may
-request Keychain access for the bridge executable. Approve that OS prompt only
-for the intended paired profile. Secrets do not belong in host settings.
+## Optional independent execution
 
-## Procedure
+Memory does not start a local execution runner. Include `--with-runner` in the
+connect command only when Recollect should independently execute approved tools
+on this computer or its private network. Add `--runner-id UUID` for an existing
+private registration. Reconnect without the flag to disable the plugin-owned
+runner. Existing Use grants, approved targets, leases and Vault rules still apply.
+The coding host's own shell and file tools do not need this runner.
 
-Set the companion's endpoint and profile to the values used during pairing. Render
-one host's settings, supplying the intended Brain UUID and absolute workspace:
+## Advanced direct HTTP
 
-```sh
-recollect-agent mcp-config codex --brain BRAIN_UUID --directory /absolute/workspace
-recollect-agent mcp-config claude --brain BRAIN_UUID --directory /absolute/workspace
-recollect-agent mcp-config opencode --brain BRAIN_UUID --directory /absolute/workspace
-```
+Expand **Advanced · Direct MCP connection** in the coding-agent dialog when only
+explicit memory/tool calls are needed. The generated project configuration points
+at `/api/brains/BRAIN_UUID/mcp/agent`; it does not install capture or automatic
+prompt hooks. Keep only one first-party Recollect MCP entry for a host.
 
-Merge the OpenCode output's `mcp.servers` into the project's `opencode.json`;
-its `local` stdio command runs the same paired bridge. OpenCode session capture
-is not provided; capture setup remains Codex or Claude Code only.
+Create a revocable user token and follow the dialog's credential instructions.
+For environment-based setup, `RECOLLECT_MCP_TOKEN` is a literal variable name in
+configuration, not a place to paste a token. Export its value through the shown
+hidden-input command in the terminal that starts the host. On macOS, the direct
+Codex alternative uses a Keychain authorization-header helper instead.
+Secrets never belong in source, host settings, command arguments or transcripts.
 
-Plugin-only clients with no companion binary use the remote HTTP shape, one
-server entry per Brain. Render it without credential access (needs only the
-Brain UUID and endpoint):
+Device authorization and bearer tokens use Recollect's existing authentication;
+this is not an OAuth implementation. The token inherits the account's current
+Brain grants. The server's model-provider credential and the coding host's own
+model billing remain separate from this user credential.
 
-```sh
-recollect-agent mcp-config codex-remote --brain BRAIN_UUID
-recollect-agent mcp-config claude-remote --brain BRAIN_UUID
-recollect-agent mcp-config opencode-remote --brain BRAIN_UUID
-```
-
-The checked-in `plugins/recollect` marketplace root adds the
-`recollect-memory` skill for the same tools:
-
-```sh
-codex plugin marketplace add ./plugins/recollect
-codex plugin add recollect-memory@recollect
-```
-
-Without a browser at setup time, start a device-code request with plain HTTPS
-(no Recollect binary), approve the returned code in the browser, then poll and
-finish to receive the token:
-
-```sh
-curl -s -X POST "$RECOLLECT_URL/api/devices/pairings" \
-  -H 'content-type: application/json' \
-  -d '{"name":"Codex plugin · personal laptop"}'
-```
-
-The full per-host flow, including the Claude `.mcp.json` template and the
-OpenCode snippet, is in `plugins/recollect/README.md`. The token inherits the
-account's current Brain grants and is not restricted to the selected Brain.
-
-Use the returned `host_arguments` for that host launch, or put the returned
-configuration in its project MCP settings. Rendering with an explicit Brain UUID
-needs neither a live service nor credential access. Its `configured_only` result
-therefore does not establish connectivity. Linux Codex settings allow forwarding
-the current session's DBus/XDG variable names, without copying their values.
-
-For a managed capture session, follow [automatic capture](session-capture.md).
-`recollect-agent capture run` supplies both hooks and MCP settings for that launch.
-The coding-agent dialog's automatic-capture disclosure presents the paired setup path.
-An explicitly selected CA file follows the [installation trust procedure](installation.md).
+## Scoped tools
 
 Start a task through `workspace.start_task` with explicit selection and a
 `context_query`. Its result contains the immutable scope, refreshed context and
@@ -114,10 +75,19 @@ change affects future operations; existing operations and child scopes remain
 bound to their original selections. Models cannot supply another Brain or
 override the selection carried by an operation.
 
-A managed Codex capture launch and a direct-HTTP `mcp_servers.recollect`
-project entry cannot share one server name: the launch refuses before any side
-effect when that entry exists. Keep the direct entry for companion-free memory
-use, or remove it to run managed capture with hooks in that directory.
+## Legacy companion migration
+
+Drain old captures with their original setup file and credential before removing
+the old first-party MCP entry or enabling plugin capture. Keep the old setup until
+its pending count is zero; do not revoke a credential still needed by queued work.
+See the exact status/drain commands in [capture recovery](session-capture.md).
+The plugin reports collisions without rewriting host configuration. Existing
+unrelated MCP servers, plugins and credentials remain the owner's configuration.
+
+The legacy native `mcp-config codex|claude|opencode` and `capture run` commands
+remain compatibility tools. Their older separate bridge/companion installation is
+not the ordinary plugin setup. Prior macOS bridge proof is recorded in the
+[desktop acceptance mapping](../mappings/desktop-final-acceptance-2026-10-01.md).
 
 ## Verification
 
@@ -137,6 +107,13 @@ Actual Codex 0.154.0 and Claude Code 2.1.270, the Linux native bridge, PostgreSQ
 Neo4j and isolated Secret Service pass the owned fixture. Scope changes reach the
 next model turn; recalled memory is excluded from independently captured evidence.
 See the [dated evidence](../mappings/mcp-tools-2026-09-22.md) for commands and limits.
+
+Run `./scripts/test-mcp-hosts.sh` for the isolated installed-host, native capture
+and local/private managed-tool proofs. It uses disposable databases, Secret
+Service and synthetic model responses without a paid model call. To diagnose
+one case, set `RECOLLECT_MCP_HOST_FILTER` to its exact Rust test name. The
+[2026-10-01 continuation evidence](../mappings/desktop-continuation-2026-10-01.md)
+records the current rerun separately from the running installation.
 
 Installed macOS Codex 0.157.1 also passed a direct HTTP `workspace.list` call
 against the actual SWEG Brain using its project config and Keychain, without

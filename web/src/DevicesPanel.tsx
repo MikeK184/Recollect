@@ -29,7 +29,7 @@ type Mark = "positive" | "attention" | "negative" | "neutral";
 /**
  * The device record carries no lifecycle enum, so these are the only states the
  * authorized read supports: `revoked_at`, the advertised `expires_at`, and
- * whether the approved pairing was ever `claimed` by the companion. Historical
+ * whether the approved pairing was ever `claimed` by the host. Historical
  * records are the ones that can no longer act, revoked or past advertised
  * expiry. Filtering is presentation only and never alters a credential.
  */
@@ -44,13 +44,13 @@ function statusOf(device: Device): {
     return { label: "Expired", mark: "attention", historical: true };
   if (device.claimed)
     return { label: "Active", mark: "positive", historical: false };
-  return { label: "Waiting for companion", mark: "neutral", historical: false };
+  return { label: "Waiting for host", mark: "neutral", historical: false };
 }
 
 /** Active records first, then the pending pairing, then history. */
 const order: Record<string, number> = {
   Active: 0,
-  "Waiting for companion": 1,
+  "Waiting for host": 1,
   Expired: 2,
   Revoked: 3,
 };
@@ -121,10 +121,10 @@ export function DevicesPanel() {
     <Stack gap="xl">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">YOUR COMPANIONS</span>
           <Title order={1}>Devices</Title>
           <Text c="dimmed" mt="xs">
-            Connect your tools to Recollect and manage each device’s access.
+            Complete account device list. Connect and manage agents from a
+            Brain&apos;s Agents page.
           </Text>
         </div>
         <Badge
@@ -136,23 +136,6 @@ export function DevicesPanel() {
         </Badge>
       </div>
       {code && <PairingApproval key={code} code={code} />}
-      <Card withBorder p="xl" bg="var(--rc-surface)">
-        <Group align="flex-start" wrap="nowrap">
-          <Laptop size={24} style={{ flexShrink: 0 }} />
-          <Stack gap="xs">
-            <Text fw={600}>Pair a companion</Text>
-            <Text size="sm" c="dimmed">
-              On your computer, run <Code>recollect-agent pair</Code> and open
-              the link it displays. Compare the code, then approve the device
-              here.
-            </Text>
-            <Text size="xs" c="dimmed">
-              A companion acts as you and uses your current Brain permissions.
-              You can revoke it independently at any time.
-            </Text>
-          </Stack>
-        </Group>
-      </Card>
       {devices.error && (
         <Alert color="red" title="Devices could not be loaded">
           {devices.error.message}
@@ -177,7 +160,7 @@ export function DevicesPanel() {
                 </div>
                 <Title order={3}>No devices paired yet</Title>
                 <Text c="dimmed" size="sm" ta="center">
-                  Approve a companion to bring your context with you.
+                  Connect an agent from a Brain&apos;s Agents page.
                 </Text>
               </Card>
             ) : (
@@ -220,8 +203,7 @@ export function DevicesPanel() {
                       </div>
                       <Title order={3}>No device is connected right now</Title>
                       <Text c="dimmed" size="sm" ta="center">
-                        Nothing is hidden from this list by mistake: every
-                        paired record is revoked or expired and belongs to the
+                        Every device is revoked or expired and belongs to the
                         history section below.
                       </Text>
                     </Card>
@@ -270,8 +252,9 @@ export function DevicesPanel() {
       >
         <Stack>
           <Text size="sm">
-            <strong>{selected?.name}</strong> will lose access to Recollect.
-            Pair it again when you want to reconnect.
+            This revokes <strong>{selected?.name}</strong>&apos;s keycard from{" "}
+            <b>all Brains</b>. Its token stops working at once; captured
+            history stays in place.
           </Text>
           {revoke.error && <Alert color="red">{revoke.error.message}</Alert>}
           <Group justify="flex-end">
@@ -396,7 +379,7 @@ function PairingApproval({ code }: { code: string }) {
         <Group>
           <ShieldCheck size={22} />
           <Title order={2} fz={22}>
-            Approve a companion
+            Approve this host
           </Title>
         </Group>
         {pairing.isPending ? (
@@ -421,8 +404,8 @@ function PairingApproval({ code }: { code: string }) {
               {pairing.data.state === "pending" ? (
                 <>
                   <Text size="sm" c="dimmed">
-                    Check that this code matches the companion you just started
-                    on your own computer.
+                    Check that this code matches the host you just started on
+                    your own computer.
                   </Text>
                   <Group>
                     <Button
@@ -454,9 +437,9 @@ function PairingApproval({ code }: { code: string }) {
                   }
                 >
                   {pairing.data.state === "approved"
-                    ? "Approved. Waiting for your companion to finish pairing."
+                    ? "Approved. Waiting for your host to finish pairing."
                     : pairing.data.state === "claimed"
-                      ? "Your companion is connected."
+                      ? "Your host is connected."
                       : "This pairing was declined or cancelled. Start a new request to try again."}
                 </Alert>
               )}

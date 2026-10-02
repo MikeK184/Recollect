@@ -4,7 +4,7 @@ Status: accepted
 Prepared: 2026-09-26
 Accepted: 2026-09-26, by the user's explicit approval and request to implement all of it.
 Scope: approved desktop implementation plan and illustrative design concepts.
-Version: N/A; the uncommitted implementation is deployed locally, with remaining domain acceptance in progress.
+Version: N/A; the uncommitted implementation is deployed locally and desktop acceptance is complete. See the [October 1 closeout](../../mappings/desktop-final-acceptance-2026-10-01.md).
 
 [ADR 0014](../../adr/0014-desktop-experience-and-answers.md), the
 [desktop contract](../../contracts/desktop-experience.md) and
@@ -13,6 +13,15 @@ implementation details. [Active packs](../execution/active/README.md) track work
 design approval is not a shipment or runtime claim. The user also explicitly
 requested one original reusable Recollect SVG logo, inspired by gathering memories
 again, with consistent SVG/icons, fonts, sizes and headings throughout the product.
+
+## 2026-10-01 display and interaction priority
+
+The user clarified that normal laptops and larger desktop monitors, up to about
+32 inches, are the target. Small-screen polish and additional keyboard-only
+interactions are optional and should not consume delivery time. The
+[desktop contract](../../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
+records the governing priority; it supersedes earlier mandatory width/keyboard
+checklists below without changing functional or data-safety requirements.
 
 ## 2026-09-29 amendment
 
@@ -29,7 +38,7 @@ from Connections, and adds an exception-first assurance band.
 The nine-peer navigation tree and the page-by-page specification below remain the
 historical approved plan and the source of each page's required behavior. Where they
 describe four peer knowledge pages or a search-first Ask landing, the amendment
-supersedes placement only. Five planned packs sit alongside the six in-progress ones
+supersedes placement only. At authoring, five planned packs sat alongside the six in-progress ones
 in [active](../execution/active/README.md); none of this is a delivery claim.
 
 ## Recommendation
@@ -427,7 +436,7 @@ relevant contract explicitly changes it.
 
 The nine slices below are registered in their existing owning epics and the
 active execution index, with accepted authority and decision-complete packs.
-They are in progress, not shipment claims. Capability UI remains with its owner;
+These were implementation slices at authoring; the [October 1 closeout](../../mappings/desktop-final-acceptance-2026-10-01.md) records their shipped acceptance. Capability UI remains with its owner;
 no isolated frontend epic takes over memory/MCP authority. Dependencies sequence
 integration/acceptance; independent backend or presentation work may proceed once
 its own decisions are complete.

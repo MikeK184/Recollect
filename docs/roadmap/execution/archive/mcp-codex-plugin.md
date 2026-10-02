@@ -1,6 +1,6 @@
 # Codex memory skills and OpenCode MCP rendering
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/mcp-coordination.md`
 Work type: product
 
@@ -34,7 +34,7 @@ Work type: product
 
 - Inputs: fixed Brain UUID, absolute workspace directory, paired device profile, and the existing immutable capture binding. Rendering with an explicit Brain UUID requires neither credential access nor a live service.
 - Authority: the paired device and current Brain grants are checked when the bridge or service actually connects, never by rendering. Skill text guides model calls to existing tools and grants no authority, scope, or execution rights.
-- Blind spots: rendered configuration is `configured_only` and does not prove connectivity; skill discovery depends on the installed host version; a live-host skill run is still unverified (see Tests and Acceptance).
+- Blind spots: rendered configuration is `configured_only` and does not prove connectivity; skill discovery depends on the installed host version; actual installed-host discovery, skill use, scoped contribution/recall and native OpenCode calls are verified below; future host versions need fresh proof.
 
 ## States and Edge Cases
 
@@ -49,7 +49,7 @@ Work type: product
 
 ## Integrations and Runtime Inputs
 
-- Providers: installed Codex 0.157.1 and OpenCode v2.0.18; Codex plugin/skill schema verified against the official Codex repository through Context7 on 2026-09-28; OpenCode local MCP shape verified against the official OpenCode v2 docs through Context7 on 2026-09-28.
+- Providers: installed Codex 0.159.3 and OpenCode v2.0.21; Codex plugin/skill schema verified against the official Codex repository through Context7 on 2026-09-28; OpenCode local MCP shape verified against the official OpenCode v2 docs through Context7 on 2026-09-28.
 - Environment: `RECOLLECT_URL` and `RECOLLECT_DEVICE_PROFILE` select the endpoint and paired profile; variable names only, never values.
 - Secrets: the paired credential stays in the OS credential store; on macOS the item carries a trusted-application list covering the companion, bridge, and runner binaries, so one pairing approval covers later loads. The Keychain helper or the literal variable name pattern from the existing setup dialog applies unchanged. No token, helper output, or credential appears in plugin files, generated settings, or proof output.
 - Failure handling: an unreachable bridge or service surfaces explicit errors at call time; mutations are never automatically replayed by the plugin or the bridge.
@@ -57,16 +57,16 @@ Work type: product
 ## Tests and Acceptance
 
 - Automated: new agent unit proof that `codex_plugin` writes `plugin.json` with the `skills` key, a parseable `SKILL.md` with required frontmatter, unchanged hooks and marketplace files; preflight unit proof that a direct-HTTP `mcp_servers.recollect` entry is refused with guidance while stdio/absent entries pass; existing `recollect-agent` unit tests; all-target Clippy; `./scripts/validate.sh`; `git diff --check`.
-- Manual: N/A: no manual operator steps beyond the documented commands; live-host skill verification is recorded below as remaining acceptance instead of a manual claim.
-- Acceptance: unit proof passes with no personal host configuration touched; the generated `SKILL.md` frontmatter carries a name of at most 64 characters and a description; the OpenCode rendering matches the documented local stdio shape; capture and `mcp-config codex|claude` outputs are byte-identical apart from the additive skill files. A real Codex run proving skill discovery, a scoped memory write/recall, single-approval Keychain behavior, and the collision preflight remains open and keeps this pack in progress.
+- Manual: Native macOS credential approval belongs to the user. Verify fresh companion/bridge loads and real Codex/OpenCode calls; saved application paths alone are not proof of silent access.
+- Acceptance: unit proof passes with no personal host configuration touched; the generated `SKILL.md` frontmatter carries a name of at most 64 characters and a description; the OpenCode rendering matches the documented local stdio shape; capture and `mcp-config codex|claude` outputs are byte-identical apart from the additive skill files. Actual Codex skill discovery/read and a scoped contribution/fresh recall pass. After the user completed native Keychain approval, fresh companion, Codex bridge and OpenCode bridge processes connected without another user step. The CLI collision preflight refused before host/capture side effects.
 
 ## Closeout
 
-- Planned: Codex memory skills in the local generated plugin and OpenCode MCP rendering.
-- Shipped: Pending live-host verification.
-- Not shipped: published marketplace, MCP OAuth, Claude changes, OpenCode capture hooks, workspace schema changes.
-- New blockers: None. OpenCode session capture is a follow-up slice needing its own host-adapter contract and fixture proof; it does not block this slice.
-- Docs updated: owning epic slice map and status, epic index, active index, this pack, skills evidence mapping, session-capture, agent-memory-tools, and device-pairing runbooks, and coding-agent setup text.
-- Validation: `cargo test --locked -p recollect-agent --lib` 14/14 passed (bundle, OpenCode rendering, and collision-preflight proof included); `cargo clippy --locked --all-targets -p recollect-agent` clean; `web` typecheck passed; `./scripts/validate.sh` passed; `git diff --check` clean. Live proof: one-approval pairing with silent later loads, SWEG capture setup, installed/enabled plugin with completed hooks, 3 delivered/1 published, autonomous claim from the session, and mechanical start_task/write/contribute/recall through the bridge (claim `89947f19` recalled with provenance). Model-driven skill invocation through Codex stays open on empty OpenAI credits, as does the live OpenCode handshake (see Tests and Acceptance).
+- Planned: Codex memory skills in the local generated plugin, OpenCode MCP rendering, trusted macOS credential access and managed-launch collision refusal.
+- Shipped: Generated skill bundle and secret-free OpenCode stdio configuration, verified through installed Codex 0.159.3 and OpenCode 2.0.21. Fixed the Apple trusted-application C-string signature, SecAccessCreate argument count and retained access-reference lifetime. Actual Codex skill discovery/read, one scoped contribution, fresh recall and exact provenance pass over HTTP; another fresh native Codex session recalls the same claim. OpenCode connects over native stdio and completes workspace.list. After OS approval, fresh companion and bridge processes read the credential successfully. The actual capture-run CLI refuses the conflicting direct-HTTP entry with unchanged configuration and no capture side effects.
+- Not shipped: Published marketplace, MCP OAuth, Claude changes, OpenCode capture hooks, workspace schema changes or silent migration of older Keychain entries. Those remain explicit non-goals.
+- New blockers: None. The earlier macOS approval gate is resolved; no broad Keychain access-policy change was made.
+- Docs updated: This pack, MCP epic/status, epic and active/archive indexes, handoff, pairing/memory/capture runbooks and [final host/deployment evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: 19 agent unit tests and all-target Clippy pass; current workspace library tests pass 34 cases with three live-Vault opt-ins ignored. Web checks and deployment passed. Real installed-host model calls and CLI preflight pass, separately from earlier Linux synthetic-transport capture proof. Disposable Brain deletion completed and subsequent read returned 404; the paired device was revoked, its local profile forgotten, both temporary HTTP tokens revoked and the dedicated OpenCode proof server stopped. Original 16 Brain IDs and 26 sources/27 versions/29 claims/37 revisions match the pre-upgrade inventory; readiness passes. Final governance validation and diff checks pass as recorded in the mapping.
 - Version: N/A: no release policy.
 - Commit: Uncommitted.

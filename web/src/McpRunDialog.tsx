@@ -98,8 +98,8 @@ export function McpRunDialog({
           {profile.name} · {tool.connection_name}
         </Text>
         <Text size="sm" c="dimmed">
-          The selected profile and environment remain fixed for this call. Tools
-          may change their target system.
+          The selected tool group and environment remain fixed for this call.
+          Tools may change their target system.
         </Text>
         <details>
           <summary>Input schema</summary>

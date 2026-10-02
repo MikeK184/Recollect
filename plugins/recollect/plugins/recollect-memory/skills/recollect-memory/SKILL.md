@@ -5,39 +5,11 @@ description: Use Recollect Brain memory through scoped MCP tools: verify access,
 
 # Recollect memory
 
-Recollect is Brain-scoped engineering memory exposed as MCP tools. No
-Recollect companion or CLI is required: this plugin connects directly over
-MCP with your own access token.
-
-## Connect first
-
-You need `RECOLLECT_MCP_TOKEN` in the environment that starts your agent,
-and one MCP server entry per Brain:
-
-- Codex: `codex mcp add recollect --url $RECOLLECT_URL/api/brains/$BRAIN_ID/mcp/agent --bearer-token-env-var RECOLLECT_MCP_TOKEN`
-- Claude Code: copy `mcp-template.json` from this plugin to your project's
-  `.mcp.json`, replacing `$RECOLLECT_URL` and `$BRAIN_ID`.
-- OpenCode: merge the snippet from the plugin README into `opencode.json`.
-
-Get the token from Recollect in your browser: open Connections, choose your
-coding host, and use Create access token. The token is shown once; save it
-in your shell's secret handling, never in a file. It inherits your current
-Brain grants and is not restricted to one Brain: one server entry selects
-one Brain, and the token itself works for every Brain you may access.
-
-No browser available at setup time? Start a device-code request with plain
-HTTPS and approve it in the browser later:
-
-```sh
-curl -s -X POST "$RECOLLECT_URL/api/devices/pairings" \
-  -H 'content-type: application/json' \
-  -d '{"name":"Codex plugin · personal laptop"}'
-```
-
-Open the returned `verification_url`, compare the `user_code`, and approve.
-Then poll with `{"device_code":"..."}` until the state is `approved` and
-call `/api/devices/pairings/finish` to claim the device and receive the
-token. Poll no faster than the returned interval.
+The installed plugin connects to one selected Recollect Brain and supplies automatic
+session capture and bounded recalled context before prompts. Use `recollect-connect`
+for one-time setup; then start the coding host normally. No separate companion,
+manual bridge configuration or managed launch is required. The plugin's bundled
+runtime uses your OS credential store and the existing server APIs.
 
 ## Verify access first
 
@@ -47,7 +19,9 @@ saving settings. Report actual results with their citations.
 
 ## Work in a task scope
 
-Start work with `workspace.start_task` using an explicit selection and a
+When a Recollect session context supplies a task ID, use that task for new
+operations and scope changes. Do not create a competing root task. For independent
+work without a supplied task, use `workspace.start_task` with an explicit selection and a
 `context_query` of at most 2,000 characters. Use the returned operation IDs for
 later memory, graph, write, and managed-tool calls. A scope change affects
 future operations only; never reuse old context, and never relabel in-flight

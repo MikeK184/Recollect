@@ -1,4 +1,5 @@
 import { test, expect as baseExpect } from "@playwright/test";
+import { openDetails } from "./desktop-helpers";
 const expect = baseExpect.configure({ timeout: 20_000 });
 
 test("desktop graph recall preserves witnesses, explicit queries and scope/expiry clearing", async ({
@@ -119,6 +120,7 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
     name: "Recall memory",
     exact: true,
   });
+  await openDetails(panel, "Refine evidence search");
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
     .click();

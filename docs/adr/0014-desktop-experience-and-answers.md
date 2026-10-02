@@ -2,6 +2,10 @@
 
 Status: accepted
 
+Amended 2026-10-01 by the user's [display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01):
+normal laptops and larger desktop monitors are primary; small-screen and extra
+keyboard work are optional rather than completion requirements.
+
 ## Decision
 
 Implement the user's explicitly approved 2026-09-26

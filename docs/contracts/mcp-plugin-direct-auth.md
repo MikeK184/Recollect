@@ -2,6 +2,8 @@
 
 Status: accepted
 
+October 1 amendment: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md) supersedes the separately operated companion/capture-only plugin boundary. Automatic capture and recalled context now belong to the plugin; existing auth, sanitization, scope and privacy guarantees remain.
+
 ## Source
 
 [ADR 0015](../adr/0015-direct-plugin-user-auth.md), the user decisions of
@@ -41,7 +43,36 @@ needing several Brains add one server entry per Brain.
 
 Both paths mint the same device record and bearer credential with a 30-day
 expiry, the 20-device account limit, and existing audit entries. No new
-tables, migrations, or credential kinds exist.
+credential kinds exist. Both paths may carry the optional `host_kind` and
+`integration` markers defined by the pairing contract: the plugin path sends the
+`plugin` marker (its host kind is unknown at pairing time); the browser Create
+action sends `mcp` with the host the user selected. Markers are recorded on the
+device record at approval; a roster display falls back to the device's latest
+capture-binding host when the record's own host kind is null.
+
+### Per-Brain agent roster read
+
+`GET /api/brains/{brain}/agents` is a Brain-member read (no admin role required).
+It returns the account's agents grouped by account username. Each agent carries
+`device_id`, `name`, `host_kind` (nullable), `integration` (`mcp` or `plugin`),
+`claimed`, `active` (unrevoked and unexpired), `created_at`, `expires_at`, the
+account-level `last_used_at`, and `last_used_on_brain_at`, the latest of this
+Brain's `mcp_calls` and capture event timestamps for that device. Revoked or
+expired agents are excluded from the groups and reported only as a hidden count.
+The response never contains tokens, private codes, or credential material. A
+rendered roster row is evidence of configuration, not of a live connection.
+
+### Global agent roster read
+
+`GET /api/agents` is an account-scoped read for the signed-in user: the
+installation owner sees every account device, and any other member sees only
+their own devices. It returns agents grouped by account username with the same
+per-agent fields as the per-Brain roster plus `brains`, the list of Brains the
+caller can access where that device has `mcp_calls` or capture events, each
+entry carrying `brain_id`, `name` and `last_used_at` (the latest of that Brain's
+call and capture timestamps), ordered by most recent use. Revoked and expired
+devices are excluded from the groups and reported only as a hidden count. The
+response never contains tokens, private codes, or credential material.
 
 - Browser Create action: the signed-in browser runs start/approve/poll/finish
   on the user's explicit Create access token action, shows the token once in

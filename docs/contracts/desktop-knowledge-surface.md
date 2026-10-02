@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The user's [2026-10-01 display and interaction priority](desktop-experience.md#display-and-interaction-priority--2026-10-01)
+applies throughout this contract: laptop and larger desktop use is primary;
+small-screen and additional keyboard/focus work are optional, not delivery gates.
+
 ## Source
 
 [ADR 0017](../adr/0017-desktop-knowledge-and-ask-experience.md) records the
@@ -116,9 +120,15 @@ presenting an undefined noun.
 
 A single standing band summarizes autonomous behavior for the current Brain:
 what was learned, revised, retired and captured, plus whether anything needs a
-human. It escalates visually only when an authorized exception exists, such as a
-failed processing run, an uncertain tool outcome, a blocked erasure or missing
-provider capability. The ordinary state under an adopted policy states that no
+human. The user's 2026-10-01 clarification limits prominent warnings to current
+blockers: an enabled automation policy missing its provider credential, canonical
+processing status reporting failed with no queued work, an unresolved uncertain
+tool outcome, or erasure reporting an error. Historical failed jobs/tool calls,
+pending cleanup and reported capture gaps remain available in Activity; those
+records alone do not establish that automatic work is currently blocked. Do not
+infer recovery or current failure from an arbitrary age cutoff. Name the current
+problem in the banner and link to its diagnostic surface; omit unrelated learning
+and capture counts while warning. The ordinary state under an adopted policy states that no
 action is required.
 
 Every displayed figure maps to a verified response field or an explicitly scoped

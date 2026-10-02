@@ -5,10 +5,7 @@ export function SourcesPage() {
   const brain = useBrain();
   return (
     <>
-      <PageHeader
-        title="Sources"
-        description="The original evidence behind what your Brain knows."
-      />
+      <PageHeader title="Sources" />
       <EvidencePanel key={brain.id} brain={brain} />
     </>
   );

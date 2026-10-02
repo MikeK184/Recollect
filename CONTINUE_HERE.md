@@ -1,3 +1,101 @@
+# Agent surface, Ask chat and desktop chrome refinements shipped — 2026-10-03
+
+The 2026-10-03 screenshot direction is delivered across three shipped packs:
+
+- **Agents**: a global `/agents` page (third global-nav entry: Brains · Agents
+  · Team) lists every account agent with the Brains it is used in and last use
+  there, backed by the new account-scoped `GET /api/agents` read (owner sees all
+  account devices, members their own; revoked/expired excluded as a hidden
+  count). Each Brain's roster now shows **only agents used on this Brain**, with
+  a "Show revoked and expired" toggle for that set and an "All account agents"
+  link. Live: the SWEG Brain roster shows exactly its three used agents.
+- **Ask**: the landing reads like a chat — centered prompt with the composer
+  beneath it (single-line start, growing with input) — and the thread keeps
+  question bubbles, model-grounded cited answers, inline follow-ups and per-turn
+  failure states over the unchanged answer backend. Live: a real SWEG Brain
+  question produced a completed cited answer turn.
+- **Chrome**: the assurance band renders only while something needs attention
+  (a healthy Brain shows no strip), and the four Knowledge pages dropped the
+  horizontal Memory/Sources/Graph/Repositories switcher — the sidebar is the
+  sole navigation; intra-page sub-tabs and inspector "Show in…" links are
+  untouched.
+
+[Archived packs](docs/roadmap/execution/archive/) (agents-surface-refinement,
+ask-chat-conversation, desktop-chrome-declutter) and
+[evidence](docs/mappings/agents-ask-chrome-refinements-2026-10-03.md) contain the
+exact checks. Contracts amended: plugin direct auth (global roster read) and
+desktop experience (nav, roster, band, Ask view).
+
+One query fix was found during live verification: the first `GET /api/agents`
+usage CTE cross-joined per-brain call/capture aggregates and misattributed rows
+when a Brain had calls from one device and captures from another; it now unions
+both sources grouped by (device, brain).
+
+The local stack at **http://127.0.0.1:8787** is the Docker api/worker rebuilt
+via `./scripts/stack.sh up --build`. Focused platform tests
+(`account_agent_roster`, `pairing_markers_and_brain_agent_roster`), clippy, web
+typecheck and `./scripts/validate.sh` pass. Work remains local and uncommitted;
+no release, commit or push occurred.
+
+## Brain agent roster and external-MCP proof shipped — 2026-10-02 (dated history)
+
+The 2026-10-02 direction is delivered: exactly two integration kinds (Recollect
+plugin, direct MCP access token), everything scoped to a Brain. Devices left the
+global navigation; `/devices` stays a hidden direct-URL surface for pairing
+approval and the full account list. Each Brain's Agents page now opens with the
+per-user roster ("owner — N agents"): host kind, plugin/MCP-token label,
+active/idle, last used on this Brain, and a revoke action labeled as removing
+the keycard from **all** Brains. All `companion`/`recollect-agent` UI copy is
+gone. [Archived pack](docs/roadmap/execution/archive/mcp-brain-agent-roster.md)
+and [evidence](docs/mappings/brain-agent-roster-2026-10-02.md) contain the exact
+checks.
+
+Data: migration **031** adds `devices.host_kind` and `devices.integration`
+(backfilled from capture bindings; legacy devices stay null, no name parsing);
+pairing requests carry optional validated markers; new brain-member read
+`GET /api/brains/{brain}/agents` (groups, hidden count, `include_hidden`).
+Contracts amended: device pairing, plugin direct auth, desktop experience.
+
+End-to-end proof passed live: the SWEG host device token drove
+`workspace.start_task` → tool operation → `mcp.call resolve-library-id` →
+`mcp.status succeeded` against external Context7 with **central placement**;
+retained output in `mcp_call_payloads.result`, `mcp_calls` 0 → 1, visible in
+Activity → Tool calls. The local-placement stdio variant (`everything` on the PC)
+remains configuration-only: the packaged dist ships no `recollect-mcp-runner`
+helper and the live SWEG bridge runs without `--with-runner`.
+
+The local stack at **http://127.0.0.1:8787** is the Docker api/worker rebuilt
+via `./scripts/stack.sh up --build` (migration 031 applied; note the api image
+has no `node`, so central stdio servers cannot run inside it). Focused platform
+tests, clippy, web typecheck and `./scripts/validate.sh` pass. Work remains local
+and uncommitted; no release, commit or push occurred.
+
+## Plugin replacement complete — 2026-10-02 (dated history)
+
+The authorized Cognee-style integration is delivered: install the packaged plugin,
+connect once, then launch Codex, Claude Code or OpenCode normally. It bundles
+capture, cited automatic recall, durable delivery, checkout discovery and Enola
+publication. Independent local/private execution is opt-in with `--with-runner`.
+[Archived pack](docs/roadmap/execution/archive/mcp-plugin-session-memory.md) and
+[final evidence](docs/mappings/plugin-session-memory-2026-10-01.md) contain exact
+checks, failures/reruns and platform limits.
+
+The local server/UI at **http://127.0.0.1:8787** were upgraded to migration **030**.
+API and worker shared image **0e2a6edcffba**; readiness and deployed owner setup passed.
+All original 16 Brains, 26 sources, 27 versions, 29 claims, 37 revisions and Brain
+grants were preserved. Only background graph-scan timestamps/cursors advanced.
+Keep volumes, secrets and the independent deletion journal. Private backup and
+before/after verification: `.cache/plugin-deploy-20261002/`.
+
+Current macOS ARM package: `.cache/plugin-dist/darwin-arm64-final-20261002-c`.
+Actual macOS Codex 0.159.3 and OpenCode 2.0.21 installed-package checks pass;
+Claude Code 2.1.270 is proved in Linux, alongside Codex 0.154.0/OpenCode 2.0.21.
+Personal host settings were preserved; fixture installs are not a claim that the
+owner's existing skills-only setup has been migrated. Use [package setup](plugins/recollect/README.md)
+and drain old queues before replacing a legacy host entry.
+
+Earlier closeouts below are dated history, not the current integration frontier.
+
 # Recollect continuation and PC transfer record
 
 Transfer prepared: 2026-09-16. Source: `/Users/mike/devops/Recollect` on macOS ARM.
@@ -6,6 +104,56 @@ Historical destination: `/home/mike/devops/Recollect`, `mike@192.168.0.41`.
 Read this file first, then `AGENTS.md`, `docs/README.md`, the accepted foundations,
 the relevant contracts and the active execution pack. This is a dated handoff,
 not a declaration that unfinished work is shipped.
+
+## Earlier desktop and host closeout — 2026-10-01
+
+The final backend and UI are deployed at **http://127.0.0.1:8787**. Root Compose
+API and worker share image **64d06daac505**; migration and readiness passed.
+Deployment preserved all 16 existing Brains, 26 sources, 27 versions, 29 claims,
+37 revisions and recorded policy/grant digests. Keep existing volumes, secrets
+and the independent deletion journal; the pre-upgrade backup predates later erasures.
+
+The four Knowledge/deletion/connection/assurance slices, Ask-primary, OpenCode
+project setup, Codex plugin/OpenCode native bridge and six older desktop
+acceptance packs are shipped and archived.
+See [final acceptance](docs/mappings/desktop-final-acceptance-2026-10-01.md) and
+[preceding regression evidence](docs/mappings/desktop-continuation-2026-10-01.md).
+Current proof adds real-provider model/autonomous UI acceptance and the deployed
+question → exact citation → authorized correction → fresh recall journey.
+Disposable answer Brains were deleted and cleanup confirmed. The lineage correction
+scope bug and macOS Keychain FFI defects were repaired with focused regression proof.
+
+The installed Codex plugin's skill discovery/read, real scoped contribution,
+fresh direct-HTTP/native recall and exact provenance pass. OpenCode 2.0.21 also
+connects through the native bridge and completes workspace.list. The user's
+Keychain approval is complete; subsequent companion/bridge processes connected
+without another user step. The actual CLI collision preflight safely refused a
+conflicting direct-HTTP entry. No further SecurityAgent approval is pending for
+this proof, and no broad Keychain policy was changed.
+
+The disposable host Brain was deleted with cleanup complete and a 404 read;
+its device was revoked and profile `final-host-proof-20261001` forgotten. Both
+temporary HTTP tokens were revoked and the dedicated OpenCode server on 4099
+stopped. Final inventory matches the original 16 Brain IDs and recorded counts;
+readiness passes. Private evidence remains in `.cache/final-closeout-20261001/`;
+its historical server log contains a temporary password and must not be printed.
+
+OpenCode's six project roles, both shared skills, Context7 and chrome-devtools
+actual calls pass. Its personal default provider tunnel was unavailable; a one-off
+proof model was used without changing personal defaults. The requested desktop /
+deployment / older acceptance / plugin work is complete. LongMemEval still needs
+its separate protocol/cost approval; marketplace/OAuth and OpenCode capture hooks
+remain outside this closeout.
+
+Normal laptop screens and larger monitors up to about 32 inches are the priority.
+Small-screen and extra keyboard/focus polish are optional, not completion gates:
+see the [desktop contract](docs/contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01).
+Prominent assurance warnings show current blockers only; historical failures
+remain in Activity. Independent owner visuals pass at 1280/1440/1920.
+
+All work is local and uncommitted. No release, commit or push was performed.
+Preserve unrelated dirty work and the separate ignored reference checkouts.
+Earlier sections below are historical snapshots, not the current frontier.
 
 ## Desktop IA and Brain deletion decisions — 2026-09-29
 

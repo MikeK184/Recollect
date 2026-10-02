@@ -93,6 +93,9 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
     })
     .click();
   await page
+    .getByRole("button", { name: "Memory history & actions", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Review and corrections", exact: true })
     .click();
   let dialog = page.getByRole("dialog");
@@ -179,6 +182,9 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
     .first()
     .click();
   await page
+    .getByRole("button", { name: "Memory history & actions", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Review and corrections", exact: true })
     .click();
   dialog = page.getByRole("dialog");
@@ -217,6 +223,9 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
       exact: true,
     })
     .first()
+    .click();
+  await page
+    .getByRole("button", { name: "Memory history & actions", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Review and corrections", exact: true })
@@ -277,6 +286,9 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
       name: "Review service · configuration",
       exact: true,
     })
+    .click();
+  await page
+    .getByRole("button", { name: "Memory history & actions", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Review and corrections", exact: true })

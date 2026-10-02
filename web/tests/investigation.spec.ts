@@ -95,7 +95,7 @@ async function setup(page: Page, name: string) {
       })
     ).claims[0].revision;
     const changing = await post(`${base}/claims`, {
-      content: content("Investigation Orion", "6060"),
+      content: content("History Orion", "6060"),
     });
     const unavailable = await post(`${base}/claims`, {
       content: content(
@@ -247,6 +247,17 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
   expect(
     answer.context.items.some((i: { id: string }) => i.id === f.right.claim_id),
   ).toBe(true);
+  // The history-only record has a separate search term so this default 8 KiB
+  // window contains the records this first navigation journey will inspect.
+  for (const id of [
+    f.accepted.claim_id,
+    f.procedure.claim_id,
+    f.handover.claim_id,
+  ]) {
+    expect(
+      answer.context.items.some((item: { id: string }) => item.id === id),
+    ).toBe(true);
+  }
   await expect(panel.getByTestId("recall-selection")).toContainText(
     "Test systems",
   );
@@ -383,7 +394,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
     .click();
   await panel
     .getByLabel("Search memory", { exact: true })
-    .fill("Investigation Orion");
+    .fill("History Orion");
   const frozenRead = page.waitForResponse(
     (r) =>
       r.url().endsWith(`${f.base}/recall`) && r.request().method() === "POST",
@@ -411,7 +422,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
   );
   await panel
     .getByTestId("recall-result")
-    .filter({ hasText: "Investigation Orion" })
+    .filter({ hasText: "History Orion" })
     .getByRole("button", { name: "Inspect claim and history", exact: true })
     .click();
   expect(
@@ -649,7 +660,7 @@ test("bounded comparison and late recall responses do not expand copied context 
   await ready;
   await panel
     .getByLabel("Search memory", { exact: true })
-    .fill("Investigation Orion");
+    .fill("History Orion");
   release();
   await complete;
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
@@ -657,7 +668,7 @@ test("bounded comparison and late recall responses do not expand copied context 
   await submit.click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
   await expect(panel.getByTestId("recall-result")).toContainText(
-    "Investigation Orion",
+    "History Orion",
   );
   await expect(panel.getByTestId("recall-result")).not.toContainText(
     "Investigation Cobalt",

@@ -221,7 +221,7 @@ pub fn sanitize_captured_event(
         "PostToolUse" | "PostToolUseFailure" => "tool_result",
         "ManagedTool" | "ManagedReceipt" | "ManagedResolution" => "tool_result",
         "SessionStart" | "SessionEnd" | "PreToolUse" | "SubagentStart" | "PreCompact"
-        | "PostCompact" | "Interrupt" | "StopFailure" => "lifecycle",
+        | "PostCompact" | "Interrupt" | "StopFailure" | "StepStart" => "lifecycle",
         _ => return Err("unsupported_capture_event"),
     };
     const COVERAGE: &[&str] = &[
@@ -514,7 +514,7 @@ pub fn capture_own_transport(text: &str) -> bool {
     // Generated commands quote executable paths; preserve whitespace boundaries.
     static OWN: OnceLock<Regex> = OnceLock::new();
     OWN.get_or_init(|| {
-        Regex::new(r"(?:^|[^a-zA-Z0-9_.-])recollect-agent\s+(?:capture\b|scope\s+recall\b|mcp\b|mcp-serve\b|mcp-config\b)")
+        Regex::new(r"(?:^|[^a-zA-Z0-9_.-])(?:recollect-plugin\b|tools\s*(?:\.\s*recollect\b|\[\s*recollect\s*\])|recollect-agent\s+(?:capture\b|scope\s+recall\b|mcp\b|mcp-serve\b|mcp-config\b))")
             .expect("constant first-party capture exclusion")
     })
     .is_match(&text.replace(['\'', '"', '\\'], ""))
@@ -523,6 +523,9 @@ fn own_mcp_tool(name: &str) -> bool {
     // Generated host settings reserve this first-party server name. This only
     // excludes derived output; it never grants trust based on a caller's name.
     name.starts_with("mcp__recollect__")
+        || name.starts_with("recollect_")
+        || name.starts_with("mcp__plugin_recollect-memory_recollect__")
+        || name.starts_with("mcp__plugin_recollect_memory_recollect__")
 }
 fn excluded_tool_input(v: &Value) -> bool {
     excluded_tool_value(v, 0)
@@ -589,7 +592,7 @@ pub fn normalize_capture_hook(
     if !policy.enabled {
         return Err("capture_disabled");
     }
-    if !matches!(host, "codex" | "claude_code") {
+    if !matches!(host, "codex" | "claude_code" | "opencode") {
         return Err("unsupported_capture_host");
     }
     if raw.len() > CAPTURE_STDIN_BYTES {
@@ -629,7 +632,7 @@ pub fn normalize_capture_hook(
             )
         }
         "SessionStart" | "SessionEnd" | "PreToolUse" | "SubagentStart" | "PreCompact"
-        | "PostCompact" | "Interrupt" | "StopFailure" => ("lifecycle", None),
+        | "PostCompact" | "Interrupt" | "StopFailure" | "StepStart" => ("lifecycle", None),
         _ => return Err("unsupported_capture_event"),
     };
     let mut event = CapturedHook {
@@ -806,6 +809,8 @@ mod tests {
             "\"/workspace/recollect-agent\"\t scope  recall brain operation query",
             "recollect-agent mcp status brain call",
             "recollect-agent mcp-serve --brain uuid",
+            "return await tools.recollect.workspace_list({});",
+            "return await tools['recollect']['memory_recall']({});",
         ] {
             let raw = json!({"hook_event_name":"PostToolUse","session_id":"s","turn_id":"t",
                 "tool_use_id":"tool1","tool_name":"Bash","tool_input":{"command":command},
@@ -833,11 +838,13 @@ mod tests {
             assert!(direct.content.is_none(), "encoded {command}");
             assert!(direct.coverage.contains(&"excluded_tool_content".into()));
         }
-        for host in ["codex", "claude_code"] {
+        for host in ["codex", "claude_code", "opencode"] {
             for tool in [
                 "mcp__recollect__memory.recall",
                 "mcp__recollect__workspace_set_scope",
                 "mcp__recollect__mcp_status",
+                "recollect_memory_recall",
+                "mcp__plugin_recollect-memory_recollect__memory_recall",
             ] {
                 let raw = json!({"hook_event_name":"PostToolUse","session_id":"s","turn_id":"t","prompt_id":"t",
                     "tool_use_id":"tool1","tool_name":tool,"tool_input":{},"tool_response":{"text":"DERIVED_MCP_CONTEXT"}});

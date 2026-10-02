@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/api/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["accountAgents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/enroll": {
         parameters: {
             query?: never;
@@ -143,6 +159,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteBrain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["brainAgents"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2292,8 +2324,40 @@ export interface components {
             oidc_subject?: string | null;
             username: string;
         };
+        AccountAgent: {
+            active: boolean;
+            brains: components["schemas"]["AgentBrainUsage"][];
+            claimed: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            device_id: string;
+            /** Format: date-time */
+            expires_at: string;
+            host_kind?: string | null;
+            integration: string;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            name: string;
+        };
+        AccountAgentGroup: {
+            agents: components["schemas"]["AccountAgent"][];
+            user_name: string;
+        };
+        AccountAgentRoster: {
+            groups: components["schemas"]["AccountAgentGroup"][];
+            /** Format: int64 */
+            hidden_count: number;
+        };
         AccountStatus: {
             enabled: boolean;
+        };
+        AgentBrainUsage: {
+            /** Format: uuid */
+            brain_id: string;
+            /** Format: date-time */
+            last_used_at: string;
+            name: string;
         };
         AnalyticsProvenance: {
             coverage: components["schemas"]["RecallCoverage"];
@@ -2478,6 +2542,32 @@ export interface components {
             group_grants: components["schemas"]["GroupGrant"][];
             members: components["schemas"]["EffectiveAccess"][];
         };
+        BrainAgent: {
+            active: boolean;
+            claimed: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            device_id: string;
+            /** Format: date-time */
+            expires_at: string;
+            host_kind?: string | null;
+            integration: string;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            /** Format: date-time */
+            last_used_on_brain_at?: string | null;
+            name: string;
+        };
+        BrainAgentGroup: {
+            agents: components["schemas"]["BrainAgent"][];
+            user_name: string;
+        };
+        BrainAgentRoster: {
+            groups: components["schemas"]["BrainAgentGroup"][];
+            /** Format: int64 */
+            hidden_count: number;
+        };
         /**
          * @description Per-class dependent identity counts. The keys mirror the migration-owned
          *     preview document exactly; a drift here is a schema break, not a default.
@@ -2570,8 +2660,7 @@ export interface components {
             sequence: number;
         };
         BrainDeletionInput: {
-            /** Format: int64 */
-            closure: number;
+            closure: string;
             confirmation: string;
         };
         BrainDeletionPreview: {
@@ -2580,8 +2669,7 @@ export interface components {
             backup_days: number;
             /** Format: uuid */
             brain_id: string;
-            /** Format: int64 */
-            closure: number;
+            closure: string;
             counts: components["schemas"]["BrainDeletionCounts"];
             name: string;
             /** Format: int64 */
@@ -2605,8 +2693,7 @@ export interface components {
             actor_id?: string | null;
             /** Format: uuid */
             brain_id: string;
-            /** Format: int64 */
-            closure: number;
+            closure: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -4298,6 +4385,8 @@ export interface components {
             token?: string | null;
         };
         PairingRequest: {
+            host_kind?: string | null;
+            integration?: string | null;
             name: string;
         };
         PairingStart: {
@@ -5131,6 +5220,25 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    accountAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountAgentRoster"];
+                };
+            };
+        };
+    };
     enroll: {
         parameters: {
             query?: never;
@@ -5395,6 +5503,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    brainAgents: {
+        parameters: {
+            query?: {
+                include_hidden?: boolean;
+            };
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrainAgentRoster"];
                 };
             };
         };

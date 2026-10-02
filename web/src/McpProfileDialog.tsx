@@ -60,9 +60,7 @@ export function McpProfileDialog(props: Props) {
     <Modal
       opened
       onClose={props.close}
-      title={
-        props.id === "new" ? "Create execution profile" : "Execution profile"
-      }
+      title={props.id === "new" ? "Create tool group" : "Tool group"}
       size="xl"
     >
       {detail.error ? (
@@ -73,7 +71,7 @@ export function McpProfileDialog(props: Props) {
             variant="light"
             onClick={() => void detail.refetch()}
           >
-            Reload profile
+            Reload tool group
           </Button>
         </Alert>
       ) : props.id !== "new" && !detail.data ? (
@@ -109,7 +107,7 @@ function ProfileContents({ detail, ...props }: Props & { detail?: Detail }) {
         (profile && profile.revision !== input.base_revision))
     )
       props.stale(
-        "This profile configuration changed. Reopen it before editing.",
+        "This tool group configuration changed. Reopen it before editing.",
       );
   }, [input.base_revision, current, profile, props.stale]);
   const save = useMutation({
@@ -169,20 +167,20 @@ function ProfileContents({ detail, ...props }: Props & { detail?: Detail }) {
         >
           <Stack>
             <TextInput
-              label="Profile name"
+              label="Tool group name"
               required
               value={input.name}
               maxLength={120}
               onChange={(e) => patch({ name: e.currentTarget.value })}
             />
             <TextInput
-              label="Profile description"
+              label="Tool group description"
               value={input.description}
               maxLength={2000}
               onChange={(e) => patch({ description: e.currentTarget.value })}
             />
             <Select
-              label="Profile environment"
+              label="Tool group environment"
               clearable
               placeholder="Brain-wide"
               data={props.environments}
@@ -190,7 +188,7 @@ function ProfileContents({ detail, ...props }: Props & { detail?: Detail }) {
               onChange={(v) => patch({ environment_id: v })}
             />
             <MultiSelect
-              label="Profile connections"
+              label="Tool group connections"
               searchable
               clearable
               value={input.connection_ids}
@@ -211,12 +209,12 @@ function ProfileContents({ detail, ...props }: Props & { detail?: Detail }) {
               </Alert>
             )}
             <Checkbox
-              label="Profile enabled"
+              label="Tool group enabled"
               checked={input.enabled}
               onChange={(e) => patch({ enabled: e.currentTarget.checked })}
             />
             {save.error && (
-              <Alert color="red" title="Profile not saved">
+              <Alert color="red" title="Tool group not saved">
                 {save.error.message}
               </Alert>
             )}
@@ -226,7 +224,7 @@ function ProfileContents({ detail, ...props }: Props & { detail?: Detail }) {
                 disabled={props.brain.archived}
                 loading={save.isPending}
               >
-                Save profile
+                Save tool group
               </Button>
             </Group>
           </Stack>
@@ -296,7 +294,7 @@ function GrantControls({ detail, ...props }: Props & { detail: Detail }) {
     onSuccess: (response) => {
       if (!response.profile) {
         props.stale(
-          "Your last profile right was removed. The inspector was closed.",
+          "Your last tool-group right was removed. The inspector was closed.",
         );
         return;
       }
@@ -322,7 +320,7 @@ function GrantControls({ detail, ...props }: Props & { detail: Detail }) {
   const mine = detail.grants?.find((g) => g.account_id === props.actor);
   return (
     <Stack>
-      <Title order={4}>Profile permissions</Title>
+      <Title order={4}>Tool group permissions</Title>
       <Text size="sm" c="dimmed">
         Every recipient also needs current Brain access. Group access uses the
         existing organization membership expiry; removing one grant can leave
@@ -401,7 +399,7 @@ function GrantControls({ detail, ...props }: Props & { detail: Detail }) {
           />
           <Group>
             <Checkbox
-              label="Use profile"
+              label="Use tool group"
               checked={rights.use_profile}
               onChange={(e) => {
                 const checked = e.currentTarget.checked;
@@ -409,7 +407,7 @@ function GrantControls({ detail, ...props }: Props & { detail: Detail }) {
               }}
             />
             <Checkbox
-              label="Manage profile"
+              label="Manage tool group"
               checked={rights.manage}
               onChange={(e) => {
                 const checked = e.currentTarget.checked;
@@ -417,7 +415,7 @@ function GrantControls({ detail, ...props }: Props & { detail: Detail }) {
               }}
             />
             <Checkbox
-              label="Share profile"
+              label="Share tool group"
               checked={rights.share}
               onChange={(e) => {
                 const checked = e.currentTarget.checked;

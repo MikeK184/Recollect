@@ -238,7 +238,7 @@ function Login() {
                       JSON.stringify({ code, until: Date.now() + 300_000 }),
                     );
                   } catch {
-                    /* The companion still displays the verification link. */
+                    /* The host CLI still displays the verification link. */
                   }
                 }
               }}

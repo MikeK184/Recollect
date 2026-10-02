@@ -176,8 +176,8 @@ test("desktop destinations are real routes with browser history and isolated fea
     await expectAccessible(page);
   }
 
-  // A source page can read its catalogue and shared authority. It must not mount
-  // a hidden graph, private tasks, capture, model usage, MCP or jobs dashboard.
+  // The shared assurance band reads bounded operational metadata on every
+  // destination. Sources must not mount another feature's detailed consumers.
   const sourceRequests: string[] = [];
   const trackSources = (request: import("@playwright/test").Request) => {
     const url = new URL(request.url());
@@ -194,8 +194,10 @@ test("desktop destinations are real routes with browser history and isolated fea
   page.off("request", trackSources);
   expect(sourceRequests.some((path) => path.endsWith("/evidence"))).toBe(true);
   expect(
-    sourceRequests.filter((path) =>
-      /\/(graph|mcp|models|capture|tasks|jobs)(\/|$)/.test(path),
+    sourceRequests.filter(
+      (path) =>
+        /\/(graph|mcp|models|capture|tasks|jobs)(\/|$)/.test(path) &&
+        !/\/(jobs|capture\/events|capture\/devices|mcp\/calls)$/.test(path),
     ),
   ).toEqual([]);
   await mkdir("../.cache/ui", { recursive: true });
@@ -262,6 +264,10 @@ test("desktop assets, keyboard navigation and layout remain consistent at suppor
     await expect(icon).toHaveAttribute("width", "18");
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: width === 1280 ? 800 : 1080 });
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

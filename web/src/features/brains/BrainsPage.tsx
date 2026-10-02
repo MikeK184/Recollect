@@ -27,6 +27,7 @@ import { useWorkspace } from "../../app/context";
 import { BrainForm } from "../../components/BrainForm";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusBadge } from "../../components/StatusBadge";
+import { DeletionNotice } from "../settings/DeletionNotice";
 import {
   EmptyState,
   ErrorState,
@@ -149,6 +150,7 @@ export function BrainsPage() {
           };
   return (
     <>
+      <DeletionNotice />
       <PageHeader
         title="Your Brains"
         eyebrow="A place for what you know"

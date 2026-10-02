@@ -2,6 +2,8 @@
 
 Status: accepted
 
+October 1 amendment: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md) supersedes the separately operated companion/capture-only plugin boundary. Automatic capture and recalled context now belong to the plugin; existing auth, sanitization, scope and privacy guarantees remain.
+
 ## Source
 
 The accepted [capture vision](../foundation/vision.md),

@@ -1,6 +1,6 @@
 # Canvas-first contextual graph workspace
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/graph-intelligence.md`
 Work type: product
 
@@ -64,10 +64,10 @@ Work type: product
 ## Closeout
 
 - Planned: Canvas-first layout, Knowledge/Repository/Combined toolbar, scope summary/filter drawer, right inspector, keyboard/list alternative, contextual path endpoints, explicit Insights and status/repair popover.
-- Shipped: Not yet. Canvas/list and filter/path/insights/status views, exact URL scope/center and bounded entry are implemented. Combined graph, current recall-graph and investigation journeys passed. The final live retained two-node graph shows separated captions and the human-readable uncertainty label; current route accessibility checks passed.
-- Not shipped: Final Graph and Graph analytics browser regressions and the remaining graph/path interaction acceptance are open. The small live screenshot and heading-visible timing samples do not establish canvas interaction p95 or large-graph capacity. Explicit product non-goals remain excluded.
-- New blockers: No unresolved product decision is known. Implementation refinements and verification are tracked in the [dated mapping](../../../mappings/desktop-experience-implementation-2026-09-26.md).
-- Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](../../../mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
-- Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
+- Shipped: Canvas-first graph, bounded exact scope, canonical inspector, path controls and explicit analytics are delivered and deployed. Graph, analytics, combined-graph, investigation and path regressions pass.
+- Not shipped: Universal capacity claims and additional small-screen/keyboard polish are excluded; the user's October 1 priorities supersede older optional polish checklists.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: All graph-related browser cases pass in the 65-case matrix. The 500-node/2,000-edge synthetic render/selection and 20-sample bounded graph-read/pointer measurements pass, with method and limits preserved in the continuation mapping. Owner visuals pass at 1280/1440/1920. Final repository checks are recorded in the linked evidence.
 - Version: N/A: no release requested.
-- Commit: uncommitted.
+- Commit: Uncommitted.

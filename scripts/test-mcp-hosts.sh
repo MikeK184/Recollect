@@ -30,6 +30,7 @@ run_fixture() {
     -v "$PWD/Cargo.toml:/workspace/Cargo.toml:ro" \
     -v "$PWD/Cargo.lock:/workspace/Cargo.lock:ro" \
     -v "$PWD/crates:/workspace/crates:ro" \
+    -v "$PWD/plugins:/workspace/plugins:ro" \
     -v "$PWD/.cache/mcp-hosts/target:/workspace/target" \
     -v "$PWD/.cache/capture-hosts/cargo:/usr/local/cargo/registry" \
     -v "$PWD/.cache/mcp-hosts/work:/workspace/.cache" \
@@ -75,5 +76,8 @@ for attempt in {1..180}; do
   sleep 1
 done
 ./scripts/docker.sh exec "$fixture-graph" wget -q --spider http://localhost:7474
-fixture_command=(dbus-run-session -- recollect-test-session bash -c 'cargo test --locked --offline -p recollect-server --test platform mcp_actual_hosts_native_tools_and_fresh_context -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_agent_native_scope_capture_and_managed_receipts -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_local_native_runner_and_cli_execute_on_the_paired_device -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_private_native_runner_executes_stdio_and_http_with_exact_registration -- --ignored --nocapture --test-threads=1')
+fixture_command=(dbus-run-session -- recollect-test-session bash -c 'cargo test --locked --offline -p recollect-server --test platform mcp_actual_hosts_native_tools_and_fresh_context -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_agent_native_scope_capture_and_managed_receipts -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_local_native_runner_and_cli_execute_on_the_paired_device -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_private_native_runner_executes_stdio_and_http_with_exact_registration -- --ignored --nocapture --test-threads=1 && cargo test --locked --offline -p recollect-server --test platform mcp_plugin_ -- --ignored --nocapture --test-threads=1')
+if [[ -n "${RECOLLECT_MCP_HOST_FILTER:-}" ]]; then
+  fixture_command=(dbus-run-session -- recollect-test-session cargo test --locked --offline -p recollect-server --test platform "$RECOLLECT_MCP_HOST_FILTER" -- --ignored --nocapture --test-threads=1)
+fi
 run_fixture --network "$fixture"

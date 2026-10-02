@@ -6,7 +6,7 @@ use crate::{
 };
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
 };
 use chrono::{DateTime, Utc};
@@ -50,6 +50,19 @@ pub async fn start(
             "Use a device name between 1 and 120 characters.",
         ));
     }
+    let host_kind = input.host_kind.as_deref().map(str::trim).filter(|v| !v.is_empty());
+    if let Some(kind) = host_kind
+        && !matches!(kind, "codex" | "claude_code" | "opencode") {
+        return Err(Error::invalid("Unknown host kind."));
+    }
+    let integration = input
+        .integration
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty());
+    if let Some(value) = integration && !matches!(value, "mcp" | "plugin") {
+        return Err(Error::invalid("Unknown integration."));
+    }
     let mut tx = state.pool.begin().await?;
     sqlx::query("SELECT pg_advisory_xact_lock(73241005)")
         .execute(&mut *tx)
@@ -73,8 +86,8 @@ pub async fn start(
     let device_code = Uuid::new_v4();
     let mut user_code = Uuid::new_v4().simple().to_string()[..8].to_ascii_uppercase();
     let expires_at = loop {
-        let expires:Option<DateTime<Utc>>=sqlx::query_scalar("INSERT INTO device_pairings(id,device_code,user_code,name) VALUES($1,$2,$3,$4) ON CONFLICT(user_code) DO NOTHING RETURNING expires_at")
-            .bind(Uuid::new_v4()).bind(device_code).bind(&user_code).bind(name).fetch_optional(&mut *tx).await?;
+        let expires:Option<DateTime<Utc>>=sqlx::query_scalar("INSERT INTO device_pairings(id,device_code,user_code,name,host_kind,integration) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_code) DO NOTHING RETURNING expires_at")
+            .bind(Uuid::new_v4()).bind(device_code).bind(&user_code).bind(name).bind(host_kind).bind(integration).fetch_optional(&mut *tx).await?;
         if let Some(expires) = expires {
             break expires;
         }
@@ -124,8 +137,22 @@ pub async fn approve(
     sqlx::query("SELECT pg_advisory_xact_lock(73241006)")
         .execute(&mut *tx)
         .await?;
-    let row:Option<(Uuid,String,String,DateTime<Utc>)>=sqlx::query_as("SELECT id,name,state,expires_at FROM device_pairings WHERE user_code=$1 AND expires_at>now() FOR UPDATE").bind(&code).fetch_optional(&mut *tx).await?;
-    let (pairing, name, status, expires_at) = row.ok_or_else(gone)?;
+    #[derive(sqlx::FromRow)]
+    struct PairingRow {
+        id: Uuid,
+        name: String,
+        state: String,
+        expires_at: DateTime<Utc>,
+        host_kind: Option<String>,
+        integration: Option<String>,
+    }
+    let row:Option<PairingRow>=sqlx::query_as("SELECT id,name,state,expires_at,host_kind,integration FROM device_pairings WHERE user_code=$1 AND expires_at>now() FOR UPDATE").bind(&code).fetch_optional(&mut *tx).await?;
+    let Some(pairing) = row else { return Err(gone()) };
+    let name = pairing.name.clone();
+    let status = pairing.state.clone();
+    let expires_at = pairing.expires_at;
+    let host_kind = pairing.host_kind.clone();
+    let integration = pairing.integration.clone();
     if status != "pending" {
         return Err(conflict());
     }
@@ -145,11 +172,13 @@ pub async fn approve(
         .await?;
         if let Some(id) = existing {
             sqlx::query(
-                "UPDATE devices SET token=$2, expires_at=now()+interval '30 days', claimed=false, name=$3 WHERE id=$1",
+                "UPDATE devices SET token=$2, expires_at=now()+interval '30 days', claimed=false, name=$3, host_kind=COALESCE($4,host_kind), integration=COALESCE($5,integration) WHERE id=$1",
             )
             .bind(id)
             .bind(Uuid::new_v4())
             .bind(&trimmed)
+            .bind(&host_kind)
+            .bind(&integration)
             .execute(&mut *tx)
             .await?;
             team::audit(
@@ -171,11 +200,13 @@ pub async fn approve(
                 ));
             }
             let id = Uuid::new_v4();
-            sqlx::query("INSERT INTO devices(id,account_id,name,token) VALUES($1,$2,$3,$4)")
+            sqlx::query("INSERT INTO devices(id,account_id,name,token,host_kind,integration) VALUES($1,$2,$3,$4,$5,COALESCE($6,'mcp'))")
                 .bind(id)
                 .bind(auth.user.id)
                 .bind(&trimmed)
                 .bind(Uuid::new_v4())
+                .bind(&host_kind)
+                .bind(&integration)
                 .execute(&mut *tx)
                 .await?;
             team::audit(
@@ -189,11 +220,11 @@ pub async fn approve(
             Some(id)
         }
     } else {
-        team::audit(&mut tx, auth.user.id, pairing, "device.decline", "declined").await?;
+        team::audit(&mut tx, auth.user.id, pairing.id, "device.decline", "declined").await?;
         None
     };
     sqlx::query("UPDATE device_pairings SET state=$2,device_id=$3 WHERE id=$1")
-        .bind(pairing)
+        .bind(pairing.id)
         .bind(outcome)
         .bind(device_id)
         .execute(&mut *tx)
@@ -324,6 +355,146 @@ pub async fn list(State(state): State<AppState>, auth: Auth) -> Result<Json<Vec<
     let rows:Vec<DbJson<Device>>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'name',name,'claimed',claimed,'revoked_at',revoked_at,'expires_at',expires_at,'last_used_at',last_used_at,'created_at',created_at) FROM devices WHERE account_id=$1 ORDER BY created_at DESC LIMIT 1000").bind(auth.user.id).fetch_all(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(rows.into_iter().map(|r| r.0).collect()))
+}
+#[utoipa::path(get,path="/api/brains/{brain}/agents",operation_id="brainAgents",params(("brain"=Uuid,Path),("include_hidden"=Option<bool>,Query)),responses((status=200,body=BrainAgentRoster)))]
+pub async fn brain_agents(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path(brain): Path<Uuid>,
+    Query(query): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<BrainAgentRoster>> {
+    let include_hidden = query
+        .get("include_hidden")
+        .is_some_and(|v| v == "true" || v == "1");
+    let mut tx = auth.tx(&state.pool).await?;
+    crate::db::require_role(&mut tx, brain, false).await?;
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        name: String,
+        host_kind: Option<String>,
+        integration: String,
+        claimed: bool,
+        active: bool,
+        created_at: DateTime<Utc>,
+        expires_at: DateTime<Utc>,
+        last_used_at: Option<DateTime<Utc>>,
+        last_used_on_brain_at: Option<DateTime<Utc>>,
+        user_name: String,
+    }
+    let visible = if include_hidden {
+        "TRUE"
+    } else {
+        "d.revoked_at IS NULL AND d.expires_at>now()"
+    };
+    let rows: Vec<Row> = sqlx::query_as(&format!(
+        "WITH brain_mcp AS (SELECT device_id,max(created_at) last_used FROM mcp_calls WHERE brain_id=$1 AND device_id IS NOT NULL GROUP BY device_id), brain_capture AS (SELECT b.device_id,max(e.received_at) last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE e.brain_id=$1 AND b.device_id IS NOT NULL GROUP BY b.device_id), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE(d.host_kind,h.host) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,GREATEST(m.last_used,c.last_used) last_used_on_brain_at,a.username user_name FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN brain_mcp m ON m.device_id=d.id LEFT JOIN brain_capture c ON c.device_id=d.id LEFT JOIN binding_host h ON h.device_id=d.id WHERE d.account_id=$2 AND ({visible}) ORDER BY active DESC,d.created_at DESC"
+    ))
+    .bind(brain)
+    .bind(auth.user.id)
+    .fetch_all(&mut *tx)
+    .await?;
+    let hidden_count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM devices WHERE account_id=$1 AND (revoked_at IS NOT NULL OR expires_at<=now())",
+    )
+    .bind(auth.user.id)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    let mut groups: Vec<BrainAgentGroup> = Vec::new();
+    for row in rows {
+        let agent = BrainAgent {
+            device_id: row.id,
+            name: row.name,
+            host_kind: row.host_kind,
+            integration: row.integration,
+            claimed: row.claimed,
+            active: row.active,
+            created_at: row.created_at,
+            expires_at: row.expires_at,
+            last_used_at: row.last_used_at,
+            last_used_on_brain_at: row.last_used_on_brain_at,
+        };
+        match groups.iter_mut().find(|g| g.user_name == row.user_name) {
+            Some(group) => group.agents.push(agent),
+            None => groups.push(BrainAgentGroup {
+                user_name: row.user_name,
+                agents: vec![agent],
+            }),
+        }
+    }
+    Ok(Json(BrainAgentRoster {
+        groups,
+        hidden_count,
+    }))
+}
+#[utoipa::path(get,path="/api/agents",operation_id="accountAgents",responses((status=200,body=AccountAgentRoster)))]
+pub async fn account_agents(
+    State(state): State<AppState>,
+    auth: Auth,
+) -> Result<Json<AccountAgentRoster>> {
+    let mut tx = auth.tx(&state.pool).await?;
+    // The installation owner sees every account device; any other member sees
+    // only their own. Both see brain usage only for Brains they can access.
+    let owner: bool = sqlx::query_scalar("SELECT installation_owner FROM accounts WHERE id=$1")
+        .bind(auth.user.id)
+        .fetch_one(&mut *tx)
+        .await?;
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        name: String,
+        host_kind: Option<String>,
+        integration: String,
+        claimed: bool,
+        active: bool,
+        created_at: DateTime<Utc>,
+        expires_at: DateTime<Utc>,
+        last_used_at: Option<DateTime<Utc>>,
+        user_name: String,
+        brains: DbJson<Vec<AgentBrainUsage>>,
+    }
+    let rows: Vec<Row> = sqlx::query_as(
+        "WITH acc AS (SELECT oidc_issuer,oidc_groups,membership_until FROM accounts WHERE id=$1), accessible AS (SELECT b.id,b.name FROM brains b WHERE b.owner_id=$1 OR EXISTS(SELECT 1 FROM brain_grants d WHERE d.brain_id=b.id AND d.account_id=$1) OR EXISTS(SELECT 1 FROM brain_group_grants g JOIN acc a ON a.oidc_issuer=g.issuer WHERE g.brain_id=b.id AND g.group_name=ANY(a.oidc_groups) AND a.membership_until>now())), usage AS (SELECT device_id,brain_id,max(last_used) last_used FROM (SELECT device_id,brain_id,created_at last_used FROM mcp_calls WHERE device_id IS NOT NULL AND brain_id IN (SELECT id FROM accessible) UNION ALL SELECT b.device_id,e.brain_id,e.received_at last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE b.device_id IS NOT NULL AND e.brain_id IN (SELECT id FROM accessible)) u GROUP BY 1,2), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE(d.host_kind,h.host) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,a.username user_name,coalesce((SELECT jsonb_agg(jsonb_build_object('brain_id',u.brain_id,'name',ab2.name,'last_used_at',u.last_used) ORDER BY u.last_used DESC) FROM usage u JOIN accessible ab2 ON ab2.id=u.brain_id WHERE u.device_id=d.id),'[]'::jsonb) brains FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN binding_host h ON h.device_id=d.id WHERE ($2 OR d.account_id=$1) AND d.revoked_at IS NULL AND d.expires_at>now() ORDER BY active DESC,d.created_at DESC",
+    )
+    .bind(auth.user.id)
+    .bind(owner)
+    .fetch_all(&mut *tx)
+    .await?;
+    let hidden_count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM devices d WHERE ($2 OR d.account_id=$1) AND (d.revoked_at IS NOT NULL OR d.expires_at<=now())",
+    )
+    .bind(auth.user.id)
+    .bind(owner)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    let mut groups: Vec<AccountAgentGroup> = Vec::new();
+    for row in rows {
+        let agent = AccountAgent {
+            device_id: row.id,
+            name: row.name,
+            host_kind: row.host_kind,
+            integration: row.integration,
+            claimed: row.claimed,
+            active: row.active,
+            created_at: row.created_at,
+            expires_at: row.expires_at,
+            last_used_at: row.last_used_at,
+            brains: row.brains.0,
+        };
+        match groups.iter_mut().find(|g| g.user_name == row.user_name) {
+            Some(group) => group.agents.push(agent),
+            None => groups.push(AccountAgentGroup {
+                user_name: row.user_name,
+                agents: vec![agent],
+            }),
+        }
+    }
+    Ok(Json(AccountAgentRoster {
+        groups,
+        hidden_count,
+    }))
 }
 #[utoipa::path(delete,path="/api/devices/{id}",params(("id"=Uuid,Path)),responses((status=204)))]
 pub async fn revoke(

@@ -128,6 +128,14 @@ Preserve loading, empty, pending, partially cleaned, failed storage, no-access
 and already-absent states. An error never reports success. Offline companion
 copies, backup windows and uncontrolled external copies stay visibly incomplete.
 
+### Lossless confirmation counter
+
+The HTTP preview and deletion status encode `closure` as an opaque decimal
+string. The browser passes it back unchanged; it must never coerce it to a
+JavaScript number. The server compares the exact PostgreSQL bigint fingerprint.
+Numeric input remains accepted for existing native clients. This avoids rounding
+a 60-bit fingerprint beyond JavaScript's exact-integer range.
+
 ## Acceptance
 
 - Owner and Brain administrator delete an active and an archived Brain through

@@ -1,6 +1,6 @@
 # Read-only Ask and retained evidence search
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/hybrid-retrieval.md`
 Work type: product
 
@@ -64,10 +64,10 @@ Work type: product
 ## Closeout
 
 - Planned: Governed read-only Ask, metadata idempotency/cancel and migrated evidence search.
-- Shipped: Not yet. Typed read-only lifecycle, canonical bundle, guarded gateway, metadata migration and temporary Ask/search are implemented in the final local image. Five deterministic database/provider scenarios, graph-backed lifecycle proof, five Ask UI cases and six distinct installed-provider quality cases passed across the recorded runs.
-- Not shipped: The declared source/memory integration acceptance and complete question-to-evidence-to-correction-to-recall journey remain open with those owner packs. The dated mapping preserves the initial paid quality-rubric failure and targeted rerun; positive browser answer transport fixtures are distinguished from actual provider proof. Explicit product non-goals remain excluded.
-- New blockers: No unresolved product decision is known. Implementation refinements and verification are tracked in the [dated mapping](../../../mappings/desktop-experience-implementation-2026-09-26.md).
-- Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](../../../mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
-- Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
+- Shipped: Governed temporary answers and explicit evidence search are deployed. The remaining actual-provider question, exact citation, authorized correction and fresh recall journey passed on an owned disposable Brain, followed by confirmed deletion.
+- Not shipped: Saved conversations, effectful Ask and universal answer-quality claims remain excluded.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: Five deterministic Ask browser cases, production handler/provider fixtures and graph-backed lifecycle proof pass. Six earlier actual-provider quality cases remain dated evidence; the October 1 deployed journey is a fresh integration proof. Disabled fallback and no model calls on navigation pass. Final repository checks are recorded in the linked evidence.
 - Version: N/A: no release requested.
-- Commit: uncommitted.
+- Commit: Uncommitted.

@@ -76,9 +76,10 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | `operations-integrated-evaluations` | shipped | contract-backed | pack | Actual-model quality, seven-capability matrix, unchanged 50-repository/200-document/eight-caller workload, repaired admission/queries, final restore/desktop and normal upgrade verified |
 | `operations-root-compose` | shipped | adr-backed, contract-backed | pack | Root Compose image/browser login, preserved inventory, full stop/start, migration-failure gate and verified fixture shutdown pass |
 | `operations-proof-cleanup` | shipped | contract-backed | small-fix: explicitly authorized removal of verified disposable local fixtures; no product implementation or schema change | Removed 50 containers, 49 volumes, 9 networks and 10 fixture directories; current seven-Brain inventory and readiness preserved |
-| `operations-desktop-activity` | in-progress | adr-backed, contract-backed | pack | Authorized bounded Activity feeds and diagnostics with canonical detail/recovery links |
-| `desktop-experience-acceptance` | in-progress | adr-backed, contract-backed | pack | Real desktop/API/agent regression, answer quality/privacy, resource measurements and rollout/rollback evidence |
-| `desktop-assurance-pulse` | planned | adr-backed, contract-backed | pack | Exception-first assurance band over existing authorized feeds, with Activity reordered as its drill-down |
+| `operations-desktop-activity` | shipped | adr-backed, contract-backed | pack | Authorized bounded Activity feeds and diagnostics with canonical detail/recovery links |
+| `desktop-experience-acceptance` | shipped | adr-backed, contract-backed | pack | Real desktop/API/agent regression, answer quality/privacy, resource measurements and rollout/rollback evidence |
+| `desktop-assurance-pulse` | shipped | adr-backed, contract-backed | pack | Exception-first assurance band over existing authorized feeds, with Activity reordered as its drill-down |
+| `desktop-chrome-declutter` | shipped | contract-backed | pack | Assurance band hidden on a healthy Brain (renders only while something needs attention); the four Knowledge pages drop the horizontal tab strip that duplicates the contextual sidebar |
 
 ## Slice Dependencies
 
@@ -95,6 +96,7 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | `operations-desktop-activity` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup` |
 | `desktop-assurance-pulse` | `operations-desktop-activity`, `desktop-knowledge-surface` |
 | `desktop-experience-acceptance` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup`, `retrieval-ask-experience`, `operations-desktop-activity`, `platform-brain-deletion`, `desktop-knowledge-surface`, `desktop-ask-primary`, `desktop-connection-authority`, `desktop-assurance-pulse` |
+| `desktop-chrome-declutter` | `desktop-assurance-pulse`, `desktop-knowledge-surface` |
 
 ## Completion Criteria
 
@@ -135,3 +137,26 @@ a deleted Brain must stay absent from every listing, retrieval, graph, audit and
 path, and must not reappear after restore from an older backup with the retained
 journal applied. `desktop-experience-acceptance` now names all five successor slices
 as predecessors.
+
+## 2026-10-01 local closeout
+
+[desktop-assurance-pulse](../execution/archive/desktop-assurance-pulse.md) are locally delivered with [dated validation and runtime limits](../../mappings/desktop-continuation-2026-10-01.md).
+The user prioritizes normal laptop and larger desktop displays; additional
+small-screen and keyboard polish is optional under the [desktop contract](../../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01).
+
+## Final desktop acceptance — 2026-10-01
+
+Activity and integrated desktop acceptance are shipped with [current deployment, permission, provider and visual proof](../../mappings/desktop-final-acceptance-2026-10-01.md). LongMemEval remains a separate blocked cost/protocol decision; it is not desktop acceptance.
+
+## Desktop chrome declutter — 2026-10-03
+
+The user's 2026-10-03 screenshot direction removed two chrome elements that
+added no information: the assurance band now renders only while something
+needs attention (a healthy Brain shows no strip at all), and the four Knowledge
+pages dropped the horizontal Memory/Sources/Graph/Repositories switcher — the
+contextual sidebar is the sole navigation, while intra-page sub-tabs and the
+inspector's "Show in…" links are untouched. Shipped 2026-10-03 with live browser
+proof on the healthy SWEG Brain; the [archived pack](../execution/archive/desktop-chrome-declutter.md)
+and [evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md) record
+the checks. The contract amendment lands in the
+[desktop experience](../../contracts/desktop-experience.md).

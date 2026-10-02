@@ -14,9 +14,12 @@ the OS credential store. Routine details are authorized by the full-product goal
 
 ### Pairing lifecycle
 
-`POST /api/devices/pairings` accepts a device name (1–120 trimmed characters) and
-creates a five-minute request. Return a private UUID `device_code`, an eight-hex-
-character public `user_code`, verification URL, expiry and two-second poll interval.
+`POST /api/devices/pairings` accepts a device name (1–120 trimmed characters), an
+optional `host_kind` (`codex`, `claude_code` or `opencode`) and an optional
+`integration` marker (`mcp` or `plugin`; default `mcp`), and creates a five-minute
+request. Unknown marker values are rejected with 400. Return a private UUID
+`device_code`, an eight-hex-character public `user_code`, verification URL, expiry
+and two-second poll interval.
 The companion prints only the URL and public code. There are at most 1,000 active
 requests installation-wide; exhausted admission returns 429. Expired requests are
 cleaned up without affecting active device credentials or audit history.
@@ -25,7 +28,9 @@ A signed-in browser opens `/devices?code={code}`. `GET /api/devices/pairings/{co
 shows the requested name/code/expiry and pending disposition. It does not reveal
 the private code or credential. `POST /api/devices/pairings/{code}/approve` with a boolean decision
 requires a current browser session and CSRF. Approval binds the device to that
-account, records audit and creates a random bearer credential valid for 30 days.
+account, persists the pairing's `host_kind` and `integration` on the device record
+(a reused same-name device is updated in place), records audit and creates a random
+bearer credential valid for 30 days.
 Decline is terminal. A second approval is 409; expiry/missing code is 410. The
 screen asks the person to compare the code with their own companion request.
 No device can approve another pairing or administer accounts through its token.
@@ -79,13 +84,15 @@ and logs. Mutation audit records the principal separately from device identity.
 
 ### Companion and UI
 
-`recollect-agent pair [name]` prints the verification link and waits up to five
-minutes while the user approves it in the browser. `whoami` proves a real
-authenticated call; `brains` lists actual permitted Brains; `unpair` revokes this
-device before deleting its stored credential. An already-revoked/expired token
-can be removed locally. A network failure preserves the credential for retry.
-`forget` explicitly removes only the local credential and tells the user to revoke
-the server record in Devices. Pairing does not overwrite an existing local profile.
+The plugin's `connect` command prints the verification link and waits up to five
+minutes while the user approves it in the browser, sending its own host kind and
+the `plugin` integration marker. `whoami` proves a real authenticated call;
+`brains` lists actual permitted Brains; unpairing revokes this device before
+deleting its stored credential. An already-revoked/expired token can be removed
+locally. A network failure preserves the credential for retry. Forgetting a local
+credential explicitly removes only the local copy and tells the user to revoke the
+server record in the Brain's Agents list or the Devices route. Pairing does not
+overwrite an existing local profile.
 
 `RECOLLECT_URL` selects an HTTPS service (loopback HTTP is allowed locally).
 The default is `http://127.0.0.1:8787`. Reject URLs containing user-info, query or
@@ -97,9 +104,12 @@ without falling back to a pretend or unencrypted credential store. The companion
 continues to depend only on protocol/HTTP/OS-store libraries, never server database
 drivers. Provider tokens and browser session cookies are not copied to it.
 
-The Devices view is available to every signed-in account. It shows name, creation,
-last-use, expiry and claimed/revoked status, with pending/error/empty states and
-revocation controls. Pairing approval remains available across a sign-in redirect.
+The Devices route `/devices` is available to every signed-in account by direct URL
+for pairing approval (including across a sign-in redirect) and the complete account
+device list; it is no longer listed in global navigation, and per-Brain agent
+visibility lives on the Brain's Agents surface. It shows name, creation, last-use,
+expiry and claimed/revoked status, with pending/error/empty states and revocation
+controls.
 Companion messages distinguish waiting, denial, expiry, connection failure and
 credential-store failure; no secret is printed in error output.
 

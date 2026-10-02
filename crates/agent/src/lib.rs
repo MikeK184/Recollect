@@ -19,6 +19,10 @@ pub mod mcp_host;
 #[cfg(target_os = "macos")]
 pub mod os_store;
 pub mod plugin;
+pub mod plugin_migration;
+pub mod plugin_runtime;
+pub mod plugin_session;
+pub mod plugin_storage;
 pub mod privacy;
 pub mod publication;
 pub mod publication_cli;
@@ -223,7 +227,11 @@ impl Client {
                 reqwest::Method::POST,
                 "/api/devices/pairings",
                 None,
-                Some(serde_json::to_value(PairingRequest { name })?),
+                Some(serde_json::to_value(PairingRequest {
+                    name,
+                    host_kind: None,
+                    integration: Some("plugin".into()),
+                })?),
             )
             .await?,
         )

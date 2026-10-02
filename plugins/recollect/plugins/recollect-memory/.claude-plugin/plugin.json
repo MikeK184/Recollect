@@ -1,9 +1,11 @@
 {
   "name": "recollect-memory",
   "version": "0.1.0",
-  "description": "Scoped Recollect Brain memory over MCP: recall evidence-backed knowledge and contribute findings with your own access token.",
+  "description": "Automatic Recollect memory: connect once, capture permitted sessions and recall relevant evidence in normal coding sessions.",
   "author": {
     "name": "Recollect"
   },
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "hooks": "./hooks/claude_code.json",
+  "mcpServers": "./.mcp.json"
 }

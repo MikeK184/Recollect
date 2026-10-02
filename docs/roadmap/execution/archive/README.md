@@ -5,6 +5,24 @@ local capability does not establish a deployed or published service.
 
 | Pack | Status |
 | --- | --- |
+| [agents-surface-refinement.md](agents-surface-refinement.md) | shipped |
+| [ask-chat-conversation.md](ask-chat-conversation.md) | shipped |
+| [desktop-chrome-declutter.md](desktop-chrome-declutter.md) | shipped |
+| [mcp-brain-agent-roster.md](mcp-brain-agent-roster.md) | shipped |
+| [mcp-plugin-session-memory.md](mcp-plugin-session-memory.md) | shipped |
+| [mcp-codex-plugin.md](mcp-codex-plugin.md) | shipped |
+| [opencode-project-setup.md](opencode-project-setup.md) | shipped |
+| [evidence-desktop-workflows.md](evidence-desktop-workflows.md) | shipped |
+| [memory-desktop-workflows.md](memory-desktop-workflows.md) | shipped |
+| [graph-desktop-workspace.md](graph-desktop-workspace.md) | shipped |
+| [retrieval-ask-experience.md](retrieval-ask-experience.md) | shipped |
+| [operations-desktop-activity.md](operations-desktop-activity.md) | shipped |
+| [desktop-experience-acceptance.md](desktop-experience-acceptance.md) | shipped |
+| [desktop-ask-primary.md](desktop-ask-primary.md) | shipped |
+| [desktop-knowledge-surface.md](desktop-knowledge-surface.md) | shipped |
+| [platform-brain-deletion.md](platform-brain-deletion.md) | shipped |
+| [desktop-connection-authority.md](desktop-connection-authority.md) | shipped |
+| [desktop-assurance-pulse.md](desktop-assurance-pulse.md) | shipped |
 | [mcp-direct-auth-repair.md](mcp-direct-auth-repair.md) | shipped |
 | [mcp-direct-connections.md](mcp-direct-connections.md) | shipped |
 | [mcp-plugin-direct-auth.md](mcp-plugin-direct-auth.md) | shipped |

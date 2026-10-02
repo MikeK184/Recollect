@@ -1,15 +1,65 @@
-# Capture Codex and Claude session evidence
+# Capture and recall coding-session evidence
+
+> Plugin migration: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md)
+> makes the packaged plugin the normal install/connect path for Codex, Claude Code
+> and OpenCode. [Package instructions](../../plugins/recollect/README.md) describe
+> the delivered implementation. Native ordinary-launch acceptance passed; the
+> legacy procedures remain for draining existing queues and advanced use.
+> Do not remove an old setup or revoke its device before its pending captures have
+> drained under their original endpoint, Brain, task and binding. Do not enable both
+> capture paths for one session. No credentials or host trust settings are migrated
+> silently.
 
 For the current route/menu map, see the [desktop guide](desktop-experience.md).
 
-Managed setup enables all supported sanitized event kinds and managed tool
-capture together. **Connections → Coding agents** gives the normal pairing,
-automatic-capture setup and verification flow. Individual policy controls below
-are optional overrides under Settings → Capture → Advanced capture controls.
+## Plugin-managed capture and recall
 
-## Purpose and Prerequisites
+Open **Agents → Connect coding agent** and follow the [package setup](../../plugins/recollect/README.md).
+Install the complete plugin, connect once, approve the host's hook trust, then start
+Codex, Claude Code or OpenCode normally. This path uses the bundled
+`recollect-plugin`; it needs no separate companion or `capture run` command.
+Native-host acceptance and remaining limits are recorded in the
+[plugin mapping](../mappings/plugin-session-memory-2026-10-01.md).
 
-Run `./scripts/dev.sh` and open `http://127.0.0.1:8787`. Use **Agents → Captured sessions** for published evidence and **Capture coverage** for companion delivery; the canonical policy editor is **Settings → Capture**. Use a
+The plugin establishes the session's Brain/task scope, captures permitted events
+locally, and uploads through an independent worker. The standing Brain capture
+policy governs admission; model policy separately governs learning. Reader-only
+access and disabled capture do not prevent authorized memory recall.
+
+Before prompts reach the model, recall supplies up to 8 KiB of cited data under
+the current task scope. Compaction retrieves again. The total hook deadline is
+eight seconds; network or credential failure leaves coding available. The
+plugin's own recalled context and transport results are excluded from fresh
+evidence. No hidden reasoning or transcript files are scraped.
+
+Use **Agents → Captured sessions** to inspect published sources and **Capture
+coverage** for delivery reports and gaps. An empty Brain can legitimately return
+no useful memory. A configured plugin is not proof of capture or useful recall.
+The packaged executable supports:
+
+```sh
+/absolute/package/plugins/recollect-memory/bin/recollect-plugin status
+/absolute/package/plugins/recollect-memory/bin/recollect-plugin drain
+```
+
+Pending events survive host exit and are retried on later launches. A delivery
+worker has a bounded final drain. Retention expiry and synchronized erasure fences
+apply before replay. Changing the selected device/server retains each old queue's
+original destination and credential reference; it does not move old evidence into
+the new Brain. Optional independent execution uses `connect --with-runner` and is
+unrelated to capture delivery.
+
+## Legacy capture setup and queue migration
+
+The procedures below describe the earlier companion-managed launch. Use them to
+inspect/drain existing queues or diagnose that explicit compatibility path. Do not
+run it alongside the complete plugin for the same session. Drain before removing
+the old host entry, enable the plugin, verify delivery, then retire the old setup
+files. Installing a new plugin does not erase old canonical sources.
+
+### Legacy prerequisites
+
+Run `./scripts/dev.sh` and open `http://127.0.0.1:8787`. Use **Agents → Captured sessions** for published evidence and **Capture coverage** for companion delivery; the canonical policy editor is **Settings → Capture**. For this compatibility path, use a
 [paired native companion](device-pairing.md) with writer access, and install the
 selected host on PATH. Codex 0.154.0 and Claude Code 2.1.270 were exercised with
 actual host processes and the compiled Recollect hook.
@@ -20,7 +70,7 @@ from the [model policy](provider-learning.md). That policy governs automatic
 learning and revision; [retention](retention-and-erasure.md) governs expiry and
 erasure. The default for raw sessions and tool output is thirty days.
 
-## Procedure
+### Legacy procedure
 
 From Recollect, prepare capture for an explicit Brain and working directory:
 
@@ -61,7 +111,7 @@ reuse a binding for the new host version while preserving the original operation
 scope. A changed task scope requires a new setup. Concurrent setups keep their
 own bindings; no shared current-Brain variable labels their events.
 
-## Verification
+### Legacy verification
 
 The panel distinguishes **Configured only** from actual device reports and
 server-confirmed publications. **View captured source** opens the retained,
@@ -98,7 +148,7 @@ it if more remain. Source text is removed locally after acknowledgment. Hooks
 perform only bounded normalization and a local SQLite transaction, with no model
 or network call. They do not read transcripts or hidden reasoning.
 
-## Failure and Recovery
+## Shared privacy and recovery
 
 Offline work remains in the durable inbox and resumes on the next run/drain.
 Capture permission cached for more than 24 hours cannot admit new content until
@@ -117,9 +167,11 @@ synchronizes deletion fences and clears affected local bodies before acknowledgi
 privacy progress or selecting uploads. A disconnected device applies new erasure
 when it next connects. Removing a host plugin or setup file is not source erasure.
 
-## Local proof
+## Verification commands
 
-`./scripts/test-capture-hosts.sh` runs pinned real Codex/Claude hosts in a
+`./scripts/test-mcp-hosts.sh` includes installed-plugin native Codex, Claude Code
+and OpenCode proofs against owned databases and a synthetic local model.
+`./scripts/test-capture-hosts.sh` separately runs pinned legacy Codex/Claude hosts in a
 repository-owned container. The execution phase has networking disabled and uses
 synthetic local provider responses; personal host configuration and credentials
 are not mounted. The test covers actual native hooks, an unbound Codex session and

@@ -11,8 +11,25 @@ The [tiered surface amendment](desktop-knowledge-surface.md), decided under
 governs sidebar tiering, the merged knowledge surface, the Ask landing default,
 the Agents/Connections split and the assurance band. It changes placement and
 presentation only: this contract's token, typography, icon, route-ownership,
-desktop-width, accessibility and read-only-answer requirements remain fully in
+desktop-width, accessibility and read-only-answer requirements remain in
 force, and every route named below stays a real deep-linkable URL.
+
+### Display and interaction priority — 2026-10-01
+
+The user prioritizes normal laptop screens and larger desktop monitors, up to
+about 32 inches. Aim for comfortable desktop reading and ordinary pointer use;
+physical screen size is not a fixed CSS resolution. Use 1440×900 and 1920×1080
+as practical review sizes, with wider desktop checks when a changed layout needs
+them. Existing 1280px checks can remain inexpensive compatibility coverage.
+
+Mobile, small-screen optimization and exhaustive responsive matrices are low
+priority. Extra keyboard interactions, shortcuts, focus polish and keyboard-only
+acceptance are optional and must not hold up functional delivery. Keep existing
+native control semantics and working keyboard behavior; do not spend further
+time expanding or perfecting them unless the user asks. This explicit user
+decision supersedes earlier mandatory screen-width/keyboard proof wording in
+desktop plans and active packs. Core behavior, data safety and permissions remain
+required.
 
 ## Source
 
@@ -28,15 +45,24 @@ layout; invented labels, counts and generated icon variations are not API data.
 
 ### Routes, identity and state
 
-Global routes are Brains `/`, Team `/team` and Devices `/devices`. Team remains
-installation-owner only. Inside `/brains/{brain}`, the contextual sidebar groups
+Global navigation lists Brains `/`, Agents `/agents` and Team `/team`; Team
+remains installation-owner only. The global Agents page is the account-level
+roster of the signed-in user's agents with per-Brain usage. The Devices route
+`/devices` stays reachable by direct URL for pairing-approval deep links and the
+complete account device list, but is no longer a navigation destination;
+per-Brain agent visibility and labeled revocation live on the Brain's Agents
+surface. Inside `/brains/{brain}`, the contextual sidebar groups
 its destinations into four ordered tiers: Ask; Knowledge, holding Memory,
 Sources, Graph and Repositories; Wiring, holding Agents, Connections and
 Settings; and Assurance, holding Activity. Their suffixes are `/ask`, `/memory`,
 `/sources`, `/graph`, `/repositories`, `/agents`, `/connections`, `/settings`
 and `/activity`. Every suffix remains a real route; the Knowledge views share one
 surface and one inspector region rather than four peer pages, as the
-[tiered surface amendment](desktop-knowledge-surface.md) specifies. The Brain
+[tiered surface amendment](desktop-knowledge-surface.md) specifies. The
+contextual sidebar is the sole navigation between the four Knowledge
+destinations: those pages do not repeat them as a horizontal tab strip. Pages
+whose tabs name sub-sections that are absent from the sidebar (Agents, Activity,
+Connections, Settings) retain their intra-page tabs. The Brain
 switcher and All Brains link replace a second full global menu. `/brains/{brain}`
 resolves to Ask on its question composer; Search evidence remains the explicit
 alternative mode and stays functional when answering is disabled or unavailable.
@@ -75,26 +101,27 @@ alternatives or decorative semantics. A raster image is not a substitute.
 Shared PageHeader, FilterBar, ScopeSummary, DetailInspector, StatusBadge,
 AsyncState, SettingsSection and ActionMenu own recurring behavior. Keep forms,
 dialogs, tables and graphs on that system. No dark mode or mobile redesign.
-Prove desktop widths 1280, 1440 and 1920, browser zoom, keyboard/focus return,
-reduced motion, readable long labels and non-color status meanings. Auth,
+Apply the display and interaction priority above. Keep readable long labels and
+non-color status meanings. Auth,
 invitation, OIDC error/recovery and expired-session views use the same system.
 
 ### Page responsibilities
 
 | Destination | Required behavior and boundary |
 | --- | --- |
-| Ask | Question/citations/inspector governed by [answers](retrieval-answers.md); the question composer is the default view and Search evidence is an explicit alternative mode retaining Matches, Disagreements, Sources, Copy context and advanced exact/mode/time/budget criteria. Applied restrictions stay visible. |
+| Ask | Question/citations/inspector governed by [answers](retrieval-answers.md); the default view is a chat-style conversation thread — user questions and model-grounded answers as turns, with citations as expandable evidence attachments and follow-ups in the same thread — and Search evidence is an explicit alternative mode retaining Matches, Disagreements, Sources, Copy context and advanced exact/mode/time/budget criteria. The thread stays temporary; applied restrictions stay visible. |
 | Memory | Readable claim/decision/procedure/handover list and exact detail/history/support. Optional correction, review, withdrawal, conflict resolution and erasure retain canonical handlers. Handover generation selects exact claim revisions, never silently saves Ask text. |
 | Sources | Current paste/text-file/reference import, list/version content, collections/areas/environment filters and one Manage views editor. New-version editing and contextual reprocess/learning/erase retain their effects. Show reference-only/unavailable bytes honestly. Storage policy lives in Settings. |
 | Graph | Canvas first, compact kind/scope toolbar, filters/insights/status drawers and canonical inspector. Provide keyboard/list selection and textual paths. Default bounded knowledge overview uses current Brain-only investigation selection when no explicit selection exists; it invokes the existing read endpoint once, without model/rebuild/analytics. Explicit historical/repository/manifest selections are never guessed or reset. Missing exact inputs ask for selection. Existing bounds and oversize refusal remain. |
 | Repositories | Published repositories, snapshots, files/facts/coverage/contributors/insights/receipt; Environments tab owns exact revision manifests/history. Browser publishing opens accurate native instructions. Own checkout paths remain account/device-private. Committed, desired and observed revisions stay distinct. |
-| Agents | Sole home for connecting a coding tool that acts as the signed-in user: supported host onboarding and real memory-read check, published sessions/capture coverage and advanced own task/scope controls. Setup is not an active connection. Capture policy has one editor in Settings. Browser metadata retry and native discovery are distinct. Other accounts' tasks remain private even from Brain admins. |
+| Agents | Sole home for connecting a coding tool that acts as the signed-in user: supported host onboarding and real memory-read check, published sessions/capture coverage and advanced own task/scope controls. A per-Brain agent roster above the setup tabs shows only the account's agents that have been used on this Brain, grouped by user ("mike — N agents"); each row is one connection of exactly two kinds — Recollect plugin or direct MCP access token — with host kind, active/idle state, last used on this Brain, and a revoke action labeled as removing the keycard from all Brains; revoked/expired rows hide behind an explicit toggle. A link opens the global Agents page for the complete account list with per-Brain usage. Setup is not an active connection. Capture policy has one editor in Settings. Browser metadata retry and native discovery are distinct. Other accounts' tasks remain private even from Brain admins. |
 | Connections | Outbound Brain-managed MCP only; no agent-connection setup path. Connections/Profiles/Runners; approved connector → target/environment → credential reference → runner → review → explicit test wizard. Independent Use/Manage/Share grants remain. Test may have effects and never implicitly retries uncertain work. No arbitrary executable installation. |
-| Activity | Exception-first drill-down behind the standing assurance band. Timeline/Processing/Tool calls/Model usage compose existing bounded authorized feeds, with canonical detail links. No fabricated counts or total causal ordering. Admin audit, profile outputs and private contexts retain independent authorization. |
+| Activity | Exception-first drill-down behind the standing assurance band, which renders only while something needs attention — a blocker, pending read, failed feed, archived Brain, disabled autonomous memory, or an empty first session — and stays hidden on a healthy Brain. Timeline/Processing/Tool calls/Model usage compose existing bounded authorized feeds, with canonical detail links. No fabricated counts or total causal ordering. Admin audit, profile outputs and private contexts retain independent authorization. |
+| Agents (global) | Account-level roster at `/agents` for the signed-in user: agents grouped by user with name, host kind, integration, active state and the Brains each is used in with last use there; entry point from every per-Brain roster. Pairing approval and the complete account device list remain on the hidden `/devices` surface. |
 | Settings | General/Access/AI & automation/Capture/Retention & privacy, with rare repair/history actions secondary. General owns archive/reopen and irreversible Brain deletion through the preview and confirmation flow in [brain deletion](platform-brain-deletion.md), kept visibly distinct from archive. Installed provider/model identity read-only; permission, content classes, purposes and quotas editable by actual authorized roles. Capture, model transmission, answering and retention remain separate decisions. |
 | Brains | Create/open, personal/shared, archived and search views with supported metadata; installation health is a small affordance with owner diagnostics. |
 | Team | Existing account/invitation/local/OIDC/disable/reset/audit functions, installation-owner only; Brain access remains a different resource. |
-| Devices | Own identities and native pairing instructions, pending approval/deny/revoke, observed last-seen only when available; approval stays explicit. |
+| Devices | Hidden direct-URL surface for pairing-approval deep links (`/devices?code=…`) and the complete account device list; no longer a navigation destination. Pending approval/deny/revoke and observed last-seen behave as before; approval stays explicit. |
 
 Normal autonomous learning, capture and agent scope/tool work require no new
 mandatory human clicking. Existing capability controls remain reachable in their

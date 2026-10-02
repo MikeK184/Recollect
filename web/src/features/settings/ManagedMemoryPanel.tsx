@@ -147,7 +147,7 @@ export function ManagedMemoryPanel({
             <Group>
               <Button
                 component="a"
-                href={`/brains/${brain.id}/connections`}
+                href={`/brains/${brain.id}/agents`}
                 variant="light"
               >
                 Connect your agent

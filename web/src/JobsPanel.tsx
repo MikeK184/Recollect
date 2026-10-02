@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Badge,
   Button,
@@ -35,7 +36,16 @@ const errorLabels: Record<string, string> = {
   cancelled_by_admin: "An administrator cancelled this job.",
 };
 
-export function JobsPanel({ id, admin }: { id: string; admin: boolean }) {
+export function JobsPanel({
+  id,
+  admin,
+  selectedJob,
+}: {
+  id: string;
+  admin: boolean;
+  selectedJob?: string;
+}) {
+  const focused = useRef<HTMLDivElement>(null);
   const cache = useQueryClient();
   const processing = useQuery({
     queryKey: ["processing", id],
@@ -78,6 +88,10 @@ export function JobsPanel({ id, admin }: { id: string; admin: boolean }) {
     },
   });
   const error = processing.error ?? jobs.error ?? action.error;
+  useEffect(() => {
+    if (selectedJob && jobs.data)
+      focused.current?.scrollIntoView({ block: "center" });
+  }, [selectedJob, jobs.data]);
   return (
     <Card
       component="section"
@@ -131,7 +145,12 @@ export function JobsPanel({ id, admin }: { id: string; admin: boolean }) {
       ) : (
         <Stack gap="md">
           {jobs.data.map((job) => (
-            <div className="job-row" key={job.id}>
+            <div
+              className={`job-row${job.id === selectedJob ? " activity-selected" : ""}`}
+              key={job.id}
+              ref={job.id === selectedJob ? focused : undefined}
+              data-testid={job.id === selectedJob ? "selected-job" : undefined}
+            >
               <div className="job-info">
                 <Text size="sm" fw={500}>
                   {job.kind === "brain.refresh"

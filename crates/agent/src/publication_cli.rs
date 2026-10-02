@@ -85,12 +85,22 @@ async fn upload(
     }
 }
 pub async fn run(client: &Client, device: &StoredDevice, args: &[String]) -> Result<Value> {
-    let action = value(args, 0)?;
-    let brain = id(args, 1)?;
-    let base = format!("/api/brains/{brain}");
     let root = std::env::var_os("RECOLLECT_PUBLICATION_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| project_root().join(".data/publications"));
+    run_with_defaults(client, device, args, root, default_enola()).await
+}
+
+pub async fn run_with_defaults(
+    client: &Client,
+    device: &StoredDevice,
+    args: &[String],
+    root: PathBuf,
+    default_extractor: PathBuf,
+) -> Result<Value> {
+    let action = value(args, 0)?;
+    let brain = id(args, 1)?;
+    let base = format!("/api/brains/{brain}");
     match action {
         "publish" => {
             crate::privacy::synchronize(client, device, brain, &root).await?;
@@ -136,7 +146,7 @@ pub async fn run(client: &Client, device: &StoredDevice, args: &[String]) -> Res
             );
             let enola = std::env::var_os("RECOLLECT_ENOLA_BIN")
                 .map(PathBuf::from)
-                .unwrap_or_else(default_enola);
+                .unwrap_or(default_extractor);
             let input = prepare(Preparation {
                 checkout,
                 revision,

@@ -1,6 +1,6 @@
 # Readable memory and standing Brain settings
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/memory-lifecycle.md`
 Work type: product
 
@@ -66,10 +66,10 @@ Work type: product
 ## Closeout
 
 - Planned: Memory All/Decisions/Procedures/Handovers and exact support/history; optional review/correction/withdraw/conflicts/erase; handover generation from exact claim revisions; General/Access/AI & automation/Capture/Retention settings and bounded literal assertion search.
-- Shipped: Not yet. Memory tabs/search/history, optional interventions, handovers and standing settings are implemented and deployed locally. Claims, review and procedures journeys passed at their recorded revision; current exact history links, knowledge cutoffs and revision mismatch tests passed.
-- Not shipped: Final corrected Claims/Retention and relocated model-policy/autonomous-learning UI proof remain open. Server policy/answer fixtures are not a substitute for those settings workflows. Explicit product non-goals remain excluded.
-- New blockers: No unresolved product decision is known. Implementation refinements and verification are tracked in the [dated mapping](../../../mappings/desktop-experience-implementation-2026-09-26.md).
-- Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](../../../mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
-- Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
+- Shipped: Readable memory, exact support/history, optional interventions, handovers and standing settings are delivered and deployed. Fixed lineage correction's missing scope catalogue, which otherwise disabled Save.
+- Not shipped: No remaining slice acceptance; automatic learning remains the default and human review remains optional.
+- New blockers: None for this slice.
+- Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
+- Validation: Claims, Retention, Review and Procedures pass in the 65-case matrix. Two separately opted-in real-provider browser tests prove model settings and autonomous learn/revise/handover without human review. The new correction regression and deployed evidence-to-correction-to-recall journey pass. Final repository checks are recorded in the linked evidence.
 - Version: N/A: no release requested.
-- Commit: uncommitted.
+- Commit: Uncommitted.

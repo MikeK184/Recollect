@@ -1,6 +1,6 @@
 # Repository Graphs, Knowledge Graphs and Analytics
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -62,7 +62,7 @@ scope, with queued work and explicit resource limits.
 | `graph-cross-repository-views` | shipped | contract-backed | pack | Delivered exact combined inputs and parsed pinned Terraform links with qualified native paths, correction/recovery and browser proof |
 | `graph-analytics` | shipped | contract-backed | pack | Delivered native GDS reports, complete qualification/invalidation, owned scratch recovery and reader concurrency with normal runtime/browser proof |
 | `graph-exploration` | shipped | contract-backed | pack | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and SWEG runtime proof |
-| `graph-desktop-workspace` | in-progress | adr-backed, contract-backed | pack | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
+| `graph-desktop-workspace` | shipped | adr-backed, contract-backed | pack | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
 
 ## Slice Dependencies
 
@@ -95,3 +95,7 @@ from remaining current-code domain and integrated acceptance. The
 [desktop guide](../../runbooks/desktop-experience.md) documents the current function
 locations. Product/proof slices stay in progress until their required checks pass;
 prior shipped domain records remain historical evidence rather than redesign proof.
+
+## Final desktop and tooling acceptance — 2026-10-01
+
+The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.

@@ -1,0 +1,7 @@
+{
+  "name": "recollect",
+  "owner": { "name": "Recollect" },
+  "plugins": [
+    { "name": "recollect-memory", "source": "./plugins/recollect-memory", "description": "Automatic scoped memory for coding sessions" }
+  ]
+}

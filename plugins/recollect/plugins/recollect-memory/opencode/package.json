@@ -1,0 +1,6 @@
+{
+  "name": "recollect-memory",
+  "private": true,
+  "type": "module",
+  "main": "./index.mjs"
+}

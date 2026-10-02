@@ -82,12 +82,37 @@ const graphStyles = (labelFontSize: number): StylesheetJson => [
 ];
 
 function fitGraph(cy: Core, elements = cy.elements(), padding = 35) {
-  cy.fit(elements, padding);
-  // A small path should not enlarge labels to fill the entire canvas.
-  if (cy.zoom() > 1.35) {
-    cy.zoom(1.35);
-    cy.center(elements);
-  }
+  const canvas = cy.container();
+  if (!canvas || elements.empty()) return;
+  const rect = canvas.getBoundingClientRect();
+  const overlay = canvas
+    .closest(".graph-stage-area")
+    ?.querySelector(".graph-stage-overlay")
+    ?.getBoundingClientRect();
+  const controls = canvas.parentElement
+    ?.querySelector(".graph-canvas-controls")
+    ?.getBoundingClientRect();
+  // Fit captions inside the usable viewport, including wrapping controls.
+  const top = Math.max(padding, overlay ? overlay.bottom - rect.top + 16 : 0);
+  const bottom = Math.max(
+    padding,
+    controls ? rect.bottom - controls.top + 16 : 0,
+  );
+  const width = Math.max(1, cy.width() - padding * 2);
+  const height = Math.max(1, cy.height() - top - bottom);
+  const bounds = elements.boundingBox({ includeLabels: true });
+  cy.zoom(
+    Math.min(
+      1.35,
+      width / Math.max(1, bounds.w),
+      height / Math.max(1, bounds.h),
+    ),
+  );
+  const zoom = cy.zoom();
+  cy.pan({
+    x: padding + width / 2 - (bounds.x1 + bounds.w / 2) * zoom,
+    y: top + height / 2 - (bounds.y1 + bounds.h / 2) * zoom,
+  });
 }
 
 export default function GraphCanvas({
@@ -111,7 +136,7 @@ export default function GraphCanvas({
   const core = useRef<Core | null>(null);
   const choose = useRef(onChoose);
   choose.current = onChoose;
-  const [layout, setLayout] = useState("cose");
+  const [layout, setLayout] = useState("concentric");
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!container.current) return;
@@ -130,44 +155,74 @@ export default function GraphCanvas({
       layout: { name: "grid" },
       minZoom: 0.08,
       maxZoom: 5,
-      wheelSensitivity: 0.25,
       boxSelectionEnabled: false,
       selectionType: "single",
       hideEdgesOnViewport: edges.length > 500,
     });
     core.current = cy;
     const run = cy.layout(
-      layout === "cose"
+      layout === "concentric"
         ? {
-            name: "cose",
+            name: "concentric",
             animate: false,
-            numIter: 250,
-            randomize: false,
-            padding: 35,
-            // The default short spring can overlap the captions of small graphs.
-            idealEdgeLength: labelMaxWidth + 48,
-            nodeRepulsion: labelMaxWidth ** 2,
-            componentSpacing: labelMaxWidth,
+            fit: false,
+            avoidOverlap: true,
             nodeDimensionsIncludeLabels: true,
+            minNodeSpacing: 35,
+            // Small degree differences should not create many large rings
+            // that force every caption down to an unreadable fitted size.
+            levelWidth: (items) => Math.max(1, items.maxDegree()),
           }
-        : layout === "breadthfirst"
+        : layout === "cose"
           ? {
-              name: "breadthfirst",
-              directed: true,
+              name: "cose",
               animate: false,
+              numIter: 250,
+              randomize: false,
               padding: 35,
-              spacingFactor: 1.25,
+              // The default short spring can overlap the captions of small graphs.
+              idealEdgeLength: labelMaxWidth + 48,
+              nodeRepulsion: labelMaxWidth ** 2,
+              componentSpacing: labelMaxWidth,
               nodeDimensionsIncludeLabels: true,
             }
-          : {
-              name: "grid",
-              animate: false,
-              padding: 35,
-              nodeDimensionsIncludeLabels: true,
-            },
+          : layout === "breadthfirst"
+            ? {
+                name: "breadthfirst",
+                directed: true,
+                animate: false,
+                padding: 35,
+                spacingFactor: 1.25,
+                nodeDimensionsIncludeLabels: true,
+              }
+            : {
+                name: "grid",
+                animate: false,
+                padding: 35,
+                nodeDimensionsIncludeLabels: true,
+              },
     );
     run.run();
-    fitGraph(cy);
+    const fitLayout = () => {
+      // Choose the orientation with the larger real rendered fit, including
+      // labels. Evaluate again after resize because initial size can be zero.
+      fitGraph(cy);
+      if (layout !== "cose") return;
+      const originalZoom = cy.zoom();
+      const positions = new Map(
+        cy.nodes().map((node) => [node.id(), { ...node.position() }] as const),
+      );
+      cy.nodes().positions((node) => {
+        const { x, y } = positions.get(node.id())!;
+        return { x: y, y: -x };
+      });
+      fitGraph(cy);
+      if (cy.zoom() <= originalZoom) {
+        cy.nodes().positions((node) => positions.get(node.id())!);
+        fitGraph(cy);
+      }
+    };
+    fitLayout();
     const tap = (event: cytoscape.EventObject) => {
       const target = event.target;
       choose.current(
@@ -179,7 +234,7 @@ export default function GraphCanvas({
     cy.on("tap", tap);
     const resize = new ResizeObserver(() => {
       cy.resize();
-      fitGraph(cy);
+      fitLayout();
     });
     resize.observe(container.current);
     setReady(true);
@@ -228,8 +283,9 @@ export default function GraphCanvas({
         <Select
           aria-label="Graph layout"
           value={layout}
-          onChange={(value) => setLayout(value ?? "cose")}
+          onChange={(value) => setLayout(value ?? "concentric")}
           data={[
+            { value: "concentric", label: "Connected rings" },
             { value: "cose", label: "Connected clusters" },
             { value: "breadthfirst", label: "Directed layers" },
             { value: "grid", label: "Grid" },

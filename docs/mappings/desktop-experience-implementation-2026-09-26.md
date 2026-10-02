@@ -286,7 +286,7 @@ optional product feature in order to close the integrated acceptance pack.
 
 Use the [desktop guide](../runbooks/desktop-experience.md) for navigation,
 component development and safe recovery. The
-[active acceptance pack](../roadmap/execution/active/desktop-experience-acceptance.md)
+[active acceptance pack](../roadmap/execution/archive/desktop-experience-acceptance.md)
 is the current source of unfinished delivery work. No external deployment,
 release version, commit or push is implied. Preserve prior shipped evidence
 records rather than rewriting them as redesign proof.

@@ -1,0 +1,88 @@
+/* Feature-local styles for the shared Knowledge surface: the canonical
+   lineage inspector body and the dense list rows of Memory, Sources and
+   Repositories. Colors and fonts come from semantic tokens only. */
+
+.lineage-wrap {
+  overflow-wrap: anywhere;
+}
+
+.lineage-content {
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-canvas);
+  padding: var(--mantine-spacing-sm);
+  font-family: var(--rc-font-mono);
+  font-size: var(--mantine-font-size-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lineage-node-button {
+  justify-content: start;
+  text-align: left;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.lineage-evidence-button {
+  justify-content: start;
+  text-align: left;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Dense source rows: one identifier line, one status line. */
+.feature-view .source-record.source-record-dense {
+  display: block;
+  padding: var(--mantine-spacing-md);
+}
+.source-record-dense .source-record-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.source-record-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+  min-width: 0;
+}
+
+.source-record-line + .source-record-line {
+  margin-top: var(--mantine-spacing-xs);
+}
+
+.source-record-line .source-symbol {
+  flex: 0 0 auto;
+}
+
+/* Dense memory rows keep the shared record frame; the status line is a
+   single composite mark whose meaning is also its text. */
+.memory-record-status {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  min-width: 0;
+}
+
+.memory-record-status .mantine-Badge-root {
+  max-width: 100%;
+  height: auto;
+  min-height: 1.4rem;
+}
+
+.memory-record-status .mantine-Badge-label {
+  white-space: normal;
+}
+
+/* Repository cards lead with the canonical origin; machine identifiers move
+   to the copyable field below. */
+.repository-card-name {
+  color: var(--rc-ink);
+  font-weight: 600;
+  text-align: left;
+  justify-content: start;
+  overflow-wrap: anywhere;
+}

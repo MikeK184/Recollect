@@ -1,5 +1,5 @@
 import { iconSize } from "./design/tokens";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
 import {
   Alert,
   Badge,
@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { GraphChoice } from "./GraphCanvas";
+import { useKnowledgeSelection } from "./features/knowledge/selection";
 const GraphCanvas = lazy(() => import("./GraphCanvas"));
 type Node = components["schemas"]["GraphNode"];
 type View = components["schemas"]["GraphView"];
@@ -189,6 +190,182 @@ export function GraphExplorer({
         n.evidence.id === chosenEdge.evidence_id ||
         n.evidence.revision_id === chosenEdge.evidence_id,
     );
+  const { select, selection, available } = useKnowledgeSelection();
+  const ownsSelection = useRef(false);
+  const details = useRef<React.ReactNode>(null);
+  details.current = (
+    <>
+      {" "}
+      {chosenNode && (
+        <Card
+          withBorder
+          p="sm"
+
+          style={{ overflowWrap: "anywhere" }}
+        >
+          <Stack gap="xs">
+            {!available && (
+              <>
+                <Title order={5}>{chosenNode.evidence.label}</Title>
+                <Text size="sm">
+                  {label(chosenNode.evidence.kind)} · {chosenNode.key}
+                </Text>
+                {chosenNode.evidence.claim && (
+                  <Text size="sm">
+                    {label(chosenNode.evidence.claim.review)} ·{" "}
+                    {label(chosenNode.evidence.claim.freshness)} ·{" "}
+                    {label(chosenNode.evidence.claim.operational)}
+                  </Text>
+                )}
+              </>
+            )}
+            {witness && (
+              <Text size="sm">
+                Shortest witness: {witness.edges.length} hops ·{" "}
+                {witness.nodes
+                  .map((key) => nodeMap.get(key)?.evidence.label ?? key)
+                  .join(" → ")}
+              </Text>
+            )}
+            <Group>
+              <Button
+                size="xs"
+                onClick={() => {
+                  select(null);
+                  inspect(chosenNode);
+                }}
+              >
+                Inspect selected evidence
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => {
+                  setCenter(chosenNode.key);
+                  load(chosenNode.key);
+                }}
+              >
+                Explore connections
+              </Button>
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() => {
+                  onStart(chosenNode.key);
+                  setChoice(null);
+                }}
+              >
+                Set path start
+              </Button>
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() => {
+                  onEnd(chosenNode.key);
+                  setChoice(null);
+                }}
+              >
+                Set path end
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
+      )}
+      {chosenEdge && (
+        <Card
+          withBorder
+          p="sm"
+
+          style={{ overflowWrap: "anywhere" }}
+        >
+          <Stack gap="xs">
+            <Title order={5}>{label(chosenEdge.relation)} relationship</Title>
+            <Text size="sm">
+              Recorded direction: {nodeMap.get(chosenEdge.from)?.evidence.label}{" "}
+              → {nodeMap.get(chosenEdge.to)?.evidence.label}
+            </Text>
+            <Text size="sm">
+              {label(chosenEdge.family)} ·{" "}
+              {chosenEdge.family === "provenance"
+                ? "This relationship records an evidence contribution; it does not establish acceptance."
+                : "This relationship records a static dependency or reference; runtime impact is not established."}
+            </Text>
+            <Text size="xs">
+              Evidence: {label(chosenEdge.evidence_kind)} ·{" "}
+              {chosenEdge.evidence_id} · relationship ordinal{" "}
+              {chosenEdge.evidence_ordinal}
+            </Text>
+            <Text size="xs">Relationship {chosenEdge.id}</Text>
+            <Group>
+              {edgeEvidence && (
+                <Button
+                  size="xs"
+                  onClick={() => {
+                    select(null);
+                    inspect(edgeEvidence);
+                  }}
+                >
+                  Inspect relationship evidence
+                </Button>
+              )}
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => setChoice({ kind: "node", id: chosenEdge.from })}
+              >
+                Inspect source entity
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => setChoice({ kind: "node", id: chosenEdge.to })}
+              >
+                Inspect target entity
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
+      )}
+    </>
+  );
+  useEffect(() => {
+    if (!available) return;
+    if (chosenNode && data) {
+      ownsSelection.current = true;
+      select(
+        {
+          kind: "graph-node",
+          key: chosenNode.key,
+          claimId:
+            chosenNode.evidence.kind === "claim"
+              ? chosenNode.evidence.id
+              : undefined,
+          revision:
+            chosenNode.evidence.kind === "claim"
+              ? chosenNode.evidence.revision_id
+              : undefined,
+        },
+        details.current,
+      );
+    } else if (chosenEdge && data) {
+      ownsSelection.current = true;
+      select(
+        {
+          kind: "graph-edge",
+          relation: chosenEdge.relation,
+          evidenceKind: chosenEdge.evidence_kind,
+          evidenceId: chosenEdge.evidence_id,
+        },
+        details.current,
+      );
+    } else if (ownsSelection.current) {
+      ownsSelection.current = false;
+      select(null);
+    }
+  }, [chosenNode, chosenEdge, data, select, available]);
+  useEffect(() => {
+    if (available && !selection) setChoice(null);
+  }, [selection, available]);
   const settings = (
     <SimpleGrid cols={{ base: 1, sm: 2 }}>
       <TextInput
@@ -286,6 +463,17 @@ export function GraphExplorer({
       >
         Explore from an entity
       </Button>
+      {path?.status === "path" && data && (
+        <Button
+          variant="light"
+          onClick={() => {
+            setShowPath((value) => !value);
+            setChoice(null);
+          }}
+        >
+          {inPath ? "Return to exploration" : "Show shortest path on canvas"}
+        </Button>
+      )}
     </div>
   );
   return (
@@ -306,8 +494,7 @@ export function GraphExplorer({
       )}
       {expired && (
         <Alert color="yellow">
-          An input reached its retention deadline. Load the current graph
-          again.
+          An input reached its retention deadline. Load the current graph again.
         </Alert>
       )}
       {data && nodes.length === 0 && (
@@ -316,6 +503,24 @@ export function GraphExplorer({
           title="No eligible entities"
           description="This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."
         />
+      )}
+      {/* When the bounded read has no data to display (an error such as an
+          ineligible center, or a retention deadline), the canvas chrome is
+          unmounted with it. Keep the exploration entry point reachable so a
+          failed read can be corrected and reloaded from its new location. */}
+      {!read.isFetching && !data && (
+        <div
+          className="graph-chrome graph-explorer-recover"
+          data-graph-chrome=""
+        >
+          <Button
+            variant="default"
+            leftSection={<Settings2 size={iconSize.small} />}
+            onClick={() => setControlsOpened(true)}
+          >
+            Explore from an entity
+          </Button>
+        </div>
       )}
       {data && nodes.length > 0 && (
         <>
@@ -351,27 +556,23 @@ export function GraphExplorer({
                   leftSection={<Search size={iconSize.small} />}
                 />
                 <Text size="xs" c="dimmed">
-                  {listedNodes.length} matches in the {nodes.length}{" "}
-                  displayed entities. Select an item to inspect its evidence
-                  and relationships.
+                  {listedNodes.length} matches in the {nodes.length} displayed
+                  entities. Select an item to inspect its evidence and
+                  relationships.
                 </Text>
                 <div className="graph-node-list">
                   {listedNodes.map((node) => (
                     <button
                       className="graph-node-button"
                       key={node.key}
-                      onClick={() =>
-                        setChoice({ kind: "node", id: node.key })
-                      }
+                      onClick={() => setChoice({ kind: "node", id: node.key })}
                     >
                       <strong>{node.evidence.label}</strong>
                       <span className="feature-meta">
                         {label(node.evidence.kind)}
                       </span>
                       <span className="feature-meta">
-                        {node.evidence.qualifications
-                          .map(label)
-                          .join(" · ")}
+                        {node.evidence.qualifications.map(label).join(" · ")}
                       </span>
                     </button>
                   ))}
@@ -385,7 +586,10 @@ export function GraphExplorer({
               hop bound.
             </Text>
           )}
-          <div className="graph-chrome graph-explorer-status" data-graph-chrome="">
+          <div
+            className="graph-chrome graph-explorer-status"
+            data-graph-chrome=""
+          >
             <Text size="xs" c="dimmed" data-testid="exploration-counts">
               {nodes.length} displayed entities · {edges.length} directed
               relationships
@@ -456,20 +660,6 @@ export function GraphExplorer({
           >
             Show eligible overview
           </Button>
-          {path?.status === "path" && data && (
-            <Button
-              variant="light"
-              onClick={() => {
-                setShowPath((value) => !value);
-                setChoice(null);
-                setControlsOpened(false);
-              }}
-            >
-              {inPath
-                ? "Return to exploration"
-                : "Show shortest path on canvas"}
-            </Button>
-          )}
           {data && (
             <Text size="xs" className="feature-meta">
               Generation {shownView!.generation.id} · {label(shownView!.state)}{" "}
@@ -478,143 +668,20 @@ export function GraphExplorer({
           )}
         </Stack>
       </Drawer>
-      <Drawer
-        className="feature-drawer"
-        opened={!!choice && !!data}
-        onClose={() => setChoice(null)}
-        position="right"
-        title={chosenNode ? "Graph entity" : "Graph relationship"}
-        size="md"
-      >
-        {chosenNode && (
-          <Card
-            withBorder
-            p="sm"
-            data-testid="exploration-node"
-            style={{ overflowWrap: "anywhere" }}
-          >
-            <Stack gap="xs">
-              <Title order={5}>{chosenNode.evidence.label}</Title>
-              <Text size="sm">
-                {label(chosenNode.evidence.kind)} · {chosenNode.key}
-              </Text>
-              {chosenNode.evidence.claim && (
-                <Text size="sm">
-                  {label(chosenNode.evidence.claim.review)} ·{" "}
-                  {label(chosenNode.evidence.claim.freshness)} ·{" "}
-                  {label(chosenNode.evidence.claim.operational)}
-                </Text>
-              )}
-              {chosenNode.evidence.provenance.map((p, i) => (
-                <Text key={i} size="xs">
-                  {label(p.kind)} · {p.id}
-                  {p.path ? ` · ${p.path}` : ""}
-                  {p.revision ? ` · commit ${p.revision}` : ""}
-                  {p.snapshot_id ? ` · snapshot ${p.snapshot_id}` : ""}
-                </Text>
-              ))}
-              <Text size="xs">
-                {chosenNode.evidence.qualifications.map(label).join(" · ")}
-              </Text>
-              {witness && (
-                <Text size="sm">
-                  Shortest witness: {witness.edges.length} hops ·{" "}
-                  {witness.nodes
-                    .map((key) => nodeMap.get(key)?.evidence.label ?? key)
-                    .join(" → ")}
-                </Text>
-              )}
-              <Group>
-                <Button size="xs" onClick={() => inspect(chosenNode)}>
-                  Inspect selected evidence
-                </Button>
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => {
-                    setCenter(chosenNode.key);
-                    load(chosenNode.key);
-                  }}
-                >
-                  Explore connections
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  onClick={() => {
-                    onStart(chosenNode.key);
-                    setChoice(null);
-                  }}
-                >
-                  Set path start
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  onClick={() => {
-                    onEnd(chosenNode.key);
-                    setChoice(null);
-                  }}
-                >
-                  Set path end
-                </Button>
-              </Group>
-            </Stack>
-          </Card>
-        )}
-        {chosenEdge && (
-          <Card
-            withBorder
-            p="sm"
-            data-testid="exploration-edge"
-            style={{ overflowWrap: "anywhere" }}
-          >
-            <Stack gap="xs">
-              <Title order={5}>{label(chosenEdge.relation)} relationship</Title>
-              <Text size="sm">
-                Recorded direction:{" "}
-                {nodeMap.get(chosenEdge.from)?.evidence.label} →{" "}
-                {nodeMap.get(chosenEdge.to)?.evidence.label}
-              </Text>
-              <Text size="sm">
-                {label(chosenEdge.family)} ·{" "}
-                {chosenEdge.family === "provenance"
-                  ? "This relationship records an evidence contribution; it does not establish acceptance."
-                  : "This relationship records a static dependency or reference; runtime impact is not established."}
-              </Text>
-              <Text size="xs">
-                Evidence: {label(chosenEdge.evidence_kind)} ·{" "}
-                {chosenEdge.evidence_id} · relationship ordinal{" "}
-                {chosenEdge.evidence_ordinal}
-              </Text>
-              <Text size="xs">Relationship {chosenEdge.id}</Text>
-              <Group>
-                {edgeEvidence && (
-                  <Button size="xs" onClick={() => inspect(edgeEvidence)}>
-                    Inspect relationship evidence
-                  </Button>
-                )}
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() =>
-                    setChoice({ kind: "node", id: chosenEdge.from })
-                  }
-                >
-                  Inspect source entity
-                </Button>
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => setChoice({ kind: "node", id: chosenEdge.to })}
-                >
-                  Inspect target entity
-                </Button>
-              </Group>
-            </Stack>
-          </Card>
-        )}
-      </Drawer>
+      {/* Ask's frozen recalled graph is outside the Knowledge surface. Keep
+          its existing secondary graph controls within that investigation. */}
+      {!available && (
+        <Drawer
+          className="feature-drawer"
+          opened={!!choice && !!data}
+          onClose={() => setChoice(null)}
+          position="right"
+          title={chosenNode ? "Graph entity" : "Graph relationship"}
+          size="md"
+        >
+          {details.current}
+        </Drawer>
+      )}
     </section>
   );
 }

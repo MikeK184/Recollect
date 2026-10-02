@@ -1,6 +1,6 @@
 # Memory Lifecycle, Learning and Review
 
-Status: active
+Status: complete
 
 [Managed experience](../../contracts/memory-managed-experience.md) governs the 2026-09-28 agent-first setup correction.
 
@@ -91,7 +91,7 @@ testing those rules through their own paths.
 | `memory-provider-policy-and-learning` | shipped | contract-backed | pack | Delivered Luna/embedding-large gateway, policy/usage, canonical source learning and erasure with API/browser/real-model/runtime proof |
 | `memory-procedures-and-handovers` | shipped | adr-backed, contract-backed | pack | Delivered typed procedures, governed handovers and autonomous learning/revision/retirement/refresh with API/browser/real-Luna/runtime/erasure proof; human review is optional |
 | `memory-capture-reconciliation` | shipped | contract-backed | pack | Delivered attributed model inputs, bound session reconciliation, maintenance at capacity, recall-feedback exclusions and independent capture/knowledge time with database/native/browser/real-Luna proof |
-| `memory-desktop-workflows` | in-progress | adr-backed, contract-backed | pack | Readable memory/handover inspectors and standing settings with literal assertion search and preserved autonomous authority |
+| `memory-desktop-workflows` | shipped | adr-backed, contract-backed | pack | Readable memory/handover inspectors and standing settings with literal assertion search and preserved autonomous authority |
 | `memory-managed-experience` | shipped | contract-backed | pack | Managed autonomous defaults, simple Ask/notes and actionable owner MCP setup |
 
 ## Slice Dependencies
@@ -137,3 +137,7 @@ delivered locally with native/browser proof and preserved existing Brain data.
 The [dated mapping](../../mappings/managed-memory-experience-2026-09-28.md) records
 the operating defaults, initial failures, completed reruns and limits. The epic
 remains active for the separate desktop workflow and integrated acceptance scope.
+
+## Final desktop and tooling acceptance — 2026-10-01
+
+The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.

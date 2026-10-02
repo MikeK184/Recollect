@@ -122,16 +122,26 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
       ).generations.some((g: { state: string }) => g.state === "ready"),
     )
     .toBe(true);
+  // Baseline model usage before the navigation under test. Fixture source
+  // processing may have charged models already; what the contract forbids is a
+  // model call triggered by navigating to the graph view itself.
+  const usageBefore = (
+    await (
+      await page.request.get(`/api/brains/${fixture.brain}/models/usage`)
+    ).json()
+  ).total;
   // --- Navigation under test: capture every graph request from a fresh load.
   const requests = { view: 0, rebuild: 0, path: 0, analytics: 0 };
   const exploreRequests: string[] = [];
   page.on("request", (request) => {
     if (request.method() !== "POST") return;
     const url = request.url();
-    if (url.endsWith(`/api/brains/${fixture.brain}/graph/view`)) requests.view++;
+    if (url.endsWith(`/api/brains/${fixture.brain}/graph/view`))
+      requests.view++;
     if (url.endsWith(`/api/brains/${fixture.brain}/graph/rebuild`))
       requests.rebuild++;
-    if (url.endsWith(`/api/brains/${fixture.brain}/graph/path`)) requests.path++;
+    if (url.endsWith(`/api/brains/${fixture.brain}/graph/path`))
+      requests.path++;
     if (url.includes(`/api/brains/${fixture.brain}/graph/analytics`))
       requests.analytics++;
     if (url.endsWith(`/api/brains/${fixture.brain}/graph/explore`))
@@ -157,15 +167,17 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
   const usage = await (
     await page.request.get(`/api/brains/${fixture.brain}/models/usage`)
   ).json();
-  expect(usage.total).toBe(0);
+  // Navigation must not start a model call: the total is unchanged from the
+  // pre-navigation baseline.
+  expect(usage.total).toBe(usageBefore);
   // --- Geometry: the canvas region exceeds the combined chrome height.
   const geometry = await page.evaluate(() => {
     const surface = document.querySelector(".graph-surface");
     const stage = document.querySelector(".graph-canvas");
     if (!surface || !stage) return null;
-    const chrome = [...surface.querySelectorAll<HTMLElement>("[data-graph-chrome]")].map(
-      (element) => element.getBoundingClientRect().height,
-    );
+    const chrome = [
+      ...surface.querySelectorAll<HTMLElement>("[data-graph-chrome]"),
+    ].map((element) => element.getBoundingClientRect().height);
     return {
       canvas: stage.getBoundingClientRect().height,
       chrome: chrome.reduce((sum, height) => sum + height, 0),
@@ -177,12 +189,24 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
     `graph geometry @1440x900: canvas=${Math.round(geometry!.canvas)}px combined chrome=${Math.round(geometry!.chrome)}px parts=${geometry!.parts.map((h) => Math.round(h)).join("+")}px`,
   );
   expect(geometry!.canvas).toBeGreaterThan(geometry!.chrome);
+  // Fresh navigation at each width exercises the initial layout, not only a
+  // resized graph whose positions were inherited from the previous viewport.
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.reload();
+    await expect(canvas).toHaveAttribute("data-ready", "true");
+    await page.screenshot({ path: `../.cache/ui/graph-review-${width}.png` });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
   // The moved controls stay reachable in their new canvas-chrome locations.
   await expect(
     page.getByRole("textbox", { name: "Inspect graph entity", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: "Inspect graph relationship", exact: true }),
+    page.getByRole("textbox", {
+      name: "Inspect graph relationship",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Explore from an entity", exact: true }),
@@ -218,7 +242,10 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
     await route.fulfill({ json: markPartial(await response.json()) });
   });
   await loadGraph(page);
-  const coverage = page.getByRole("button", { name: "Coverage limits", exact: true });
+  const coverage = page.getByRole("button", {
+    name: "Coverage limits",
+    exact: true,
+  });
   await expect(coverage).toBeVisible();
   await expect(coverage).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByText("source text unavailable")).not.toBeVisible();

@@ -69,6 +69,8 @@ pub struct BrainDeletionPreview {
     pub brain_id: Uuid,
     pub name: String,
     pub archived: bool,
+    #[serde(with = "decimal_counter")]
+    #[schema(value_type = String)]
     pub closure: i64,
     pub counts: BrainDeletionCounts,
     pub repository_content_allowed: bool,
@@ -79,6 +81,8 @@ pub struct BrainDeletionPreview {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BrainDeletionInput {
+    #[serde(with = "decimal_counter")]
+    #[schema(value_type = String)]
     pub closure: i64,
     pub confirmation: String,
 }
@@ -89,6 +93,8 @@ pub struct BrainDeletionStatus {
     pub id: Uuid,
     pub brain_id: Uuid,
     pub actor_id: Option<Uuid>,
+    #[serde(with = "decimal_counter")]
+    #[schema(value_type = String)]
     pub closure: i64,
     pub disposition: String,
     pub created_at: DateTime<Utc>,
@@ -116,6 +122,73 @@ pub struct BrainDeletionFence {
     pub brain_id: Uuid,
     pub deletion_id: Uuid,
     pub sequence: i64,
+}
+
+// PostgreSQL's 60-bit closure fingerprint exceeds JavaScript's exact integer
+// range. Keep the database value intact and make the HTTP token opaque. Numeric
+// input remains readable for pre-existing native clients and SQL JSON parsing.
+mod decimal_counter {
+    use serde::{Deserialize, Deserializer, Serializer, de::Error};
+
+    pub fn serialize<S: Serializer>(value: &i64, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&value.to_string())
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<i64, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Counter {
+            Decimal(String),
+            Integer(i64),
+        }
+        let value = match Counter::deserialize(deserializer)? {
+            Counter::Decimal(value) => value.parse::<i64>().map_err(D::Error::custom)?,
+            Counter::Integer(value) => value,
+        };
+        if !(0..(1_i64 << 60)).contains(&value) {
+            return Err(D::Error::custom("Invalid deletion preview counter"));
+        }
+        Ok(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BrainDeletionInput;
+
+    #[test]
+    fn closure_survives_a_browser_json_round_trip_without_numeric_rounding() {
+        let input = BrainDeletionInput {
+            closure: (1_i64 << 60) - 1,
+            confirmation: "Disposable".into(),
+        };
+        let wire = serde_json::to_value(&input).unwrap();
+        assert_eq!(wire["closure"], "1152921504606846975");
+        assert_eq!(
+            serde_json::from_value::<BrainDeletionInput>(wire).unwrap(),
+            input
+        );
+        let native =
+            serde_json::json!({"closure": input.closure, "confirmation": input.confirmation});
+        assert_eq!(
+            serde_json::from_value::<BrainDeletionInput>(native)
+                .unwrap()
+                .closure,
+            input.closure
+        );
+        for invalid in [
+            serde_json::json!(-1),
+            serde_json::json!("1152921504606846976"),
+            serde_json::json!("1.1"),
+        ] {
+            assert!(
+                serde_json::from_value::<BrainDeletionInput>(
+                    serde_json::json!({"closure":invalid,"confirmation":"Disposable"})
+                )
+                .is_err()
+            );
+        }
+    }
 }
 
 fn unreadable(code: &'static str, message: &'static str) -> Error {

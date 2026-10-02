@@ -1,6 +1,6 @@
 # Separated agent and tool wiring authority
 
-Status: planned
+Status: shipped
 Owning epic: `docs/roadmap/epics/mcp-coordination.md`
 Work type: product
 
@@ -70,10 +70,10 @@ Work type: product
 ## Closeout
 
 - Planned: Coding-agents view removal, legacy state resolution, Agents promotion, single connect flow, session and context views, where-it-runs explanation and tool-group naming.
-- Shipped: Not yet implemented. This pack is the specification; delivery evidence is recorded here only after the checks above run.
-- Not shipped: OAuth, plugin packaging, new hosts, capture hooks and device dedupe changes remain outside this slice.
-- New blockers: None recorded at authoring time.
-- Docs updated: Owning epic slice map and dependencies, active execution index, desktop contract Agents and Connections rows, managed-experience amendment note, and the desktop runbook function map.
-- Validation: Not yet executed for this slice.
-- Version: N/A: no release policy exists.
-- Commit: Uncommitted.
+- Shipped: Locally delivered on 2026-10-01. Agents is the sole incoming coding-agent setup location, including legacy Connections redirects; Connections owns outbound Brain-managed MCP. One host-selection setup flow, session/context views, plain placement descriptions and consistent tool-group Use/Manage/Share presentation preserve existing authority. The base checkout already supplied part of the route split; this closeout covers the finished behavior. See the [continuation evidence](../../../mappings/desktop-continuation-2026-10-01.md).
+- Not shipped: OAuth, published plugin packaging, new hosts and new capture hooks remain outside this slice. External Context7 output is recorded separately from transport success in the evidence mapping; configured placement alone is never counted as executed.
+- New blockers: None for this slice. Unrelated desktop acceptance packs and the held Ask slice remain open.
+- Docs updated: Governing desktop priority amendment, dated evidence, desktop/agent/capture runbooks as applicable, this pack, owning epic and epic/execution indexes, and CONTINUE_HERE.md.
+- Validation: Browser direct-token/revocation, legacy-route, managed setup, scoped workspace, capture, grants, private runner and uncertain-outcome cases passed. All four isolated native/installed-host cases passed, including actual Codex 0.154.0 and Claude Code 2.1.270 discovery, fresh scope, capture publication, and central/local/private downstream execution. Anonymous Context7 discovery and a real React library lookup passed through the host-facing Recollect MCP transport. Second-agent owner visual review passed. Web design/typecheck/build, workspace Rust tests, platform integration with documented focused reruns, Clippy, formatting, all 32 governance checker tests and git diff --check passed. The evidence mapping distinguishes opt-in skips, real external results and current deployment.
+- Version: N/A: no release policy or version bump in this scope.
+- Commit: Uncommitted; no commit, push or release performed.

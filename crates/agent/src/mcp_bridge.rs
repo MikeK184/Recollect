@@ -24,6 +24,7 @@ struct Bridge {
     instructions: Option<String>,
     capture: Option<crate::capture_launch::Launch>,
     scope_changes: Arc<tokio::sync::Mutex<()>>,
+    plugin_guard: bool,
 }
 fn bounded(result: CallToolResult) -> CallToolResponse {
     if serde_json::to_vec(&result).is_ok_and(|bytes| bytes.len() < 1024 * 1024 - 1024) {
@@ -51,6 +52,23 @@ fn refresh_tool() -> Tool {
     )
 }
 impl Bridge {
+    async fn check_plugin_destination(&self) -> Result<()> {
+        if !self.plugin_guard {
+            return Ok(());
+        }
+        let (config, _) = crate::plugin_runtime::selected(
+            crate::plugin_storage::config()?,
+            &std::env::current_dir()?,
+        )
+        .await?;
+        ensure!(
+            config.brain == self.brain
+                && config.device == self.device.device_id
+                && config.endpoint == self.client.endpoint,
+            "Plugin destination changed. Reconnect this host's MCP server before using its tools."
+        );
+        Ok(())
+    }
     async fn refresh(&self) -> Result<Value> {
         // Fresh remote discovery establishes current role before local scanning.
         let tools = self
@@ -123,6 +141,9 @@ impl ServerHandler for Bridge {
         page: Option<PaginatedRequestParams>,
         _: RequestContext<RoleServer>,
     ) -> std::result::Result<ListToolsResult, ErrorData> {
+        self.check_plugin_destination()
+            .await
+            .map_err(|_| unavailable())?;
         if page.is_some_and(|p| p.cursor.is_some()) {
             return Err(ErrorData::invalid_params(
                 "Use the single bounded catalogue page.",
@@ -144,6 +165,9 @@ impl ServerHandler for Bridge {
         request: CallToolRequestParams,
         _: RequestContext<RoleServer>,
     ) -> std::result::Result<CallToolResponse, ErrorData> {
+        self.check_plugin_destination()
+            .await
+            .map_err(|_| unavailable())?;
         if request.name == "workspace.refresh" {
             if request.arguments.as_ref().is_some_and(|v| !v.is_empty()) {
                 return Err(ErrorData::invalid_params(
@@ -216,6 +240,27 @@ pub async fn serve(
     workspace_root: Option<PathBuf>,
     capture: Option<crate::capture_launch::Launch>,
 ) -> Result<()> {
+    serve_inner(client, device, brain, workspace_root, capture, false).await
+}
+
+pub async fn serve_plugin(
+    client: Client,
+    device: StoredDevice,
+    brain: Uuid,
+    workspace_root: Option<PathBuf>,
+    capture: Option<crate::capture_launch::Launch>,
+) -> Result<()> {
+    serve_inner(client, device, brain, workspace_root, capture, true).await
+}
+
+async fn serve_inner(
+    client: Client,
+    device: StoredDevice,
+    brain: Uuid,
+    workspace_root: Option<PathBuf>,
+    capture: Option<crate::capture_launch::Launch>,
+    plugin_guard: bool,
+) -> Result<()> {
     ensure!(
         client.endpoint == device.endpoint,
         "Saved pairing belongs to another endpoint."
@@ -244,6 +289,7 @@ pub async fn serve(
         workspace_root,
         capture,
         scope_changes: Arc::new(tokio::sync::Mutex::new(())),
+        plugin_guard,
     };
     // Reuse the same bounded, cancellation-safe pipe forwarding as the managed
     // process supervisor. The SDK remains responsible for JSON-RPC parsing.

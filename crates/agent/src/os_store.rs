@@ -16,7 +16,7 @@ use core_foundation::{
 };
 use core_foundation_sys::base::CFRelease;
 use std::{
-    ffi::c_void,
+    ffi::{CString, c_char, c_void},
     path::{Path, PathBuf},
     ptr,
 };
@@ -41,11 +41,10 @@ unsafe extern "C" {
     fn SecAccessCreate(
         descriptor: CFStringRef,
         trustedList: CFArrayRef,
-        owner: *const c_void,
         accessRef: *mut SecAccessRef,
     ) -> OSStatus;
     fn SecTrustedApplicationCreateFromPath(
-        path: CFStringRef,
+        path: *const c_char,
         trustedApp: *mut SecTrustedApplicationRef,
     ) -> OSStatus;
     fn SecItemAdd(attributes: CFDictionaryRef, result: *mut CFTypeRef) -> OSStatus;
@@ -103,6 +102,7 @@ pub fn companion_binaries(exe_dir: &Path) -> Vec<PathBuf> {
         "recollect-agent",
         "recollect-mcp-bridge",
         "recollect-mcp-runner",
+        "recollect-plugin",
     ]
     .iter()
     .map(|name| exe_dir.join(format!("{name}{suffix}")))
@@ -120,13 +120,9 @@ fn trusted_access(label: &str) -> Result<Option<Release>> {
     }
     for path in paths {
         let Some(text) = path.to_str() else { continue };
+        let path = CString::new(text).map_err(|_| unavailable())?;
         let mut trusted: SecTrustedApplicationRef = ptr::null();
-        let status = unsafe {
-            SecTrustedApplicationCreateFromPath(
-                CFString::new(text).as_concrete_TypeRef(),
-                &mut trusted,
-            )
-        };
+        let status = unsafe { SecTrustedApplicationCreateFromPath(path.as_ptr(), &mut trusted) };
         if status == SUCCESS && !trusted.is_null() {
             apps.push(trusted);
         }
@@ -140,7 +136,6 @@ fn trusted_access(label: &str) -> Result<Option<Release>> {
         SecAccessCreate(
             CFString::new(label).as_concrete_TypeRef(),
             list.as_concrete_TypeRef(),
-            ptr::null(),
             &mut access,
         )
     };
@@ -174,7 +169,7 @@ pub fn save(service: &str, account: &str, secret: &[u8]) -> Result<()> {
         if let Some(access) = &access {
             pairs.push((
                 constant(kSecAttrAccess),
-                CFType::wrap_under_create_rule(access.0 as CFTypeRef),
+                CFType::wrap_under_get_rule(access.0 as CFTypeRef),
             ));
         }
         let attributes = CFDictionary::from_CFType_pairs(&pairs);
@@ -220,6 +215,17 @@ pub fn delete(service: &str, account: &str) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn security_framework_accepts_the_current_executable_path() {
+        // Builds an in-memory ACL only; never reads or changes the Keychain.
+        // A CFString pointer passed to the C path API cannot establish trust.
+        assert!(
+            trusted_access("Recollect path ABI proof")
+                .unwrap()
+                .is_some()
+        );
+    }
 
     #[test]
     fn companion_binaries_lists_only_existing_siblings() {

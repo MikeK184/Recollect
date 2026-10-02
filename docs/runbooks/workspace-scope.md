@@ -4,10 +4,10 @@ For the current route/menu map, see the [desktop guide](desktop-experience.md).
 
 ## Purpose and Prerequisites
 
-Use a paired native companion, installed Git and an accessible Brain. Publishing
-checkout metadata requires writer/admin access; readers may create their own
-working tasks. Follow [device pairing](device-pairing.md) for personal endpoint
-and OS-store setup. Browser sign-in and workspace selection do not grant tool
+Use the [connected plugin](../../plugins/recollect/README.md), installed Git and
+an accessible Brain. Publishing checkout metadata requires writer/admin access;
+readers may create their own working tasks. Read-only local discovery needs no
+connection. The plugin keeps endpoint and credential setup in personal OS storage. Browser sign-in and workspace selection do not grant tool
 execution or repository publication authority.
 
 ## Procedure
@@ -20,19 +20,22 @@ brain = "bankit"
 ```
 
 Prefer the Brain UUID shown in the browser when names are ambiguous. Keep
-`RECOLLECT_URL` and the OS credential profile personal. Do not add endpoint or
+the plugin endpoint and OS credential personal. Do not add endpoint or
 credentials to the workspace file. A nearer nested selector defines a separate
 boundary, including when it is invalid.
 
-From the Recollect repository, inspect then publish the catalogue for your chosen
+Use the installed plugin runtime to inspect, then publish metadata for your chosen
 workspace directory:
 
 ```sh
-cargo build -p recollect-agent
-./target/debug/recollect-agent workspace discover /path/to/workspace
-./target/debug/recollect-agent workspace refresh /path/to/workspace
-./target/debug/recollect-agent workspace list /path/to/workspace
+PLUGIN_RUNTIME=/absolute/installed/plugin/bin/recollect-plugin
+"$PLUGIN_RUNTIME" workspace discover /path/to/workspace
+"$PLUGIN_RUNTIME" workspace refresh /path/to/workspace
+"$PLUGIN_RUNTIME" workspace list /path/to/workspace
 ```
+
+Source-checkout developers may still build `recollect-agent` and use its legacy
+paired profile; a plugin consumer needs no Cargo or separate companion.
 
 Discovery is read-only and works from a subdirectory below the selector. Refresh
 uploads origin/branch/HEAD/dirty observations, not source contents. Examine
@@ -51,19 +54,20 @@ parent into an independent child. **Change scope** affects future operations;
 **Recorded operations** and **Scope history** retain their original selections.
 **Close task** stops new operations without closing its children.
 
-The CLI provides the same operations. Set the ID variables below from the
+Normal plugin sessions create and close their own tasks automatically. The CLI
+provides explicit operations for inspection or deliberate scope management. Set the ID variables below from the
 catalogue and task JSON; these UUIDs identify resources and are not credentials:
 
 ```sh
-./target/debug/recollect-agent scope start "$BRAIN_ID" "Investigate Vault" \
+"$PLUGIN_RUNTIME" scope start "$BRAIN_ID" "Investigate Vault" \
   --repository "$REPOSITORY_ID" --area "$AREA_ID" \
   --environment "$ENVIRONMENT_ID" --workspace "$WORKSPACE_ID"
-./target/debug/recollect-agent scope begin "$BRAIN_ID" "$TASK_ID" context
-./target/debug/recollect-agent scope fork "$BRAIN_ID" "$TASK_ID" "Repository review"
-./target/debug/recollect-agent scope inspect "$BRAIN_ID" "$TASK_ID"
-./target/debug/recollect-agent scope change "$BRAIN_ID" "$TASK_ID" "$BASE_SCOPE_ID" \
+"$PLUGIN_RUNTIME" scope begin "$BRAIN_ID" "$TASK_ID" context
+"$PLUGIN_RUNTIME" scope fork "$BRAIN_ID" "$TASK_ID" "Repository review"
+"$PLUGIN_RUNTIME" scope inspect "$BRAIN_ID" "$TASK_ID"
+"$PLUGIN_RUNTIME" scope change "$BRAIN_ID" "$TASK_ID" "$BASE_SCOPE_ID" \
   --repository "$OTHER_REPOSITORY_ID"
-./target/debug/recollect-agent scope close "$BRAIN_ID" "$TASK_ID"
+"$PLUGIN_RUNTIME" scope close "$BRAIN_ID" "$TASK_ID"
 ```
 
 Repeat repository/area flags for multiple selections. `scope change` replaces

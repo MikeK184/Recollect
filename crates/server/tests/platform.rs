@@ -22,6 +22,8 @@ struct Login {
     csrf: String,
 }
 
+#[path = "platform/agents.rs"]
+mod agents;
 #[path = "platform/brain_admission.rs"]
 mod brain_admission;
 #[path = "platform/managed.rs"]
@@ -2098,6 +2100,62 @@ impl Harness {
                 "/api/devices/pairings/poll",
                 None,
                 json!({"device_code":start["device_code"]}),
+            )
+            .await;
+        let token = poll["token"].as_str().unwrap().to_owned();
+        assert_eq!(
+            self.call(
+                "POST",
+                "/api/devices/pairings/finish",
+                None,
+                json!({"device_code":start["device_code"]})
+            )
+            .await
+            .0,
+            StatusCode::NO_CONTENT
+        );
+        (
+            poll["device"]["id"].as_str().unwrap().parse().unwrap(),
+            token,
+        )
+    }
+    async fn pair_with(
+        &self,
+        login: &Login,
+        name: &str,
+        host_kind: Option<&str>,
+        integration: Option<&str>,
+    ) -> (Uuid, String) {
+        let mut body = json!({"name": name});
+        if let Some(value) = host_kind {
+            body["host_kind"] = json!(value);
+        }
+        if let Some(value) = integration {
+            body["integration"] = json!(value);
+        }
+        let (_, start, _) = self
+            .call("POST", "/api/devices/pairings", None, body)
+            .await;
+        assert_eq!(
+            self.call(
+                "POST",
+                &format!(
+                    "/api/devices/pairings/{}/approve",
+                    start["user_code"].as_str().unwrap()
+                ),
+                Some(login),
+                json!({"approve":true})
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        let (_, poll, _) = self
+            .call(
+                "POST",
+                "/api/devices/pairings/poll",
+                None,
+                json!({"device_code":start["device_code"]})
             )
             .await;
         let token = poll["token"].as_str().unwrap().to_owned();

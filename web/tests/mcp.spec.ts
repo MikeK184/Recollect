@@ -41,7 +41,7 @@ async function setup(page: Page, name: string) {
   });
   await page.goto(`/brains/${brain.id}/connections?tab=connections`);
   const panel = page.getByRole("region", {
-    name: "MCP connections and profiles",
+    name: "MCP connections and tool groups",
     exact: true,
   });
   await expect(
@@ -102,21 +102,21 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   );
   await page.getByRole("tab", { name: "Tool groups", exact: true }).click();
   await f.panel
-    .getByRole("button", { name: "Create execution profile", exact: true })
+    .getByRole("button", { name: "Create tool group", exact: true })
     .click();
   dialog = page.getByRole("dialog", {
-    name: "Create execution profile",
+    name: "Create tool group",
     exact: true,
   });
-  await dialog.getByLabel(/^Profile name/).fill("Laboratory tools");
-  await dialog.getByLabel("Profile environment", { exact: true }).click();
+  await dialog.getByLabel(/^Tool group name/).fill("Laboratory tools");
+  await dialog.getByLabel("Tool group environment", { exact: true }).click();
   await page.getByRole("option", { name: "Laboratory", exact: true }).click();
-  await dialog.getByLabel("Profile connections", { exact: true }).click();
+  await dialog.getByLabel("Tool group connections", { exact: true }).click();
   await page
     .getByRole("option", { name: "Laboratory inspector", exact: true })
     .click();
   await dialog
-    .getByRole("button", { name: "Save profile", exact: true })
+    .getByRole("button", { name: "Save tool group", exact: true })
     .click();
   await expect(dialog).not.toBeVisible();
   const card = f.panel.getByTestId("mcp-profile");
@@ -127,7 +127,7 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   await card
     .getByRole("button", { name: "Inspect profile", exact: true })
     .click();
-  dialog = page.getByRole("dialog", { name: "Execution profile", exact: true });
+  dialog = page.getByRole("dialog", { name: "Tool group", exact: true });
   await dialog
     .getByRole("button", { name: "Select myself for Use", exact: true })
     .click();
@@ -297,7 +297,7 @@ test("delegated reader can manage or share independently and loses cached tools 
   );
   await reader.goto(`/brains/${f.brain.id}/connections?tab=profiles`);
   const panel = reader.getByRole("region", {
-    name: "MCP connections and profiles",
+    name: "MCP connections and tool groups",
     exact: true,
   });
   const card = panel.getByTestId("mcp-profile");
@@ -312,17 +312,20 @@ test("delegated reader can manage or share independently and loses cached tools 
     .getByRole("button", { name: "Inspect profile", exact: true })
     .click();
   let dialog = reader.getByRole("dialog", {
-    name: "Execution profile",
+    name: "Tool group",
     exact: true,
   });
   await expect(
-    dialog.getByRole("heading", { name: "Profile permissions", exact: true }),
+    dialog.getByRole("heading", {
+      name: "Tool group permissions",
+      exact: true,
+    }),
   ).not.toBeVisible();
   await dialog
-    .getByLabel("Profile description", { exact: true })
+    .getByLabel("Tool group description", { exact: true })
     .fill("Managed by a Brain reader");
   await dialog
-    .getByRole("button", { name: "Save profile", exact: true })
+    .getByRole("button", { name: "Save tool group", exact: true })
     .click();
   await expect(dialog).not.toBeVisible();
   await expect(card).toContainText("Managed by a Brain reader");
@@ -339,7 +342,7 @@ test("delegated reader can manage or share independently and loses cached tools 
   await card
     .getByRole("button", { name: "Inspect profile", exact: true })
     .click();
-  await expect(dialog.getByLabel(/^Profile name/)).not.toBeVisible();
+  await expect(dialog.getByLabel(/^Tool group name/)).not.toBeVisible();
   await dialog
     .getByRole("button", { name: "Select myself for Use", exact: true })
     .click();
@@ -448,8 +451,8 @@ test("desktop registers a paired private runner, selects exact placement and han
     .getByLabel("Non-secret settings", { exact: true })
     .fill('{"region":"test"}');
   await dialog.getByRole("button", { name: "Continue", exact: true }).click();
-  await dialog.getByLabel(/^Execution placement/).click();
-  await page.getByRole("option", { name: "private", exact: true }).click();
+  await dialog.getByLabel(/^Where this connection runs/).click();
+  await page.getByRole("option", { name: /^Private-network runner/ }).click();
   await dialog.getByLabel(/^Private runner/).click();
   await page
     .getByRole("option", { name: "Private lab runner · Offline", exact: true })

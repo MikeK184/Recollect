@@ -32,7 +32,7 @@ type Input = components["schemas"]["McpConnectionInput"];
 // stored noun, and say what each one decides: which network can reach the target.
 const placementLabel: Record<string, string> = {
   central: "Central service · the Recollect service reaches the target",
-  local: "Paired device · your device's companion reaches the target",
+  local: "Paired device · your device's plugin runner reaches the target",
   private: "Private-network runner · a registered device on a private network",
 };
 export const placementText = (value: string) =>
@@ -418,8 +418,11 @@ function ConnectionForm({
                       Each runner is bound to one paired device. Register or
                       rename it on the Runners tab, and manage the device itself
                       in{" "}
-                      <Link to="/devices" search={{ code: undefined }}>
-                        Devices
+                      <Link
+                        to="/brains/$brainId/agents"
+                        params={{ brainId: props.brain.id }}
+                      >
+                        this Brain&apos;s Agents list
                       </Link>
                       .
                     </Text>

@@ -646,16 +646,22 @@ async fn restart_receipt(tool: &str, outcome: &str) {
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL, OS store and built native binaries"]
 async fn mcp_local_native_runner_and_cli_execute_on_the_paired_device() {
-    local_native(false, false).await;
-    local_native(true, false).await;
+    local_native(false, false, false).await;
+    local_native(true, false, false).await;
 }
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL, OS store and built native binaries"]
 async fn mcp_private_native_runner_executes_stdio_and_http_with_exact_registration() {
-    local_native(false, true).await;
-    local_native(true, true).await;
+    local_native(false, true, false).await;
+    local_native(true, true, false).await;
 }
-async fn local_native(http: bool, private: bool) {
+#[tokio::test]
+#[ignore = "Requires owned plugin runtime, Secret Service and databases"]
+async fn mcp_plugin_runner_flag_enables_and_disables_approved_execution() {
+    local_native(false, false, true).await;
+    local_native(true, true, true).await;
+}
+async fn local_native(http: bool, private: bool, plugin: bool) {
     use recollect_agent::{Client, CredentialSlot, StoredDevice};
     let hosted = if http {
         Some(http_fixture().await)
@@ -777,20 +783,56 @@ async fn local_native(http: bool, private: bool) {
         .as_ref()
         .map(|id| vec!["private-runner", id.as_str(), outbox.to_str().unwrap()])
         .unwrap_or_else(|| vec!["mcp-runner", outbox.to_str().unwrap()]);
-    let mut native = tokio::process::Command::new(&binary)
-        .env_clear()
-        .envs(
-            std::env::var_os("DBUS_SESSION_BUS_ADDRESS")
-                .map(|value| ("DBUS_SESSION_BUS_ADDRESS", value)),
+    let plugin_root = PathBuf::from(&h.state.config.artifact_dir).join("plugin-runner");
+    let plugin_binary = binary.with_file_name("recollect-plugin");
+    let mut native = if plugin {
+        recollect_agent::plugin_storage::directory(&plugin_root).unwrap();
+        let config = recollect_agent::plugin_storage::Config {
+            endpoint: endpoint.clone(),
+            brain,
+            device,
+            profile: profile_name.clone(),
+            with_runner: false,
+            runner_id: private_id.as_ref().map(|id| id.parse().unwrap()),
+        };
+        recollect_agent::plugin_storage::write(&plugin_root.join("config.json"), &config).unwrap();
+        let mut connect = tokio::process::Command::new(&plugin_binary);
+        connect.env("RECOLLECT_PLUGIN_DATA", &plugin_root).args([
+            "connect",
+            "--url",
+            &endpoint,
+            "--brain",
+            &brain.to_string(),
+            "--with-runner",
+        ]);
+        if let Some(id) = &private_id {
+            connect.args(["--runner-id", id]);
+        }
+        let output = connect.output().await.unwrap();
+        assert!(
+            output.status.success(),
+            "Plugin runner opt-in: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        None
+    } else {
+        Some(
+            tokio::process::Command::new(&binary)
+                .env_clear()
+                .envs(
+                    std::env::var_os("DBUS_SESSION_BUS_ADDRESS")
+                        .map(|value| ("DBUS_SESSION_BUS_ADDRESS", value)),
+                )
+                .env("RECOLLECT_URL", &endpoint)
+                .env("RECOLLECT_DEVICE_PROFILE", &profile_name)
+                .args(native_args)
+                .kill_on_drop(true)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .unwrap(),
         )
-        .env("RECOLLECT_URL", &endpoint)
-        .env("RECOLLECT_DEVICE_PROFILE", &profile_name)
-        .args(native_args)
-        .kill_on_drop(true)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+    };
     let path = format!(
         "/api/brains/{brain}/mcp/calls/{}",
         call["id"].as_str().unwrap()
@@ -827,21 +869,51 @@ async fn local_native(http: bool, private: bool) {
     .await
     .unwrap();
     assert_eq!(repeated["id"], call["id"]);
-    assert!(
-        tokio::process::Command::new("/bin/kill")
-            .args(["-INT", &native.id().unwrap().to_string()])
-            .status()
+    if let Some(native) = native.as_mut() {
+        assert!(
+            tokio::process::Command::new("/bin/kill")
+                .args(["-INT", &native.id().unwrap().to_string()])
+                .status()
+                .await
+                .unwrap()
+                .success()
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_secs(12), native.wait())
+                .await
+                .unwrap()
+                .unwrap()
+                .success()
+        );
+    } else {
+        let output = tokio::process::Command::new(&plugin_binary)
+            .env("RECOLLECT_PLUGIN_DATA", &plugin_root)
+            .args(["connect", "--url", &endpoint, "--brain", &brain.to_string()])
+            .output()
             .await
-            .unwrap()
-            .success()
-    );
-    assert!(
-        tokio::time::timeout(Duration::from_secs(12), native.wait())
-            .await
-            .unwrap()
-            .unwrap()
-            .success()
-    );
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "Reconnect without the flag must disable owned execution"
+        );
+        let config: recollect_agent::plugin_storage::Config =
+            recollect_agent::plugin_storage::read(&plugin_root.join("config.json")).unwrap();
+        assert!(!config.with_runner);
+        let lock =
+            recollect_agent::plugin_storage::private_file(&plugin_root.join("runner.lock"), false)
+                .unwrap();
+        let until = tokio::time::Instant::now() + Duration::from_secs(12);
+        loop {
+            if lock.try_lock().is_ok() {
+                break;
+            }
+            assert!(
+                tokio::time::Instant::now() < until,
+                "Disabling the plugin runner must stop its process"
+            );
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    }
     if !http {
         assert_eq!(
             tokio::fs::read_to_string(marker)

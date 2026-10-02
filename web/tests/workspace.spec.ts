@@ -336,6 +336,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     await dialog
       .getByRole("button", { name: "Attach origin", exact: true })
       .click();
+    await card.getByText("1 more origin", { exact: true }).click();
     await expect(
       page.getByText("Also known as example.test/Moved/infra", { exact: true }),
     ).toBeVisible();

@@ -18,14 +18,21 @@
 .ask-conversation {
   min-width: 0;
 }
+/* Empty state reads like a chat landing: the prompt is centered in the
+   conversation area and the composer sits beneath it, not above. */
+.ask-page.is-empty .ask-body {
+  align-items: center;
+}
+.ask-page.is-empty .ask-composer {
+  margin-top: 8px;
+}
 .ask-welcome {
-  min-height: 340px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 16px;
-  padding: 32px 0;
+  padding: 32px 0 16px;
 }
 .ask-welcome .brand img {
   width: 52px;
@@ -160,6 +167,10 @@
   padding: 16px 140px 16px 16px;
   font-size: 0.9375rem;
   min-height: 86px;
+}
+/* The landing composer starts as a single chat line and grows with input. */
+.ask-page.is-empty .ask-composer textarea {
+  min-height: 0;
 }
 .ask-composer > button {
   position: absolute;

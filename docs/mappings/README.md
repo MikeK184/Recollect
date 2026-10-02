@@ -11,6 +11,10 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Agent surface, Ask chat and desktop chrome refinements, 2026-10-03](agents-ask-chrome-refinements-2026-10-03.md)
+- [Per-Brain agent roster and external-MCP-through-Brain proof, 2026-10-02](brain-agent-roster-2026-10-02.md)
+- [Final desktop deployment and host acceptance, 2026-10-01](desktop-final-acceptance-2026-10-01.md)
+- [Desktop and Brain deletion continuation, 2026-10-01](desktop-continuation-2026-10-01.md)
 - [Atlas lifecycle proof and public benchmark reproduction, 2026-09-29](atlas-lifecycle-proof-2026-09-29.md)
 - [Codex memory skills and OpenCode MCP rendering, 2026-09-28](codex-plugin-skills-2026-09-28.md)
 - [Plugin/MCP direct auth without CLI, 2026-09-29](plugin-direct-auth-2026-09-29.md)
@@ -72,3 +76,5 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 - [Session capture interface evidence, 2026-09-14](session-capture-interfaces-2026-09-14.md)
 - [Agent memory MCP interface evidence, 2026-09-22](mcp-tools-2026-09-22.md)
 - [Installation interface and runtime evidence, 2026-09-22](installation-2026-09-22.md)
+
+- [Plugin-managed memory implementation evidence](plugin-session-memory-2026-10-01.md) — delivered; native plugin/runner proofs, final regression and preserved migration 030 deployment.

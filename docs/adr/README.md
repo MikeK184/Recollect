@@ -28,3 +28,5 @@ pending foundation documents as accepted authority.
 - [0015: Direct plugin and MCP user authentication without a CLI download](0015-direct-plugin-user-auth.md)
 - [0016: Irreversible Brain deletion through the canonical erasure path](0016-brain-deletion.md)
 - [0017: One knowledge surface, primary Ask and separated wiring](0017-desktop-knowledge-and-ask-experience.md)
+
+- [0018: Plugin-managed automatic agent memory](0018-plugin-managed-agent-memory.md)

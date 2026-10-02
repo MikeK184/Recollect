@@ -5,55 +5,54 @@
 | Epic | Status | Current focus |
 | --- | --- | --- |
 | [repository-governance.md](repository-governance.md) | complete | README presentation and peer comparison delivered locally; description and 19 topics verified on the existing public GitHub repository |
-| [developer-tooling.md](developer-tooling.md) | active | Add OpenCode v2 support for the existing project instructions, skills, roles and Context7 |
-| [product-platform.md](product-platform.md) | active | Desktop authority, shared light visual system, SVG identity, global/contextual routes and identity checks delivered; reopened for irreversible Brain deletion and the tiered knowledge surface |
-| [evidence-and-workspaces.md](evidence-and-workspaces.md) | active | Sources, repositories/manifests and agent/private workspace desktop workflows |
-| [memory-lifecycle.md](memory-lifecycle.md) | active | Readable memory/handovers and standing policy/capture/retention settings |
-| [hybrid-retrieval.md](hybrid-retrieval.md) | active | Governed temporary Ask and retained exact evidence search |
-| [graph-intelligence.md](graph-intelligence.md) | active | Canvas-first bounded graph workspace with exact scope and accessible inspection |
-| [mcp-coordination.md](mcp-coordination.md) | active | SWEG direct authentication repaired and verified with installed Codex 0.157.1; Keychain/environment guidance deployed. OAuth and plugin packaging remain undelivered. Codex memory skills and OpenCode MCP rendering in progress. Planned: direct plugin/MCP user auth with no CLI download |
-| [operational-readiness.md](operational-readiness.md) | active | Authorized Activity presentation and complete desktop/API/runtime acceptance; Atlas §6/§7 lifecycle matrix and HotpotQA reproduction shipped, LongMemEval run blocked on cost approval |
+| [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
+| [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
+| [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
+| [memory-lifecycle.md](memory-lifecycle.md) | complete | Memory/correction/retention and real-provider autonomous settings acceptance passed |
+| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Chat-style Ask landing and thread shipped 2026-10-03 over the unchanged model-grounded answer flow |
+| [graph-intelligence.md](graph-intelligence.md) | complete | Graph/path/analytics browser acceptance, bounded measurements and laptop/desktop visuals passed |
+| [mcp-coordination.md](mcp-coordination.md) | complete | Used-on-Brain per-Brain roster, global `/agents` page and the `GET /api/agents` account read shipped 2026-10-03 |
+| [operational-readiness.md](operational-readiness.md) | active | Assurance band hidden on healthy Brains and knowledge tab-strip removal shipped 2026-10-03; separate LongMemEval benchmark remains blocked on protocol and cost approval |
 
 ## Active frontier
 
-The [direct MCP setup](../execution/archive/mcp-direct-connections.md),
-[public retrieval benchmark](../execution/archive/operations-public-benchmark.md)
-and [Atlas lifecycle proof](../execution/archive/operations-atlas-lifecycle-proof.md)
-are locally delivered with dated runtime and measured evidence. OAuth/plugin
-packaging and the six desktop acceptance packs remain outside those closeouts.
+The complete [plugin integration replacement](../execution/archive/mcp-plugin-session-memory.md), approved October 1, is shipped as of October 2. [Current evidence](../../mappings/plugin-session-memory-2026-10-01.md) proves ordinary Codex/Claude/OpenCode sessions, automatic capture/learning/recall, optional runner execution, native packaging and preserved local deployment.
 
-The 2026-09-28 [managed memory correction](../execution/archive/memory-managed-experience.md)
-is delivered locally: autonomous agent operation and managed defaults replace ordinary manual tuning.
-It preserves the remaining desktop verification scope.
+The user's 2026-10-02 direction shipped as the
+[brain agent roster pack](../execution/archive/mcp-brain-agent-roster.md):
+exactly two integration kinds (plugin, direct MCP token), Devices out of global
+navigation with the pairing deep link preserved, a per-user agent roster inside
+each Brain's Agents surface, and the live external-MCP-through-Brain proof from
+the SWEG host ([evidence](../../mappings/brain-agent-roster-2026-10-02.md)).
 
-The user's 2026-09-29 decisions add three product directions and five planned packs.
-[ADR 0016](../../adr/0016-brain-deletion.md) makes a Brain irreversibly deletable
-with total erasure through the canonical mutation, journal and cleanup path, which
-reopens [Product platform and access](product-platform.md) from complete.
-[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) merges Memory,
-Sources, Graph and Repositories into one knowledge surface with a shared lineage
-inspector, makes the Ask question composer the default, splits Agents from
-Connections, and adds an exception-first assurance band. The live desktop was walked
-route by route on the running local stack to establish the evidence for those changes;
-the observations are summarized in the [desktop plan](../desktop-experience/README.md)
-amendment note rather than restated here.
+A follow-up 2026-10-03 direction refined that surface and the desktop chrome,
+and is shipped: the per-Brain roster shows only agents used on this Brain, a
+global `/agents` page (third global-nav entry) lists every agent with
+cross-Brain usage, Ask reads like a chat conversation over its unchanged
+model-grounded backend, the assurance band hides on healthy Brains, and the
+Knowledge pages dropped the tab strip that duplicates the sidebar. The archived
+packs are [agents-surface-refinement](../execution/archive/agents-surface-refinement.md),
+[ask-chat-conversation](../execution/archive/ask-chat-conversation.md) and
+[desktop-chrome-declutter](../execution/archive/desktop-chrome-declutter.md),
+with [live evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md).
 
-The user explicitly approved the [desktop experience](../desktop-experience/README.md)
-on 2026-09-26 and requested complete implementation plus an original SVG logo.
-[ADR 0014](../../adr/0014-desktop-experience-and-answers.md), the
-[desktop contract](../../contracts/desktop-experience.md) and
-[answer contract](../../contracts/retrieval-answers.md) govern the nine capability-owned slices. The authority slice is
-[shipped](../execution/archive/desktop-experience-contracts.md), together with the
-[shell](../execution/archive/platform-desktop-shell.md) and
-[MCP setup](../execution/archive/mcp-desktop-setup.md); six product and acceptance
-slices remain in progress. All twelve concepts are illustrative; actual behavior
-requires the [active packs](../execution/active/README.md)' tests. Existing
-completion records below describe the delivered baseline before this expansion.
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records the final local image at port 8787, preserved recorded inventory,
-completed desktop/identity/MCP/Ask/backend checks and the remaining domain and
-integrated verification. The deployment claim comes from actual readiness,
-browser and inventory proof, independently of authority approval or a build.
+The final backend and UI are deployed on the existing local installation. The
+four Knowledge/deletion/connection/assurance slices, resumed Ask-primary,
+OpenCode project setup and all six older desktop acceptance packs are shipped.
+The [October 1 final evidence](../../mappings/desktop-final-acceptance-2026-10-01.md)
+records actual deployment, preserved inventory, real-provider browser journeys,
+independent owner visuals and fresh versus carried verification. The earlier
+[continuation](../../mappings/desktop-continuation-2026-10-01.md) records the four
+preceding local closeouts before deployment.
+
+The Codex plugin and native OpenCode bridge also pass actual installed-host
+verification and are shipped. The OS approval gate is resolved, fresh native
+processes connect successfully, and disposable proof resources are cleaned up. LongMemEval is separately blocked on its
+proposed protocol and explicit cost approval. Published marketplace/OAuth remain outside these slices; direct user-token/device-code
+authentication and OpenCode automatic capture/recall are delivered. No commit, push or release was performed.
+
+Normal laptops and larger monitors take priority. Small-screen and additional
+keyboard/focus polish are optional under the October 1 desktop decision.
 
 The repository/foundation bootstrap is delivered locally. The accepted
 foundation documents capture the accepted independent Rust memory/MCP product
@@ -81,7 +80,7 @@ The Atlas implementation audit also delivered one bounded repair slice,
 `memory-capture-reconciliation`, before further retrieval consumers. The full
 29-slice implementation is delivered locally. The user-requested
 `operations-root-compose` follow-up is also delivered locally. The accepted desktop
-expansion is the current active work; it does not rewrite those closeout records.
+expansion is now delivered; it does not rewrite those historical closeout records.
 The CodeGraph developer-tooling slice is delivered locally and ready for use.
 The Atlas reference checkout is also available locally, with the requested
 pattern and comparison pages verified against the published site.
@@ -170,7 +169,7 @@ capture reuse and bounded lineage joins repair the observed recall bottlenecks.
 Recall p95 was 863 ms, with explicit backpressure and a 4.9-second maximum; all
 accepted writes were readable within 8.1 seconds. These are bounded synthetic
 observations, not production capacity. The final original pack and seven product epics were complete at that closeout;
-the subsequent desktop assignment now reopens their named slices. See the [handoff](../../../CONTINUE_HERE.md) for live startup/state
+the subsequent desktop assignment reopened named slices, whose October 1 desktop acceptance is now complete. See the [handoff](../../../CONTINUE_HERE.md) for live startup/state
 and the [evaluation](../../mappings/integrated-evaluations-2026-09-26.md) for current
 versus carried checks, preserved failures, paid usage and known limits.
 Future changes follow the [lifecycle](../../README.md) and resolve their own

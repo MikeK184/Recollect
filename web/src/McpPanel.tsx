@@ -38,7 +38,7 @@ export const rightsLabel = (rights: McpRights) =>
     rights.share && "Share",
   ]
     .filter(Boolean)
-    .join(" · ") || "No profile rights";
+    .join(" · ") || "No tool-group rights";
 export const availabilityLabel = (value: string) =>
   ({
     configured: "Configured · connection not checked",
@@ -52,11 +52,13 @@ export function McpPanel({
   actor,
   section = "connections",
   onSectionChange,
+  initialCall,
 }: {
   brain: Brain;
   actor: string;
   section?: "connections" | "profiles" | "runners" | "activity";
   onSectionChange?: (section: string | null) => void;
+  initialCall?: string;
 }) {
   const cache = useQueryClient();
   const [connection, setConnection] = useState<string | null>(null);
@@ -68,7 +70,9 @@ export function McpPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [setupSaved, setSetupSaved] = useState(false);
   const [session, setSession] = useState(() => crypto.randomUUID());
-  const [selectedCall, setSelectedCall] = useState<string | null>(null);
+  const [selectedCall, setSelectedCall] = useState<string | null>(
+    initialCall ?? null,
+  );
   const [run, setRun] = useState<{
     profile: string;
     tool: McpTool;
@@ -133,7 +137,7 @@ export function McpPanel({
       !catalogue.data.profiles.some((p) => p.id === profile)
     ) {
       setProfile(null);
-      setNotice("Profile access changed. The inspector was closed.");
+      setNotice("Tool-group access changed. The inspector was closed.");
     }
     if (profile === "new" && (!catalogue.data.can_configure || brain.archived))
       setProfile(null);
@@ -145,7 +149,7 @@ export function McpPanel({
         ))
     ) {
       setDiscover(null);
-      setNotice("Profile use changed. Cached tool results were cleared.");
+      setNotice("Tool-group use changed. Cached tool results were cleared.");
     }
   }, [
     catalogue.data,
@@ -174,7 +178,10 @@ export function McpPanel({
         "Unavailable environment")
       : "Brain-wide";
   return (
-    <section className="feature-view" aria-label="MCP connections and profiles">
+    <section
+      className="feature-view"
+      aria-label="MCP connections and tool groups"
+    >
       <Stack gap="lg">
         {connectorSetup && (
           <McpConnectorSetup
@@ -190,14 +197,6 @@ export function McpPanel({
               refresh();
             }}
           />
-        )}
-        {section === "profiles" && (
-          <Text size="sm">
-            Profiles are tool groups: choose which MCP connections an agent can
-            use together. For example, a Documentation profile could contain
-            GitLab and Confluence. Use permission is separate from changing or
-            sharing the group.
-          </Text>
         )}
         {notice && (
           <Alert
@@ -259,7 +258,7 @@ export function McpPanel({
                     disabled={brain.archived}
                     onClick={() => setProfile("new")}
                   >
-                    Create execution profile
+                    Create tool group
                   </Button>
                 )}
                 {section !== "runners" && (
@@ -275,8 +274,7 @@ export function McpPanel({
             )}
             {brain.archived && (
               <Alert color="gray">
-                This Brain is archived. Configuration and profile use are
-                paused.
+                This Brain is archived. Configuration and tool use are paused.
               </Alert>
             )}
             {section === "connections" && (
@@ -284,7 +282,7 @@ export function McpPanel({
                 {setupSaved && (
                   <Alert title="Connection saved · not tested" color="brand">
                     <Text size="sm">
-                      Add this connection to an execution profile and grant Use
+                      Add this connection to a tool group and grant Use
                       separately. Then choose a tool, review its inputs and
                       effects, and explicitly run it. Saving has made no tool
                       call.
@@ -292,7 +290,7 @@ export function McpPanel({
                     <Group mt="md">
                       {onSectionChange && (
                         <Button onClick={() => onSectionChange("profiles")}>
-                          Configure profile &amp; test
+                          Configure tool group &amp; test
                         </Button>
                       )}
                       <Button
@@ -314,7 +312,7 @@ export function McpPanel({
                   <EmptyState
                     icon={Unplug}
                     title="Tools, when you need them"
-                    description="Add an approved connection, then include it in a profile with explicit tool-use permissions."
+                    description="Add an approved connection, then include it in a tool group with explicit tool-use permissions."
                   />
                 )}
                 <div className="connection-grid">
@@ -370,7 +368,7 @@ export function McpPanel({
                 </div>
                 <Text size="xs" c="dimmed">
                   Saving a connection does not contact its server. A real test
-                  uses a profile with an explicit Use grant and may have
+                  uses a tool group with an explicit Use grant and may have
                   effects.
                 </Text>
                 {onSectionChange && (
@@ -379,7 +377,7 @@ export function McpPanel({
                     w="fit-content"
                     onClick={() => onSectionChange("profiles")}
                   >
-                    Manage profiles and test tools
+                    Manage tool groups and test tools
                   </Button>
                 )}
               </>
@@ -394,7 +392,7 @@ export function McpPanel({
                   <EmptyState
                     icon={ShieldCheck}
                     title="Choose who can use your tools"
-                    description="Execution profiles group connections and grant only the permissions each person or group needs."
+                    description="Tool groups organize connections and grant only the permissions each person or group needs."
                   />
                 )}
                 <div className="connection-grid">

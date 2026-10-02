@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./features/feature-views.css";
 import {
   Alert,
@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
+import { useLineageOverlay } from "./features/knowledge/selection";
 type Policy = components["schemas"]["RetentionPolicy"];
 type Settings = components["schemas"]["RetentionSettings"];
 type Erasure = components["schemas"]["ErasureStatus"];
@@ -179,7 +180,7 @@ function ErasureProgress({ brain, item }: { brain: string; item: Erasure }) {
       )}
       <Text size="xs" c="dimmed">
         {current.acknowledged_devices ?? 0} devices have acknowledged this
-        deletion position. Companion copies require device check-in or their
+        deletion position. Host-side copies require device check-in or their
         known expiry. Central completion does not confirm removal from offline
         devices or external backups.
       </Text>
@@ -209,6 +210,7 @@ export function EraseAction({
   name: string;
 }) {
   const [opened, setOpened] = useState(false);
+  useLineageOverlay(opened);
   const [attempt, setAttempt] = useState(0);
   const cache = useQueryClient();
   const command = useIdempotency();
@@ -317,7 +319,7 @@ export function EraseAction({
                     {!!preview.data.capture_event_fences && (
                       <Text size="sm">
                         {preview.data.capture_event_fences} capture events will
-                        be removed from companion inboxes during
+                        be removed from host inboxes during
                         synchronization.
                       </Text>
                     )}
@@ -476,11 +478,14 @@ export function RetentionPanel({
   brain,
   section = "settings",
   simple = false,
+  selectedRequest,
 }: {
   brain: Brain;
   section?: "settings" | "activity";
   simple?: boolean;
+  selectedRequest?: string;
 }) {
+  const focused = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [offset, setOffset] = useState(0);
   const policy = useQuery({
@@ -504,6 +509,10 @@ export function RetentionPanel({
       ),
     refetchInterval: 4000,
   });
+  useEffect(() => {
+    if (selectedRequest && erasures.data)
+      focused.current?.scrollIntoView({ block: "center" });
+  }, [selectedRequest, erasures.data]);
   return (
     <section className="feature-setting">
       <Stack>
@@ -574,7 +583,20 @@ export function RetentionPanel({
             ) : (
               !erasures.error &&
               erasures.data?.items.map((item) => (
-                <Card withBorder key={item.id} p="md">
+                <Card
+                  withBorder
+                  key={item.id}
+                  p="md"
+                  ref={item.id === selectedRequest ? focused : undefined}
+                  className={
+                    item.id === selectedRequest
+                      ? "activity-selected"
+                      : undefined
+                  }
+                  data-testid={
+                    item.id === selectedRequest ? "selected-erasure" : undefined
+                  }
+                >
                   <Stack gap="sm">
                     <Text size="sm">
                       {label(item.cause)} · {label(item.target.kind)} ·{" "}
@@ -590,7 +612,7 @@ export function RetentionPanel({
                           {item.graph_pending
                             ? " Graph cleanup pending. "
                             : " "}
-                          Offline companion copies require check-in.
+                          Offline host copies require check-in.
                         </Text>
                       </>
                     )}

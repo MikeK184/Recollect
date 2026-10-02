@@ -1,6 +1,6 @@
 # Evidence, Collections and Workspaces
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -71,7 +71,7 @@ it does not place a selector in the customer workspace.
 | `evidence-workspace-scope` | shipped | contract-backed | pack | Delivered nearest/nested discovery, private checkout catalogue, shared repository identities and independent immutable task/subagent operation scope with CLI/browser proof |
 | `evidence-repository-publication` | shipped | adr-backed, contract-backed | pack | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real SWEG proof |
 | `evidence-session-capture` | shipped | contract-backed | pack | Delivered actual Codex/Claude hooks, native setup/launch and durable delivery, original-scope learning, browser coverage/source controls and local/central retention with replay proof |
-| `evidence-desktop-workflows` | in-progress | adr-backed, contract-backed | pack | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
+| `evidence-desktop-workflows` | shipped | adr-backed, contract-backed | pack | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
 
 ## Slice Dependencies
 
@@ -105,3 +105,7 @@ from remaining current-code domain and integrated acceptance. The
 [desktop guide](../../runbooks/desktop-experience.md) documents the current function
 locations. Product/proof slices stay in progress until their required checks pass;
 prior shipped domain records remain historical evidence rather than redesign proof.
+
+## Final desktop and tooling acceptance — 2026-10-01
+
+The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
