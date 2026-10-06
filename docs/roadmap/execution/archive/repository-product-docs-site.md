@@ -1,6 +1,6 @@
 # Recollect Product and Documentation Website
 
-Status: in-progress
+Status: shipped
 Owning epic: `docs/roadmap/epics/repository-governance.md`
 Work type: governance
 
@@ -66,14 +66,18 @@ Work type: governance
 ## Closeout
 
 - Planned: Product site, canonical searchable guides, Actions publication and proof.
-- Shipped: Local branded product page, 27 canonical guides, search/navigation,
-  original assets and locked static build; publication acceptance remains in progress.
+- Shipped: Branded product page and 27 searchable canonical guides published at
+  `https://mikek184.github.io/Recollect/`, with original assets, responsive layout,
+  canonical edit links, locked build and automatic main-branch deployment.
 - Not shipped: Custom domain, analytics, application hosting and runtime changes.
-- New blockers: None at preparation.
+- New blockers: None; initial Actions build/deployment and live acceptance passed.
 - Docs updated: README, documentation entry point, site maintenance guide,
-  contract/index, owning epic/index and active execution index.
+  contract/index, deployment evidence/index, owning epic/index and execution indexes.
 - Validation: Locked dependency reinstall/build; 30 HTML routes and 1,484 local
   references/anchors; desktop/mobile browser layout, private-runner search/deep
   link, canonical edit links, code/setup copying; governance lint and 32 tests.
+  [Published acceptance](../../../mappings/public-product-docs-site-2026-10-06.md)
+  records the successful workflow, public HTTPS responses and live browser search.
 - Version: N/A; public documentation website, no application release.
-- Commit: Uncommitted during implementation; publication requires the website commit.
+- Commit: Website `696361919660688ebc850d86ea623421032230ca` pushed to
+  `origin/main`; this archived closeout follows in the containing Git history.

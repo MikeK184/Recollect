@@ -4,7 +4,7 @@
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
-| [repository-governance.md](repository-governance.md) | active | Build and publish the branded product site and searchable operator guides through GitHub Pages |
+| [repository-governance.md](repository-governance.md) | complete | Branded product site and 27 searchable canonical guides published through GitHub Pages; live HTTPS and browser acceptance passed |
 | [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
@@ -16,6 +16,10 @@
 | [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Approved Private Runner relationship cards, shared authorized metadata and independent laptop/wide acceptance delivered locally |
 
 ## Active frontier
+
+The [public product and docs site](../../mappings/public-product-docs-site-2026-10-06.md)
+is published and accepted. Main-branch guide changes rebuild the static site;
+this delivery does not host or deploy the Recollect application.
 
 The selected [General/inline environments and bounded Privacy follow-up](../../mappings/settings-demo-scenario-2026-10-06.md)
 is delivered and independently accepted. Reader/demo UI and canonical access

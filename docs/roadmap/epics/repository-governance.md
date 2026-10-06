@@ -1,6 +1,6 @@
 # Repository Governance
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -40,7 +40,7 @@ deferral for the two requested documentation skills.
 | `repository-readme-concept-imagery` | shipped | contract-backed | small-fix: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
 | `repository-readme-branded-workflows` | shipped | contract-backed | small-fix: image/documentation refinement using the existing original logo and accepted MCP scope/placement behavior; no runtime or interface change | Original identity on approved layouts and a closer Tool access illustration clarify environment scope and service dispatch |
 | `repository-readme-product-positioning` | shipped | contract-backed | small-fix: user-requested README copy refinement grounded in existing memory, environment, permission and runner contracts; no runtime or interface change | Lead with shared engineering memory, governed MCP tools and private execution as one self-hosted workflow |
-| `repository-product-docs-site` | in-progress | contract-backed | pack | Publish the branded product and searchable canonical operator guides through GitHub Pages |
+| `repository-product-docs-site` | shipped | contract-backed | pack | Branded product page and 27 canonical guides published through GitHub Pages, with successful Actions and live browser proof |
 
 ## Clarification closeout
 
@@ -171,3 +171,25 @@ unrelated roadmap slices. `./scripts/validate.sh` passed governance lint and all
   memory, MCP catalogue and private-runner behavior and recorded local proofs.
 - Version: N/A; documentation only.
 - Commit: User-authorized commit and push to `origin/main`; see containing Git history.
+
+## Public product and docs website closeout — 2026-10-06
+
+- Planned: A branded product page and searchable documentation on GitHub Pages.
+- Shipped: Static VitePress website at
+  [Recollect](https://mikek184.github.io/Recollect/) and
+  [Documentation](https://mikek184.github.io/Recollect/docs/), with original
+  logo/fonts/illustrations, 27 canonical guides, local search, code highlighting,
+  copy controls, responsive layout and automatic main-branch publication.
+  The GitHub About homepage now links to the site.
+- Not shipped: Custom domain, analytics, application hosting or product runtime changes.
+- New blockers: None for the website; existing product acceptance limits remain separate.
+- Docs updated: Root/docs READMEs, site maintenance guide, accepted site contract,
+  [deployment evidence](../../mappings/public-product-docs-site-2026-10-06.md),
+  mappings/index, this epic/index and archived pack/execution indexes.
+- Validation: Locked clean install/build, 30 HTML routes and 1,484 local references,
+  desktop/mobile navigation/search/copy/layout, governance lint and 32 tests.
+  GitHub Actions build/deploy passed; live product/docs/deep guides and assets
+  return HTTPS 200; public search opens the correct private-runner anchor.
+- Version: N/A; no application release bump.
+- Commit: Website `696361919660688ebc850d86ea623421032230ca` pushed to `origin/main`;
+  publication closeout follows in the containing Git history.
