@@ -3,6 +3,11 @@
 Observed: 2026-10-06
 Confidence: verified
 
+The [branded-workflow follow-up](readme-branded-workflows-2026-10-06.md) preserves
+the approved agent/private layouts, adds the original identity and replaces the
+environment illustration. It supersedes README consumption of these v2 assets;
+the generation and validation observations below remain historical.
+
 ## Sources and Method
 
 The user rejected the preceding SVG workflow artwork and requested generated

@@ -38,6 +38,7 @@ deferral for the two requested documentation skills.
 | `repository-readme-discoverability` | shipped | contract-backed | small-fix: user-requested README presentation and GitHub metadata using existing product authority; no runtime or interface change | Deliver the local README presentation and peer comparison; verify the description and 19 topics on the existing public GitHub repository |
 | `repository-readme-runner-workflows` | shipped | contract-backed | small-fix: bounded README and vector diagrams of accepted MCP scope, grants and execution; no runtime or interface change | Refresh host/status guidance and illustrate plugin/direct MCP, environment scope and private-runner request flow |
 | `repository-readme-concept-imagery` | shipped | contract-backed | small-fix: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
+| `repository-readme-branded-workflows` | shipped | contract-backed | small-fix: image/documentation refinement using the existing original logo and accepted MCP scope/placement behavior; no runtime or interface change | Original identity on approved layouts and a closer Tool access illustration clarify environment scope and service dispatch |
 
 ## Clarification closeout
 
@@ -132,3 +133,21 @@ unrelated roadmap slices. `./scripts/validate.sh` passed governance lint and all
   and whitespace checks. Temporary preview resources were closed.
 - Version: N/A; no release bump.
 - Commit: User-authorized follow-up local commit; see the containing Git history.
+
+## Branded README workflow closeout — 2026-10-06
+
+- Planned: Add the original identity to all three visuals, preserve the approved
+  agent/private layouts and improve environment/service flow fidelity.
+- Shipped: Three v3 images; compact Development group, scope/placement badges,
+  agent/request/result arrows, original logo/mark references, README dispatch
+  clarification and descriptive alt text. [Evidence](../../mappings/readme-branded-workflows-2026-10-06.md)
+  records prompts, inputs and rendered review.
+- Not shipped: Product/runtime changes, deployment, push or connectivity proof.
+- New blockers: None for this bounded artwork/documentation refinement.
+- Docs updated: README, assets/provenance, mappings/index, this epic/index and
+  continuation record. Earlier artwork remains historical.
+- Validation: Three valid RGB PNGs; all eight preview images loaded without
+  horizontal overflow; readable environment capture, 39 README links/anchors,
+  governance lint/32 tests and whitespace checks. Temporary resources closed.
+- Version: N/A; no release bump.
+- Commit: Continuing user-authorized local commit; see containing Git history.

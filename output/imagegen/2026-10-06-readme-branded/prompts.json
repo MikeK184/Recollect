@@ -1,0 +1,53 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "mode": "image edits and UI concept generation",
+  "logo_source": "web/public/brand/recollect-logo.svg",
+  "symbol_source": "web/public/brand/recollect-symbol.svg",
+  "logo_preparation": "Unchanged source SVGs rasterized by installed sharp only for reference inputs; final pixel edits use imagegen.",
+  "prompts": [
+    {
+      "key": "agent",
+      "refs": [
+        "docs/assets/recollect-agent-workflow-v2.png",
+        "output/imagegen/2026-10-06-readme-branded/original-logo-reference.png"
+      ],
+      "prompt": "Use case: compositing. Asset: existing Recollect GitHub README image. Image 1 is the EDIT TARGET, the user-approved agent overview. Image 2 is the ORIGINAL OFFICIAL LOGO to insert, containing the exact three interrupted arcs, sage inner loop, central ink diamond, small sage/amber dots, outlined Newsreader Recollect wordmark and sage final dot.\nMake only this precise brand correction: replace the small text-only 'Recollect.' at top left with the complete original mark-plus-wordmark from image 2. Preserve its correct proportions and exact shape/colors; do not redesign the mark or add an enclosing circle. Make the complete logo about 250px wide at the existing 1672px canvas, with enough clear space and the original position/alignment, safely above the main title. Blend its transparent background into the existing cream.\nKeep EVERY OTHER element, all words, main title 'Connect once. Keep context.', headings, compact cards, badges, host names, icons, arrow, spacing, canvas dimensions and palette exactly as in image 1. No new text. Do not modify the approved layout. Crisp image, coherent original brand."
+    },
+    {
+      "key": "runner",
+      "refs": [
+        "docs/assets/recollect-private-runner-v2.png",
+        "output/imagegen/2026-10-06-readme-branded/original-logo-reference.png",
+        "output/imagegen/2026-10-06-readme-branded/original-symbol-reference.png"
+      ],
+      "prompt": "Use case: compositing. Asset: existing Recollect GitHub README private-runner illustration. Image 1 is the EDIT TARGET, the user-approved private-runner workflow. Image 2 is the ORIGINAL OFFICIAL complete mark-plus-wordmark logo. Image 3 is the EXACT ORIGINAL MARK by itself.\nMake only two branding corrections: 1. Replace the small centered text-only 'Recollect.' at the top with the complete original logo from image 2, at roughly 225px width on the existing 1672px canvas, centered in the same header area with generous clear space. Preserve original aspect ratio, exact interrupted arcs, inner sage loop, central diamond, tiny sage/amber dots and outlined wordmark. 2. Replace the outline book icon in the lower-left Recollect 'Access & dispatch' card with the exact original mark from image 3, at the same compact icon size within the existing light icon tile.\nKeep EVERY OTHER element, words, proportions, cream/ink/sage styling, cards, main title 'Private tools. One connected workflow.', paired host, Office network boundary, tool identifiers, scope badges, footer and all arrows unchanged. In particular the runner-initiated outbound arrow must continue to point from private network to Recollect; requests point Recollect to runner, results return runner to Recollect. No coding-host labels or invented copy. No redesign or simplification of the original logo."
+    },
+    {
+      "key": "environment",
+      "refs": [
+        "docs/assets/recollect-private-runner-v2.png",
+        "output/tool-access-header-badges-2026-10-06/read.png",
+        "output/imagegen/2026-10-06-readme-branded/original-logo-reference.png",
+        "output/imagegen/2026-10-06-readme-branded/original-symbol-reference.png"
+      ],
+      "prompt": "Use case: ui-mockup. Asset: new landscape 16:9 Recollect GitHub README product/workflow illustration.\nInput roles: Image 1 is the USER-APPROVED private-runner visual: match its elegant serif headline, precise cards, cream/ink/sage identity and restrained workflow arrows. Image 2 is the REAL current compact Tool access UI: faithfully borrow its sage title bar, separate environment/count badges directly beneath title, dark square book/cube tiles, paper two-column body, single compact permission set beside each name and thin dividers; don't reproduce the full browser screenshot or installation identities. Images 3 and 4 are the EXACT ORIGINAL Recollect logo and mark, to reproduce faithfully rather than invent.\nPrimary request: redesign the previous 'The right tools for each environment' image so it feels like the actual approved Recollect product, and clearly explains that the coding agent asks Recollect, which checks an environment-scoped tool group before calling MCP servers using the Recollect service. This complements the private-runner diagram; here show ONLY Recollect-service execution.\nComposition: spacious and balanced, similar to image 1. Top a compact centered original mark-plus-wordmark logo from image 3, correct proportions and original colors. Serif main title 'Your environment. The right tools.' Small line 'Plugin or direct MCP'. Below, left column approximately 28 percent wide with two tasteful small product cards stacked: 'Coding agent' above, with terminal glyph and a small separate sage 'Development' badge; 'Recollect' below with the exact original mark from image 4 in its icon tile and the small caption 'Access & dispatch'. Two thin arrows connect agent to Recollect: downward 'Tool request', upward 'Result'.\nRight approximately 62 percent wide is a precise current-style compact tool-group card, NOT a giant poster panel. Pale sage header: dark ink square outline-book icon; serif title 'Development tools'; directly beneath title TWO SEPARATE compact badges 'Development' and '2 MCPs'. Far right tiny 'Enabled' state and restrained 'Edit' affordance. Ivory body split by thin vertical divider: left column title 'MCPs' with two small rows 'Exa' and 'Context7'; each cube tile, separate 'Brain-wide' scope badge and small outline-server badge 'Recollect service'. Right column title 'People', one compact avatar and name 'Alex', small muted 'Direct' badge, and exactly three aligned compact permission icons under the small column labels 'Use', 'Manage', 'Share'. Use play icon is pale green; Manage sliders and Share connected nodes are pale red. Do NOT duplicate effective/direct permission rows or add inheritance paragraphs. Slim footer 'Tools & testing →'. Keep fine warm grey lines and compact real UI proportions.\nThe tool-group card sits inside a subtle thin dashed boundary labelled 'Recollect service' so it is obvious this example's MCP calls run from that service. Thin arrows from the left Recollect card into the right MCPs section, labelled 'Approved call', and returning labelled 'Result'. At the bottom outside the boundary one quiet explanatory line only: 'Available in Development · MCP calls run from the Recollect service'.\nFaithful style: cream #f7f4ec canvas, paper #fffdf8, pale sage #e8f0e9 headers, ink #101b2a, sage #3d6b59 accents. Newsreader-like serif headings, compact Manrope-like controls and fine Lucide-style icons. No gradients, heavy shadows, neon, 3D, giant green/red buttons, full sidebar, modal, description paragraphs, customer names, UUIDs or extra host brands. Logo geometry must remain the original interrupted memory mark, never a new spiral, generic book or closed circle. All requested text must be readable and spelled correctly. Preserve spare margins and clear directional semantics. Environment is availability context, NOT a physical server/network; Brain-wide connection is narrowed by the Development group; permissions are independent."
+    }
+  ],
+  "assets": [
+    {
+      "key": "agent",
+      "source": "/Users/mike/.codex/generated_images/01a10d71-8838-75a0-93cf-3ce01e45d1ba/exec-780a8b71-b83d-467d-b7be-eadc678c80f0.png",
+      "destination": "docs/assets/recollect-agent-workflow-v3.png"
+    },
+    {
+      "key": "runner",
+      "source": "/Users/mike/.codex/generated_images/01a10d71-8838-75a0-93cf-3ce01e45d1ba/exec-8122cb86-9f01-43a6-ad5e-2ce6515964e2.png",
+      "destination": "docs/assets/recollect-private-runner-v3.png"
+    },
+    {
+      "key": "environment",
+      "source": "/Users/mike/.codex/generated_images/01a10d71-8838-75a0-93cf-3ce01e45d1ba/exec-3d287b69-f984-4a92-ba19-d3c1cf34c18b.png",
+      "destination": "docs/assets/recollect-environment-access-v3.png"
+    }
+  ]
+}

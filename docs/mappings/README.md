@@ -11,6 +11,8 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Original identity and clearer service/environment README workflows, 2026-10-06](readme-branded-workflows-2026-10-06.md)
+
 - [README imagery matching approved Recollect concepts, 2026-10-06](readme-concept-imagery-2026-10-06.md)
 
 - [README agent, environment and private-runner workflows, 2026-10-06](readme-runner-workflows-2026-10-06.md)

@@ -1,3 +1,20 @@
+# Branded README workflows — 2026-10-06
+
+All three README illustrations now use the original logo as reference. The
+approved agent/private compositions are preserved; environment v3 borrows the
+actual Tool access header/card language and shows agent → Recollect → approved
+MCP call/result, Development scope, Brain-wide connections, independent grants
+and Recollect-service dispatch. README explains that remote HTTP MCP servers
+are contacted by the central executor, rather than hosted by an environment.
+
+[Evidence, prompts and rendered preview](docs/mappings/readme-branded-workflows-2026-10-06.md).
+All PNGs, eight preview images/no overflow, 39 links/anchors, governance lint/32
+tests and whitespace pass. Original identity rendered to reference PNGs only;
+all artwork edits used built-in imagegen. No product/runtime/provider changes,
+deployment or push. Preview resources closed; no viewport override. Continuing
+local commit authorization; see containing Git history. Older assets/history
+remain retained. Version N/A.
+
 # README concept imagery replacement — 2026-10-06
 
 The user rejected the preceding SVG diagrams. Three built-in imagegen PNGs now
