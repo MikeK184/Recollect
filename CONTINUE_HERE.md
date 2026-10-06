@@ -1,3 +1,18 @@
+# README concept imagery replacement — 2026-10-06
+
+The user rejected the preceding SVG diagrams. Three built-in imagegen PNGs now
+replace them in the README, using approved compact Tool access/Private Runners
+concepts and the cream/ink/sage palette. Agent memory, environment permissions
+and private execution have generic example data and an explicit illustration
+caption; Connected badges are not renewed runtime evidence.
+
+[Evidence, prompts and preview](docs/mappings/readme-concept-imagery-2026-10-06.md).
+PNG validity, all eight preview images/no overflow, 39 README links/anchors,
+governance lint/32 tests and whitespace passed. Documentation/images only;
+no installation or provider operation. Temporary preview resources removed.
+Follow-up local commit under the existing user request; no push/version bump.
+The preceding SVG artifacts and acceptance records remain historical.
+
 # GitHub README workflow visuals and commit — 2026-10-06
 
 The user requested the newest local changes committed and more README visuals.

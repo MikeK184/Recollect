@@ -3,6 +3,11 @@
 Observed: 2026-10-06
 Confidence: verified
 
+The user subsequently rejected the SVG artwork. The
+[concept-imagery follow-up](readme-concept-imagery-2026-10-06.md) supersedes its
+README presentation; the observations and original artifacts below remain
+historical evidence.
+
 ## Sources and Method
 
 The user requested the newest changes committed and a GitHub README with more

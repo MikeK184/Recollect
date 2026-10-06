@@ -37,6 +37,7 @@ deferral for the two requested documentation skills.
 | `repository-license-and-readme` | shipped | contract-backed | small-fix: established user license choice, README and package metadata; no runtime change | Apply Apache-2.0 consistently, simplify the entry point and retain private GitHub visibility with authentic history |
 | `repository-readme-discoverability` | shipped | contract-backed | small-fix: user-requested README presentation and GitHub metadata using existing product authority; no runtime or interface change | Deliver the local README presentation and peer comparison; verify the description and 19 topics on the existing public GitHub repository |
 | `repository-readme-runner-workflows` | shipped | contract-backed | small-fix: bounded README and vector diagrams of accepted MCP scope, grants and execution; no runtime or interface change | Refresh host/status guidance and illustrate plugin/direct MCP, environment scope and private-runner request flow |
+| `repository-readme-concept-imagery` | shipped | contract-backed | small-fix: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
 
 ## Clarification closeout
 
@@ -113,3 +114,21 @@ unrelated roadmap slices. `./scripts/validate.sh` passed governance lint and all
   scan. No model calls or installation writes.
 - Version: N/A; no release bump.
 - Commit: User-authorized local commit; see the containing Git history.
+
+## README concept imagery closeout — 2026-10-06
+
+- Planned: Replace the rejected README visuals with generated images matching
+  Recollect's approved light palette and compact product concepts.
+- Shipped: Three concept-based PNGs for agents, environment permissions and
+  private execution; README replacement, descriptive alt text and illustration
+  caption. [Evidence](../../mappings/readme-concept-imagery-2026-10-06.md) records
+  prompts, visual review and the rendered preview.
+- Not shipped: Runtime changes, deployment, push or renewed connectivity proof.
+- New blockers: None for this bounded image/documentation request.
+- Docs updated: README, assets, prompt provenance, mappings/index, this epic/index
+  and continuation record. Original artwork remains historical.
+- Validation: Three valid RGB PNGs; all eight preview images loaded without
+  horizontal overflow; 39 README links/anchors, governance lint and 32 tests,
+  and whitespace checks. Temporary preview resources were closed.
+- Version: N/A; no release bump.
+- Commit: User-authorized follow-up local commit; see the containing Git history.
