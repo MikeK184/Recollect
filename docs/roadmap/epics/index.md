@@ -4,7 +4,7 @@
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
-| [repository-governance.md](repository-governance.md) | complete | README agent/environment/private-runner SVG workflows and current status delivered; newest local work committed at the user's request |
+| [repository-governance.md](repository-governance.md) | complete | README generated imagery matches approved Recollect concepts; documentation and local validation reconciled |
 | [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |

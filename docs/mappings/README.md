@@ -11,6 +11,8 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [README imagery matching approved Recollect concepts, 2026-10-06](readme-concept-imagery-2026-10-06.md)
+
 - [README agent, environment and private-runner workflows, 2026-10-06](readme-runner-workflows-2026-10-06.md)
 
 - [Private Runner relationship cards and independent acceptance, 2026-10-06](private-runner-relationships-2026-10-06.md)
