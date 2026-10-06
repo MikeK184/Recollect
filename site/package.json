@@ -1,0 +1,16 @@
+{
+  "name": "recollect-site",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "prepare:content": "node scripts/prepare.mjs",
+    "dev": "npm run prepare:content && vitepress dev . --host 127.0.0.1",
+    "build": "npm run prepare:content && vitepress build .",
+    "check": "node scripts/check.mjs",
+    "preview": "vitepress preview . --host 127.0.0.1"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

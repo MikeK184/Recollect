@@ -5,6 +5,7 @@ Statuses here are planned, in-progress, or blocked. Shipped packs belong in the
 
 | Pack | Status |
 | --- | --- |
+| [repository-product-docs-site](repository-product-docs-site.md) | in-progress |
 | [mcp-copy-ready-agent-config](mcp-copy-ready-agent-config.md) | in-progress |
 | [operations-longmemeval-bench](operations-longmemeval-bench.md) | blocked |
 

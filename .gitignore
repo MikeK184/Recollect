@@ -14,3 +14,9 @@ __pycache__/
 /web/dist/
 /.data/
 /test-results/
+/site/node_modules/
+/site/content/
+/site/public/
+/site/.vitepress/cache/
+/site/.vitepress/dist/
+/site/.vitepress/.temp/

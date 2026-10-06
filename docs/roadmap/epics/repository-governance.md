@@ -1,6 +1,6 @@
 # Repository Governance
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -40,6 +40,7 @@ deferral for the two requested documentation skills.
 | `repository-readme-concept-imagery` | shipped | contract-backed | small-fix: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
 | `repository-readme-branded-workflows` | shipped | contract-backed | small-fix: image/documentation refinement using the existing original logo and accepted MCP scope/placement behavior; no runtime or interface change | Original identity on approved layouts and a closer Tool access illustration clarify environment scope and service dispatch |
 | `repository-readme-product-positioning` | shipped | contract-backed | small-fix: user-requested README copy refinement grounded in existing memory, environment, permission and runner contracts; no runtime or interface change | Lead with shared engineering memory, governed MCP tools and private execution as one self-hosted workflow |
+| `repository-product-docs-site` | in-progress | contract-backed | pack | Publish the branded product and searchable canonical operator guides through GitHub Pages |
 
 ## Clarification closeout
 

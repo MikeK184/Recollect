@@ -17,6 +17,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 ## Index
 
 - [Repository governance](repository-governance.md)
+- [Public product and documentation website](public-product-and-docs-site.md)
 - [Local CodeGraph navigation](local-codegraph-navigation.md)
 - [Platform bootstrap](platform-bootstrap.md)
 - [Durable commands and workers](platform-durable-work.md)

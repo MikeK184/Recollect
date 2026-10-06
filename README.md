@@ -16,6 +16,8 @@
 
 <p align="center">
   <a href="#run-locally">Quickstart</a> ·
+  <a href="https://mikek184.github.io/Recollect/">Product website</a> ·
+  <a href="https://mikek184.github.io/Recollect/docs/">Online docs</a> ·
   <a href="#connect-your-coding-agent">Connect your agent</a> ·
   <a href="#environments-and-tool-access">Tool access</a> ·
   <a href="#private-runners">Private runners</a> ·
@@ -233,6 +235,9 @@ Recollect owns its Rust core. [Cognee](https://github.com/topoteretes/cognee) an
 other memory systems inform the design; Cognee is not a required runtime.
 
 ## Documentation
+
+Browse the [searchable documentation website](https://mikek184.github.io/Recollect/docs/)
+or use the canonical repository guides below.
 
 | I want to… | Start here |
 | --- | --- |
