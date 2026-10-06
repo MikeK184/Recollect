@@ -36,6 +36,7 @@ deferral for the two requested documentation skills.
 | `foundation-access-and-workspace-clarifications` | shipped | contract-backed | small-fix: bounded documentation clarification and fixture-isolation repair; no runtime change | Clarify dataset ownership, SSO group mapping, managed-operation enforcement, and workspace/developer configuration boundaries |
 | `repository-license-and-readme` | shipped | contract-backed | small-fix: established user license choice, README and package metadata; no runtime change | Apply Apache-2.0 consistently, simplify the entry point and retain private GitHub visibility with authentic history |
 | `repository-readme-discoverability` | shipped | contract-backed | small-fix: user-requested README presentation and GitHub metadata using existing product authority; no runtime or interface change | Deliver the local README presentation and peer comparison; verify the description and 19 topics on the existing public GitHub repository |
+| `repository-readme-runner-workflows` | shipped | contract-backed | small-fix: bounded README and vector diagrams of accepted MCP scope, grants and execution; no runtime or interface change | Refresh host/status guidance and illustrate plugin/direct MCP, environment scope and private-runner request flow |
 
 ## Clarification closeout
 
@@ -91,3 +92,24 @@ unrelated roadmap slices. `./scripts/validate.sh` passed governance lint and all
   archive/disabled state and homepage match the pre-change API read.
 - Version: N/A; documentation and metadata only.
 - Commit: Uncommitted; GitHub metadata is live independently of a Git commit.
+
+## README workflow closeout — 2026-10-06
+
+- Planned: Refresh the GitHub entry point with visuals for the current agent,
+  environment/tool-group and private-runner flow; commit the newest local work.
+- Shipped: Three precise cream/ink/sage SVG workflows, a concise responsibility
+  table, current host/UI wording and local acceptance/remaining-work status.
+  [Evidence](../../mappings/readme-runner-workflows-2026-10-06.md) records rendered
+  PNGs and fresh source/documentation checks.
+- Not shipped: Push, release, deployment or renewed live runner proof. Docker was
+  stopped, so an isolated full browser test could not start. Prior UI/Ubuntu
+  observations remain dated evidence rather than current connectivity claims.
+- New blockers: None for the documentation/commit request.
+- Docs updated: Root README, SVG assets, evidence mapping/index, this epic/index
+  and continuation record. Existing product authority is unchanged by this slice.
+- Validation: Rendered README/all three diagrams; 39 local links/anchors; four
+  valid described SVGs; eight permission tests, two Rust tests, web build/type/design,
+  Rust/Python/shell checks, governance lint and 32 tests; whitespace and credential
+  scan. No model calls or installation writes.
+- Version: N/A; no release bump.
+- Commit: User-authorized local commit; see the containing Git history.

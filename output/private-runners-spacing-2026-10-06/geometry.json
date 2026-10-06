@@ -1,0 +1,167 @@
+[
+  {
+    "mode": "runners-wide",
+    "card": {
+      "height": 135,
+      "width": 1200,
+      "x": 414,
+      "y": 337.03125
+    },
+    "heading": {
+      "height": 69,
+      "width": 1200,
+      "x": 414,
+      "y": 104
+    },
+    "overflow": false,
+    "tabs": {
+      "height": 47,
+      "width": 1200,
+      "x": 414,
+      "y": 201
+    },
+    "toolbar": {
+      "height": 53.03125,
+      "width": 1200,
+      "x": 414,
+      "y": 264
+    },
+    "viewport": [
+      2260,
+      1314
+    ]
+  },
+  {
+    "mode": "edit-wide",
+    "card": {
+      "height": 142,
+      "width": 1200,
+      "x": 414,
+      "y": 337.03125
+    },
+    "heading": {
+      "height": 69,
+      "width": 1200,
+      "x": 414,
+      "y": 104
+    },
+    "overflow": false,
+    "tabs": {
+      "height": 47,
+      "width": 1200,
+      "x": 414,
+      "y": 201
+    },
+    "toolbar": {
+      "height": 53.03125,
+      "width": 1200,
+      "x": 414,
+      "y": 264
+    },
+    "viewport": [
+      2260,
+      1314
+    ]
+  },
+  {
+    "mode": "profiles-wide",
+    "card": {
+      "height": 189,
+      "width": 1200,
+      "x": 414,
+      "y": 318
+    },
+    "heading": {
+      "height": 69,
+      "width": 1200,
+      "x": 414,
+      "y": 104
+    },
+    "overflow": false,
+    "tabs": {
+      "height": 47,
+      "width": 1200,
+      "x": 414,
+      "y": 201
+    },
+    "viewport": [
+      2260,
+      1314
+    ]
+  },
+  {
+    "mode": "connections-wide",
+    "heading": {
+      "x": 414,
+      "y": 104
+    },
+    "viewport": [
+      2260,
+      1314
+    ]
+  },
+  {
+    "mode": "runners-laptop",
+    "card": {
+      "height": 135,
+      "width": 1072,
+      "x": 280,
+      "y": 329.03125
+    },
+    "heading": {
+      "height": 69,
+      "width": 1072,
+      "x": 280,
+      "y": 96
+    },
+    "overflow": false,
+    "tabs": {
+      "height": 47,
+      "width": 1072,
+      "x": 280,
+      "y": 193
+    },
+    "toolbar": {
+      "height": 53.03125,
+      "width": 1072,
+      "x": 280,
+      "y": 256
+    },
+    "viewport": [
+      1384,
+      1473
+    ]
+  },
+  {
+    "mode": "edit-laptop",
+    "card": {
+      "height": 142,
+      "width": 1072,
+      "x": 280,
+      "y": 329.03125
+    },
+    "heading": {
+      "height": 69,
+      "width": 1072,
+      "x": 280,
+      "y": 96
+    },
+    "overflow": false,
+    "tabs": {
+      "height": 47,
+      "width": 1072,
+      "x": 280,
+      "y": 193
+    },
+    "toolbar": {
+      "height": 53.03125,
+      "width": 1072,
+      "x": 280,
+      "y": 256
+    },
+    "viewport": [
+      1384,
+      1473
+    ]
+  }
+]

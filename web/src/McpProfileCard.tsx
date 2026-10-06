@@ -3,19 +3,24 @@ import {
   Alert,
   Badge,
   Button,
-  Checkbox,
   Group,
+  Popover,
   Select,
+  Switch,
   TextInput,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Box, Pencil, Plus, Users, X } from "lucide-react";
+import { BookOpen, Pencil, Plus, Users, X } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { McpCatalogue, McpRights } from "./McpPanel";
 import { McpPermissionIcons } from "./components/McpPermissionIcons";
 import { McpConnectorIcon } from "./components/McpConnectorIcon";
 import { useIdempotency } from "./useIdempotency";
+import {
+  inheritedIndicators,
+  projectMemberPermissions,
+} from "./features/connections/member-permissions";
 import "./features/connections/inline-management.css";
 
 type Detail = components["schemas"]["McpProfileDetail"];
@@ -68,6 +73,7 @@ export function McpProfileCard({
   >({});
   const [progress, setProgress] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
+  const [showDescription, setShowDescription] = useState(false);
   const [subjectKind, setSubjectKind] = useState("account");
   const [subject, setSubject] = useState("");
   const [newRights, setNewRights] = useState<McpRights>({
@@ -129,10 +135,8 @@ export function McpProfileCard({
     setPendingGrants((values) => ({ ...values, [grantKey(grant)]: grant }));
   const effective = detail.data?.effective_members ?? [];
   const groups = detail.data?.grants?.filter((grant) => grant.group_name) ?? [];
-  const direct = (username: string) =>
-    pendingGrants[`account:${username}`]?.rights ??
-    detail.data?.grants?.find((grant) => grant.username === username)?.rights ??
-    denied();
+  const ambiguousGroup = (name: string) =>
+    groups.filter((g) => g.group_name === name).length > 1;
   const groupRights = (name: string) =>
     pendingGrants[`group:${name}`]?.rights ??
     groups.find((g) => g.group_name === name)?.rights ??
@@ -237,6 +241,7 @@ export function McpProfileCard({
     setPendingGrants({});
     setProgress([]);
     save.reset();
+    setShowDescription(!!profile.description);
     setEditing(true);
   }
   function cancel() {
@@ -262,8 +267,9 @@ export function McpProfileCard({
   );
   return (
     <article
-      className="mcp-tool-group-card rc-enter"
+      className={`mcp-tool-group-card rc-enter${editing ? " is-editing" : ""}`}
       data-testid="mcp-profile"
+      id={`tool-group-${savedId}`}
       aria-label={`Tool group ${profile?.name ?? "new"}`}
     >
       <fieldset disabled={save.isPending} className="mcp-inline-fields">
@@ -274,6 +280,7 @@ export function McpProfileCard({
           <div className="mcp-tool-group-identity">
             {editing && canManage ? (
               <TextInput
+                size="xs"
                 aria-label="Tool group name"
                 placeholder="Tool group name"
                 required
@@ -288,10 +295,13 @@ export function McpProfileCard({
               <h2>{name}</h2>
             )}
             <div className="mcp-tool-group-meta">
-              {editing && canManage && environments.length ? (
+              {editing && canManage && environments.length > 0 ? (
                 <Select
+                  className="mcp-inline-environment"
                   aria-label="Tool group environment"
+                  size="xs"
                   clearable
+                  disabled={save.isPending || brain.archived}
                   placeholder="Brain-wide"
                   value={input.environment_id}
                   data={environments}
@@ -300,7 +310,11 @@ export function McpProfileCard({
                   }
                 />
               ) : (
-                <span>
+                <Badge
+                  className="mcp-environment-badge"
+                  variant="light"
+                  color="brand"
+                >
                   {environments.find(
                     (e) =>
                       e.value ===
@@ -308,16 +322,21 @@ export function McpProfileCard({
                         ? input.environment_id
                         : profile?.environment_id),
                   )?.label ?? "Brain-wide"}
-                </span>
+                </Badge>
               )}
-              <span>
-                · {connectionIds.length} MCP
+              <Badge
+                className="mcp-connection-count"
+                variant="light"
+                color="gray"
+              >
+                {connectionIds.length} MCP
                 {connectionIds.length === 1 ? "" : "s"}
-              </span>
+              </Badge>
             </div>
           </div>
           {editing && canManage ? (
-            <Checkbox
+            <Switch
+              size="xs"
               label="Enabled"
               checked={input.enabled}
               disabled={brain.archived || save.isPending}
@@ -343,8 +362,9 @@ export function McpProfileCard({
             </Button>
           )}
         </header>
-        {editing && canManage ? (
+        {editing && canManage && (showDescription || description) ? (
           <TextInput
+            size="xs"
             className="mcp-tool-group-description"
             aria-label="Tool group description"
             placeholder="Description (optional)"
@@ -354,6 +374,16 @@ export function McpProfileCard({
               setInput({ ...input, description: e.currentTarget.value })
             }
           />
+        ) : editing && canManage ? (
+          <Button
+            className="mcp-add-description"
+            variant="subtle"
+            size="compact-xs"
+            leftSection={<Plus size={13} />}
+            onClick={() => setShowDescription(true)}
+          >
+            Add description
+          </Button>
         ) : description ? (
           <p className="mcp-tool-group-description">{description}</p>
         ) : null}
@@ -372,14 +402,16 @@ export function McpProfileCard({
           <>
             <div className="mcp-tool-group-sections">
               <section aria-label="MCP connections">
-                <div className="mcp-card-section-heading">
-                  <h3>MCPs</h3>
-                  {editing && canManage && (
-                    <span className="management-muted">
-                      {connectionIds.length}/20
-                    </span>
-                  )}
-                </div>
+                {editing && (
+                  <div className="mcp-card-section-heading">
+                    <h3>MCPs</h3>
+                    {editing && canManage && (
+                      <span className="management-muted">
+                        {connectionIds.length}/20
+                      </span>
+                    )}
+                  </div>
+                )}
                 {connectionIds.map((connectionId) => {
                   const connection = catalogue.connections.find(
                     (c) => c.id === connectionId,
@@ -423,13 +455,16 @@ export function McpProfileCard({
                 )}
                 {editing && canManage && (
                   <Select
+                    size="xs"
                     label="Add MCP"
                     searchable
                     clearable
                     placeholder="Choose a connection"
                     value={null}
                     disabled={
-                      input.connection_ids.length >= 20 || save.isPending
+                      input.connection_ids.length >= 20 ||
+                      save.isPending ||
+                      brain.archived
                     }
                     data={catalogue.connections
                       .filter((c) => !input.connection_ids.includes(c.id))
@@ -455,60 +490,82 @@ export function McpProfileCard({
                       Remove MCPs from other environments before saving.
                     </Alert>
                   )}
+                {!editing && (
+                  <Button
+                    variant="subtle"
+                    className="mcp-card-tools-action"
+                    size="compact-sm"
+                    disabled={
+                      !profile?.rights.use_profile ||
+                      !profile.enabled ||
+                      brain.archived
+                    }
+                    onClick={() => profile && tools(profile.id)}
+                    aria-label="Tools & testing"
+                  >
+                    Tools & testing →
+                  </Button>
+                )}
               </section>
               <section aria-label="People and groups">
-                <div className="mcp-card-section-heading">
-                  <h3>People</h3>
-                  {editing && (canShare || savedId === "new") && (
-                    <Button
-                      variant="subtle"
-                      size="compact-xs"
-                      leftSection={<Plus size={14} />}
-                      disabled={save.isPending}
-                      onClick={() => setAdding(!adding)}
-                    >
-                      Add person
-                    </Button>
-                  )}
-                </div>
+                {editing && (
+                  <div className="mcp-card-section-heading">
+                    <h3>People</h3>
+                    {editing && (canShare || savedId === "new") && (
+                      <Button
+                        variant="subtle"
+                        size="compact-xs"
+                        leftSection={<Plus size={14} />}
+                        disabled={save.isPending}
+                        onClick={() => setAdding(!adding)}
+                      >
+                        Add person
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {editing && (
+                  <div className="mcp-permission-legend" aria-hidden="true">
+                    <span>Use</span>
+                    <span>Manage</span>
+                    <span>Share</span>
+                  </div>
+                )}
                 {detail.isPending && savedId !== "new" && (
                   <p className="management-muted" role="status">
                     Loading permissions…
                   </p>
                 )}
                 {effective.map((member) => (
+                  <MemberPermissions
+                    key={member.account_id}
+                    member={member}
+                    actor={actor}
+                    grants={detail.data?.grants ?? []}
+                    drafts={pendingGrants}
+                    editing={editing && canShare && !brain.archived}
+                    disabled={save.isPending || brain.archived}
+                    change={(rights) =>
+                      stage({
+                        username: member.username,
+                        group_name: null,
+                        rights,
+                      })
+                    }
+                  />
+                ))}
+                {!effective.length && profile && !canShare && (
                   <div
                     className="mcp-card-person"
-                    key={member.account_id}
-                    data-testid="mcp-effective-member"
+                    data-testid="mcp-own-permissions"
                   >
                     <span className="mcp-person-avatar" aria-hidden="true">
-                      {member.username.slice(0, 1).toUpperCase()}
+                      Y
                     </span>
-                    <strong>{member.username}</strong>
-                    <McpPermissionIcons
-                      subject={member.username}
-                      rights={member.rights}
-                    />
-                    {editing && canShare && !brain.archived && (
-                      <span className="mcp-direct-permissions">
-                        <small>Direct</small>
-                        <McpPermissionIcons
-                          subject={`${member.username} direct`}
-                          rights={direct(member.username)}
-                          disabled={save.isPending}
-                          onChange={(rights) =>
-                            stage({
-                              username: member.username,
-                              group_name: null,
-                              rights,
-                            })
-                          }
-                        />
-                      </span>
-                    )}
+                    <strong>You</strong>
+                    <McpPermissionIcons subject="you" rights={profile.rights} />
                   </div>
-                ))}
+                )}
                 {groups.map((grant) => (
                   <div
                     className="mcp-card-person"
@@ -519,14 +576,24 @@ export function McpProfileCard({
                       <Users size={15} />
                     </span>
                     <strong>{grant.group_name}</strong>
+                    <small
+                      className="mcp-access-source"
+                      title={grant.issuer ?? undefined}
+                    >
+                      Group
+                    </small>
                     <McpPermissionIcons
                       subject={grant.group_name!}
                       rights={
-                        editing ? groupRights(grant.group_name!) : grant.rights
+                        editing && !ambiguousGroup(grant.group_name!)
+                          ? groupRights(grant.group_name!)
+                          : grant.rights
                       }
                       disabled={brain.archived || save.isPending}
                       onChange={
-                        editing && canShare
+                        editing &&
+                        canShare &&
+                        !ambiguousGroup(grant.group_name!)
                           ? (rights) =>
                               stage({
                                 username: null,
@@ -563,13 +630,16 @@ export function McpProfileCard({
                 {!effective.length &&
                   !groups.length &&
                   !addedPeople.length &&
+                  (!profile || canShare) &&
                   !detail.isPending && (
                     <p className="management-muted">No people visible.</p>
                   )}
                 {adding && editing && (canShare || savedId === "new") && (
                   <div className="mcp-add-person">
                     <Select
+                      size="xs"
                       aria-label="Recipient type"
+                      disabled={save.isPending || brain.archived}
                       value={subjectKind}
                       data={[
                         { value: "account", label: "Account" },
@@ -585,6 +655,7 @@ export function McpProfileCard({
                       }}
                     />
                     <TextInput
+                      size="xs"
                       label={
                         subjectKind === "account" ? "Username" : "Group name"
                       }
@@ -600,7 +671,12 @@ export function McpProfileCard({
                       />
                       <Button
                         size="compact-sm"
-                        disabled={!subject.trim() || save.isPending}
+                        disabled={
+                          !subject.trim() ||
+                          save.isPending ||
+                          (subjectKind === "group" &&
+                            ambiguousGroup(subject.trim()))
+                        }
                         onClick={() => {
                           stage({
                             username:
@@ -617,47 +693,6 @@ export function McpProfileCard({
                       </Button>
                     </Group>
                   </div>
-                )}
-                {canShare && (effective.length > 0 || groups.length > 0) && (
-                  <details className="mcp-effective-details">
-                    <summary>
-                      Access details{editing ? " · editing direct grants" : ""}
-                    </summary>
-                    {effective.map((member) => (
-                      <div key={member.account_id}>
-                        <strong>{member.username}</strong>
-                        <span>
-                          {" "}
-                          · {member.brain_role ?? "No current Brain access"}
-                          {member.enabled ? "" : " · account disabled"}
-                        </span>
-                        <div>
-                          Effective{" "}
-                          <McpPermissionIcons
-                            subject={`${member.username} effective`}
-                            rights={member.rights}
-                          />
-                        </div>
-                        <div>
-                          Direct{" "}
-                          <McpPermissionIcons
-                            subject={`${member.username} direct`}
-                            rights={member.direct_rights}
-                          />
-                        </div>
-                        <p>
-                          Groups: {member.groups.join(", ") || "None"}
-                          {member.membership_until
-                            ? ` · valid until ${new Date(member.membership_until).toLocaleString()}`
-                            : ""}
-                        </p>
-                      </div>
-                    ))}
-                    <p>
-                      Inherited group or administrator access may remain after a
-                      direct grant is cleared.
-                    </p>
-                  </details>
                 )}
               </section>
             </div>
@@ -700,61 +735,199 @@ export function McpProfileCard({
             )}
           </>
         )}
-        <footer className="mcp-tool-group-footer">
-          <div className="mcp-your-rights">
-            <span>Your access</span>
-            <McpPermissionIcons
-              subject="you"
-              rights={profile?.rights ?? denied()}
-            />
-          </div>
-          {editing ? (
-            <Group gap="xs">
-              <Button
-                variant="default"
-                size="sm"
-                disabled={save.isPending}
-                onClick={cancel}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                loading={save.isPending}
-                disabled={
-                  brain.archived ||
-                  !!detail.error ||
-                  (!canManage && !canShare) ||
-                  (canManage &&
-                    (!input.name.trim() ||
-                      input.connection_ids.some(
-                        (c) => !compatible.some((p) => p.id === c),
-                      )))
-                }
-                onClick={() => save.mutate()}
-              >
-                {save.error && progress.length
-                  ? "Retry remaining changes"
-                  : "Save changes"}
-              </Button>
-            </Group>
-          ) : (
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              disabled={
-                !profile?.rights.use_profile ||
-                !profile.enabled ||
-                brain.archived
-              }
-              onClick={() => profile && tools(profile.id)}
-              aria-label="Tools & testing"
-            >
-              Tools & testing →
-            </Button>
-          )}
-        </footer>
+        {editing && (
+          <footer className="mcp-tool-group-footer">
+            {editing ? (
+              <Group gap="xs">
+                <Button
+                  variant="default"
+                  size="xs"
+                  disabled={save.isPending}
+                  onClick={cancel}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="xs"
+                  loading={save.isPending}
+                  disabled={
+                    brain.archived ||
+                    !!detail.error ||
+                    (!canManage && !canShare) ||
+                    (canManage &&
+                      (!input.name.trim() ||
+                        input.connection_ids.some(
+                          (c) => !compatible.some((p) => p.id === c),
+                        )))
+                  }
+                  onClick={() => save.mutate()}
+                >
+                  {save.error && progress.length
+                    ? "Retry remaining changes"
+                    : "Save changes"}
+                </Button>
+              </Group>
+            ) : null}
+          </footer>
+        )}
       </fieldset>
     </article>
+  );
+}
+
+function MemberPermissions({
+  member,
+  actor,
+  grants,
+  drafts,
+  editing,
+  disabled,
+  change,
+}: {
+  member: components["schemas"]["McpEffectiveMember"];
+  actor: string;
+  grants: components["schemas"]["McpGrant"][];
+  drafts: Record<string, GrantInput>;
+  editing: boolean;
+  disabled: boolean;
+  change: (rights: McpRights) => void;
+}) {
+  const [opened, setOpened] = useState(false);
+  const projected = projectMemberPermissions(
+    member,
+    grants,
+    editing ? drafts : {},
+  );
+  const rights = editing ? projected.effective : member.rights;
+  // Read-only readers may not receive all grants; authoritative effective rights
+  // remain the source of truth outside a Share editor's draft projection.
+  const inherited = editing
+    ? projected.inherited
+    : inheritedIndicators(member, projected.inherited);
+  const source = !member.enabled
+    ? "Disabled"
+    : !member.brain_role
+      ? "No Brain access"
+      : member.brain_role === "admin"
+        ? "Admin"
+        : member.groups.length
+          ? "Group"
+          : "Direct";
+  useEffect(() => setOpened(false), [editing, disabled]);
+  return (
+    <div className="mcp-card-person" data-testid="mcp-effective-member">
+      <span className="mcp-person-avatar" aria-hidden="true">
+        {member.username.slice(0, 1).toUpperCase()}
+      </span>
+      <strong>
+        {member.username}
+        {member.account_id === actor && <small> (you)</small>}
+      </strong>
+      <Popover
+        opened={opened}
+        onDismiss={() => setOpened(false)}
+        width={270}
+        position="bottom-end"
+        withArrow
+        trapFocus
+        returnFocus
+        classNames={{ dropdown: "mcp-access-popover" }}
+      >
+        <Popover.Target>
+          <button
+            type="button"
+            className="mcp-access-source"
+            aria-label={`Access sources for ${member.username}`}
+            onClick={() => setOpened(!opened)}
+            disabled={disabled}
+          >
+            {source}
+          </button>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <strong>{member.username}</strong>
+          <dl>
+            <div>
+              <dt>Brain access</dt>
+              <dd>{member.brain_role ?? "None"}</dd>
+            </div>
+            {!member.enabled && (
+              <div>
+                <dt>Account</dt>
+                <dd>Disabled</dd>
+              </div>
+            )}
+            {member.brain_role === "admin" && (
+              <div>
+                <dt>Admin grants</dt>
+                <dd>Manage · Share</dd>
+              </div>
+            )}
+            {member.groups.length > 0 && (
+              <div>
+                <dt>Groups</dt>
+                <dd>{member.groups.join(", ")}</dd>
+              </div>
+            )}
+            {member.membership_until && (
+              <div>
+                <dt>Membership until</dt>
+                <dd>{new Date(member.membership_until).toLocaleString()}</dd>
+              </div>
+            )}
+          </dl>
+          {projected.ambiguousGroups.length > 0 && (
+            <p className="management-muted">
+              Multiple providers for {projected.ambiguousGroups.join(", ")}.
+              Current access is shown; edit direct grants below.
+            </p>
+          )}
+          <div className="mcp-source-direct">
+            <span>Direct grant</span>
+            <McpPermissionIcons
+              subject={`${member.username} direct`}
+              rights={projected.direct}
+              disabled={disabled || !projected.available}
+              onChange={editing ? change : undefined}
+            />
+          </div>
+          {editing && Object.values(projected.direct).some(Boolean) && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              color="red"
+              disabled={disabled}
+              onClick={() => change(denied())}
+            >
+              Clear direct grant
+            </Button>
+          )}
+        </Popover.Dropdown>
+      </Popover>
+      <McpPermissionIcons
+        subject={member.username}
+        rights={rights}
+        inherited={inherited}
+        disabled={
+          disabled ||
+          !projected.available ||
+          projected.ambiguousGroups.length > 0
+        }
+        onChange={
+          editing
+            ? (next) =>
+                change({
+                  use_profile: inherited.use_profile
+                    ? projected.direct.use_profile
+                    : next.use_profile,
+                  manage: inherited.manage
+                    ? projected.direct.manage
+                    : next.manage,
+                  share: inherited.share ? projected.direct.share : next.share,
+                })
+            : undefined
+        }
+      />
+    </div>
   );
 }

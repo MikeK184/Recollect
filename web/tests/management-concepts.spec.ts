@@ -172,7 +172,7 @@ test("approved library, inert config import, masked credentials and stable priva
   await expect(inspector).toHaveCount(0);
   await page.getByRole("button", { name: "View Management proof", exact: true }).click();
   await expect(inspector).toBeVisible();
-  await page.getByRole("tab", { name: "Runners", exact: true }).click();
+  await page.getByRole("tab", { name: "Private Runners", exact: true }).click();
   await expect(page).toHaveURL(/tab=runners/);
   await page.getByRole("tab", { name: "Connections", exact: true }).click();
   await page.goto(`/brains/${brain.id}/settings?tab=privacy`);

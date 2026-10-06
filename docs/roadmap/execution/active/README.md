@@ -8,6 +8,20 @@ Statuses here are planned, in-progress, or blocked. Shipped packs belong in the
 | [mcp-copy-ready-agent-config](mcp-copy-ready-agent-config.md) | in-progress |
 | [operations-longmemeval-bench](operations-longmemeval-bench.md) | blocked |
 
+The approved compact Private Runners editor is delivered on the ready local
+stack. Its [pack](../archive/desktop-inline-private-runners.md) is archived with
+[CUA and layout evidence](../../../mappings/desktop-inline-private-runners-2026-10-06.md).
+That UI-only proof left registrations empty. The subsequent
+[Ubuntu filesystem proof](../archive/mcp-ubuntu-private-runner-proof.md) is now
+delivered: the owned runner is Connected with actual independent-reader calls,
+permission/directory denials, offline recovery and fresh-container OS-store reuse.
+
+The approved compact Tool access revision is locally shipped and independently
+accepted at laptop/wide sizes. Its [pack](../archive/desktop-compact-tool-access.md)
+is archived with [current proof](../../../mappings/desktop-compact-tool-access-2026-10-06.md):
+canonical partial-save retry, restored configuration/access and actual demo
+Use-only inspection. External OIDC live proof and native-host work stay separate.
+
 The five Connections follow-ups are locally shipped and independently accepted.
 Both [readability](../archive/desktop-readable-mcp-inspection.md) and
 [equivalent schema inspection](../archive/mcp-equivalent-http-schema-inspection.md)

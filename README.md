@@ -17,12 +17,14 @@
 <p align="center">
   <a href="#run-locally">Quickstart</a> ·
   <a href="#connect-your-coding-agent">Connect your agent</a> ·
+  <a href="#environments-and-tool-access">Tool access</a> ·
+  <a href="#private-runners">Private runners</a> ·
   <a href="#what-it-does">Features</a> ·
   <a href="#documentation">Documentation</a> ·
   <a href="https://github.com/MikeK184/Recollect/issues">Issues</a>
 </p>
 
-**Recollect gives Codex and Claude Code persistent memory for engineering work.**
+**Recollect gives Codex, Claude Code and OpenCode persistent memory for engineering work.**
 Bring repository knowledge, documents, decisions, runbooks and supported agent
 sessions into one place, so the next session can pick up where the last left off.
 Run it on your own machine or a private server, and inspect the same knowledge in
@@ -34,8 +36,11 @@ sources, repository revisions and environments. You control what is captured,
 what can be sent to a model and which tools an agent may use.
 
 > **Early project:** intended for individuals and trusted internal teams.
-> The initial product scope has local test evidence; the desktop redesign has
-> [acceptance work still in progress](docs/roadmap/execution/active/README.md).
+> The desktop redesign and private-runner workflow have local acceptance evidence.
+> [Remaining work and limits](docs/roadmap/execution/active/README.md) include
+> further native-host direct-MCP acceptance and memory evaluation.
+
+![Coding agents connect through the plugin or direct MCP to a Recollect Brain. Memory follows Brain policy; separately authorized MCP tools run on the service, caller device or a private runner.](docs/assets/recollect-agent-workflow.svg)
 
 ## When to use Recollect
 
@@ -89,7 +94,7 @@ For Docker installation and shared HTTPS access, see the
 
 ## Connect your coding agent
 
-Open **Agents → Connect coding agent** for Codex, Claude Code or OpenCode.
+Open **Agents → Connect agent** for Codex, Claude Code or OpenCode.
 Install the [packaged plugin](plugins/recollect/README.md), connect once to your
 Brain, then start your coding host normally. The plugin bundles automatic capture,
 cited memory recall, local checkout discovery and repository publication.
@@ -106,9 +111,65 @@ native MCP OAuth login are not available yet.
 
 The connection guide covers host configuration and a real tool-call check.
 Session capture depends on the supported host's hooks and your Brain's policies.
+Direct MCP uses a host configuration and access token; it does not install the
+plugin's automatic session-capture hooks.
 
 For reproducible quality evidence, see the [public retrieval benchmark](docs/runbooks/public-memory-benchmark.md)
 and its [measured results and limits](docs/mappings/public-memory-benchmark-2026-09-28.md).
+
+## Environments and tool access
+
+Set up a connection once, include it in a **tool group**, and grant people or
+groups **Use**. Choose an environment when the tools should be available only
+for that work context. Execution placement controls where the server runs.
+
+| Setting | Responsibility | Example |
+| --- | --- | --- |
+| **Connection scope** | Where the MCP connection is eligible within its Brain | Brain-wide, or only Development |
+| **Tool group** | Which connections a caller can use, with optional environment scope | Research tools contains Exa and requires Development |
+| **Use / Manage / Share** | Independent permissions to run tools, edit a group, or grant access | A reader can Use without Manage or Share |
+| **Runs on** | Where approved tools execute | Recollect service, the caller's device, or a named private runner |
+
+![A Brain-wide Exa connection belongs to a Development tool group. A caller with Brain access and explicit Use can use it in Development, while its Recollect-service execution placement stays separate.](docs/assets/recollect-environment-access.svg)
+
+A Brain-wide connection can belong to an environment-specific tool group. That
+group limits its use to the selected environment; it does not move the MCP server.
+An environment-bound connection can only belong to a group in that same
+environment. A group cannot widen a connection's scope.
+
+Without an enabled matching tool group and an explicit Use grant, the agent
+cannot execute that connection's tools. Brain administrators inherit Manage and
+Share, **not Use**. Grants are additive: another eligible group can still grant
+access. See the [catalogue guide](docs/runbooks/mcp-catalogue.md) for setup.
+
+## Private runners
+
+A private runner is an optional executor on a **paired device inside your
+network**. Use it for a filesystem MCP, internal service or another approved tool
+that the Recollect service cannot reach directly.
+
+![A coding agent requests a tool from Recollect. After authorization, a paired private runner polls for its work, executes the approved MCP server inside its network and returns the result through Recollect.](docs/assets/recollect-private-runner.svg)
+
+The runner initiates an outbound connection to your Recollect endpoint, claims
+its addressed work and returns the result. It needs access to Recollect and the
+MCP server; it does not need a public inbound port. Your coding agent can be on
+another machine and use either the plugin or direct MCP.
+
+In **Connections → Private Runners**, add a paired device, copy its setup command
+and start the runner there. Assign a connection to that runner, then include it
+in a tool group with the caller's Use grant. The runner card shows its device,
+assigned MCP connections, approved tools and linked tool groups. A connection
+badge describes placement; the runner's live status describes connectivity.
+
+Registering a runner does not install an MCP server or grant tool access.
+Executable commands, arguments and tool schemas come from approved definitions;
+an agent cannot turn the runner into an arbitrary shell. The plugin's automatic
+memory integration and optional execution runner have separate responsibilities.
+
+See the [private-runner setup guide](docs/runbooks/mcp-vault-and-private-runners.md)
+and the [Ubuntu filesystem proof](docs/mappings/private-runner-ubuntu-proof-2026-10-06.md).
+That local proof covers a real MCP caller, permitted reads, access denials and
+offline recovery; it does not claim a fresh LLM host session or production deployment.
 
 ## What it does
 
@@ -152,7 +213,10 @@ other memory systems inform the design; Cognee is not a required runtime.
 ## Project status
 
 The first planned product scope is implemented and locally tested. The desktop
-redesign is under active acceptance; mobile views are deferred.
+redesign, compact tool access and private-runner relationship cards have local
+acceptance evidence; mobile views are deferred. The
+[active execution index](docs/roadmap/execution/active/README.md) tracks remaining
+direct-MCP native-host acceptance and the blocked LongMemEval evaluation.
 The [evaluation report](docs/mappings/integrated-evaluations-2026-09-26.md)
 records measured results, failures and limits. Local validation is not a
 production capacity or deployment guarantee.

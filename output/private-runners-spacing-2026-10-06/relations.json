@@ -1,0 +1,11 @@
+{
+  "runner": "Ubuntu filesystem demo",
+  "connected": true,
+  "device": "Ubuntu filesystem demo runner",
+  "connection": "Ubuntu filesystem demo",
+  "scope": "Brain-wide",
+  "tool_groups": [
+    "Ubuntu demo files"
+  ],
+  "approved_tool_count": 3
+}

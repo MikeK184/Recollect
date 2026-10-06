@@ -34,6 +34,12 @@ behavior; presentation changes never change what a page measures or authorizes.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `desktop-private-runner-relationships` | shipped | contract-backed | pack | Approved device/connection/tool/group cards with reader-safe binding summaries and independent UI acceptance |
+| `desktop-private-runners-spacing` | shipped | contract-backed | small-fix: explicit alignment correction to existing scoped CSS; registration, device binding and authority unchanged | Align Private Runners with Tool access and reduce excess tab-to-toolbar spacing; relationship display remains a proposal |
+| `desktop-inline-private-runners` | shipped | contract-backed | pack | Approved compact cards and inline Add/Edit delivered locally with immutable device, authority and revision guards |
+| `desktop-private-runners-label-concepts` | shipped | contract-backed | small-fix: explicit tab/copy rename and concept-only images; routes, registration and editor behavior unchanged | Private Runners label plus compact read and inline Add/Edit proposals |
+| `desktop-tool-access-header-badges` | shipped | contract-backed | small-fix: explicit badge/alignment correction in one existing header; canonical draft/save behavior unchanged | Separate environment/MCP badges and keep environment editing beside its metadata |
+| `desktop-compact-tool-access` | shipped | contract-backed | pack | Approved tighter cards, single permission rows and source popovers; canonical retry and independent laptop/wide acceptance |
 | `desktop-readable-mcp-inspection` | shipped | contract-backed | pack | Scope/runner badges, reliable tool-read states, single formatted descriptions/JSON and structured call inspection |
 | `desktop-general-inline-environments` | shipped | contract-backed | pack | Selected General layout and stable inline environment add/rename over existing commands |
 | `desktop-bounded-privacy-rows` | shipped | contract-backed | small-fix: explicit width/separator correction and removal of two presentation controls; existing draft payloads and commands unchanged | Cap Privacy width, highlight focused rows and hide manual exclusions while preserving saved rules |
@@ -388,3 +394,93 @@ All approved scale, diagnostics, agent inspection/context hiding, readable code 
   expiry/width proof, preserved runtime invariants and independent source/pixel review.
 - Version: N/A.
 - Commit: Uncommitted.
+
+## Compact Tool access closeout — 2026-10-06
+
+- Planned: Implement the approved tighter cards and independently verify appearance/function.
+- Shipped: Compact header/filter, aligned bounded cards, one adjacent effective
+  icon set with locked inheritance and concise source/direct popover; private
+  reader row and existing canonical edit/retry retained on the ready local stack.
+- Not shipped: New backend policy, external OIDC live fixture or unrelated native-host work.
+- New blockers: None for this slice or visual epic.
+- Docs updated: Contracts, archived [pack](../execution/archive/desktop-compact-tool-access.md),
+  indexes, handoff and [dated evidence](../../mappings/desktop-compact-tool-access-2026-10-06.md).
+- Validation: Eight focused permission tests, type/design/build, governance32,
+  CodeGraph, actual CUA draft/Cancel/reversible Save/partial retry, unchanged
+  canonical inventory and demo Use-only/two-tool proof passed. Independent final
+  source and actual 1384/2504 px comparison accepted without remaining blockers.
+- Version: N/A.
+- Commit: Uncommitted.
+
+## Tool access header badge correction — 2026-10-06
+
+- Planned: Separate environment/MCP metadata into badges and fix the edit picker position.
+- Shipped: Two compact badges beneath the title; the environment picker replaces
+  its badge in the same row, aligned with the MCP count. Ready local frontend.
+- Not shipped: Backend/configuration or permission changes; none requested.
+- New blockers: None.
+- Docs updated: Contract, small-fix slice/index, dated evidence and handoff.
+- Validation: Type/design/build, governance32, whitespace, CodeGraph and actual
+  CUA read/edit/picker/Cancel checks passed; measured title/picker/count alignment.
+  [Follow-up evidence](../../mappings/desktop-compact-tool-access-2026-10-06.md#header-badge-follow-up).
+- Version: N/A.
+- Commit: Uncommitted.
+
+## Private runner naming and concepts — 2026-10-06
+
+- Planned: Rename the tab and generate matching read/inline Add/Edit concepts.
+- Shipped: Private Runners tab/guidance on the ready local stack; saved read and
+  tightened inline concept images with fictional sample data and exact prompts.
+- Not shipped: Inline editor implementation, new registrations or live runner proof.
+- New blockers: None for the requested label/concept deliverable.
+- Docs updated: Contract, small-fix slice/index, mappings/index and handoff;
+  [evidence and limits](../../mappings/private-runners-concepts-2026-10-06.md).
+- Validation: Web type/design/build, governance32, whitespace, CodeGraph and
+  actual CUA selected-tab/unchanged empty registration view passed.
+- Version: N/A.
+- Commit: Uncommitted.
+
+## Inline Private Runners delivery — 2026-10-06
+
+- Planned: Implement the approved read/inline concepts and explain runner versus agent roles.
+- Shipped: Bounded light cards, compact name/device/status, inline Add/Edit,
+  locked existing host, explicit setup copy and canonical guarded save/retry;
+  ready local frontend. [Current evidence](../../mappings/desktop-inline-private-runners-2026-10-06.md).
+- Not shipped: New real registrations, worker startup or new backend behavior.
+- New blockers: None for this slice.
+- Docs updated: Contract, archived pack, epic/index, mappings/index and handoff.
+- Validation: Web type/design/build, required governance32, whitespace and
+  CodeGraph passed; CUA live empty/Add/Cancel and fixture Save/Cancel/retry/stale/
+  device/reader/archive checks plus actual laptop/wide comparison passed.
+- Version: N/A.
+- Commit: Uncommitted.
+
+## Private Runners spacing follow-up — 2026-10-06
+
+- Planned: Fix the route's spacing first and explain a clearer runner relationship display.
+- Shipped: Left-aligned bounded page and consistent tab-to-toolbar gap on the
+  ready local frontend. [Evidence and proposal](../../mappings/private-runners-spacing-2026-10-06.md).
+- Not shipped: The proposed assigned-connections/tools/tool-groups section;
+  no new runner behavior or permission projection.
+- New blockers: None for spacing. A reader-safe relationship projection needs
+  a separate decision and implementation because connection detail is admin-only.
+- Docs updated: Contract, this small-fix slice/index, mapping/index and handoff.
+- Validation: Web build/type/design, CUA read/Edit/Add/Cancel at laptop/wide
+  sizes, independent visual review, readiness, governance32 and whitespace.
+- Version: N/A; presentation correction without a release policy.
+- Commit: Uncommitted; no commit, push or external release.
+
+## Private Runner relationship cards closeout — 2026-10-06
+
+- Planned: Implement the approved device/MCP/tools/group hierarchy with independent UI review.
+- Shipped: Compact relationship cards with canonical reader-safe binding summaries, shared
+  definition/profile metadata and exact resource links, deployed to the ready local stack.
+  [Evidence](../../mappings/private-runner-relationships-2026-10-06.md),
+  [archived pack](../execution/archive/desktop-private-runner-relationships.md).
+- Not shipped: New grants, execution, telemetry or device rebinding are outside this slice.
+- New blockers: None. Earlier spacing proposal is superseded by this approved delivery.
+- Docs updated: Contracts, epic/index, pack/index, evidence/index and handoff.
+- Validation: Two Rust tests, web type/design/build, 13 CUA state/pagination/pending/link
+  checks, actual owner/reader APIs and rendered UI, Add/Edit/Cancel, independent
+  laptop/wide review, governance32, CodeGraph, readiness and whitespace passed.
+- Version: N/A; commit: uncommitted. No push or external release.

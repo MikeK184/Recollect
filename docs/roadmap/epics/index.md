@@ -4,16 +4,16 @@
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
-| [repository-governance.md](repository-governance.md) | complete | README presentation and peer comparison delivered locally; description and 19 topics verified on the existing public GitHub repository |
+| [repository-governance.md](repository-governance.md) | complete | README agent/environment/private-runner SVG workflows and current status delivered; newest local work committed at the user's request |
 | [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
 | [memory-lifecycle.md](memory-lifecycle.md) | complete | Supported model catalogue, dated prices and dimension-safe rebuild successor locally validated; prior memory acceptance retained |
 | [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Chat-style Ask landing and thread shipped 2026-10-03 over the unchanged model-grounded answer flow |
 | [graph-intelligence.md](graph-intelligence.md) | complete | Graph/path/analytics browser acceptance, bounded measurements and laptop/desktop visuals passed |
-| [mcp-coordination.md](mcp-coordination.md) | active | Equivalent HTTP schema inspection, direct config and icons delivered; fresh native-host token acceptance remains open after OpenCode service startup timeout |
+| [mcp-coordination.md](mcp-coordination.md) | active | Live Ubuntu private filesystem runner, independent reader/permission/offline proof delivered; fresh native-host token acceptance remains open after OpenCode service startup timeout |
 | [operational-readiness.md](operational-readiness.md) | active | Assurance band hidden on healthy Brains and knowledge tab-strip removal shipped 2026-10-03; separate LongMemEval benchmark remains blocked on protocol and cost approval |
-| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Five Connections follow-ups locally verified and independently accepted; packs archived |
+| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Approved Private Runner relationship cards, shared authorized metadata and independent laptop/wide acceptance delivered locally |
 
 ## Active frontier
 

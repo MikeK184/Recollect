@@ -1,0 +1,87 @@
+{
+  "environment_id": null,
+  "execution_state": "not_connected",
+  "next_offset": null,
+  "offset": 0,
+  "operation_id": "0fb5630a-17ef-4015-8d13-d87bc6103d15",
+  "profile_id": "2fe52917-4077-4f89-99b7-1e2666ab0aa7",
+  "source": "approved_catalogue",
+  "tools": [
+    {
+      "connection_id": "843f47a8-4196-47da-a439-1647c5636bed",
+      "connection_name": "Ubuntu filesystem demo",
+      "tool": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Show allowed filesystem directories.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "name": "list_allowed_directories",
+        "outputSchema": null
+      }
+    },
+    {
+      "connection_id": "843f47a8-4196-47da-a439-1647c5636bed",
+      "connection_name": "Ubuntu filesystem demo",
+      "tool": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "List the Ubuntu demo directory.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "list_directory",
+        "outputSchema": null
+      }
+    },
+    {
+      "connection_id": "843f47a8-4196-47da-a439-1647c5636bed",
+      "connection_name": "Ubuntu filesystem demo",
+      "tool": {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true
+        },
+        "description": "Read a text file inside the Ubuntu demo folder.",
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "read_text_file",
+        "outputSchema": null
+      }
+    }
+  ],
+  "total": 3,
+  "unavailable_connections": []
+}

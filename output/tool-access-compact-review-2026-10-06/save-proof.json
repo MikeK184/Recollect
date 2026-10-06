@@ -1,0 +1,10 @@
+{
+  "grantAttempts": [
+    "demo",
+    "owner",
+    "owner"
+  ],
+  "retryOnlyRemaining": true,
+  "descriptionRestored": true,
+  "unchangedGrantValues": true
+}

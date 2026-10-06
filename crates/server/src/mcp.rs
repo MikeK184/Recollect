@@ -173,6 +173,10 @@ impl ConnectionRow {
             description: self.description.clone(),
             definition_key: self.definition_key.clone(),
             placement: self.placement.clone(),
+            private_runner_id: private_binding_id(
+                &self.placement,
+                self.runner_reference.as_deref(),
+            ),
             environment_id: self.environment_id,
             enabled: self.enabled,
             revision: self.revision,
@@ -180,6 +184,67 @@ impl ConnectionRow {
             updated_at: self.updated_at,
             last_successful_call_at: None,
         }
+    }
+}
+fn private_binding_id(placement: &str, reference: Option<&str>) -> Option<Uuid> {
+    if placement != "private" {
+        return None;
+    }
+    let reference = reference?;
+    let id = Uuid::parse_str(reference.strip_prefix("private:")?).ok()?;
+    (reference == format!("private:{id}")).then_some(id)
+}
+
+#[cfg(test)]
+mod private_binding_tests {
+    use super::*;
+
+    #[test]
+    fn summary_reveals_only_private_uuid_binding() {
+        let id = Uuid::parse_str("abcdefab-cdef-4abc-8def-abcdefabcdef").unwrap();
+        let reference = format!("private:{id}");
+        assert_eq!(private_binding_id("private", Some(&reference)), Some(id));
+        assert_eq!(private_binding_id("central", Some(&reference)), None);
+        assert_eq!(private_binding_id("local", Some(&reference)), None);
+        assert_eq!(private_binding_id("private", Some("device:host")), None);
+        assert_eq!(private_binding_id("private", Some("private:invalid")), None);
+        assert_eq!(
+            private_binding_id("private", Some(&format!("private:{}", id.simple()))),
+            None
+        );
+        assert_eq!(
+            private_binding_id("private", Some(&reference.to_uppercase())),
+            None
+        );
+        assert_eq!(
+            private_binding_id(
+                "private",
+                Some(&format!("private:{}", id.to_string().to_uppercase()))
+            ),
+            None
+        );
+        assert_eq!(private_binding_id("private", None), None);
+    }
+
+    #[test]
+    fn legacy_summary_without_binding_remains_readable() {
+        let id = Uuid::new_v4();
+        let legacy = serde_json::json!({
+            "id": id,
+            "brain_id": id,
+            "name": "Existing connection",
+            "description": "",
+            "definition_key": "existing",
+            "placement": "private",
+            "environment_id": null,
+            "enabled": true,
+            "revision": id,
+            "availability": "configured",
+            "updated_at": "2026-10-06T12:00:00Z",
+            "last_successful_call_at": null
+        });
+        let summary: McpConnectionSummary = serde_json::from_value(legacy).unwrap();
+        assert_eq!(summary.private_runner_id, None);
     }
 }
 async fn connection(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<ConnectionRow> {

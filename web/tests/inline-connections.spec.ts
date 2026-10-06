@@ -218,25 +218,34 @@ test("card icons edit independent grants and retry only unfinished writes", asyn
   );
   await page.goto(`/brains/${f.brain.id}/connections?tab=profiles`);
   const card = page.getByTestId("mcp-profile");
+  const owner = process.env.RECOLLECT_OWNER_USERNAME!;
   await expect(
-    card.getByRole("img", { name: "Use for you: Denied", exact: true }),
+    card.getByRole("img", { name: `Use for ${owner}: Denied`, exact: true }),
   ).toHaveClass(/denied/);
   await expect(
-    card.getByRole("img", { name: "Manage for you: Allowed", exact: true }),
+    card.getByRole("img", {
+      name: `Manage for ${owner}: Allowed (inherited)`,
+      exact: true,
+    }),
   ).toHaveClass(/allowed/);
   await expect(
-    card.getByRole("img", { name: "Share for you: Allowed", exact: true }),
+    card.getByRole("img", {
+      name: `Share for ${owner}: Allowed (inherited)`,
+      exact: true,
+    }),
   ).toHaveClass(/allowed/);
   await card
     .getByRole("button", { name: "Edit Inline group", exact: true })
     .click();
   await card
+    .getByRole("button", { name: "Add description", exact: true })
+    .click();
+  await card
     .getByLabel("Tool group description", { exact: true })
     .fill("Saved in place");
-  const owner = process.env.RECOLLECT_OWNER_USERNAME!;
   await card
     .getByRole("button", {
-      name: `Use for ${owner} direct: Denied`,
+      name: `Use for ${owner}: Denied`,
       exact: true,
     })
     .click();
@@ -269,7 +278,7 @@ test("card icons edit independent grants and retry only unfinished writes", asyn
   ).toBeVisible();
   expect(attempts).toEqual([username, owner, owner]);
   await expect(
-    card.getByRole("img", { name: "Use for you: Allowed", exact: true }),
+    card.getByRole("img", { name: `Use for ${owner}: Allowed`, exact: true }),
   ).toHaveClass(/allowed/);
   const person = card
     .getByTestId("mcp-effective-member")

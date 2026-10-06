@@ -55,7 +55,7 @@ export function ConnectionsPage() {
         <Tabs.List>
           <Tabs.Tab value="connections">Connections</Tabs.Tab>
           <Tabs.Tab value="profiles">Tool access</Tabs.Tab>
-          <Tabs.Tab value="runners">Runners</Tabs.Tab>
+          <Tabs.Tab value="runners">Private Runners</Tabs.Tab>
         </Tabs.List>
       </Tabs>
       {search.tab === "runners" ? (
@@ -70,6 +70,8 @@ export function ConnectionsPage() {
           section={search.tab === "profiles" ? "profiles" : "connections"}
           onSectionChange={(tab) => patch({ tab: tab ?? undefined })}
           onManageRunners={() => patch({ tab: "runners" })}
+          initialConnection={search.connection}
+          initialProfile={search.profile}
         />
       )}
     </div>

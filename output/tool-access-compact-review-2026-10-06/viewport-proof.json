@@ -1,0 +1,15 @@
+{
+  "wide": {
+    "width": 2504,
+    "height": 1314,
+    "contentWidth": 1200,
+    "nameWidth": 320,
+    "nameHeight": 32,
+    "horizontalOverflow": false
+  },
+  "laptop": {
+    "height": 1473,
+    "horizontalOverflow": false,
+    "width": 1384
+  }
+}

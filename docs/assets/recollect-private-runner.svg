@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="635" viewBox="0 0 1100 635" role="img" aria-labelledby="title description">
+  <title id="title">Private runner request and result flow</title>
+  <desc id="description">A coding agent calls Recollect. Recollect checks the caller’s tool group, Use grant and environment. A paired private runner initiates an outbound connection, claims its addressed work, executes an approved MCP server inside its network, and returns the result.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 9 5 1 9" fill="none" stroke="#3d6b59" stroke-width="1.5"/></marker>
+    <g id="computer" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8M12 17v5"/></g>
+    <g id="brain" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 4a4 4 0 0 0-6 5 5 5 0 0 0 1 9 4 4 0 0 0 7 2V4a3 3 0 0 0-2-2M15 4a4 4 0 0 1 6 5 5 5 0 0 1-1 9 4 4 0 0 1-7 2V4a3 3 0 0 1 2-2M4 10h3M17 10h3M7 16h4M13 16h4"/></g>
+    <g id="cube" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 2 10 5.5v9L12 22 2 16.5v-9ZM2 7.5 12 13l10-5.5M12 13v9M7 4.75l10 5.5"/></g>
+    <g id="server" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 7h.01M6 18h.01M11 7h7M11 18h7"/></g>
+  </defs>
+  <rect width="1100" height="635" rx="18" fill="#f7f4ec"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#101b2a">
+<text x="36" y="55" font-size="35" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Reach private tools through a paired runner.</text>
+<text x="36" y="90" font-size="20" fill="#59666e" font-weight="400" text-anchor="start">Your coding agent can run elsewhere. The runner lives beside the private MCP server.</text>
+<rect x="36" y="146" width="251" height="300" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="345" y="146" width="289" height="300" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="686" y="125" width="378" height="345" rx="12" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="706" y="156" font-size="19" fill="#3d6b59" font-weight="700" text-anchor="start">Office network / Ubuntu container</text>
+<rect x="56" y="170" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#computer" x="65" y="179" color="#fffdf8"/>
+<text x="112" y="198" font-size="24" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Coding agent</text>
+<rect x="56" y="225" width="173" height="30" rx="6" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="68" y="246" font-size="17" fill="#101b2a" font-weight="400" text-anchor="start">Plugin or MCP</text>
+<text x="56" y="285" font-size="20" fill="#101b2a" font-weight="400" text-anchor="start">Requests a tool</text>
+<text x="56" y="315" font-size="20" fill="#101b2a" font-weight="400" text-anchor="start">Receives the result</text>
+<text x="56" y="408" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Caller identity</text>
+<rect x="365" y="170" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#brain" x="374" y="179" color="#fffdf8"/>
+<text x="421" y="198" font-size="25" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Recollect</text>
+<text x="365" y="250" font-size="20" fill="#101b2a" font-weight="700" text-anchor="start">Checks access + scope</text>
+<text x="365" y="284" font-size="19" fill="#101b2a" font-weight="400" text-anchor="start">Queues the approved call</text>
+<text x="365" y="318" font-size="19" fill="#101b2a" font-weight="400" text-anchor="start">Tracks lease and result</text>
+<text x="365" y="408" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Authorization + dispatch</text>
+<rect x="706" y="180" width="338" height="119" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="724" y="196" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#server" x="733" y="205" color="#fffdf8"/>
+<text x="780" y="220" font-size="25" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Private runner</text>
+<text x="724" y="258" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Paired device · executor identity</text>
+<rect x="706" y="345" width="338" height="100" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="724" y="363" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#cube" x="733" y="372" color="#fffdf8"/>
+<text x="780" y="385" font-size="22" fill="#101b2a" font-weight="700" text-anchor="start">Approved MCP server</text>
+<text x="724" y="421" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Filesystem / internal service</text>
+<path d="M295 263H337" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M337 330H295" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M697 278H643" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="670" y="257" font-size="17" fill="#59666e" font-weight="400" text-anchor="middle">Poll</text>
+<path d="M643 330H697" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="669" y="356" font-size="17" fill="#59666e" font-weight="400" text-anchor="middle">Work</text>
+<path d="M869 309L869 335" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="887" y="330" font-size="17" fill="#3d6b59" font-weight="400" text-anchor="start">Run tool</text>
+<rect x="36" y="494" width="1028" height="105" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="58" y="527" font-size="22" fill="#3d6b59" font-weight="700" text-anchor="start">The runner initiates an outbound connection to Recollect.</text>
+<text x="58" y="557" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">No public inbound runner port is needed. Tool results return through Recollect to the caller.</text>
+<text x="58" y="583" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Approved tools only: registering a runner does not grant access or permit arbitrary shell commands.</text>
+</g>
+</svg>

@@ -1,0 +1,56 @@
+{
+  "laptop": {
+    "card": {
+      "bottom": 615.1875,
+      "height": 307.1875,
+      "left": 280,
+      "right": 1352,
+      "top": 308,
+      "width": 1072,
+      "x": 280,
+      "y": 308
+    },
+    "heading": {
+      "bottom": 140,
+      "height": 44,
+      "left": 280,
+      "right": 528.125,
+      "top": 96,
+      "width": 248.125,
+      "x": 280,
+      "y": 96
+    },
+    "overflow": false,
+    "viewport": [
+      1384,
+      1473
+    ]
+  },
+  "wide": {
+    "card": {
+      "bottom": 623.1875,
+      "height": 307.1875,
+      "left": 414,
+      "right": 1614,
+      "top": 316,
+      "width": 1200,
+      "x": 414,
+      "y": 316
+    },
+    "heading": {
+      "bottom": 148,
+      "height": 44,
+      "left": 414,
+      "right": 662.125,
+      "top": 104,
+      "width": 248.125,
+      "x": 414,
+      "y": 104
+    },
+    "overflow": false,
+    "viewport": [
+      2260,
+      1314
+    ]
+  }
+}

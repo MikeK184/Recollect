@@ -1,0 +1,28 @@
+Use case: ui-mockup
+Asset type: high-fidelity desktop UI concept image for the Recollect web app.
+Primary request: Design a NEW, cleaner Private Runners card layout that clearly connects the execution device to its assigned MCP connections, approved tools, and tool-access groups. This is a proposed design, not a screenshot of shipped functionality.
+
+Create one polished, flat, front-on desktop application mockup in a wide landscape composition, approximately 1536x1024. No browser chrome, floating annotation markers, perspective, collage, or duplicated interface. Keep the app familiar and compact, with crisp, readable typography.
+
+Visual language: Recollect's LIGHT warm cream background #f7f4ec, ivory white card surfaces, dark ink #101b2a, sage green #3d6b59, light sage header fills, fine warm gray borders. Editorial serif page/card headings; restrained modern sans-serif labels and controls. Small outline icons consistent with Lucide. NO dark mode, large shadows, huge fields, dense explanatory paragraphs, collapsible technical sections, or gigantic badges.
+
+App shell: Narrow left sidebar around 220px with Recollect. wordmark, Brains, My agents, Connectors, a compact SWEG — test Brain selector, Dashboard, Ask, Graph, Explore, then Agents, Connections selected, Settings. Team at bottom. Main area: small breadcrumb SWEG — test / Connections, small diagnostics icon at top right. Page heading Connections and subtitle Tools your agents can use in this Brain. Tabs Connections / Tool access / Private Runners, with Private Runners selected and sage underline. Main heading and all content share a single stable left edge, content bounded to a comfortable width.
+
+Below tabs, a minimal toolbar with '1 private runner' on the left and compact dark '+ Add runner' button on the right. Do not add a redundant big Private runners heading or a long introductory paragraph.
+
+Show one redesigned runner card, broad and compact, occupying the main visual focus. Card shape radius 8px, thin border. Header light sage:
+- small network/runner icon on left
+- title 'Ubuntu filesystem demo' in a restrained ~20px serif
+- directly underneath, a small labeled line 'Runs on' followed by an outline monitor badge 'Ubuntu filesystem demo runner'. This line must unmistakably identify the execution device, not another MCP.
+- at upper right a small green-dot 'Connected' badge, small Enabled toggle and compact pencil 'Edit' action; aligned, with no giant fields.
+
+Card body ivory surface with clear concise hierarchy and fine separators. A compact section label 'Assigned connections' at left and a small '1 MCP' badge. Below it one connection row, using a cube icon:
+- connection title 'Ubuntu filesystem demo'
+- beside it a small sage 'Brain-wide' scope badge and subtle '3 approved tools' badge
+- below, three small understated monospaced tool chips: 'read_text_file', 'list_directory', 'list_allowed_directories'
+- a small 'Inspect connection →' text link.
+At the right of this same connection row, behind a thin vertical divider, a compact label 'Tool access' and one linked book-icon chip 'Ubuntu demo files →'. A small supporting line 'Access is managed by this group.' No duplicate people lists, no inherited/direct permission details, no permission matrix, no claim that the runner grants access to everyone. This right column is noticeably narrower than the connection/tools column, and the group visibly belongs to the connection row.
+
+At card bottom, a slim footer with a subtle link 'Manage paired devices →' on left and outline copy icon 'Copy setup command' on right. Use short labels only and generous-but-compact 16–20px card padding. The total card should be around 300–330px tall, with no vast empty space inside the card.
+
+Ensure the visual logic is clear: header identifies WHERE tools execute; the connection row identifies WHICH MCP and its approved tools; the Tool access chip identifies the group that controls WHO may call them. Device connectivity is distinct from group authorization. Render exact names above accurately. Do not invent IP addresses, OS telemetry, last seen timestamps, user identities, extra MCPs, tools, or runner cards. Use the remaining page space as calm cream breathing room, not a huge placeholder panel.

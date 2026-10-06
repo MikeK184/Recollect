@@ -1,0 +1,80 @@
+{
+  "brain_id": "5c054930-d266-4c18-a42b-942729f942aa",
+  "container": "recollect-ubuntu-private-runner-demo",
+  "checks": {
+    "separate_caller_and_runner_identities": true,
+    "native_runner_connected": true,
+    "reader_agent_mcp_catalogue": true,
+    "reader_without_use_denied": "mcp_permission_required",
+    "approved_three_read_tools_discovered": true,
+    "private_file_returned_to_reader_agent": true,
+    "private_directory_listing": true,
+    "outside_directory_denied": true,
+    "unapproved_write_tool_denied": "invalid_input",
+    "offline_queue_and_recovery": true,
+    "allowed_directory_boundary": true,
+    "fresh_container_saved_os_credential": true,
+    "reader_manage_and_share_denied": true
+  },
+  "calls": {
+    "read_marker": "e9fdd498-97f1-42fe-838e-0daae96f5e8e",
+    "list_directory": "8432324f-9e06-4ed4-bfd3-fba6c70133af",
+    "outside_root": "a2108150-e7c8-4408-b578-914f79a9471e",
+    "allowed_directories": "c0a71f6d-6b01-4a7f-a835-a55bb03bdbfe"
+  },
+  "marker": "Ubuntu private-runner filesystem proof",
+  "caller_kind": "MCP protocol client, not an OpenCode LLM session",
+  "caller_device_id": "d7eaafe6-beab-4b8d-89dd-b36bdea46843",
+  "caller_user": "demo",
+  "container_created": true,
+  "runner_device_id": "f5dd4d6c-f4bf-405d-91de-776bae0a1e67",
+  "runner_id": "06f572a4-5865-4472-9a0e-4299e3860363",
+  "definition_imported": true,
+  "connection_id": "843f47a8-4196-47da-a439-1647c5636bed",
+  "profile_id": "2fe52917-4077-4f89-99b7-1e2666ab0aa7",
+  "protocol_version": "2025-11-25",
+  "use_granted": true,
+  "runner_online_at_closeout": true,
+  "ready": {
+    "ready": true
+  },
+  "previous_runs": [
+    {
+      "task_id": "80f47030-7b61-481e-81f4-9157f0342d34",
+      "operation_id": "fdcf3356-09e1-487b-a198-57f88d254669",
+      "client_session_id": "ebc05746-c3f0-4d1d-a80a-f4b2427adfb9",
+      "calls": {
+        "read_marker": "5e173349-20c4-450e-82ea-acf14214b5ed",
+        "list_directory": "e32cb81b-291c-4270-ae08-236699706790",
+        "outside_root": "f7f6e391-faa0-46be-8647-81b4d8401da9",
+        "offline_queued": "554647e2-a9b5-4aaa-bc95-51b74bd703f3"
+      }
+    },
+    {
+      "task_id": "390d0cde-d47f-48b5-a249-5ff74aa074eb",
+      "operation_id": "4c56d93e-4fa0-43f6-921a-84e9af14b37d",
+      "client_session_id": "9743da8e-9216-4555-8d19-1a896b3be7e2",
+      "calls": {
+        "read_marker": "701c894f-4fae-43da-b9fe-2ec6c801f2af",
+        "list_directory": "ad8b91ba-3f7f-4d28-b99a-b5a9ebec5cf0",
+        "outside_root": "294c0904-c319-41f0-8565-43172799a7c9",
+        "allowed_directories": "6eeea678-82e6-4883-a653-ffc4598feea0"
+      }
+    }
+  ],
+  "runtime_image_id": "sha256:68af65c671da9500106e0041f38134d8033c4702e8548f7cb1c3beebcaa89bbc",
+  "node_version": "v22.23.3",
+  "task_id": "87fd0a6c-ee8c-4c50-89a7-8e72ca37d6f5",
+  "scope_id": "2d64ed3c-4a97-45f8-a56f-afcd7b21a674",
+  "operation_id": "0fb5630a-17ef-4015-8d13-d87bc6103d15",
+  "client_session_id": "855f5418-e4fe-4306-9419-d58a969717ed",
+  "task_closed": true,
+  "package_versions": {
+    "filesystem": "2026.8.31",
+    "sdk": "1.32.1"
+  },
+  "ubuntu_version": "24.04.5 LTS",
+  "ports_published": false,
+  "capabilities_dropped": "ALL",
+  "tls_verified": true
+}

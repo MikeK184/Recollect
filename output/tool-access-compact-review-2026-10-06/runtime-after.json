@@ -1,0 +1,48 @@
+{
+  "configuration": {
+    "name": "Demo web research",
+    "description": "",
+    "enabled": true,
+    "environment_id": null,
+    "connection_ids": [
+      "b694e0b8-8c47-4e3e-846e-a9848d3cd7fe"
+    ]
+  },
+  "grants": [
+    {
+      "id": "e040fb22-7c7d-4d3c-be4e-6d7d342d3a12",
+      "account_id": "1725db3a-c74f-4573-b065-64c6cc79b77c",
+      "username": "demo",
+      "issuer": null,
+      "group_name": null,
+      "rights": {
+        "use_profile": true,
+        "manage": false,
+        "share": false
+      }
+    },
+    {
+      "id": "6f8677e5-8de9-4e5e-a7d9-38446dc82dcc",
+      "account_id": "0b702823-b136-4f21-9fac-e1001695ab03",
+      "username": "owner",
+      "issuer": null,
+      "group_name": null,
+      "rights": {
+        "use_profile": true,
+        "manage": false,
+        "share": false
+      }
+    }
+  ],
+  "rights": {
+    "use_profile": true,
+    "manage": true,
+    "share": true
+  },
+  "brain_count": 16,
+  "call_ids": [
+    "d0ec9c5f-420f-47eb-8fc3-685f262a093e",
+    "b7769ee9-a820-4977-ba51-e58aa6e301ba",
+    "f7375104-0dc1-499f-a20b-6f38592ceb69"
+  ]
+}

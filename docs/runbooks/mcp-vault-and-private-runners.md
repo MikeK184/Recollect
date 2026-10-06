@@ -11,8 +11,8 @@ credential file. Existing environment/OS-store bindings need no Vault service.
 
 ## Register a private runner
 
-In the Brain's MCP panel, choose **Register private runner**, name it and select
-your own active paired device. You must remain a Brain administrator. Registration
+In **Connections → Private Runners**, choose **Add runner**, name it and select
+your own active paired device in the inline form. You must remain a Brain administrator. Registration
 alone shows **Offline**; **Connected** requires a current runner heartbeat.
 Other users need their own explicit profile **Use** grant. They do not receive
 the host's account or device credential.
@@ -21,17 +21,26 @@ On that registered device, use its paired endpoint/profile and an owned receipt
 directory. Install `recollect-mcp-runner` beside `recollect-agent`:
 
 ```sh
-cargo build -p recollect-agent
+cargo build -p recollect-agent --bins
 RECOLLECT_URL=http://127.0.0.1:8787 RECOLLECT_DEVICE_PROFILE=private-host \
   target/debug/recollect-agent private-runner RUNNER_UUID /path/to/private/receipts
 ```
 
 Set connection placement to **private** and select that exact Brain registration.
 Offline calls remain queued until their queue deadline; another runner does not
-take over. Rename/disable through **Edit private runner**. A device change needs
+take over. Rename/disable through the card's inline **Edit private runner**. A device change needs
 a new registration. Stale edits require reopening the form. Lost host authority
 prevents new work and renewal; active uncertainty uses the existing receipt-only
 recovery and reconciliation controls. Stopping a runner never revokes Vault tokens.
+
+The [owned Ubuntu filesystem demo](../../infra/private-runner-demo/README.md)
+proves an independent reader's agent MCP call, three approved read tools,
+outside-root/no-Use/Manage/Share/write denials and offline queue/recovery on the
+local SWEG installation. A coding host requests tools through Recollect;
+the private runner starts/calls the approved provider on its own machine and
+returns the result through Recollect. The coding host need not reach that
+provider directly. Registration, caller permissions and actual connectivity
+remain separate. See [dated proof and native-host limits](../mappings/private-runner-ubuntu-proof-2026-10-06.md).
 
 ## Configure optional Vault delivery
 

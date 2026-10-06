@@ -1,0 +1,26 @@
+{
+  "owner": {
+    "bound_connection": "Ubuntu filesystem demo",
+    "runner": "Ubuntu filesystem demo",
+    "available": true,
+    "group": "Ubuntu demo files",
+    "approved_tools": [
+      "list_allowed_directories",
+      "list_directory",
+      "read_text_file"
+    ],
+    "admin_detail_denied": false
+  },
+  "reader": {
+    "bound_connection": "Ubuntu filesystem demo",
+    "runner": "Ubuntu filesystem demo",
+    "available": true,
+    "group": "Ubuntu demo files",
+    "approved_tools": [
+      "list_allowed_directories",
+      "list_directory",
+      "read_text_file"
+    ],
+    "admin_detail_denied": true
+  }
+}

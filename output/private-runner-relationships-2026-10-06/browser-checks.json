@@ -1,0 +1,54 @@
+[
+  {
+    "case": "metadata loading",
+    "pass": true
+  },
+  {
+    "case": "denied metadata has no stale count",
+    "pass": true
+  },
+  {
+    "case": "shared profile traverses all pages once for two connections",
+    "pass": true
+  },
+  {
+    "case": "old server missing binding is unavailable, not empty",
+    "pass": true
+  },
+  {
+    "case": "no Use hides tools without discovery",
+    "pass": true
+  },
+  {
+    "case": "pending save freezes fields and relationship links",
+    "pass": true
+  },
+  {
+    "case": "failed save retains draft and restores actions",
+    "pass": true
+  },
+  {
+    "case": "retry keeps original draft revision and idempotency",
+    "pass": true
+  },
+  {
+    "case": "failed refresh hides previously successful tool count",
+    "pass": true
+  },
+  {
+    "case": "discovery uses exact tool-group environment",
+    "pass": true
+  },
+  {
+    "case": "reader empty qualifies visibility",
+    "pass": true
+  },
+  {
+    "case": "missing connection does not open another inspector",
+    "pass": true
+  },
+  {
+    "case": "missing tool group explains unavailable destination",
+    "pass": true
+  }
+]

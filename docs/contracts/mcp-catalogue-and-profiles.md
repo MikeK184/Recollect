@@ -103,6 +103,13 @@ a catalogue claim. Import of identical content does not create duplicate records
 
 ### Brain connections and profiles
 
+The Private Runner card follow-up adds nullable `private_runner_id` to connection
+summaries. Derive it only from a private placement's canonical `private:UUID`
+binding; otherwise return null. It exposes no configuration, credential alias,
+target or local-device runner reference. Existing Brain/catalogue visibility
+filters still apply; the UUID is routing metadata, never a grant or live status.
+Older summary payloads may omit it and must remain deserializable.
+
 The Brain owns connections/profiles; `created_by` records contribution, not an
 independent owner bypass. Brain admins provision and edit connections and create
 profiles. Named connections select an approved definition, exact target, placement,
@@ -211,11 +218,22 @@ Editing updates values in the existing card/connection inspector with stable
 identity, tabs and sections. Manage edits group configuration; Share edits grants.
 Effective account rights remain additive; removable direct/group grants are
 distinct from inherited administrative/group authority, exposed in a concise
-disclosure. The main account icon set always shows effective access; a Share
-editor labels separate Direct controls beside the same name, so an inherited
-allowed power never silently turns into a red denial. Pending people are marked
+disclosure. The approved compact revision on 2026-10-06 supersedes the repeated
+Direct controls beside each name: one main icon set shows effective access,
+including staged direct/group edits. Inherited powers remain green with a lock;
+they cannot be denied by clearing a direct grant. A small source chip opens the
+direct/admin/group breakdown and on-demand direct-grant controls, preserving
+the ability to remove overlapping direct grants. Admin inheritance applies to
+Manage/Share only; Use stays explicit. Disabled accounts or absent Brain access
+never appear enabled merely because stored direct grants exist. Pending people are marked
 as drafts, rendered only in active authorized editing, and discarded on Share
 loss/archive. Neither the design nor edit mode grants additional rights.
+Where retained same-name group grants belong to different issuers, the member
+DTO cannot identify the matching issuer. Preserve authoritative effective and
+individual-grant values, disable ambiguous projection/group editing and keep
+explicit direct-grant editing available; never guess an issuer from name order.
+Non-sharers see only their own authoritative profile-rights row when the server
+withholds the member/grant inventory.
 
 Configuration and grant commands remain separate canonical transactions. A card
 Save applies a changed configuration first, then edited grants sequentially;

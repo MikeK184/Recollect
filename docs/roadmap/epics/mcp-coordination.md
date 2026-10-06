@@ -74,6 +74,7 @@ universal catalogue of customer connectors is introduced.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `mcp-ubuntu-private-runner-proof` | shipped | contract-backed | pack | Real Ubuntu filesystem MCP with separate reader caller, permission/boundary denials, offline recovery and fresh OS-store reuse |
 | `mcp-equivalent-http-schema-inspection` | shipped | contract-backed | pack | Bounded equivalent Draft 7 declaration conversion during HTTP inspection; strict manifest approval retained |
 | `mcp-copy-ready-agent-config` | in-progress | contract-backed | pack | Browser direct-token native config and visible account token management, preserving plugin OS storage |
 | `mcp-approved-connector-icons` | shipped | contract-backed | pack | Explicit discovery preserves safe optional connector icons with bounded local cache/fallback |
@@ -97,6 +98,7 @@ universal catalogue of customer connectors is introduced.
 
 | Slice ID | Predecessors |
 | --- | --- |
+| `mcp-ubuntu-private-runner-proof` | `mcp-vault-and-private-runners`, `mcp-memory-and-workspace-tools` |
 | `mcp-plugin-session-memory` | `mcp-plugin-direct-auth`, `mcp-codex-plugin`, `evidence-session-capture`, `mcp-vault-and-private-runners` |
 | `mcp-direct-auth-repair` | `mcp-direct-connections` |
 | `mcp-catalogue-and-profiles` | `platform-durable-work`, `evidence-workspace-scope` |

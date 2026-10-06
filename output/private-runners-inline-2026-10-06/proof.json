@@ -1,0 +1,100 @@
+{
+  "live": {
+    "empty": true,
+    "addInline": true,
+    "eligiblePairedDeviceEnablesSubmit": true,
+    "cancelNoRegistration": true,
+    "modalCount": 0,
+    "finalEmpty": true
+  },
+  "fixtures": {
+    "immutableDevice": true,
+    "cancelDiscarded": true,
+    "failedSaveRetainedDraft": true,
+    "pendingNameCancelToggleFrozen": true,
+    "retrySameIdempotencyKey": true,
+    "createUsesPostNullRevision": true,
+    "disablePreservesHistory": true,
+    "setupCommandExact": true,
+    "staleRevisionBlocksSave": true,
+    "deviceOptionsExcludedExpiredAndRegistered": true,
+    "whitespaceNameBlocked": true,
+    "deviceReadFailureBlocksCreate": true,
+    "failedRunnerReadHidesCardsAndEditor": true,
+    "readerHasNoAddEdit": true,
+    "readerFreshDeviceReads": 0,
+    "archivedAdminAddEditDisabled": true
+  },
+  "layout": {
+    "laptop": {
+      "viewport": [
+        1384,
+        1473
+      ],
+      "cardWidth": 1072,
+      "cardHeight": 135,
+      "noHorizontalOverflow": true
+    },
+    "wide": {
+      "viewport": [
+        2260,
+        1314
+      ],
+      "cardWidth": 1200,
+      "nameInputWidth": 320,
+      "nameInputHeight": 32,
+      "deviceBadgeHeight": 26,
+      "nameAndDeviceSameLeft": true,
+      "noHorizontalOverflow": true
+    }
+  },
+  "writeProof": [
+    {
+      "method": "PUT",
+      "name": "Office VPN",
+      "enabled": true,
+      "device_id": "00000000-0000-4000-8000-000000000011",
+      "base_revision": "00000000-0000-4000-8000-000000000101",
+      "idempotency_key": "0ab5d0ef-51a1-4e7b-b85a-4eeb5965061c"
+    },
+    {
+      "method": "PUT",
+      "name": "Office VPN",
+      "enabled": true,
+      "device_id": "00000000-0000-4000-8000-000000000011",
+      "base_revision": "00000000-0000-4000-8000-000000000101",
+      "idempotency_key": "0ab5d0ef-51a1-4e7b-b85a-4eeb5965061c"
+    },
+    {
+      "method": "PUT",
+      "name": "Office VPN",
+      "enabled": true,
+      "device_id": "00000000-0000-4000-8000-000000000011",
+      "base_revision": "00000000-0000-4000-8000-000000000101",
+      "idempotency_key": "0ab5d0ef-51a1-4e7b-b85a-4eeb5965061c"
+    },
+    {
+      "method": "POST",
+      "name": "Build tools",
+      "enabled": true,
+      "device_id": "00000000-0000-4000-8000-000000000013",
+      "base_revision": null,
+      "idempotency_key": "b92db2d9-338b-4035-9df6-4d3a64f87909"
+    },
+    {
+      "method": "PUT",
+      "name": "Build tools",
+      "enabled": false,
+      "device_id": "00000000-0000-4000-8000-000000000013",
+      "base_revision": "fc08d9f9-33da-418c-bf97-5f02297cd4eb",
+      "idempotency_key": "f4906d51-25c6-468f-aff6-ae781f0f46b7"
+    }
+  ],
+  "limits": "Request fixtures in agent-owned tab only; no actual private runner registered or started.",
+  "cleanup": {
+    "interceptsRemoved": true,
+    "viewportReset": true,
+    "clipboardRestored": true,
+    "userOriginalTabPreserved": true
+  }
+}

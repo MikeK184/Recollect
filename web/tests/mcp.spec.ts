@@ -518,12 +518,10 @@ test("desktop registers a paired private runner, selects exact placement and han
     name: "Private runners",
     exact: true,
   });
-  await expect(panel).toContainText("No private runners are registered");
-  await panel
-    .getByRole("button", { name: "Register private runner", exact: true })
-    .click();
-  let dialog = page.getByRole("dialog", {
-    name: "Register private runner",
+  await expect(panel).toContainText("No private runners yet");
+  await panel.getByRole("button", { name: "Add runner", exact: true }).click();
+  let dialog = page.getByRole("form", {
+    name: "Add private runner",
     exact: true,
   });
   const existingDevices = await command(page, "/api/devices");
@@ -537,12 +535,12 @@ test("desktop registers a paired private runner, selects exact placement and han
     )
   )
     await expect(dialog).toContainText(
-      "Connect the Recollect plugin on an active device before registering a private runner.",
+      "Connect the Recollect plugin on an active device first.",
     );
   await expect(
-    dialog.getByRole("button", { name: "Save private runner", exact: true }),
+    dialog.getByRole("button", { name: "Add runner", exact: true }),
   ).toBeDisabled();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   const pairing = await command(page, "/api/devices/pairings", {
     name: "Desktop private host",
   });
@@ -556,11 +554,9 @@ test("desktop registers a paired private runner, selects exact placement and han
   await command(page, "/api/devices/pairings/finish", {
     device_code: pairing.device_code,
   });
-  await panel
-    .getByRole("button", { name: "Register private runner", exact: true })
-    .click();
-  dialog = page.getByRole("dialog", {
-    name: "Register private runner",
+  await panel.getByRole("button", { name: "Add runner", exact: true }).click();
+  dialog = page.getByRole("form", {
+    name: "Add private runner",
     exact: true,
   });
   await dialog.getByLabel(/^Private runner name/).fill("Private lab runner");
@@ -568,14 +564,15 @@ test("desktop registers a paired private runner, selects exact placement and han
   await page
     .getByRole("option", { name: "Desktop private host", exact: true })
     .click();
-  await dialog
-    .getByRole("button", { name: "Save private runner", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: "Add runner", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   const card = panel.getByTestId("mcp-private-runner");
   await expect(card).toContainText("Private lab runner");
   await expect(card).toContainText("Offline");
-  await expect(card).toContainText("No runner connection has been established");
+  await expect(card).toContainText("No assigned connections.");
+  await expect(
+    card.getByRole("button", { name: "Copy setup command", exact: true }),
+  ).toBeVisible();
   const records = await command(page, `${f.base}/mcp/private-runners`);
   expect(records).toHaveLength(1);
   expect(records[0].device_id).toBe(device);
@@ -622,7 +619,7 @@ test("desktop registers a paired private runner, selects exact placement and han
   await card
     .getByRole("button", { name: "Edit private runner", exact: true })
     .click();
-  dialog = page.getByRole("dialog", {
+  dialog = page.getByRole("form", {
     name: "Edit private runner",
     exact: true,
   });
@@ -639,20 +636,20 @@ test("desktop registers a paired private runner, selects exact placement and han
   );
   await expect(dialog).toContainText("This registration changed");
   await expect(
-    dialog.getByRole("button", { name: "Save private runner", exact: true }),
+    dialog.getByRole("button", { name: "Save changes", exact: true }),
   ).toBeDisabled();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await card
     .getByRole("button", { name: "Edit private runner", exact: true })
     .click();
-  dialog = page.getByRole("dialog", {
+  dialog = page.getByRole("form", {
     name: "Edit private runner",
     exact: true,
   });
   await dialog.getByLabel(/^Private runner name/).fill("Private lab runner");
   await dialog.getByLabel("Private runner enabled", { exact: true }).uncheck();
   await dialog
-    .getByRole("button", { name: "Save private runner", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(dialog).not.toBeVisible();
   await expect(card).toContainText("Disabled");

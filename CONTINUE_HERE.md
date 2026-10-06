@@ -1,3 +1,134 @@
+# GitHub README workflow visuals and commit — 2026-10-06
+
+The user requested the newest local changes committed and more README visuals.
+Root README now includes three generic cream/ink/sage SVG workflows: coding
+host/plugin/direct MCP, connection/group/environment permissions, and private
+runner outbound execution. Host labels and project status reflect delivered
+desktop work while keeping the active native-host/evaluation limits visible.
+[Current evidence](docs/mappings/readme-runner-workflows-2026-10-06.md).
+
+README renders without horizontal overflow; all diagrams and links pass.
+Fresh web build/type/design, eight permission tests, two Rust tests, formatting,
+Python/shell checks and governance32 pass. The isolated browser rerun could not
+start because Docker is stopped; older Connected/readiness statements below are
+historical proof, not a fresh connectivity check. No installation or provider
+operation occurred. The user-authorized commit includes the latest MCP UI/backend,
+owned Ubuntu fixture, docs and proof artifacts; see containing Git history.
+No push or version bump. Temporary browser/preview state is removed.
+
+# Private Runner relationship cards delivered — 2026-10-06
+
+The approved concept is implemented on the ready local stack: paired device/status,
+assigned MCP/scope/approved tool chips, linked Tool groups and slim footer; the
+relationship body stays visible in Edit. Existing registration/grant boundaries
+remain. Reader summaries expose only the canonical private runner UUID; approved
+metadata uses existing Use-gated discovery with shared complete pagination.
+
+[Evidence](docs/mappings/private-runner-relationships-2026-10-06.md),
+[archived pack](docs/roadmap/execution/archive/desktop-private-runner-relationships.md).
+Two Rust tests, web build/type/design, 13 CUA checks, actual owner/reader reads,
+links/Add/Edit/Cancel, independent rendered laptop/wide review and governance32
+passed. Current image is
+`sha256:bf43f20cd956f3eb1e1af7333ec995a9a5e2294bf8956e80c81c945fdf2e017e`.
+Ubuntu demo stays Connected; canonical name/device/Enabled/revision unchanged.
+Temporary browser/proxy fixtures removed; original user tab preserved. This
+supersedes the proposal-only spacing handoff below. Version N/A; uncommitted.
+
+# Private Runners spacing corrected — 2026-10-06
+
+The user's follow-up removes the route's centered horizontal jump and excess
+top toolbar margin. Title/tabs/cards now align with Connections/Tool access;
+1200px cap and existing inline Add/Edit behavior remain. Actual laptop/wide
+read/Edit/Add/Cancel proof, independent UI review, build/type/design, governance32,
+readiness and whitespace passed. Current frontend-only image is
+`sha256:c65591fe3ce16723f66037acc433d1d4efe295e56baa6ba10100fd983463fcab`.
+The Ubuntu demo remains connected; original user tab and saved state preserved.
+
+[Evidence and relationship proposal](docs/mappings/private-runners-spacing-2026-10-06.md).
+Suggested next UI: paired device/status plus assigned connection/scope/approved
+tools and tool-group chips. Proposal only; existing full connection binding
+detail is admin-only, so reader-safe relationships need separate implementation.
+Version N/A; uncommitted.
+
+# Real Ubuntu private filesystem runner proven — 2026-10-06
+
+User-authorized named Docker demo `recollect-ubuntu-private-runner-demo` is
+retained online on SWEG — test. Native pairing uses its own Ubuntu Secret
+Service; an independent demo reader calls the real Brain agent MCP interface.
+Three approved read tools return the synthetic private file/directory. No-Use,
+Manage/Share, outside-root and unapproved-write denials pass; offline work waits
+for the exact runner and returns on the same call after restart. Fresh-container
+OS-store reuse, live Connected/connection/Tools views and readiness pass.
+
+[Archived pack](docs/roadmap/execution/archive/mcp-ubuntu-private-runner-proof.md),
+[dated checks/resources/screenshots](docs/mappings/private-runner-ubuntu-proof-2026-10-06.md)
+and [fixture procedure/stop-start commands](infra/private-runner-demo/README.md).
+No host/customer folder or Docker socket mounted; no published port. Only the
+new Ubuntu demo group gets owner/demo Use. Existing Context7/Exa and other grants
+remain intact. Caller tasks closed/sessions released; original browser tab and
+unrelated services preserved. Real MCP protocol proof is distinct from a fresh
+OpenCode LLM session; the existing native-token host pack remains active.
+No product deployment/schema change, paid model acceptance or release. Native
+build, proof, preparation rerun, syntax/governance32/CodeGraph/whitespace pass.
+Version N/A; uncommitted. The preceding UI-only empty-runner evidence below is
+historical and superseded for this runtime question.
+
+# Compact inline Private Runners delivered — 2026-10-06
+
+The approved read/inline-v2 concepts are implemented on the ready local stack:
+bounded cards, compact name/device/status, inline Add/Edit with immutable existing
+host, Enabled and explicit Copy setup command. Canonical revision/idempotency,
+reader/archive and failed-read/save guards remain. Paired-device names use only
+the current account inventory, with UUID fallback for other hosts.
+
+Build/type/design, required governance32, CodeGraph and whitespace passed. CUA
+proved actual empty/Add/Cancel and isolated Save/retry/pending/stale/device/reader/
+archive states; 1384/2260px comparison passed without overflow. Setup copy is exact.
+Frontend-only image `sha256:34d390b2f0bc11d8563b2ea5e28df9141568bde666a9d24a02bd4f2653fbc89f`
+is deployed through normal stack startup; backend unchanged, readiness passed.
+Interceptions/viewport removed, clipboard restored, owned tab closed and actual
+SWEG registrations still empty. Original user tab/session preserved.
+
+[Archived pack](docs/roadmap/execution/archive/desktop-inline-private-runners.md)
+and [current evidence/screenshots](docs/mappings/desktop-inline-private-runners-2026-10-06.md).
+Agents consume Brain knowledge/request tools; an opt-in private worker executes
+permitted outbound tools from the paired host's network. No real runner started.
+Version N/A; uncommitted. Native-token host work stays separate.
+
+# Compact Tool access delivered locally — 2026-10-06
+
+The subsequent quick header correction is also live: separate environment/MCP
+badges beneath the title, with the environment picker in that same row when
+editing. CUA measured alignment and verified picker/Cancel preserved the user's
+Local test scope. Build/governance and readiness passed; frontend-only image
+`sha256:4c425ae34df3a0ad2ed9d86d176f84bfe4cea196e261669cfce0faca797ce4eb`.
+See the dated mapping's header-badge follow-up for current screenshots.
+
+The user-approved tighter layout is running on the ready local stack: compact
+name/environment/Enabled header, aligned bounded cards, MCP/People columns,
+one adjacent permission set per person and small Admin/Group/Direct popovers.
+Inherited rights remain green and locked; explicit direct cleanup stays in the
+popover. Share-only/no-environment edits retain the environment label. Readers
+with withheld member inventories see only their own authoritative You row.
+
+The [archived pack](docs/roadmap/execution/archive/desktop-compact-tool-access.md)
+and [current evidence/screenshots](docs/mappings/desktop-compact-tool-access-2026-10-06.md)
+record eight focused permission tests, build/type/design, governance32,
+CodeGraph and actual CUA draft/Cancel/Save/partial retry proof. A controlled
+grant-save failure retried only the unfinished grant. Temporary description was
+restored; final configuration/grants/rights, 16 Brains and three call IDs match
+before. The demo reader loaded two approved Exa tools, with Manage/Share denied
+by the actual API. No tool executed or permission expanded.
+
+Independent final source/pixel review accepted actual 1384×1473 and 2504×1314
+layouts with no remaining blocker. Frontend-only immutable runtime layer
+`sha256:2c12972776391aa4e69b87cca2b03d83dcf866713b57f8937f4b4291f13c5752`
+was installed using normal stack startup; backend unchanged, readiness passed.
+Temporary proxy/tabs and network/viewport overrides were cleaned up; user's
+original tab/session stayed intact. Refresh Tool access for current assets.
+External OIDC group behavior has focused fixture/source proof, not a new live
+provider. Version N/A; uncommitted. Separate native-token acceptance stays open.
+
 # Connections inspection follow-up delivered locally — 2026-10-06
 
 All five marked concerns now run on the ready local stack: actual scope/runner

@@ -1,0 +1,11 @@
+{
+  "rights": {
+    "use_profile": true,
+    "manage": false,
+    "share": false
+  },
+  "grants_withheld": true,
+  "members_withheld": true,
+  "manage_denied": 403,
+  "share_denied": 403
+}
