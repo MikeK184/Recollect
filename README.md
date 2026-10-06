@@ -40,7 +40,7 @@ what can be sent to a model and which tools an agent may use.
 > [Remaining work and limits](docs/roadmap/execution/active/README.md) include
 > further native-host direct-MCP acceptance and memory evaluation.
 
-![Recollect product concept: Codex, Claude Code and OpenCode share an Engineering Brain through the plugin or direct MCP, with separate approved tool access.](docs/assets/recollect-agent-workflow-v2.png)
+![Recollect product concept with the original logo: Codex, Claude Code and OpenCode share an Engineering Brain through the plugin or direct MCP, with separate approved tool access.](docs/assets/recollect-agent-workflow-v3.png)
 
 *Product illustrations use example data and show the main workflows.*
 
@@ -123,16 +123,21 @@ and its [measured results and limits](docs/mappings/public-memory-benchmark-2026
 
 Set up a connection once, include it in a **tool group**, and grant people or
 groups **Use**. Choose an environment when the tools should be available only
-for that work context. Execution placement controls where the server runs.
+for that work context. Execution placement controls which executor makes the
+MCP call.
 
 | Setting | Responsibility | Example |
 | --- | --- | --- |
 | **Connection scope** | Where the MCP connection is eligible within its Brain | Brain-wide, or only Development |
 | **Tool group** | Which connections a caller can use, with optional environment scope | Research tools contains Exa and requires Development |
 | **Use / Manage / Share** | Independent permissions to run tools, edit a group, or grant access | A reader can Use without Manage or Share |
-| **Runs on** | Where approved tools execute | Recollect service, the caller's device, or a named private runner |
+| **Runs on** | Which executor dispatches the approved MCP call | Recollect service, the caller's device, or a named private runner |
 
-![Recollect Tool access concept: a Brain-wide Exa connection is included in a Development tool group. Alex has Use, while Manage and Share are denied. Execution remains on the Recollect service.](docs/assets/recollect-environment-access-v2.png)
+The agent requests tools through Recollect. For centrally placed HTTP connections
+such as Exa, Recollect checks access and makes the MCP request to the remote
+service. The environment limits availability; it does not host the MCP server.
+
+![Recollect Tool access workflow: the coding agent selects Development and requests a tool through Recollect. The Development group includes Brain-wide Exa and Context7 connections; Alex has Use without Manage or Share, and MCP calls run from the Recollect service.](docs/assets/recollect-environment-access-v3.png)
 
 A Brain-wide connection can belong to an environment-specific tool group. That
 group limits its use to the selected environment; it does not move the MCP server.
@@ -150,7 +155,7 @@ A private runner is an optional executor on a **paired device inside your
 network**. Use it for a filesystem MCP, internal service or another approved tool
 that the Recollect service cannot reach directly.
 
-![Recollect Private Runners concept: an Office Ubuntu runner connects outbound and executes three approved filesystem tools for the Office files group, returning results through Recollect to the coding agent.](docs/assets/recollect-private-runner-v2.png)
+![Recollect Private Runners workflow with the original logo: an Office Ubuntu runner connects outbound and executes three approved filesystem tools for the Office files group, returning results through Recollect to the coding agent.](docs/assets/recollect-private-runner-v3.png)
 
 The runner initiates an outbound connection to your Recollect endpoint, claims
 its addressed work and returns the result. It needs access to Recollect and the
