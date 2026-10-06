@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Self-hosted AI memory and MCP coordination for coding agents.</strong><br />
-  Keep context across repositories, tools and coding sessions.
+  <strong>Shared engineering memory and governed MCP tools for coding agents.</strong><br />
+  Connect once. Keep context. Reach the tools you need on your own infrastructure.
 </p>
 
 <p align="center">
@@ -24,16 +24,22 @@
   <a href="https://github.com/MikeK184/Recollect/issues">Issues</a>
 </p>
 
-**Recollect gives Codex, Claude Code and OpenCode persistent memory for engineering work.**
-Bring repository knowledge, documents, decisions, runbooks and supported agent
-sessions into one place, so the next session can pick up where the last left off.
-Run it on your own machine or a private server, and inspect the same knowledge in
-a desktop web UI.
+**Recollect gives your coding agents a shared Brain and the right tools to act.**
+Connect Codex, Claude Code and OpenCode to one self-hosted service. Carry
+repository knowledge, decisions, runbooks and session memory across agents and
+repositories, so the next session can pick up where the last left off.
 
-It combines long-term agent memory, knowledge graphs and hybrid search with a
-Model Context Protocol (MCP) coordinator. Memories stay connected to their
-sources, repository revisions and environments. You control what is captured,
-what can be sent to a model and which tools an agent may use.
+Bring memory and execution into one workflow: retrieve context with supporting
+evidence, authorize the tools an agent can use, and route approved MCP calls
+through the Recollect service or a paired private runner. Reach an internal
+filesystem or service from another machine while keeping execution inside your
+network.
+
+Long-term memory, knowledge graphs, hybrid search and a Model Context Protocol
+(MCP) coordinator work together around the same Brain. Memories retain links to
+their sources, repository revisions and environments. Your coding agent stays
+in its familiar host; Recollect provides the shared knowledge, access rules and
+tool coordination. Inspect it all in the desktop web UI.
 
 > **Early project:** intended for individuals and trusted internal teams.
 > The desktop redesign and private-runner workflow have local acceptance evidence.
@@ -43,6 +49,27 @@ what can be sent to a model and which tools an agent may use.
 ![Recollect product concept with the original logo: Codex, Claude Code and OpenCode share an Engineering Brain through the plugin or direct MCP, with separate approved tool access.](docs/assets/recollect-agent-workflow-v3.png)
 
 *Product illustrations use example data and show the main workflows.*
+
+## Why Recollect
+
+**A shared Brain, governed tools and private execution in one self-hosted service.**
+
+- **Keep engineering context across agents and sessions.** Capture supported
+  sessions automatically, recall relevant knowledge with citations, and reuse
+  decisions and fixes across repositories. Memory stays connected to its
+  evidence and correction history.
+- **Give agents the right tools for each environment.** Organize MCP connections
+  into tool groups with independent Use, Manage and Share permissions. A person
+  can read a Brain without permission to run its tools; environment scope keeps
+  tool availability tied to the selected work context.
+- **Reach private tools from wherever you work.** A paired runner connects
+  outbound to Recollect and executes approved calls inside your network. The
+  caller and runner can be different people or devices, and each connection has
+  an explicit execution location.
+- **Keep control of your data and infrastructure.** Self-host the service,
+  choose capture, retention and AI-processing policies, and inspect knowledge,
+  connections, permissions and tool-call outcomes in one UI. Model calls follow
+  your configured provider policy.
 
 ## When to use Recollect
 

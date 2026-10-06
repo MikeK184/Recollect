@@ -39,6 +39,7 @@ deferral for the two requested documentation skills.
 | `repository-readme-runner-workflows` | shipped | contract-backed | small-fix: bounded README and vector diagrams of accepted MCP scope, grants and execution; no runtime or interface change | Refresh host/status guidance and illustrate plugin/direct MCP, environment scope and private-runner request flow |
 | `repository-readme-concept-imagery` | shipped | contract-backed | small-fix: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
 | `repository-readme-branded-workflows` | shipped | contract-backed | small-fix: image/documentation refinement using the existing original logo and accepted MCP scope/placement behavior; no runtime or interface change | Original identity on approved layouts and a closer Tool access illustration clarify environment scope and service dispatch |
+| `repository-readme-product-positioning` | shipped | contract-backed | small-fix: user-requested README copy refinement grounded in existing memory, environment, permission and runner contracts; no runtime or interface change | Lead with shared engineering memory, governed MCP tools and private execution as one self-hosted workflow |
 
 ## Clarification closeout
 
@@ -151,3 +152,21 @@ unrelated roadmap slices. `./scripts/validate.sh` passed governance lint and all
   governance lint/32 tests and whitespace checks. Temporary resources closed.
 - Version: N/A; no release bump.
 - Commit: Continuing user-authorized local commit; see containing Git history.
+
+## README product positioning closeout — 2026-10-06
+
+- Planned: Strengthen Recollect's README positioning around the combined value
+  established in the user's project comparison.
+- Shipped: A clearer headline and introduction plus a concise Why Recollect
+  section covering shared engineering memory, environment permissions, private
+  execution and data control. Existing concept images and setup guides remain
+  the visual and operating references.
+- Not shipped: New product capabilities, comparative performance claims or
+  exclusivity claims. Existing acceptance and deployment limits are retained.
+- New blockers: None for this bounded documentation change.
+- Docs updated: Root README and repository-governance epic/index.
+- Validation: All 39 README local file/anchor references; governance lint and
+  all 32 checker tests; whitespace checks. Claims checked against the accepted
+  memory, MCP catalogue and private-runner behavior and recorded local proofs.
+- Version: N/A; documentation only.
+- Commit: User-authorized commit and push to `origin/main`; see containing Git history.
