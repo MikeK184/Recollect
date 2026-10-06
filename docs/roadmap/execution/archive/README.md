@@ -5,6 +5,7 @@ local capability does not establish a deployed or published service.
 
 | Pack | Status |
 | --- | --- |
+| [repository-product-docs-site.md](repository-product-docs-site.md) | shipped |
 | [desktop-private-runner-relationships.md](desktop-private-runner-relationships.md) | shipped |
 | [mcp-ubuntu-private-runner-proof.md](mcp-ubuntu-private-runner-proof.md) | shipped |
 | [desktop-inline-private-runners.md](desktop-inline-private-runners.md) | shipped |

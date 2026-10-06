@@ -5,9 +5,12 @@ Statuses here are planned, in-progress, or blocked. Shipped packs belong in the
 
 | Pack | Status |
 | --- | --- |
-| [repository-product-docs-site](repository-product-docs-site.md) | in-progress |
 | [mcp-copy-ready-agent-config](mcp-copy-ready-agent-config.md) | in-progress |
 | [operations-longmemeval-bench](operations-longmemeval-bench.md) | blocked |
+
+The public product and searchable docs site is published through GitHub Pages.
+Its [pack](../archive/repository-product-docs-site.md) is archived with
+[live deployment and browser evidence](../../../mappings/public-product-docs-site-2026-10-06.md).
 
 The approved compact Private Runners editor is delivered on the ready local
 stack. Its [pack](../archive/desktop-inline-private-runners.md) is archived with
