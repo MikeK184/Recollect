@@ -4,7 +4,7 @@
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
-| [repository-governance.md](repository-governance.md) | complete | Original identity and compact service/environment workflows are illustrated in the README; validation reconciled |
+| [repository-governance.md](repository-governance.md) | complete | README highlights shared engineering memory, governed MCP tools and private execution alongside the branded workflows; validation reconciled |
 | [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
