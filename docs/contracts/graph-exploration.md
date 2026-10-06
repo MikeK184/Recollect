@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The [October 3 presentation correction](#flat-graph-correction--2026-10-03)
+retains a flat 2D graph and recorded contributions. The canonical query, scope
+and display bounds below remain authoritative.
+
 ## Source
 
 The user's authorized full-product implementation includes browser graph,
@@ -97,3 +101,68 @@ runtime impact are outside this contract. Graph-fused retrieval and its
 investigation UI belong to their successor slices. Mobile views and mobile
 acceptance are deferred by the user's explicit 2026-09-22 instruction; continue
 with desktop product behavior without spending further work on mobile.
+
+## 3D and contribution perspective — 2026-10-03
+
+Historical renderer approval, superseded later the same day by the flat graph
+correction below. The contribution semantics and validity requirements remain
+accepted.
+
+The approved main Graph route adds lazy react-force-graph-3d/Three.js rendering
+over the same canonical nodes/edges, retaining Cytoscape 2D and optional HTML
+Entities selection. Renderer layout physics is presentation only, never native
+traversal or analytics. Preserve directions, edge identities, parallel edges,
+self-loops and isolates; clone renderer inputs. Bound settling, retain camera on
+selection, avoid auto-orbit/continuous particles, respect reduced motion and
+pause hidden rendering. WebGL failure offers 2D. Labels are plain text.
+
+A separate Provenance perspective may visualize at most the existing 30-input
+recent pipeline and 20-contributor page for an explicitly selected exact snapshot.
+Agent credential→source version means submitted/captured via; agent→snapshot
+means published via; snapshot→repository is identity membership. Join only exact
+IDs. Show recorded timestamps and page/validity bounds. No private checkout/task
+history is exposed. Claim IDs in learning outcomes are not revision IDs and do
+not authorize synthetic agent→current-memory edges. These contribution edges
+are separate from canonical path/impact calculations. Every perspective obeys
+500 nodes/2,000 edges, clears on failure/access loss/expiry and uses no model call.
+
+SnapshotDetail advertises observed_at and valid_until, capped at six seconds
+and the exact repository retention deadline after a locked canonical read.
+Publication-derived display uses this independent deadline; pipeline freshness
+cannot renew a snapshot. Continued display requires another successful read.
+
+## Flat graph correction — 2026-10-03
+
+The user explicitly rejected the delivered 3D spheres. Use the existing lazy
+Cytoscape 2D renderer for both Evidence and Contributions, with no dimension
+toggle, Three.js dependency or WebGL path. Preserve selection, explicit
+neighbourhood focus, layouts, pan/zoom, canonical paths and all validity gates.
+The cream/ink/sage theme remains. This supersedes only the 3D renderer choice;
+it changes no graph data, algorithms, permissions or contribution meaning.
+
+## Compact graph interactions — 2026-10-03
+
+The user approved readable labels, quick filters, focused connections and a
+compact inspector over the existing 2D renderer. Auto labels show selected and
+hovered entities and reveal other labels only at readable zoom. Full labels
+remain available in the finder and inspection; label changes never run layout.
+
+Local type filters use exact recorded kinds and appear only when applicable:
+agents are device credentials, people are contributors, inputs are sources or
+captures, repository evidence is repositories/snapshots/facts/manifests, and
+memory is claims. A single filter shows matching nodes plus their direct loaded
+connections, retaining directed edge identities. Counts state shown versus
+loaded, not Brain-wide totals. This presentation uses Cytoscape's existing
+adjacency, not new graph traversal or inferred associations.
+
+Focus connections shows the selected node's direct loaded neighbourhood, or
+the selected relationship's exact endpoints. Show all loaded restores the
+overview viewport. A qualified path must remain complete; reset/disable local
+type filters and focus while path highlighting is active. Scope/Brain/snapshot
+changes reset local view state. Removed or hidden selections clear; failed,
+expired or unauthorized reads remove canvas and compact summaries together.
+
+The compact inspector shows the full title, real qualification, recorded
+direction and selectable direct connections. Open evidence retains canonical
+lineage/detail reads. Exact IDs, witness and path actions remain secondary and
+reachable. No model calls, new backend read, graph engine or persistent state.

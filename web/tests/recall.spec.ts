@@ -114,9 +114,11 @@ test("recall filters, inert source evidence, context budget and source erasure",
     exact: true,
   });
   const search = async (query: string) => {
-    await panel.getByLabel("Search memory", { exact: true }).fill(query);
+    await panel.getByLabel("Search evidence", { exact: true }).fill(query);
     await expect(panel.getByTestId("recall-result")).toHaveCount(0);
-    await panel.getByRole("button", { name: "Recall", exact: true }).click();
+    await panel
+      .getByRole("button", { name: "Find evidence", exact: true })
+      .click();
   };
   await search("Amber");
   await expect(panel.getByTestId("recall-result")).toHaveCount(2);
@@ -127,7 +129,9 @@ test("recall filters, inert source evidence, context budget and source erasure",
     .getByRole("option", { name: "Accepted and current", exact: true })
     .click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
-  await panel.getByRole("button", { name: "Recall", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Find evidence", exact: true })
+    .click();
   await expect(
     panel.getByText("Insufficient eligible evidence", { exact: true }),
   ).toBeVisible();
@@ -186,14 +190,22 @@ test("recall filters, inert source evidence, context budget and source erasure",
     panel.getByText("Investigation cleared", { exact: true }),
   ).toBeVisible();
   await expect(erase).toHaveCount(0);
+  // The new textarea retains the user's query as text content. Erasure clears
+  // retrieved payload, while the user's own draft remains available to edit.
   await expect(
-    page.getByText(/RAW_RECALL_FRAGMENT/, { exact: false }),
+    panel.getByLabel("Search evidence", { exact: true }),
+  ).toHaveValue("RAW_RECALL_FRAGMENT");
+  await expect(
+    page
+      .getByText(/RAW_RECALL_FRAGMENT/, { exact: false })
+      .and(page.locator(":not(textarea)")),
   ).toHaveCount(0);
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
   await search("FOREIGN_BROWSER_RECALL_CANARY");
   await expect(
-    panel.getByText("No matching evidence", { exact: true }),
+    panel.getByText("Insufficient eligible evidence", { exact: true }),
   ).toBeVisible();
+  await expect(panel.getByTestId("recall-result")).toHaveCount(0);
   await page.route(`**/api/brains/${fixture.brain}/recall`, (route) =>
     route.fulfill({
       status: 503,
@@ -208,7 +220,9 @@ test("recall filters, inert source evidence, context budget and source erasure",
     panel.getByText("Synthetic temporary recall failure.", { exact: true }),
   ).toBeVisible();
   await page.unroute(`**/api/brains/${fixture.brain}/recall`);
-  await panel.getByRole("button", { name: "Recall", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Find evidence", exact: true })
+    .click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
   await expect(panel.getByTestId("recall-fragment")).toContainText(
     "private transit network",
@@ -234,8 +248,14 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await panel
     .getByText("Scope, time and exact lookup", { exact: true })
     .click();
+  await panel.getByLabel("Retrieval strategy", { exact: true }).click();
+  await page
+    .getByRole("option", { name: "Choose methods", exact: true })
+    .click();
   await panel.getByLabel("Semantic similarity", { exact: true }).check();
-  await panel.getByRole("button", { name: "Recall", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Find evidence", exact: true })
+    .click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
   expect(attempts).toHaveLength(1);
   await page.goto(`/brains/${fixture.brain}/settings?tab=ai`);
@@ -253,14 +273,20 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await expect(modelPolicy).not.toBeVisible();
   await page.goto(`/brains/${fixture.brain}/ask?tab=search`);
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
-  await panel.getByLabel("Search memory", { exact: true }).fill("Cobalt");
+  await panel.getByLabel("Search evidence", { exact: true }).fill("Cobalt");
   await openDetails(panel, "Refine evidence search");
   await panel
     .getByText("Scope, time and exact lookup", { exact: true })
     .click();
+  await panel.getByLabel("Retrieval strategy", { exact: true }).click();
+  await page
+    .getByRole("option", { name: "Choose methods", exact: true })
+    .click();
   await panel.getByLabel("Semantic similarity", { exact: true }).check();
   expect(attempts).toHaveLength(1);
-  await panel.getByRole("button", { name: "Recall", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Find evidence", exact: true })
+    .click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
   expect(attempts).toHaveLength(2);
   expect(new Set(attempts).size).toBe(2);

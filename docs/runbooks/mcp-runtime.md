@@ -68,6 +68,9 @@ target, runner or credential override. Browser calls may explicitly use Brain-wi
 or selected environment scope without a companion task; device calls require one.
 
 Credential bindings use `RECOLLECT_MCP_CREDENTIALS_FILE` on the selected executor.
+Central execution falls back to the private sibling `mcp-bindings` file when
+this override is absent. Browser-managed development credentials are explained
+below; paired runners keep their separately configured providers.
 The file holds references, not values. Example shape (replace placeholder UUIDs):
 
 ```json
@@ -93,6 +96,34 @@ OS-store/reference-file changes are read on the next operation; `.env` changes
 require restarting the executor. Resolved credential changes drain old instances
 while their active calls may finish. Provider stderr and raw SDK diagnostics are
 suppressed; retained results pass shared and exact-value redaction.
+
+## Browser-managed connector setup
+
+The installation owner manages reusable definitions at **Connectors**, outside
+individual Brains. Add a URL or paste/import JSON, TOML or YAML. Parsing only
+reads the configuration. Command imports remain inert and must match an approved
+command and arguments before a Brain connection can use them. Explicit HTTP
+inspection loads bounded metadata; it neither calls tools nor grants Use rights.
+
+Under **Brain → Connections**, an owner who is also a Brain administrator may
+enter a masked Bearer/header or stdio environment value for an approved alias on
+a central connection. Save first validates the current connection revision and
+its approved transport. The installation development provider atomically writes
+values to `credentials.mcp-secrets.json` and references to
+`credentials.mcp-bindings.json`, beside the configured `credentials.json` login
+file. Other credential-file stems produce matching sibling names. Values do not
+enter connection settings, database audit, returned metadata or browser storage.
+The value file must remain owned by the executor and mode 0600; missing, unsafe
+or inaccessible files fail closed before tool dispatch. Rotation preserves the
+binding's opaque key and changes the resolved credential generation.
+
+An existing `RECOLLECT_MCP_CREDENTIALS_FILE` override remains authoritative;
+owner provisioning updates only the exact central connection/alias binding and
+preserves other bindings and Vault sources. Vault and paired/private execution
+still use their existing provider configuration. This UI explicitly identifies
+the installation-local development file; it does not promise an OS store or a
+production Vault. A failed credential save may leave a configured connection:
+retry the masked credential step or reopen that connection; no tool is run.
 
 ## Verification
 

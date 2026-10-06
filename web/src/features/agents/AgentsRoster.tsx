@@ -1,10 +1,24 @@
 import { useState } from "react";
-import { Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  Menu,
+  Modal,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { MoreHorizontal } from "lucide-react";
 import { client, result, type Brain } from "../../api";
-import { palette, tokens } from "../../design/tokens";
-import { EmptyState, ErrorState, LoadingState } from "../../components/AsyncState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../components/AsyncState";
+import { HostIcon } from "../../components/HostIcon";
+import { staggerStyle } from "../../components/Motion";
 
 const hostLabel = (kind?: string | null) =>
   kind === "codex"
@@ -19,20 +33,36 @@ const integrationLabel = (value: string) =>
   value === "plugin" ? "Recollect plugin" : "MCP token";
 
 const time = (value?: string | null) =>
-  value ? new Date(value).toLocaleString() : "Never used on this Brain";
+  value
+    ? new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      })
+    : "No observed use";
 
-/** Per-Brain answer to "who is connected here": the account's agents grouped
+/** Observed contributors to this Brain, grouped
  * by user, each row one connection of exactly two kinds. A row proves the
  * configuration exists; only real calls prove it works. */
-export function AgentsRoster({ brain }: { brain: Brain }) {
+export function AgentsRoster({
+  brain,
+  onSelect,
+  selectedDevice,
+}: {
+  brain: Brain;
+  onSelect: (id: string) => void;
+  selectedDevice?: string;
+}) {
   const [showHidden, setShowHidden] = useState(false);
   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
   const cache = useQueryClient();
   const roster = useQuery({
     queryKey: ["brain-agents", brain.id, showHidden],
-    queryFn: async () =>
+    gcTime: 0,
+    refetchInterval: 5000,
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/agents", {
+          signal,
           params: {
             path: { brain: brain.id },
             query: showHidden ? { include_hidden: true } : {},
@@ -42,9 +72,14 @@ export function AgentsRoster({ brain }: { brain: Brain }) {
   });
   const revoke = useMutation({
     mutationFn: async (id: string) =>
-      result(await client.DELETE("/api/devices/{id}", { params: { path: { id } } })),
-    onSuccess: () =>
-      cache.invalidateQueries({ queryKey: ["brain-agents", brain.id] }),
+      result(
+        await client.DELETE("/api/devices/{id}", { params: { path: { id } } }),
+      ),
+    onSuccess: async () => {
+      await cache.invalidateQueries({ queryKey: ["brain-agents", brain.id] });
+      await cache.invalidateQueries({ queryKey: ["account-agents"] });
+      await cache.invalidateQueries({ queryKey: ["devices"] });
+    },
   });
   if (roster.isPending) return <LoadingState label="Loading agents…" />;
   if (roster.isError) return <ErrorState error={roster.error} />;
@@ -67,56 +102,107 @@ export function AgentsRoster({ brain }: { brain: Brain }) {
       {visible.length === 0 && (
         <EmptyState
           title="No agents have been used on this Brain yet"
-          description="Connect the Recollect plugin or a direct MCP access token below, or review the full account list on the Agents page."
+          description="Connect an agent to start contributing. Your complete account list is in My agents."
         />
       )}
-      {usedGroups.map((group) => (
-        <Card key={group.user_name} withBorder padding="sm">
-          <Text fw={600} size="sm" mb="xs">
-            {group.user_name} — {group.agents.length}{" "}
-            {group.agents.length === 1 ? "agent" : "agents"}
-          </Text>
+      {usedGroups.map((group, index) => (
+        <Card
+          key={group.user_name}
+          withBorder
+          padding={24}
+          className="agent-roster-group rc-enter"
+          style={staggerStyle(index)}
+        >
+          <div className="agent-roster-heading">
+            <div className="agent-owner-avatar">
+              {group.user_name.slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <strong>{group.user_name}</strong>
+              <small>
+                {group.agents.length}{" "}
+                {group.agents.length === 1 ? "agent" : "agents"}
+              </small>
+            </div>
+          </div>
           <Stack gap="xs">
             {group.agents.map((agent) => (
-              <Group
+              <div
                 key={agent.device_id}
-                gap="sm"
-                wrap="wrap"
+                className={`agent-roster-row${selectedDevice === agent.device_id ? " selected" : ""}`}
                 data-testid={`brain-agent-row-${agent.device_id}`}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: agent.active ? tokens.accent : palette.lineDark,
-                    flexShrink: 0,
-                    marginTop: 6,
-                  }}
-                />
+                <div className="management-icon agent-host-icon">
+                  <HostIcon host={agent.host_kind} size={32} />
+                </div>
                 <Stack gap={0} style={{ flex: 1, minWidth: 180 }}>
-                  <Text size="sm" fw={500}>
+                  <Button
+                    variant="subtle"
+                    className="agent-name"
+                    px={0}
+                    h="auto"
+                    w="fit-content"
+                    onClick={() => onSelect(agent.device_id)}
+                    aria-pressed={selectedDevice === agent.device_id}
+                  >
                     {agent.name}
-                  </Text>
-                  <Text size="xs" c="dimmed">
+                  </Button>
+                  <Text size="md" c="dimmed">
                     {hostLabel(agent.host_kind) ?? "Coding host"} ·{" "}
                     {integrationLabel(agent.integration)}
                     {!agent.active && " · revoked or expired"}
                   </Text>
                 </Stack>
-                <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                  Last used {time(agent.last_used_on_brain_at).toLowerCase()}
-                </Text>
-                <Button
-                  variant="subtle"
-                  color="red"
-                  size="xs"
-                  onClick={() => setPendingRevoke(agent.device_id)}
+                <Badge
+                  className="agent-access-badge"
+                  variant="light"
+                  color={agent.active ? "brand" : "gray"}
+                  leftSection={
+                    <span
+                      className={
+                        "agent-access-dot" + (agent.active ? "" : " inactive")
+                      }
+                    />
+                  }
                 >
-                  Revoke
-                </Button>
-              </Group>
+                  {agent.active ? "Credential enabled" : "Revoked or expired"}
+                </Badge>
+                <time
+                  title={
+                    agent.last_used_on_brain_at
+                      ? new Date(agent.last_used_on_brain_at).toLocaleString()
+                      : undefined
+                  }
+                  dateTime={agent.last_used_on_brain_at ?? undefined}
+                >
+                  {"Observed "}
+                  {time(agent.last_used_on_brain_at)}
+                </time>
+                <Menu position="bottom-end" withinPortal>
+                  <Menu.Target>
+                    <Button
+                      variant="subtle"
+                      size="compact-sm"
+                      aria-label={`Actions for ${agent.name}`}
+                    >
+                      <MoreHorizontal size={16} />
+                    </Button>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item onClick={() => onSelect(agent.device_id)}>
+                      View activity
+                    </Menu.Item>
+                    {agent.can_revoke && (
+                      <Menu.Item
+                        color="red"
+                        onClick={() => setPendingRevoke(agent.device_id)}
+                      >
+                        Revoke credential across all Brains
+                      </Menu.Item>
+                    )}
+                  </Menu.Dropdown>
+                </Menu>
+              </div>
             ))}
           </Stack>
         </Card>
@@ -134,14 +220,11 @@ export function AgentsRoster({ brain }: { brain: Brain }) {
               : "Show revoked and expired"}
           </Button>
         )}
-        <Link to="/agents" style={{ fontSize: "var(--mantine-font-size-xs)" }}>
-          All account agents
-        </Link>
       </Group>
       <Modal
-        opened={pendingRevoke !== null}
+        opened={!!target?.can_revoke}
         onClose={() => setPendingRevoke(null)}
-        title="Remove this agent?"
+        title="Revoke this credential across all Brains?"
         size="sm"
       >
         <Stack gap="md">
@@ -158,7 +241,7 @@ export function AgentsRoster({ brain }: { brain: Brain }) {
               color="red"
               loading={revoke.isPending}
               onClick={() => {
-                if (!pendingRevoke) return;
+                if (!pendingRevoke || !target?.can_revoke) return;
                 revoke.mutate(pendingRevoke, {
                   onSuccess: () => setPendingRevoke(null),
                 });

@@ -30,6 +30,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Human review and durable corrections](memory-review-and-corrections.md)
 - [Retention and controlled erasure](memory-retention-and-erasure.md)
 - [Brain model policy and evidence-backed learning](memory-provider-policy-and-learning.md)
+- [Brain model catalogue and selection](brain-model-catalogue-and-selection.md)
 - [Procedures and multi-repository handovers](memory-procedures-and-handovers.md)
 - [Autonomous Brain maintenance](memory-autonomous-maintenance.md)
 - [Automatic host session capture](evidence-session-capture.md)

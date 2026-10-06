@@ -7,49 +7,125 @@ import {
   Drawer,
   Group,
   Stack,
+  Select,
   Text,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { Check, History } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Check, History, Tv } from "lucide-react";
 import { client, result, type Audit } from "../../api";
+import { iconSize } from "../../design/tokens";
 import { useBrain, useWorkspace } from "../../app/context";
+import { CapturePanel } from "../../CapturePanel";
 import { JobsPanel } from "../../JobsPanel";
 import { ModelsPanel } from "../../ModelsPanel";
 import { McpPanel } from "../../McpPanel";
 import { RetentionPanel } from "../../RetentionPanel";
 import { PageHeader } from "../../components/PageHeader";
-import { FeatureTabs, useFeatureTab } from "../../components/FeatureTabs";
+import { staggerStyle } from "../../components/Motion";
+import { useFeatureTab } from "../../components/FeatureTabs";
 import { useBrainSearch } from "../../app/useBrainSearch";
 import { AssuranceActivity } from "./Assurance";
+import { PipelineView } from "./PipelineView";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../../components/AsyncState";
 const tabs = [
-  { value: "attention", label: "Overview" },
+  { value: "capture", label: "Captured activity" },
+  { value: "pipeline", label: "Pipeline" },
+  { value: "attention", label: "Needs attention" },
   { value: "processing", label: "Processing" },
   { value: "tools", label: "Tool calls" },
   { value: "models", label: "Model usage" },
   { value: "removal", label: "Data removal" },
-  { value: "timeline", label: "Timeline" },
+  { value: "timeline", label: "Administrative timeline" },
 ] as const;
 export function ActivityPage() {
   const brain = useBrain();
   const session = useWorkspace();
-  const [search] = useBrainSearch();
+  const navigate = useNavigate();
+  const [search, patch] = useBrainSearch();
+  const roster = useQuery({
+    queryKey: ["brain-agents", brain.id, true],
+    enabled: !!search.device && (!search.tab || search.tab === "capture"),
+    retry: false,
+    gcTime: 0,
+    refetchInterval: 5000,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/agents", {
+          signal,
+          params: {
+            path: { brain: brain.id },
+            query: { include_hidden: true },
+          },
+        }),
+      ),
+  });
+  const agent = roster.isError
+    ? undefined
+    : roster.data?.groups
+        .flatMap((g) => g.agents)
+        .find((a) => a.device_id === search.device);
   const [tab, setTab] = useFeatureTab(
     tabs.map((t) => t.value),
-    "attention",
+    "capture",
   );
   return (
     <>
       <PageHeader
         title="Activity"
-        description="See what happened, understand exceptions, and follow the evidence."
+        actions={
+          <Button
+            variant="default"
+            leftSection={<Tv size={iconSize.small} />}
+            onClick={() =>
+              void navigate({
+                to: "/brains/$brainId/tv",
+                params: { brainId: brain.id },
+              })
+            }
+          >
+            Ambient display
+          </Button>
+        }
       />
-      <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
+      <div className="feature-toolbar">
+        <Select
+          aria-label="Activity view"
+          data={[...tabs]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+      <div>
+        {tab === "capture" && search.device && (
+          <Group justify="space-between" mb="md">
+            <Text size="sm">
+              Agent capture ·{" "}
+              {agent?.name ?? `Selected agent ${search.device.slice(0, 8)}`}{" "}
+              {roster.isError ? "· identity unavailable" : ""}
+            </Text>
+            <Button
+              variant="subtle"
+              onClick={() => patch({ device: undefined })}
+            >
+              Show all agents
+            </Button>
+          </Group>
+        )}
+        {tab === "capture" && (
+          <CapturePanel
+            key={`${brain.id}:${search.device ?? "all"}:${search.source ?? ""}:${search.version ?? ""}`}
+            brain={brain}
+            deviceId={search.device}
+            selectedSource={search.source}
+            selectedVersion={search.version}
+          />
+        )}
+        {tab === "pipeline" && <PipelineView />}
         {tab === "attention" && <AssuranceActivity />}
         {tab === "timeline" && <Timeline />}
         {tab === "processing" && (
@@ -76,7 +152,7 @@ export function ActivityPage() {
             selectedRequest={search.erasure}
           />
         )}
-      </FeatureTabs>
+      </div>
     </>
   );
 }
@@ -153,7 +229,8 @@ function Timeline() {
     return (
       <Alert color="gray" title="Administrative timeline">
         Brain administrators can view the audit timeline. Your permitted
-        processing, tool calls, and model usage are available in their tabs.
+        processing, tool calls, and model usage are available in the activity
+        selector.
       </Alert>
     );
   if (query.isError)
@@ -175,10 +252,14 @@ function Timeline() {
         Recent authorized audit events. Independent events may overlap in time.
       </Text>
       <Card withBorder p="lg">
-        {query.data.map((event) => {
+        {query.data.map((event, index) => {
           const target = destination(event);
           return (
-            <div className="audit-row" key={event.id}>
+            <div
+              className="audit-row rc-enter"
+              style={staggerStyle(index)}
+              key={event.id}
+            >
               <span className="audit-icon">
                 <Check size={15} />
               </span>

@@ -1,7 +1,30 @@
-import { test, expect as baseExpect, type Page } from "@playwright/test";
+import {
+  test,
+  expect as baseExpect,
+  type Page,
+  type Locator,
+} from "@playwright/test";
 
 const expect = baseExpect.configure({ timeout: 12_000 });
 
+async function expectRights(
+  card: Locator,
+  use: boolean,
+  manage: boolean,
+  share: boolean,
+) {
+  for (const [label, allowed] of [
+    ["Use", use],
+    ["Manage", manage],
+    ["Share", share],
+  ] as const)
+    await expect(
+      card.getByRole("img", {
+        name: `${label} for you: ${allowed ? "Allowed" : "Denied"}`,
+        exact: true,
+      }),
+    ).toHaveClass(allowed ? /allowed/ : /denied/);
+}
 async function command(
   page: Page,
   path: string,
@@ -58,11 +81,74 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const f = await setup(page, "Desktop MCP catalogue");
+  await page.goto(`/brains/${f.brain.id}/settings?tab=general#environments`);
+  await page
+    .getByRole("button", { name: "Add environment", exact: true })
+    .click();
+  const envEditor = page.getByRole("region", {
+    name: "Add environment",
+    exact: true,
+  });
+  await expect(envEditor).toHaveAccessibleName("Add environment");
+  await envEditor
+    .getByRole("textbox", { name: "Environment name", exact: true })
+    .fill("Production");
+  await envEditor
+    .getByRole("button", { name: "Save environment", exact: true })
+    .click();
+  await expect(envEditor).not.toBeVisible();
+  const envCatalogue = await command(page, `${f.base}/evidence`);
+  const production = envCatalogue.groups.find(
+    (e: { kind: string; name: string }) =>
+      e.kind === "environment" && e.name === "Production",
+  );
+  expect(production).toBeTruthy();
+  await command(
+    page,
+    `${f.base}/evidence/groups/${production.id}`,
+    { name: "Production", description: "Keep this environment description" },
+    "PATCH",
+  );
+  const envRow = page
+    .getByTestId("general-environment-row")
+    .filter({ has: page.getByText("Production", { exact: true }) });
+  await envRow
+    .getByRole("button", { name: "Rename Production", exact: true })
+    .click();
+  const renamed = page.getByRole("region", {
+    name: "Rename environment",
+    exact: true,
+  });
+  await expect(renamed).toHaveAccessibleName("Rename environment");
+  await renamed
+    .getByRole("textbox", { name: "Environment name", exact: true })
+    .fill("Production EU");
+  await renamed
+    .getByRole("button", { name: "Save environment", exact: true })
+    .click();
+  await expect(renamed).not.toBeVisible();
+  const updatedEnvironment = (
+    await command(page, `${f.base}/evidence`)
+  ).groups.find((e: { id: string }) => e.id === production.id);
+  expect(updatedEnvironment.name).toBe("Production EU");
+  expect(updatedEnvironment.description).toBe(
+    "Keep this environment description",
+  );
+  await page.goto(`/brains/${f.brain.id}/connections`);
+
   await f.panel
-    .getByRole("button", { name: "Use registered connector", exact: true })
+    .getByRole("button", { name: "Add connection", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Add connection", exact: true })
+    .getByText("Approved connector", { exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Add connection", exact: true })
+    .getByRole("button", { name: "Choose connector", exact: true })
     .click();
   let dialog = page.getByRole("dialog", {
-    name: "Add MCP connection",
+    name: "Add connection",
     exact: true,
   });
   await dialog.getByLabel(/^Connection name/).fill("Laboratory inspector");
@@ -70,90 +156,134 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   await page
     .getByRole("option", { name: "Approved fixture", exact: true })
     .click();
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog.getByLabel(/^Target label/).fill("laboratory-target");
   await dialog.getByLabel("Connection environment", { exact: true }).click();
   await page.getByRole("option", { name: "Laboratory", exact: true }).click();
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog.getByLabel("Credential alias", { exact: true }).click();
   await page.getByRole("option", { name: "fixture-read", exact: true }).click();
   await dialog
     .getByLabel("Non-secret settings", { exact: true })
     .fill('{"region":"invalid"}');
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog
     .getByRole("button", { name: "Save connection", exact: true })
     .click();
   await expect(dialog).toContainText("Configuration must match");
-  await dialog.getByRole("button", { name: "Back", exact: true }).click();
-  await dialog.getByRole("button", { name: "Back", exact: true }).click();
   await dialog
     .getByLabel("Non-secret settings", { exact: true })
     .fill('{"region":"test"}');
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog
     .getByRole("button", { name: "Save connection", exact: true })
     .click();
   await expect(dialog).not.toBeVisible();
   await expect(f.panel.getByTestId("mcp-connection")).toContainText(
-    "Configured · connection not checked",
+    "Configured",
   );
-  await page.getByRole("tab", { name: "Tool groups", exact: true }).click();
+  await expect
+    .poll(() =>
+      f.panel
+        .getByTestId("mcp-connection")
+        .first()
+        .evaluate((el) => getComputedStyle(el).opacity),
+    )
+    .toBe("1");
+  await page.screenshot({
+    path: "../.cache/guided-connections.png",
+    animations: "disabled",
+  });
+  await f.panel
+    .getByRole("textbox", { name: "Find a connection", exact: true })
+    .fill("does-not-exist");
+  await expect(f.panel.getByTestId("mcp-connection")).toHaveCount(0);
+  await expect(
+    f.panel.getByText("No connections match these filters.", { exact: true }),
+  ).toBeVisible();
+  await f.panel
+    .getByRole("textbox", { name: "Find a connection", exact: true })
+    .fill("lab");
+  await expect(f.panel.getByTestId("mcp-connection")).toHaveCount(1);
+  await f.panel
+    .getByRole("textbox", { name: "Find a connection", exact: true })
+    .fill("");
+  const connectionCard = f.panel.getByTestId("mcp-connection");
+  const inspector = f.panel.getByRole("complementary", {
+    name: "Connection details",
+  });
+  await inspector
+    .getByRole("button", { name: "Pause use…", exact: true })
+    .click();
+  const power = page.getByRole("dialog", {
+    name: "Pause connection use",
+    exact: true,
+  });
+  await expect(power).toContainText("Already dispatched calls may finish");
+  await power.getByRole("button", { name: "Pause use", exact: true }).click();
+  await expect(connectionCard).toContainText("Connection disabled");
+  await inspector
+    .getByRole("button", { name: "Enable use…", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Enable connection use", exact: true })
+    .getByRole("button", { name: "Enable use", exact: true })
+    .click();
+  await expect(connectionCard).toContainText("Configured");
+  await page.getByRole("tab", { name: "Tool access", exact: true }).click();
   await f.panel
     .getByRole("button", { name: "Create tool group", exact: true })
     .click();
-  dialog = page.getByRole("dialog", {
-    name: "Create tool group",
-    exact: true,
-  });
+  dialog = f.panel.getByTestId("mcp-profile").first();
   await dialog.getByLabel(/^Tool group name/).fill("Laboratory tools");
   await dialog.getByLabel("Tool group environment", { exact: true }).click();
   await page.getByRole("option", { name: "Laboratory", exact: true }).click();
-  await dialog.getByLabel("Tool group connections", { exact: true }).click();
+  await dialog.getByLabel("Add MCP", { exact: true }).click();
   await page
     .getByRole("option", { name: "Laboratory inspector", exact: true })
     .click();
   await dialog
-    .getByRole("button", { name: "Save tool group", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
-  await expect(dialog).not.toBeVisible();
-  const card = f.panel.getByTestId("mcp-profile");
-  await expect(card).toContainText("Your rights: Manage · Share");
   await expect(
-    card.getByRole("button", { name: "Inspect cached tools", exact: true }),
+    dialog.getByLabel("Tool group name", { exact: true }),
+  ).not.toBeVisible();
+  const card = f.panel.getByTestId("mcp-profile");
+  await expectRights(card, false, true, true);
+  await page.screenshot({
+    path: "../.cache/guided-tool-access.png",
+    animations: "disabled",
+  });
+  await expect(
+    card.getByRole("button", { name: "Tools & testing", exact: true }),
   ).toBeDisabled();
   await card
-    .getByRole("button", { name: "Inspect profile", exact: true })
+    .getByRole("button", { name: "Edit Laboratory tools", exact: true })
     .click();
-  dialog = page.getByRole("dialog", { name: "Tool group", exact: true });
-  await dialog
-    .getByRole("button", { name: "Select myself for Use", exact: true })
+  await card
+    .getByRole("button", {
+      name: `Use for ${process.env.RECOLLECT_OWNER_USERNAME} direct: Denied`,
+      exact: true,
+    })
     .click();
-  await dialog.getByRole("button", { name: "Save grant", exact: true }).click();
-  await expect(dialog).toContainText("Grant updated.");
+  await card.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(
-    dialog.getByTestId("mcp-effective-member").first(),
-  ).toContainText("Use · Manage · Share");
-  await page.keyboard.press("Escape");
+    card.getByRole("button", { name: "Edit Laboratory tools", exact: true }),
+  ).toBeVisible();
   await expect(
-    card.getByRole("button", { name: "Inspect cached tools", exact: true }),
+    card.getByRole("button", { name: "Tools & testing", exact: true }),
   ).toBeEnabled();
   await card
-    .getByRole("button", { name: "Inspect cached tools", exact: true })
+    .getByRole("button", { name: "Tools & testing", exact: true })
     .click();
   const cached = page.getByRole("dialog", {
-    name: "Cached tools · Laboratory tools",
+    name: "Tools · Laboratory tools",
     exact: true,
   });
-  await expect(cached).toContainText("1 approved tools · Cached metadata");
+  await expect(cached).toContainText("1 tools · Approved catalogue");
   await expect(
     cached.getByLabel("Tool environment", { exact: true }),
   ).toHaveValue("Laboratory");
   await expect(
     cached.getByLabel("Tool environment", { exact: true }),
   ).toBeDisabled();
+  await cached.getByText("Tool details", { exact: true }).first().click();
   await cached.getByText("Output schema", { exact: true }).click();
   await expect(cached).toContainText('"type": "array"');
   expect(
@@ -180,16 +310,17 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   await expect(cached).not.toBeVisible();
   await expect(f.panel).toContainText("Cached tool results were cleared");
   await expect(
-    card.getByRole("button", { name: "Inspect cached tools", exact: true }),
+    card.getByRole("button", { name: "Tools & testing", exact: true }),
   ).toBeDisabled();
-  // A remote edit closes an open configuration editor instead of saving over it.
-  await page.getByRole("tab", { name: "MCP servers", exact: true }).click();
+  // A remote edit retains the inline draft and blocks stale configuration writes.
+  await page.goto(`/brains/${f.brain.id}/connections`);
   await f.panel
-    .getByRole("button", { name: "Inspect connection", exact: true })
+    .getByRole("button", { name: "Edit connection", exact: true })
     .click();
-  dialog = page.getByRole("dialog", { name: "MCP connection", exact: true });
+  dialog = f.panel.getByRole("complementary", { name: "Connection details" });
+  await dialog.getByText("More configuration", { exact: true }).click();
   await dialog
-    .getByLabel("Connection description", { exact: true })
+    .getByLabel("Description", { exact: true })
     .fill("Unsaved local text");
   const detail = await command(
     page,
@@ -214,14 +345,17 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
     input,
     "PUT",
   );
-  await expect(dialog).not.toBeVisible();
-  await expect(f.panel).toContainText("This connection changed elsewhere");
-  await f.panel
-    .getByRole("button", { name: "Inspect connection", exact: true })
+  await expect(dialog).toContainText("Your draft is retained");
+  await expect(dialog.getByLabel("Description", { exact: true })).toHaveValue(
+    "Unsaved local text",
+  );
+  await dialog
+    .getByRole("button", { name: "Reload settings", exact: true })
     .click();
-  await expect(
-    dialog.getByLabel("Connection description", { exact: true }),
-  ).toHaveValue("Updated from another session");
+  await dialog.getByText("More configuration", { exact: true }).click();
+  await expect(dialog.getByLabel("Description", { exact: true })).toHaveValue(
+    "Updated from another session",
+  );
   const detailUrl = `**${f.base}/mcp/connections/${connection.id}`;
   await page.route(detailUrl, (route) =>
     route.request().method() === "GET"
@@ -243,7 +377,7 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   await expect(dialog.getByLabel(/^Target label/)).toHaveValue(
     "laboratory-target",
   );
-  await page.keyboard.press("Escape");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await f.panel.screenshot({
     path: "../.cache/mcp-catalogue-desktop.png",
     animations: "disabled",
@@ -301,36 +435,32 @@ test("delegated reader can manage or share independently and loses cached tools 
     exact: true,
   });
   const card = panel.getByTestId("mcp-profile");
-  await expect(card).toContainText("Your rights: Manage");
+  await expectRights(card, false, true, false);
   await expect(
     panel.getByRole("button", { name: "Add connection", exact: true }),
   ).not.toBeVisible();
   await expect(
-    panel.getByRole("button", { name: "Inspect connection", exact: true }),
+    panel.getByRole("button", { name: "Edit connection", exact: true }),
   ).not.toBeVisible();
   await card
-    .getByRole("button", { name: "Inspect profile", exact: true })
+    .getByRole("button", { name: "Edit Shared tools", exact: true })
     .click();
-  let dialog = reader.getByRole("dialog", {
-    name: "Tool group",
-    exact: true,
-  });
+  let dialog = card;
   await expect(
-    dialog.getByRole("heading", {
-      name: "Tool group permissions",
-      exact: true,
-    }),
+    card.getByRole("button", { name: "Add person", exact: true }),
   ).not.toBeVisible();
   await dialog
     .getByLabel("Tool group description", { exact: true })
     .fill("Managed by a Brain reader");
   await dialog
-    .getByRole("button", { name: "Save tool group", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
-  await expect(dialog).not.toBeVisible();
+  await expect(
+    card.getByLabel("Tool group description", { exact: true }),
+  ).not.toBeVisible();
   await expect(card).toContainText("Managed by a Brain reader");
   await expect(
-    card.getByRole("button", { name: "Inspect cached tools", exact: true }),
+    card.getByRole("button", { name: "Tools & testing", exact: true }),
   ).toBeDisabled();
   await command(
     page,
@@ -338,23 +468,29 @@ test("delegated reader can manage or share independently and loses cached tools 
     { username, rights: { use_profile: false, manage: false, share: true } },
     "PUT",
   );
-  await expect(card).toContainText("Your rights: Share");
+  await expectRights(card, false, false, true);
   await card
-    .getByRole("button", { name: "Inspect profile", exact: true })
+    .getByRole("button", { name: "Edit Shared tools", exact: true })
     .click();
-  await expect(dialog.getByLabel(/^Tool group name/)).not.toBeVisible();
-  await dialog
-    .getByRole("button", { name: "Select myself for Use", exact: true })
-    .click();
-  await dialog.getByRole("button", { name: "Save grant", exact: true }).click();
-  await expect(dialog).toContainText("Grant updated.");
-  await reader.keyboard.press("Escape");
-  await expect(card).toContainText("Your rights: Use · Share");
+  await expect(
+    card.getByLabel("Tool group name", { exact: true }),
+  ).not.toBeVisible();
   await card
-    .getByRole("button", { name: "Inspect cached tools", exact: true })
+    .getByRole("button", {
+      name: `Use for ${username} direct: Denied`,
+      exact: true,
+    })
+    .click();
+  await card.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    card.getByRole("button", { name: "Edit Shared tools", exact: true }),
+  ).toBeVisible();
+  await expectRights(card, true, false, true);
+  await card
+    .getByRole("button", { name: "Tools & testing", exact: true })
     .click();
   dialog = reader.getByRole("dialog", {
-    name: "Cached tools · Shared tools",
+    name: "Tools · Shared tools",
     exact: true,
   });
   await expect(dialog).toContainText("Shared inspector · inspect");
@@ -377,8 +513,8 @@ test("desktop registers a paired private runner, selects exact placement and han
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const f = await setup(page, "Desktop private runners");
-  await page.getByRole("tab", { name: "Runners", exact: true }).click();
-  const panel = f.panel.getByRole("region", {
+  await page.goto(`/brains/${f.brain.id}/connections?tab=runners`);
+  const panel = page.getByRole("region", {
     name: "Private runners",
     exact: true,
   });
@@ -390,7 +526,19 @@ test("desktop registers a paired private runner, selects exact placement and han
     name: "Register private runner",
     exact: true,
   });
-  await expect(dialog).toContainText("Pair an active companion from Devices");
+  const existingDevices = await command(page, "/api/devices");
+  if (
+    !existingDevices.some(
+      (d: {
+        claimed: boolean;
+        revoked_at: string | null;
+        expires_at: string;
+      }) => d.claimed && !d.revoked_at && Date.parse(d.expires_at) > Date.now(),
+    )
+  )
+    await expect(dialog).toContainText(
+      "Connect the Recollect plugin on an active device before registering a private runner.",
+    );
   await expect(
     dialog.getByRole("button", { name: "Save private runner", exact: true }),
   ).toBeDisabled();
@@ -431,33 +579,34 @@ test("desktop registers a paired private runner, selects exact placement and han
   const records = await command(page, `${f.base}/mcp/private-runners`);
   expect(records).toHaveLength(1);
   expect(records[0].device_id).toBe(device);
-  await page.getByRole("tab", { name: "MCP servers", exact: true }).click();
+  await page.goto(`/brains/${f.brain.id}/connections`);
   await f.panel
-    .getByRole("button", { name: "Use registered connector", exact: true })
+    .getByRole("button", { name: "Add connection", exact: true })
     .click();
-  dialog = page.getByRole("dialog", {
-    name: "Add MCP connection",
+  const setupDialog = page.getByRole("dialog", {
+    name: "Add connection",
     exact: true,
   });
+  await setupDialog.getByText("Approved connector", { exact: true }).click();
+  await setupDialog
+    .getByRole("button", { name: "Choose connector", exact: true })
+    .click();
+  dialog = page.getByRole("dialog", { name: "Add connection", exact: true });
   await dialog.getByLabel(/^Connection name/).fill("Private inspector");
   await dialog.getByLabel(/^Approved connector/).click();
   await page
     .getByRole("option", { name: "Approved fixture", exact: true })
     .click();
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog.getByLabel(/^Target label/).fill("private-lab");
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog
     .getByLabel("Non-secret settings", { exact: true })
     .fill('{"region":"test"}');
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog.getByLabel(/^Where this connection runs/).click();
   await page.getByRole("option", { name: /^Private-network runner/ }).click();
   await dialog.getByLabel(/^Private runner/).click();
   await page
     .getByRole("option", { name: "Private lab runner · Offline", exact: true })
     .click();
-  await dialog.getByRole("button", { name: "Continue", exact: true }).click();
   await dialog
     .getByRole("button", { name: "Save connection", exact: true })
     .click();
@@ -469,7 +618,7 @@ test("desktop registers a paired private runner, selects exact placement and han
   );
   expect(connection.runner_reference).toBe(`private:${records[0].id}`);
   expect(connection.credential_alias).toBeNull();
-  await page.getByRole("tab", { name: "Runners", exact: true }).click();
+  await page.goto(`/brains/${f.brain.id}/connections?tab=runners`);
   await card
     .getByRole("button", { name: "Edit private runner", exact: true })
     .click();

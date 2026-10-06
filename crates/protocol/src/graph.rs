@@ -103,6 +103,7 @@ pub struct GraphEdge {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct GraphView {
     pub brain_id: Uuid,
+    pub expires_at: Option<DateTime<Utc>>,
     pub scope: GraphSelection,
     pub scope_id: Option<Uuid>,
     pub generation: GraphGeneration,

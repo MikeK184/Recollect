@@ -256,3 +256,13 @@ slices. Coordinator-owned MCP observations reuse this engine under the
 tool results the host actually supplies. The `managed_tools` policy field defaults
 false and selects that independent internal producer, without changing host
 binding/device authority or enabling retrospective capture.
+
+### Activity attribution — 2026-10-04
+
+The event read accepts an optional exact `device_id`, applied with the existing
+Brain/binding/kind predicates before count and twenty-row pagination. Safe device
+name and contributing username accompany each event; device identity may be absent
+for browser-managed calls. This adds no private task/path or credential detail.
+Current Brain authorization and retention/erasure still govern evidence availability.
+
+Capture activity may summarize source processing and the latest learning run from the exact retained source version. These are recorded states, with timestamps; a stored running state does not prove a currently leased worker. No Brain-wide graph result is attributed to a single event.

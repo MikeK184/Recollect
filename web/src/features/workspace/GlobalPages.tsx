@@ -1,117 +1,268 @@
-import { Card, Group, Stack, Text } from "@mantine/core";
+import { useState } from "react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Drawer,
+  Group,
+  Stack,
+  Text,
+  TextInput,
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { Alert } from "@mantine/core";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ArrowRight, Search, Terminal } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { client, result } from "../../api";
-import { tokens } from "../../design/tokens";
-import { palette } from "../../design/tokens";
-import { EmptyState, ErrorState, LoadingState } from "../../components/AsyncState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../components/AsyncState";
 import { PageHeader } from "../../components/PageHeader";
+import { BrainIcon } from "../../components/BrainIcon";
+import { AgentAccessPanel } from "../../DevicesPanel";
 import { TeamPanel } from "../../TeamPanel";
 import { useWorkspace } from "../../app/context";
+import "./control-panel.css";
 
 const hostLabel = (kind?: string | null) =>
-  kind === "codex"
-    ? "Codex"
-    : kind === "opencode"
-      ? "OpenCode"
-      : kind === "claude_code"
-        ? "Claude Code"
-        : null;
-
+  ({ codex: "Codex", opencode: "OpenCode", claude_code: "Claude Code" })[
+    kind ?? ""
+  ] ?? "Host unreported";
 const integrationLabel = (value: string) =>
   value === "plugin" ? "Recollect plugin" : "MCP token";
-
 const time = (value?: string | null) =>
-  value ? new Date(value).toLocaleString() : null;
+  value ? new Date(value).toLocaleString() : "No recorded use";
 
-/** Account-level answer to "which agents exist and where are they used":
- * every agent of the signed-in user, grouped by user, with the Brains each is
- * used in and when it was last used there. */
 export function AgentsGlobalPage() {
+  const reduced = useReducedMotion(),
+    navigate = useNavigate();
+  const searchStr = useRouterState({
+    select: (state) => state.location.searchStr,
+  });
+  const params = new URLSearchParams(searchStr),
+    code = params.get("code") ?? undefined;
+  const access = params.get("access") === "true" || !!code;
+  const [selected, setSelected] = useState<string | null>(null),
+    [search, setSearch] = useState("");
   const roster = useQuery({
     queryKey: ["account-agents"],
-    queryFn: async () => result(await client.GET("/api/agents")),
+    queryFn: async ({ signal }) =>
+      result(await client.GET("/api/agents", { signal })),
+    gcTime: 0,
+    refetchInterval: 5000,
+    retry: false,
   });
-  if (roster.isPending) return <LoadingState label="Loading agents…" />;
-  if (roster.isError) return <ErrorState error={roster.error} />;
-  const { groups, hidden_count } = roster.data;
-  const total = groups.reduce((n, g) => n + g.agents.length, 0);
+  const agents = roster.isError
+    ? []
+    : (roster.data?.groups ?? []).flatMap((group) =>
+        group.agents.map((agent) => ({ ...agent, user_name: group.user_name })),
+      );
+  const inspected = agents.find((agent) => agent.device_id === selected);
+  type Agent = (typeof agents)[number];
+  type Usage = Agent["brains"][number];
+  const byBrain = new Map<
+    string,
+    { brain: Usage; agents: { agent: Agent; usage: Usage }[] }
+  >();
+  const term = search.trim().toLocaleLowerCase();
+  for (const agent of agents)
+    for (const brain of agent.brains) {
+      if (
+        !`${brain.name} ${agent.name} ${hostLabel(agent.host_kind)}`
+          .toLocaleLowerCase()
+          .includes(term)
+      )
+        continue;
+      if (!byBrain.has(brain.brain_id))
+        byBrain.set(brain.brain_id, { brain, agents: [] });
+      byBrain.get(brain.brain_id)!.agents.push({ agent, usage: brain });
+    }
+  const groups = [...byBrain.values()].sort((a, b) =>
+    a.brain.name.localeCompare(b.brain.name),
+  );
   return (
-    <Stack gap="md" data-testid="account-agent-roster">
+    <Stack gap="lg" data-testid="account-agent-roster">
       <PageHeader
         title="Agents"
-        description="Every agent of this account, and the Brains it is used in."
+        actions={
+          <Button
+            variant="default"
+            onClick={() =>
+              void navigate({ to: "/agents", search: { access: true } })
+            }
+          >
+            Access tokens
+          </Button>
+        }
       />
-      {total === 0 && (
+      <TextInput
+        aria-label="Search agents or Brains"
+        placeholder="Find an agent or Brain…"
+        leftSection={<Search size={16} />}
+        value={search}
+        onChange={(event) => setSearch(event.currentTarget.value)}
+        maw={480}
+      />
+      {roster.isPending ? (
+        <LoadingState label="Loading agents…" />
+      ) : roster.isError ? (
+        <ErrorState error={roster.error} retry={() => void roster.refetch()} />
+      ) : !groups.length ? (
         <EmptyState
-          title="No agents connected yet"
-          description="Connect an agent from any Brain's Agents page."
+          title={
+            term
+              ? "No matching agents or Brains"
+              : "No recorded Brain activity yet"
+          }
+          description={
+            term
+              ? "Try a different name."
+              : "Connect an agent from a Brain’s Agents page. Your credentials are available in Access tokens."
+          }
         />
+      ) : (
+        groups.map(({ brain, agents: rows }) => (
+          <motion.section
+            key={brain.brain_id}
+            layout={!reduced}
+            transition={{ duration: reduced ? 0 : 0.22 }}
+            className="control-surface agent-brain-group"
+            data-testid="agent-brain-group"
+          >
+            <div className="control-surface-head">
+              <BrainIcon id={brain.brain_id} revision={brain.icon_revision} />
+              <div>
+                <Link
+                  to="/brains/$brainId/agents"
+                  params={{ brainId: brain.brain_id }}
+                  search={{}}
+                >
+                  <strong>{brain.name}</strong>
+                </Link>
+                <small>
+                  {rows.length} {rows.length === 1 ? "agent" : "agents"}
+                </small>
+              </div>
+            </div>
+            <table className="agent-group-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Connection</th>
+                  <th>Last used</th>
+                  <th>
+                    <span className="sr-only">Details</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows
+                  .sort(
+                    (a, b) =>
+                      Date.parse(b.usage.last_used_at) -
+                      Date.parse(a.usage.last_used_at),
+                  )
+                  .map(({ agent, usage }) => (
+                    <tr
+                      key={agent.device_id}
+                      data-testid={`account-agent-row-${agent.device_id}`}
+                    >
+                      <td>
+                        <button
+                          className="agent-name-button"
+                          onClick={() => setSelected(agent.device_id)}
+                          aria-label={`Inspect ${agent.name}`}
+                        >
+                          <span className="control-agent-icon">
+                            <Terminal size={18} />
+                          </span>
+                          <strong>{agent.name}</strong>
+                        </button>
+                      </td>
+                      <td>
+                        <span>{hostLabel(agent.host_kind)}</span>
+                        <small>{integrationLabel(agent.integration)}</small>
+                      </td>
+                      <td>
+                        <time dateTime={usage.last_used_at}>
+                          {time(usage.last_used_at)}
+                        </time>
+                      </td>
+                      <td>
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </motion.section>
+        ))
       )}
-      {groups.map((group) => (
-        <Card key={group.user_name} withBorder padding="sm">
-          <Text fw={600} size="sm" mb="xs">
-            {group.user_name} — {group.agents.length}{" "}
-            {group.agents.length === 1 ? "agent" : "agents"}
-          </Text>
-          <Stack gap="xs">
-            {group.agents.map((agent) => (
-              <Group
-                key={agent.device_id}
-                gap="sm"
-                wrap="wrap"
-                data-testid={`account-agent-row-${agent.device_id}`}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: agent.active ? tokens.accent : palette.lineDark,
-                    flexShrink: 0,
-                    marginTop: 6,
-                  }}
-                />
-                <Stack gap={0} style={{ flex: 1, minWidth: 200 }}>
-                  <Text size="sm" fw={500}>
-                    {agent.name}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {hostLabel(agent.host_kind) ?? "Coding host"} ·{" "}
-                    {integrationLabel(agent.integration)}
-                  </Text>
-                </Stack>
-                <Stack gap={0} style={{ minWidth: 220, flexShrink: 0 }}>
-                  {agent.brains.length === 0 ? (
-                    <Text size="xs" c="dimmed">
-                      Not used on any Brain yet
-                    </Text>
-                  ) : (
-                    agent.brains.map((usage) => (
-                      <Text key={usage.brain_id} size="xs" c="dimmed">
-                        {usage.name} — last used{" "}
-                        {time(usage.last_used_at)?.toLowerCase()}
-                      </Text>
-                    ))
+      <Drawer
+        opened={access}
+        onClose={() => void navigate({ to: "/agents", search: {} })}
+        title="Access tokens"
+        position="right"
+        size="xl"
+        className="control-drawer"
+      >
+        {access && <AgentAccessPanel code={code} />}
+      </Drawer>
+      <Drawer
+        opened={!!inspected && !access}
+        onClose={() => setSelected(null)}
+        title="Agent record"
+        position="right"
+        size="lg"
+        className="control-drawer"
+      >
+        {inspected && (
+          <Stack gap="lg">
+            <div className="creation-preview">
+              <Terminal size={26} />
+              <div>
+                <strong>{inspected.name}</strong>
+                <p>
+                  {hostLabel(inspected.host_kind)} ·{" "}
+                  {integrationLabel(inspected.integration)}
+                </p>
+              </div>
+            </div>
+            <Group>
+              <Text>{inspected.user_name}</Text>
+              <Badge variant="light">
+                {inspected.claimed ? "Credential enabled" : "Waiting for host"}
+              </Badge>
+            </Group>
+            {inspected.brains.map((brain) => (
+              <div className="control-detail-section" key={brain.brain_id}>
+                <strong>{brain.name}</strong>
+                <Text size="sm">
+                  Last observed use {time(brain.last_used_at)}
+                </Text>
+                <Button
+                  variant="light"
+                  renderRoot={(props) => (
+                    <Link
+                      {...props}
+                      to="/brains/$brainId/activity"
+                      params={{ brainId: brain.brain_id }}
+                      search={{ tab: "pipeline" }}
+                    />
                   )}
-                </Stack>
-              </Group>
+                >
+                  Open Brain activity
+                </Button>
+              </div>
             ))}
           </Stack>
-        </Card>
-      ))}
-      {hidden_count > 0 && (
-        <Text size="xs" c="dimmed">
-          {hidden_count} revoked or expired{" "}
-          {hidden_count === 1 ? "agent is" : "agents are"} hidden. The complete
-          device history stays on the direct /devices surface.
-        </Text>
-      )}
+        )}
+      </Drawer>
     </Stack>
   );
 }
-
 export function TeamPage() {
   const session = useWorkspace();
   return session.user.installation_owner ? (

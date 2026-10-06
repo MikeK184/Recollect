@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { iconSize } from "./design/tokens";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./features/feature-views.css";
 import { EraseAction } from "./RetentionPanel";
 import {
@@ -14,6 +14,7 @@ import {
   Loader,
   Modal,
   Select,
+  SegmentedControl,
   Stack,
   Switch,
   Tabs,
@@ -26,6 +27,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileCode2, GitCommitHorizontal, Plus } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
+import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
 type Repository = components["schemas"]["Repository"];
 type Manifest = components["schemas"]["ManifestRevision"];
@@ -76,6 +78,53 @@ function Pages({
 function JsonView({ value }: { value: unknown }) {
   return <pre className="source-content">{JSON.stringify(value, null, 2)}</pre>;
 }
+function FactRecord({ value }: { value: unknown }) {
+  const fact =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  const relations = Array.isArray(fact?.relations) ? fact.relations : [];
+  return (
+    <Stack gap="xs">
+      <Group justify="space-between">
+        <Text size="sm" fw={600}>
+          {typeof fact?.name === "string" ? fact.name : "Structured fact"}
+        </Text>
+        {typeof fact?.kind === "string" && (
+          <Badge variant="light" color="gray">
+            {fact.kind}
+          </Badge>
+        )}
+      </Group>
+      {typeof fact?.file === "string" && (
+        <Text size="xs" c="dimmed">
+          {fact.file}
+          {typeof fact.line === "number" ? `:${fact.line}` : ""}
+        </Text>
+      )}
+      {relations.map((relation, index) => {
+        const r =
+          relation && typeof relation === "object"
+            ? (relation as Record<string, unknown>)
+            : {};
+        return (
+          <Text key={index} size="xs">
+            {typeof r.kind === "string" ? r.kind : "Relationship"} →{" "}
+            {typeof r.target === "string"
+              ? r.target
+              : typeof r.target_id === "string"
+                ? r.target_id
+                : "Target not recorded"}
+          </Text>
+        );
+      })}
+      <details className="record-identity">
+        <summary>Raw record</summary>
+        <JsonView value={value} />
+      </details>
+    </Stack>
+  );
+}
 export function RepositoryDialog({
   brain,
   repository,
@@ -124,8 +173,8 @@ export function RepositoryDialog({
         {snapshots.isPending && <Loader size="sm" />}
         {snapshots.data?.items.length === 0 && (
           <Alert title="No snapshots published">
-            Use a connected host with a task scoped to this repository.
-            Publish an exact locally available commit from your checkout.
+            Use a connected host with a task scoped to this repository. Publish
+            an exact locally available commit from your checkout.
           </Alert>
         )}
         {!snapshots.error &&
@@ -274,7 +323,12 @@ export function SnapshotDialog({
   });
   const s = details.error ? undefined : details.data?.snapshot;
   return (
-    <Modal opened onClose={onClose} size="xl" title="Repository snapshot">
+    <Modal
+      opened
+      onClose={onClose}
+      size="min(76rem, 92vw)"
+      title="Committed snapshot"
+    >
       <Stack className="publication-panel">
         <Failure error={details.error} />
         {details.isPending && <Loader />}
@@ -297,10 +351,13 @@ export function SnapshotDialog({
               {s.fact_count} structural facts · {s.file_count} files ·{" "}
               {s.retained_file_count} retained texts
             </Text>
-            <Text size="xs" c="dimmed">
-              Snapshot {id} · {s.adapter} {s.adapter_build} · extractor{" "}
-              {s.extractor_version}
-            </Text>
+            <details className="record-identity">
+              <summary>Extraction details</summary>
+              <Text size="xs" c="dimmed">
+                Snapshot {id} · {s.adapter} {s.adapter_build} · extractor{" "}
+                {s.extractor_version}
+              </Text>
+            </details>
             {brain.role !== "reader" && !brain.archived && (
               <Button
                 variant="light"
@@ -326,8 +383,19 @@ export function SnapshotDialog({
                 <Tabs.Tab value="facts">Facts</Tabs.Tab>
                 <Tabs.Tab value="coverage">Coverage</Tabs.Tab>
                 <Tabs.Tab value="contributors">Contributors</Tabs.Tab>
-                <Tabs.Tab value="insights">Insights</Tabs.Tab>
-                <Tabs.Tab value="receipt">Receipt</Tabs.Tab>
+                <Select
+                  aria-label="Snapshot artifacts"
+                  placeholder="Artifacts"
+                  clearable
+                  value={tab === "insights" || tab === "receipt" ? tab : null}
+                  onChange={(value) => setTab(value ?? "files")}
+                  data={[
+                    { value: "insights", label: "Insights" },
+                    { value: "receipt", label: "Receipt" },
+                  ]}
+                  ml="auto"
+                  w={150}
+                />
               </Tabs.List>
               <Tabs.Panel value="files" pt="md">
                 <Stack>
@@ -422,10 +490,7 @@ export function SnapshotDialog({
                   {!facts.error &&
                     facts.data?.items.map((f) => (
                       <Card withBorder key={f.id}>
-                        <Text size="xs" mb="xs">
-                          Record {f.ordinal + 1} · {f.id}
-                        </Text>
-                        <JsonView value={f.record} />
+                        <FactRecord value={f.record} />
                       </Card>
                     ))}
                   {!facts.error && facts.data && (
@@ -456,7 +521,9 @@ export function SnapshotDialog({
                   {details.data?.contributors.map((c) => (
                     <Card key={c.id} withBorder>
                       <Stack gap="xs">
-                        <Text size="sm">Account {c.actor_id}</Text>
+                        <Text size="sm" fw={600}>
+                          {c.actor_name || "Recorded contributor"}
+                        </Text>
                         <Text size="xs">Device {c.device_id}</Text>
                         <Text size="sm">
                           {c.dirty
@@ -1172,7 +1239,19 @@ function EntryForm({
   );
 }
 
-export function RepositoryStoragePolicy({ brain }: { brain: Brain }) {
+export function RepositoryStoragePolicy({
+  brain,
+  inline = false,
+  readOnly = false,
+  close,
+}: {
+  brain: Brain;
+  inline?: boolean;
+  readOnly?: boolean;
+  close?: () => void;
+}) {
+  const [draft, setDraft] = useState<boolean | null>(null);
+  const [baseline, setBaseline] = useState<boolean | null>(null);
   const cache = useQueryClient();
   const policy = useQuery({
     queryKey: ["repository-policy", brain.id],
@@ -1183,42 +1262,94 @@ export function RepositoryStoragePolicy({ brain }: { brain: Brain }) {
         }),
       ),
   });
+  useEffect(() => {
+    if (
+      inline &&
+      baseline === null &&
+      policy.data?.allow_file_content !== undefined
+    )
+      setBaseline(policy.data?.allow_file_content!);
+  }, [inline, baseline, policy.data?.allow_file_content]);
+  const changed =
+    inline &&
+    baseline !== null &&
+    policy.data?.allow_file_content !== undefined &&
+    policy.data?.allow_file_content !== baseline;
   const updatePolicy = useMutation({
-    mutationFn: async (allowed: boolean) =>
-      result(
+    mutationFn: async (allowed: boolean) => {
+      if (changed || policy.error)
+        throw new Error(
+          "Storage policy changed. Cancel and reopen before saving.",
+        );
+      return result(
         await client.PUT("/api/brains/{brain}/repositories/policy", {
           params: { path: { brain: brain.id } },
           body: { allow_file_content: allowed },
         }),
-      ),
-    onSuccess: (value) =>
-      cache.setQueryData(["repository-policy", brain.id], value),
+      );
+    },
+    onSuccess: (value) => {
+      cache.setQueryData(["repository-policy", brain.id], value);
+      close?.();
+    },
   });
 
   return (
-    <section className="feature-setting">
+    <section className={inline ? "privacy-editor" : "feature-setting"}>
       <Stack gap="md">
-        <Title order={3}>Repository file storage</Title>
-        <Text size="sm" c="dimmed">
-          Published structure is separate from retained file text. Files require
-          explicit host selection and this Brain's permission.
-        </Text>
+        {changed && (
+          <Alert color="yellow">
+            Storage policy changed elsewhere. Cancel and reopen to edit the
+            current policy.
+          </Alert>
+        )}
+        {!inline && <Title order={3}>Repository file storage</Title>}
         <Failure error={policy.error} />
         <Failure error={updatePolicy.error} />
         {!policy.error &&
           policy.data &&
           (brain.role === "admin" && !brain.archived ? (
-            <Switch
-              label="Allow explicitly selected repository file text"
-              description="Applies to new publications. Turning this off preserves previously retained evidence."
-              checked={
-                updatePolicy.isPending
-                  ? updatePolicy.variables
-                  : policy.data.allow_file_content
+            <PolicyRow
+              title={
+                inline
+                  ? "Repository content"
+                  : "Allow explicitly selected repository file text"
               }
-              disabled={updatePolicy.isPending}
-              onChange={(e) => updatePolicy.mutate(e.currentTarget.checked)}
-            />
+              description="Source code and repository files; applies to new captures."
+            >
+              {inline ? (
+                <SegmentedControl
+                  className="vision-segment repository-capture-options"
+                  aria-label="Repository content capture"
+                  value={
+                    (
+                      readOnly
+                        ? policy.data.allow_file_content
+                        : (draft ?? baseline ?? policy.data.allow_file_content)
+                    )
+                      ? "text"
+                      : "references"
+                  }
+                  disabled={readOnly || updatePolicy.isPending}
+                  data={[
+                    { value: "references", label: "References only" },
+                    { value: "text", label: "Include file text" },
+                  ]}
+                  onChange={(v) => setDraft(v === "text")}
+                />
+              ) : (
+                <Switch
+                  aria-label="Allow explicitly selected repository file text"
+                  checked={
+                    updatePolicy.isPending
+                      ? updatePolicy.variables
+                      : policy.data.allow_file_content
+                  }
+                  disabled={updatePolicy.isPending}
+                  onChange={(e) => updatePolicy.mutate(e.currentTarget.checked)}
+                />
+              )}
+            </PolicyRow>
           ) : (
             <Text size="sm">
               Repository text capture:{" "}
@@ -1227,6 +1358,31 @@ export function RepositoryStoragePolicy({ brain }: { brain: Brain }) {
                 : "disabled"}
             </Text>
           ))}
+        {inline &&
+          !readOnly &&
+          !policy.error &&
+          policy.data &&
+          brain.role === "admin" &&
+          !brain.archived && (
+            <Group justify="flex-end">
+              <Button
+                variant="default"
+                disabled={updatePolicy.isPending}
+                onClick={close}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={changed}
+                loading={updatePolicy.isPending}
+                onClick={() =>
+                  updatePolicy.mutate(draft ?? policy.data!.allow_file_content)
+                }
+              >
+                Save repository storage
+              </Button>
+            </Group>
+          )}
       </Stack>
     </section>
   );

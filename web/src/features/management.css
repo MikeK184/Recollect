@@ -1,0 +1,2419 @@
+/* Management uses the shared shell geometry and navigation scale. */
+.brain-global-nav {
+  border-bottom: 1px solid var(--rc-border);
+}
+.workspace-nav.brain-global-nav {
+  flex: 0;
+  margin-top: 0;
+  padding-bottom: 20px;
+  margin-bottom: 18px;
+}
+.healthy-service-status {
+  display: none;
+}
+.account-utilities {
+  position: relative;
+}
+.account-utilities summary {
+  display: flex;
+  cursor: pointer;
+  color: var(--rc-muted);
+}
+.account-utilities > div {
+  position: absolute;
+  bottom: 30px;
+  left: -145px;
+  min-width: 180px;
+  padding: 16px;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  z-index: 20;
+}
+.connections-page,
+.connectors-page,
+.agents-management-page,
+.settings-management-page {
+  color: var(--rc-ink);
+}
+.connections-page .page-heading h1 {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -1.8px;
+}
+.connectors-page .page-heading h1,
+.agents-management-page .page-heading h1 {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.connections-page .page-description,
+.connectors-page .page-description,
+.agents-management-page .page-description,
+.settings-management-page .page-description {
+  font-family: var(--rc-font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.connections-page .page-heading,
+.connectors-page .page-heading {
+  margin-bottom: 28px;
+}
+.management-surface {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+  border-radius: 8px;
+  padding: 24px;
+}
+.management-title {
+  font-family: var(--rc-font-display);
+  font-size: 25px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  line-height: 1.2;
+  color: var(--rc-ink);
+}
+.management-muted {
+  color: var(--rc-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.management-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: var(--rc-sidebar);
+  color: var(--rc-ink);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.management-icon svg {
+  width: 30px;
+  height: 30px;
+}
+.management-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.management-section-heading > div {
+  min-width: 0;
+}
+.management-side {
+  display: grid;
+  gap: 18px;
+}
+.management-row {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rc-border);
+}
+.management-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.management-row-main strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.management-row-main p {
+  margin: 4px 0 0;
+}
+.vision-segment {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+  border-radius: 5px;
+  padding: 3px;
+}
+.vision-segment .mantine-SegmentedControl-indicator {
+  background: var(--rc-selection);
+  box-shadow: none;
+  border-radius: 4px;
+}
+.vision-segment .mantine-SegmentedControl-label {
+  color: var(--rc-ink);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.vision-segment .mantine-SegmentedControl-label[data-active] {
+  color: var(--rc-accent);
+  font-weight: 600;
+}
+.vision-segment .mantine-SegmentedControl-label > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+/* Connections: the inspector starts with the page heading, not after the filters. */
+.connections-page {
+  position: relative;
+  --connection-rail: 438px;
+  --connection-gap: 32px;
+  min-height: calc(100dvh - 108px);
+}
+.connections-page:not(.secondary-view) > .page-heading,
+.connections-page:not(.secondary-view) > .mantine-Tabs-root {
+  width: calc(100% - var(--connection-rail) - var(--connection-gap));
+}
+.connections-page > .mantine-Tabs-root {
+  margin-bottom: 24px;
+}
+.connections-page .rc-tab {
+  font-size: 15px;
+  padding: 15px 20px;
+}
+.connections-page .feature-toolbar {
+  margin: 0 0 22px;
+}
+.connections-page:not(.secondary-view) .feature-toolbar {
+  width: calc(100% - var(--connection-rail) - var(--connection-gap));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 24px;
+}
+.connections-page .feature-toolbar .feature-search {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+.connections-page .feature-toolbar .rc-input {
+  border-color: var(--rc-border);
+  height: 44px;
+  min-height: 44px;
+  font-size: 15px;
+}
+.connection-add-action {
+  position: absolute;
+  right: calc(var(--connection-rail) + var(--connection-gap));
+  top: 16px;
+  height: 46px;
+  padding: 0 18px;
+}
+.connections-layout {
+  display: block;
+  width: calc(100% - var(--connection-rail) - var(--connection-gap));
+}
+.connections-layout.no-selection {
+  width: 100%;
+}
+.connection-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-height: 122px;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--rc-border);
+}
+.connection-row.selected {
+  background: var(--rc-selection);
+  border: 1px solid var(--rc-accent);
+  border-left: 3px solid var(--rc-accent);
+  border-radius: 6px;
+}
+.connection-icon {
+  background: var(--rc-ink);
+  color: var(--rc-surface);
+}
+.connection-row-content {
+  flex: 1;
+  min-width: 0;
+}
+.connection-select {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--rc-ink);
+  cursor: pointer;
+  text-align: left;
+}
+.connection-select:hover {
+  color: var(--rc-accent);
+}
+.connection-row-content strong {
+  font-family: var(--rc-font-display);
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.2;
+}
+.connection-row-content small {
+  display: block;
+  color: var(--rc-muted);
+  margin-top: 5px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.connection-row-status {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  max-width: 190px;
+}
+.connection-row-status .rc-badge {
+  height: 28px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+.connection-row-status small {
+  font-size: 11px;
+  color: var(--rc-muted);
+}
+.connection-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--rc-border);
+  min-height: 36px;
+}
+.connection-row-actions > .rc-button {
+  text-decoration: underline;
+  padding: 0 6px;
+}
+.connection-inspector {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--connection-rail);
+  min-height: 854px;
+  padding: 22px 20px;
+}
+.connection-inspector-heading {
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.connection-inspector-heading > div:last-child {
+  min-width: 0;
+}
+.connection-inspector-identity {
+  flex: 1;
+  min-width: 0;
+}
+.connection-inspector-actions {
+  display: flex;
+  gap: 2px;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+.connections-page:has(.connections-layout.no-selection) > .page-heading,
+.connections-page:has(.connections-layout.no-selection) > .mantine-Tabs-root,
+.connections-page:has(.connections-layout.no-selection) .feature-toolbar,
+.connections-page:has(.connections-layout.no-selection) .private-runner-note {
+  width: 100%;
+}
+.connections-page:has(.connections-layout.no-selection) .connection-add-action {
+  right: 0;
+}
+.connections-page:has(.connections-layout.no-selection) .private-runner-note {
+  margin-top: 24px;
+}
+.connection-inspector .management-title {
+  font-size: 25px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.connection-inspector-heading .management-muted {
+  font-size: 14px;
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.connection-inspector .management-icon {
+  width: 52px;
+  height: 52px;
+}
+.connection-inspector .rc-tab {
+  padding: 12px 18px;
+}
+.connection-inspector .inspector-section-title {
+  font-size: 21px;
+  margin-top: 22px;
+  margin-bottom: 12px;
+}
+.connection-inspector dl {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 15px 14px;
+  margin: 20px 0;
+  font-size: 14px;
+}
+.connection-inspector dt {
+  color: var(--rc-ink);
+}
+.connection-inspector dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.connection-inspector code {
+  font-family: var(--rc-font-mono);
+  font-size: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--rc-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: var(--rc-canvas);
+}
+.inspector-target-value {
+  display: flex;
+  align-items: start;
+  gap: 4px;
+}
+.inspector-target-value code {
+  flex: 1;
+}
+.inspector-test-section {
+  border-top: 1px solid var(--rc-border);
+  padding-top: 16px;
+  margin-top: 22px;
+}
+.inspector-test-section .inspector-section-title {
+  margin: 0;
+}
+.inspector-test-section .rc-badge {
+  max-width: 240px;
+}
+.connection-inspector .connection-runtime-note {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.connection-inspector-actions {
+  flex-wrap: nowrap;
+  margin-top: 18px;
+}
+.connection-inspector-actions button:first-child {
+  flex: 1.5;
+}
+.connection-inspector-actions button {
+  flex: 1;
+  height: 44px;
+}
+.inspector-tool-access {
+  border-top: 1px solid var(--rc-border);
+  margin-top: 26px;
+  padding-top: 20px;
+}
+.inspector-tool-access .inspector-section-title {
+  margin: 0;
+}
+.inspector-tool-group {
+  padding: 18px;
+  border: 1px solid var(--rc-border);
+  border-radius: 7px;
+  margin-top: 16px;
+}
+.inspector-tool-group > .mantine-Group-root {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+.inspector-tool-group strong {
+  flex: 1;
+  font-family: var(--rc-font-display);
+  font-size: 18px;
+}
+.inspector-tool-group .management-muted {
+  font-size: 13px;
+  margin: 12px 0;
+}
+.inspector-tool-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.inspector-tool-name code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+}
+.private-runner-note {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  width: calc(100% - var(--connection-rail) - var(--connection-gap));
+  margin-top: 330px;
+  min-height: 116px;
+}
+.private-runner-note > div:not(.management-icon) {
+  flex: 1;
+}
+.private-runner-note .management-title {
+  font-size: 24px;
+}
+.private-runner-note .management-muted {
+  margin: 5px 0 0;
+  font-size: 13px;
+}
+.private-runner-note button {
+  border-left: 1px solid var(--rc-border);
+  border-radius: 0;
+  padding: 0 0 0 18px;
+  font-size: 13px;
+}
+.connection-edit-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.connection-edit-form > p,
+.connection-edit-form > .mantine-Alert-root,
+.connection-edit-form > details,
+.connection-edit-form > .mantine-JsonInput-root,
+.connection-edit-form > .mantine-Group-root,
+.connection-edit-form > .mantine-SegmentedControl-root {
+  grid-column: 1/-1;
+}
+/* URL, imported config and approved connector setup use the same broad dialog. */
+.connection-setup-modal .mantine-Modal-content {
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+}
+.connection-setup-modal .mantine-Modal-header {
+  padding: 26px 32px 0;
+  min-height: 64px;
+}
+.connection-setup-modal .mantine-Modal-title {
+  font-family: var(--rc-font-display);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.connection-setup-modal .mantine-Modal-body {
+  padding: 0 32px 24px;
+}
+.connection-setup-modal .connection-setup-intro {
+  margin: 2px 0 8px;
+  font-size: 15px;
+}
+.connection-setup-body {
+  gap: 18px;
+}
+.connection-methods {
+  height: 46px;
+}
+.connection-methods .mantine-SegmentedControl-label {
+  padding: 8px 12px;
+}
+.connection-config-heading .management-title {
+  font-size: 19px;
+  margin: 0;
+}
+.config-format-tabs .mantine-SegmentedControl-label {
+  padding: 7px 17px;
+  font-size: 12px;
+}
+.connection-config-heading {
+  gap: 8px;
+}
+.numbered-config-editor {
+  position: relative;
+  overflow: hidden;
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-border);
+  border-radius: 4px;
+  height: 188px;
+}
+.config-line-numbers {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 48px;
+  background: var(--rc-canvas);
+  padding: 8px 0;
+  text-align: center;
+  font-family: var(--rc-font-mono);
+  font-size: 12px;
+  line-height: 22px;
+  color: var(--rc-muted);
+  min-height: 100%;
+}
+.config-highlight {
+  position: absolute;
+  top: 0;
+  left: 48px;
+  right: 0;
+  margin: 0;
+  padding: 8px 12px;
+  font-family: var(--rc-font-mono);
+  font-size: 12px;
+  line-height: 22px;
+  color: var(--rc-ink);
+  white-space: pre;
+  pointer-events: none;
+}
+.config-key {
+  color: var(--rc-danger);
+}
+.config-string {
+  color: var(--rc-cat-claim);
+}
+.numbered-config-editor .mantine-Textarea-root,
+.numbered-config-editor .mantine-Input-wrapper {
+  height: 100%;
+}
+.numbered-config-editor textarea {
+  padding: 8px 12px 8px 60px;
+  height: 188px;
+  min-height: 188px;
+  background: transparent;
+  border: 0;
+  font-family: var(--rc-font-mono);
+  font-size: 12px;
+  line-height: 22px;
+  color: transparent;
+  caret-color: var(--rc-ink);
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+}
+.numbered-config-editor textarea::placeholder {
+  color: var(--rc-muted);
+}
+.connection-parsed-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  border-radius: 4px;
+  color: var(--rc-accent);
+  background: var(--rc-selection);
+  padding: 8px 16px;
+  font-size: 12px;
+  margin-top: -8px;
+}
+.connection-setup-summary {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 0.8fr;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 16px;
+  border: 1px solid var(--rc-border);
+  border-radius: 5px;
+}
+.connection-setup-summary > div {
+  min-width: 0;
+}
+.connection-setup-summary > div + div {
+  border-left: 1px solid var(--rc-border);
+  padding-left: 18px;
+}
+.connection-setup-summary strong,
+.connection-setup-summary small {
+  display: block;
+}
+.connection-setup-summary strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.connection-setup-summary small {
+  font-size: 11px;
+  color: var(--rc-muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.connection-summary-server {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.connection-summary-server strong {
+  font-weight: 700;
+}
+.connection-summary-server .management-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+}
+.connection-summary-server .management-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.connection-setup-summary strong .rc-button {
+  margin-left: 4px;
+  font-size: 11px;
+  padding: 0 4px;
+  height: 20px;
+  display: inline-flex;
+}
+.connection-authentication .management-title {
+  font-size: 19px;
+  margin: 0;
+}
+.connection-authentication > .mantine-Group-root {
+  margin-bottom: 16px;
+}
+.connection-auth-tabs {
+  width: 590px;
+  max-width: 70%;
+}
+.connection-auth-tabs .mantine-SegmentedControl-label {
+  padding: 7px 8px;
+  font-size: 12px;
+}
+.connection-auth-fields {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr 1.06fr;
+  gap: 18px;
+  align-items: start;
+}
+.connection-auth-fields + .connection-auth-fields {
+  margin-top: 12px;
+}
+.connection-auth-fields .mantine-InputWrapper-description {
+  font-size: 10px;
+  margin: 2px 0;
+}
+.connection-setup-body .rc-input-label {
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.connection-setup-body .rc-input {
+  height: 40px;
+  min-height: 40px;
+  font-size: 13px;
+  border-color: var(--rc-border);
+}
+.connection-credential-note {
+  margin: 5px 0 0 33%;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.connection-setup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--rc-border);
+  padding-top: 16px;
+  margin-top: 6px;
+  position: sticky;
+  bottom: -24px;
+  background: var(--rc-surface);
+  z-index: 4;
+  padding-bottom: 8px;
+}
+.connection-setup-footer > span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--rc-muted);
+}
+.connection-setup-footer .rc-button {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+.connection-setup-footer .mantine-Group-root > .rc-button:first-child {
+  min-width: 112px;
+}
+.connection-setup-footer .mantine-Group-root > .rc-button:nth-child(2) {
+  min-width: 122px;
+}
+.connection-setup-footer .mantine-Group-root > .rc-button:last-child {
+  min-width: 136px;
+}
+.connection-review-card {
+  padding: 14px 18px;
+}
+/* Installation connector catalogue. Real sparse inventories keep compact tiles. */
+.connector-library-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 338px;
+  gap: 26px;
+  align-items: start;
+}
+.connector-primary {
+  min-width: 0;
+}
+.connector-library-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.connector-library-toolbar .mantine-Tabs-root {
+  flex: 1;
+  min-width: 0;
+}
+.connector-library-toolbar .rc-tab {
+  font-size: 14px;
+  padding: 13px 12px;
+}
+.connector-library-toolbar > .mantine-TextInput-root {
+  width: 208px;
+}
+.connector-library-toolbar > .mantine-Select-root {
+  width: 146px;
+}
+.connector-library-toolbar .rc-input {
+  border-color: var(--rc-border);
+}
+.connector-library {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.connector-tile {
+  display: flex;
+  flex-direction: column;
+  min-height: 242px;
+  padding: 18px;
+  gap: 16px;
+}
+.connector-tile header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.connector-tile header > div:last-child {
+  min-width: 0;
+}
+.connector-tile h3 {
+  margin: 0 0 8px;
+  font-family: var(--rc-font-display);
+  font-size: 20px;
+  font-weight: 600;
+}
+.connector-tile-icon {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  background: var(--rc-cat-procedure-tint);
+}
+.connector-tile-icon svg {
+  width: 36px;
+  height: 36px;
+}
+.connector-tile {
+  position: relative;
+}
+.connector-tile-actions {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  z-index: 1;
+}
+.connector-tile .rc-badge {
+  border-radius: 18px;
+  height: 28px;
+  font-size: 11px;
+  padding: 0 10px;
+}
+.connector-tile p {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+.connector-transport-pill {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--rc-canvas);
+  border: 1px solid var(--rc-border);
+  border-radius: 20px;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+.connector-tile footer {
+  border-top: 1px solid var(--rc-border);
+  padding-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+}
+.connector-tile footer .rc-button {
+  padding: 0;
+  height: 28px;
+  font-size: 13px;
+}
+.connector-context-panel {
+  min-height: 0;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.connector-context-panel > .management-title {
+  font-size: 25px;
+  margin: 0;
+}
+.connector-import-illustration {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--rc-canvas);
+  margin: 6px auto 2px;
+  color: var(--rc-secondary);
+}
+.connector-context-panel .management-muted {
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+.connector-context-panel > .rc-button {
+  height: 36px;
+  font-size: 14px;
+}
+.connector-review-explainer {
+  border-top: 1px solid var(--rc-border);
+  border-bottom: 1px solid var(--rc-border);
+  margin-top: 16px !important;
+  padding: 22px 0;
+}
+.connector-import-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: connector-step;
+}
+.connector-import-steps li {
+  position: relative;
+  counter-increment: connector-step;
+  padding: 0 0 20px 46px;
+  min-height: 80px;
+}
+.connector-import-steps li::before {
+  content: counter(connector-step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--rc-border);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--rc-surface);
+  font-weight: 600;
+}
+.connector-import-steps li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 34px;
+  height: calc(100% - 34px);
+  border-left: 1px solid var(--rc-border);
+}
+.connector-import-steps li:last-child {
+  min-height: 75px;
+  padding-bottom: 0;
+}
+.connector-primary .page-heading .rc-button {
+  min-width: 0;
+  height: 36px;
+  font-size: 14px;
+}
+.connector-import-steps strong {
+  font-size: 16px;
+  display: block;
+  margin-bottom: 7px;
+}
+.connector-import-steps span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rc-muted);
+  display: block;
+}
+.connector-library-note {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  width: calc(100% - 364px);
+  padding: 16px 18px;
+  margin-top: 20px;
+  background: var(--rc-attention);
+  border: 1px solid var(--rc-border);
+  border-radius: 8px;
+}
+.connector-library-note > svg {
+  color: var(--rc-amber);
+  flex-shrink: 0;
+}
+.connector-library-note strong {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+}
+.connector-library-note small {
+  display: block;
+  font-size: 12px;
+  color: var(--rc-muted);
+  margin-top: 4px;
+}
+/* Privacy keeps canonical policy controls in the same compact rows when editing. */
+.settings-management-page > .page-heading {
+  margin-bottom: 4px;
+}
+.settings-management-page > .page-heading h1 {
+  font-size: 40px;
+  font-weight: 600;
+}
+.settings-management-page .rc-tab {
+  font-size: 14px;
+  padding: 13px 18px;
+}
+.settings-management-page:has(.privacy-management) .rc-tab {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.privacy-management {
+  display: grid;
+  gap: 8px;
+  max-width: none;
+}
+.privacy-management .privacy-section {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.privacy-management .privacy-head {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 2px 4px 16px;
+}
+.privacy-management .privacy-head > svg {
+  flex-shrink: 0;
+}
+.privacy-management .privacy-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.privacy-management .privacy-head .management-title {
+  font-size: 22px;
+  margin: 0 0 3px;
+}
+.privacy-management .privacy-head .rc-badge {
+  margin-left: 4px;
+  vertical-align: middle;
+  font-family: var(--rc-font-ui);
+  border-radius: 16px;
+  height: 22px;
+  font-size: 11px;
+}
+.privacy-management .privacy-head .mantine-Text-root {
+  font-size: 13px;
+}
+.privacy-management .privacy-redaction-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  font-size: 11px;
+  background: var(--rc-selection);
+  border-radius: 6px;
+  color: var(--rc-accent);
+}
+.privacy-management .privacy-row {
+  display: flex;
+  align-items: start;
+  gap: 18px;
+  margin: 0 0 10px;
+  padding: 0 4px;
+  border: 0;
+}
+.privacy-management .privacy-row > div {
+  flex: 1;
+}
+.privacy-management .privacy-row strong {
+  font-family: var(--rc-font-display);
+  font-size: 22px;
+  font-weight: 600;
+}
+.privacy-management .privacy-row > svg {
+  margin-top: 2px;
+  width: 23px;
+  height: 23px;
+}
+.privacy-management .privacy-row::after {
+  display: none;
+}
+.privacy-management .privacy-editing-badge {
+  font-size: 11px;
+  color: var(--rc-amber);
+  background: var(--rc-attention);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.privacy-management .privacy-raw-edit-toggle {
+  position: absolute;
+  right: 20px;
+  top: 16px;
+}
+.privacy-management .privacy-raw-edit-toggle > svg,
+.privacy-raw-edit-toggle > div {
+  display: none;
+}
+.privacy-management .privacy-section-raw {
+  position: relative;
+}
+.privacy-management .privacy-section-raw .privacy-head {
+  padding-right: 56px;
+}
+.privacy-management
+  .privacy-section-raw:has(.privacy-editing-badge)
+  .privacy-raw-edit-toggle {
+  top: 83px;
+  right: 290px;
+  z-index: 1;
+}
+.privacy-management .privacy-policy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  align-items: center;
+  gap: 20px;
+  min-height: 45px;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--rc-border);
+}
+.privacy-management .privacy-policy-row:last-of-type {
+  border-bottom: 0;
+}
+.privacy-management .privacy-policy-row strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.privacy-management .privacy-policy-row small {
+  display: block;
+  font-size: 11px;
+  color: var(--rc-muted);
+  line-height: 1.3;
+}
+.privacy-management .privacy-policy-value {
+  text-align: right;
+  color: var(--rc-secondary);
+  font-size: 12px;
+}
+.privacy-management .privacy-policy-value .mantine-InputWrapper-root {
+  text-align: left;
+}
+.privacy-management .privacy-policy-row-controls {
+  display: grid;
+  grid-template-columns: 112px 122px;
+  gap: 12px;
+  justify-content: end;
+}
+.privacy-management .privacy-policy-row-controls .rc-input {
+  height: 34px;
+  min-height: 34px;
+  border-color: var(--rc-accent);
+  font-size: 12px;
+}
+.privacy-management .privacy-policy-row-controls input[readonly] {
+  background: var(--rc-surface);
+  border-color: var(--rc-border);
+}
+.privacy-management .privacy-policy-value .mantine-Switch-root {
+  display: flex;
+  justify-content: flex-end;
+}
+.privacy-management .privacy-policy-value .mantine-Switch-track {
+  min-width: 36px;
+  height: 21px;
+}
+.privacy-management .privacy-policy-value .mantine-Switch-thumb {
+  height: 15px;
+  width: 15px;
+}
+.privacy-management .privacy-policy-value .mantine-Switch-track[data-checked] {
+  background: var(--rc-accent);
+  border-color: var(--rc-accent);
+}
+.privacy-management .privacy-policy-value .mantine-Switch-track[data-disabled] {
+  opacity: 1;
+  cursor: default;
+}
+.privacy-management .privacy-editor {
+  padding: 0;
+  border: 0;
+  background: none;
+  gap: 0;
+}
+.privacy-management .privacy-editor > .privacy-policy-row,
+.privacy-management
+  .privacy-editor
+  > .mantine-Stack-root
+  > .privacy-policy-row {
+  margin: 0;
+}
+.privacy-management .privacy-editor:has(> .privacy-policy-row) {
+  border: 1px solid var(--rc-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.privacy-management .privacy-retention-save-line {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 16px;
+}
+.privacy-management .privacy-duration-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 9px 14px;
+  background: var(--rc-attention);
+  border-radius: 6px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.privacy-management .privacy-duration-warning > svg {
+  flex-shrink: 0;
+  color: var(--rc-amber);
+}
+.privacy-management .privacy-retention-save-line .mantine-Group-root {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.privacy-management .privacy-retention-save-line .rc-button {
+  height: 36px;
+  font-size: 12px;
+}
+.privacy-management .privacy-retention-save-line .rc-button:last-child {
+  background: var(--rc-accent);
+}
+.privacy-management .privacy-section-capture .privacy-row > div::after {
+  content: "Choose what Recollect captures from this Brain.";
+  display: block;
+  font-size: 12px;
+  color: var(--rc-muted);
+}
+.privacy-management .privacy-section-evidence .privacy-row > div::after {
+  content: "Control how long supporting content and memory are kept.";
+  display: block;
+  font-size: 12px;
+  color: var(--rc-muted);
+}
+.privacy-management .privacy-section-repository .privacy-row > div::after {
+  content: "Control how much repository content is captured.";
+  display: block;
+  font-size: 12px;
+  color: var(--rc-muted);
+}
+.privacy-management .privacy-capture-enabled {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--rc-muted);
+  margin: -36px 64px 12px 0;
+  align-items: center;
+  height: 25px;
+}
+.privacy-management .privacy-capture-kind-switches {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.privacy-management .privacy-capture-options {
+  border-top: 1px solid var(--rc-border);
+}
+.privacy-management .privacy-section-evidence > div[role],
+.privacy-section-evidence > div:last-child {
+  min-width: 0;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor:has(> .privacy-policy-row) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-policy-row {
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 12px;
+  padding: 5px 14px;
+  min-height: 40px;
+}
+.privacy-management .privacy-section-evidence .privacy-policy-row-controls {
+  grid-template-columns: 100px 70px;
+  gap: 8px;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-policy-row-controls
+  .rc-input {
+  height: 30px;
+  min-height: 30px;
+  font-size: 11px;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-policy-row:last-of-type {
+  grid-column: 1/-1;
+  min-height: 28px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-retention-save-line {
+  grid-column: 1/-1;
+}
+.privacy-management .privacy-document-storage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.privacy-management .privacy-document-storage > section {
+  flex: 1;
+}
+.privacy-management .privacy-document-storage .privacy-policy-row {
+  min-height: 28px;
+  padding: 5px 14px;
+}
+.privacy-management .privacy-document-storage .privacy-policy-row small {
+  display: none;
+}
+.privacy-management .privacy-document-storage > .rc-button {
+  height: 28px;
+}
+.privacy-management .privacy-section-repository .privacy-policy-row {
+  grid-template-columns: minmax(0, 1fr) 326px;
+  min-height: 42px;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+}
+.repository-capture-options {
+  width: 100%;
+}
+.repository-capture-options .mantine-SegmentedControl-label {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+.repository-capture-options[data-disabled] {
+  opacity: 1;
+}
+.privacy-management .privacy-baseline {
+  display: none;
+}
+.privacy-management > .feature-advanced {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+}
+.privacy-management .privacy-footer {
+  margin-top: -34px;
+  height: 28px;
+  align-self: end;
+}
+.privacy-management .privacy-footer .rc-button {
+  font-size: 11px;
+  height: 28px;
+}
+/* AI permissions: clear policy at left, separate coverage, models and options. */
+.models-management .management-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 22px;
+  align-items: start;
+}
+.models-management .management-surface {
+  padding: 22px 26px;
+}
+.models-management .management-side {
+  gap: 18px;
+}
+.models-management .ai-policy-title {
+  font-size: 32px;
+  line-height: 1.1;
+  margin: 0 0 8px;
+}
+.models-management .management-section-heading {
+  margin-bottom: 18px;
+}
+.models-management .management-section-heading .management-muted {
+  font-size: 14px;
+  margin: 0;
+}
+.ai-installed-provider {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 49px;
+  padding: 10px 14px;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.ai-installed-provider strong {
+  margin-right: 22px;
+  font-weight: 600;
+}
+.ai-installed-provider .rc-badge {
+  margin-left: auto;
+  border-radius: 18px;
+  height: 27px;
+}
+.ai-automatic-memory {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 67px;
+  background: var(--rc-selection);
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  padding: 12px 22px;
+  margin-bottom: 18px;
+}
+.ai-automatic-memory > svg {
+  flex-shrink: 0;
+  color: var(--rc-accent);
+}
+.ai-automatic-memory > div:not(.mantine-Badge-root) {
+  flex: 1;
+}
+.ai-automatic-memory strong {
+  font-size: 14px;
+}
+.ai-automatic-memory p {
+  margin: 3px 0 0;
+  font-size: 12px;
+}
+.ai-automatic-memory .rc-badge {
+  height: 28px;
+  border-radius: 18px;
+}
+.ai-processing-title {
+  font-size: 15px;
+  font-weight: 600;
+  border-top: 1px solid var(--rc-border);
+  padding-top: 8px;
+  margin: 0;
+}
+.models-management .management-row {
+  min-height: 60px;
+  padding: 8px 0;
+  gap: 24px;
+}
+.models-management .management-row > svg {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.models-management .management-row-main strong {
+  display: block;
+  font-size: 14px;
+}
+.models-management .management-row-main p {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 2px 0 0;
+}
+.models-management .management-row .rc-badge {
+  border-radius: 18px;
+  height: 26px;
+  min-width: 78px;
+}
+.management-content-policy {
+  margin-top: 6px;
+}
+.management-content-policy .management-title {
+  font-family: var(--rc-font-ui);
+  font-size: 15px;
+  margin: 6px 0 9px;
+}
+.management-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+.management-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 23px;
+  padding: 2px 10px;
+  font-size: 11px;
+  color: var(--rc-ink);
+  background: var(--rc-selection);
+  border: 1px solid var(--rc-border);
+  border-radius: 5px;
+}
+.management-chip svg {
+  color: var(--rc-accent);
+  width: 16px;
+  height: 16px;
+}
+.management-chip.denied {
+  background: var(--rc-sidebar);
+  color: var(--rc-muted);
+}
+.ai-privacy-note {
+  font-size: 11px;
+  margin: 9px 0 0;
+  color: var(--rc-muted);
+}
+.ai-policy-detail {
+  font-size: 10px;
+  color: var(--rc-muted);
+  margin-top: 8px;
+}
+.ai-policy-detail summary {
+  cursor: pointer;
+}
+.management-stats {
+  display: flex;
+  padding: 16px 0 18px;
+  gap: 30px;
+}
+.management-stat {
+  flex: 1;
+}
+.management-stat + .management-stat {
+  border-left: 1px solid var(--rc-border);
+  padding-left: 30px;
+}
+.management-stat strong {
+  display: block;
+  font-family: var(--rc-font-display);
+  font-size: 31px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.management-stat span {
+  font-size: 13px;
+  color: var(--rc-muted);
+}
+.blocked-stat strong {
+  color: var(--rc-danger);
+}
+.ai-search-coverage .management-title {
+  font-size: 24px;
+  margin: 0;
+}
+.ai-search-coverage .rc-badge {
+  border-radius: 18px;
+  height: 28px;
+  font-size: 11px;
+}
+.semantic-count-note {
+  font-size: 10px;
+  color: var(--rc-muted);
+}
+.semantic-coverage-note {
+  padding: 0;
+  margin-top: 16px;
+  background: none;
+  font-size: 12px;
+  color: var(--rc-muted);
+}
+.semantic-coverage-note p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.ai-search-coverage > .mantine-Text-root {
+  font-size: 10px;
+  margin-top: 8px;
+}
+.ai-search-coverage > .rc-button {
+  height: 36px;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.ai-installed-models .management-title {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+.ai-model-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+}
+.ai-model-row + .ai-model-row {
+  border-top: 1px solid var(--rc-border);
+}
+.ai-model-row > svg {
+  flex-shrink: 0;
+}
+.ai-model-row > div:not(.mantine-Badge-root) {
+  flex: 1;
+  min-width: 0;
+}
+.ai-model-row strong {
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.ai-model-row p {
+  font-size: 11px;
+  margin: 4px 0 0;
+}
+.ai-model-row .rc-badge {
+  height: 26px;
+  border-radius: 18px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.ai-more-options .management-title {
+  font-size: 23px;
+  margin-bottom: 10px;
+}
+.ai-more-options button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border: 0;
+  padding: 14px 0;
+  background: none;
+  font-size: 14px;
+  color: var(--rc-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.ai-more-options button + button {
+  border-top: 1px solid var(--rc-border);
+}
+.ai-more-options button span {
+  flex: 1;
+}
+/* Observed agents and the two concise setup companions. */
+.agents-management-page .page-heading {
+  margin-bottom: 36px;
+}
+.agents-header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+.agents-header-actions > .rc-button {
+  height: 50px;
+  min-width: 200px;
+  background: var(--rc-accent);
+  font-size: 16px;
+}
+.agents-header-actions > a {
+  display: inline-flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 16px;
+}
+.agent-roster-group {
+  padding: 22px 26px 0;
+  border-radius: 8px;
+}
+.agent-roster-heading {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  margin-bottom: 14px;
+}
+.agent-owner-avatar {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--rc-sidebar);
+  font-size: 23px;
+  font-weight: 600;
+}
+.agent-roster-heading strong {
+  font-family: var(--rc-font-display);
+  font-size: 27px;
+  font-weight: 600;
+}
+.agent-roster-heading small {
+  display: block;
+  font-size: 16px;
+  margin-top: 3px;
+  color: var(--rc-muted);
+}
+.agent-roster-group > .mantine-Stack-root {
+  gap: 0;
+}
+.agent-roster-row {
+  display: grid;
+  grid-template-columns: 60px minmax(180px, 1fr) 168px 180px 32px;
+  align-items: center;
+  gap: 36px;
+  padding: 12px 0;
+  min-height: 86px;
+  border-top: 1px solid var(--rc-border);
+}
+.agent-host-icon {
+  width: 60px;
+  height: 60px;
+  background: var(--rc-canvas);
+  border-radius: 10px;
+}
+.agent-host-icon svg {
+  width: 32px;
+  height: 32px;
+}
+.agent-roster-row .agent-name {
+  color: var(--rc-ink);
+  font-family: var(--rc-font-display);
+  font-size: 23px;
+  font-weight: 600;
+  height: auto;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.2;
+}
+.agent-roster-row .agent-name .mantine-Button-label {
+  white-space: normal;
+  text-align: left;
+}
+.agent-roster-row .mantine-Text-root {
+  font-size: 16px;
+}
+.agent-roster-row time {
+  font-size: 15px;
+  color: var(--rc-muted);
+  white-space: nowrap;
+  text-align: right;
+}
+.agent-access-badge {
+  height: 34px;
+  font-size: 12px;
+  border-radius: 22px;
+  padding: 0 14px;
+}
+.agent-access-dot {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rc-accent);
+  margin-right: 7px;
+}
+.agent-access-dot.inactive {
+  background: var(--rc-muted);
+}
+.agent-roster-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  border-top: 1px solid var(--rc-border);
+  min-height: 52px;
+}
+.agent-roster-footer a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+}
+.agents-utilities {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+  gap: 16px;
+  margin-top: 10px;
+}
+.agents-utilities .management-surface {
+  padding: 24px 30px;
+}
+.agents-utilities .management-title {
+  font-size: 30px;
+  margin-bottom: 4px;
+}
+.agent-connect-utility > .mantine-Text-root {
+  font-size: 16px;
+}
+.agent-host-tabs {
+  height: 46px;
+}
+.agent-host-tabs .mantine-SegmentedControl-label {
+  padding: 7px 12px;
+  font-size: 14px;
+}
+.agent-setup-prompt {
+  margin-top: 16px;
+}
+.agent-compact-connect {
+  padding: 9px 16px;
+  border-radius: 6px;
+  background: var(--rc-canvas);
+}
+.agent-compact-connect > span {
+  font-family: var(--rc-font-mono);
+  font-size: 11px;
+  color: var(--rc-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.agent-compact-connect > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-compact-connect code {
+  font-family: var(--rc-font-mono);
+  font-size: 13px;
+  color: var(--rc-ink);
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.agent-compact-connect .agent-prompt-details {
+  margin-top: 8px;
+}
+.agent-prompt-details,
+.tool-description-details {
+  font-size: 10px;
+  color: var(--rc-muted);
+}
+.agent-prompt-details summary,
+.tool-description-details summary {
+  cursor: pointer;
+}
+.agent-prompt-details .mantine-Code-root,
+.agent-read-check {
+  font-family: var(--rc-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--rc-canvas);
+  border: 1px solid var(--rc-border);
+  border-radius: 4px;
+}
+.agent-connect-utility > .feature-advanced {
+  margin-top: 12px;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--rc-accent);
+}
+.agent-memory-utility > .mantine-Group-root {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  margin-top: 14px;
+}
+.agent-memory-utility > .mantine-Group-root .rc-button {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.agent-memory-utility > .agent-prompt-details {
+  margin-top: 8px;
+}
+@media (max-width: 1500px) {
+  .connections-page {
+    --connection-rail: 390px;
+    --connection-gap: 24px;
+  }
+  .connection-row {
+    gap: 18px;
+    padding: 20px 16px;
+  }
+  .connection-row-status {
+    max-width: 150px;
+  }
+  .connection-row-content strong {
+    font-size: 21px;
+  }
+  .models-management .management-split {
+    grid-template-columns: minmax(0, 1fr) 350px;
+  }
+  .connector-library-toolbar {
+    flex-wrap: wrap;
+  }
+  .connector-library-toolbar .mantine-Tabs-root {
+    min-width: 100%;
+  }
+  .connector-library-toolbar > .mantine-TextInput-root {
+    flex: 1;
+  }
+  .connector-library-layout {
+    grid-template-columns: minmax(0, 1fr) 318px;
+  }
+  .connector-tile {
+    padding: 16px;
+  }
+  .connector-tile header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .connector-tile-icon {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+  }
+  .connector-library-note {
+    width: calc(100% - 344px);
+  }
+  .agent-roster-row {
+    gap: 24px;
+    grid-template-columns: 60px minmax(160px, 1fr) 160px 155px 32px;
+  }
+}
+@media (max-width: 1200px) {
+  .connections-page {
+    --connection-rail: 330px;
+    --connection-gap: 20px;
+  }
+  .connections-page .feature-toolbar {
+    grid-template-columns: minmax(0, 1fr) 170px !important;
+    gap: 12px !important;
+  }
+  .connection-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .connection-row-status {
+    max-width: none;
+    margin-left: 70px;
+  }
+  .models-management .management-split {
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+  .connector-library {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agent-roster-row {
+    gap: 16px;
+    grid-template-columns: 48px minmax(140px, 1fr) 140px 120px 28px;
+  }
+  .agent-roster-row .agent-name {
+    font-size: 20px;
+  }
+  .agent-roster-row time,
+  .agent-roster-row .mantine-Text-root {
+    font-size: 12px;
+  }
+  .privacy-section-evidence .privacy-editor > .privacy-policy-row {
+    grid-template-columns: 1fr 165px;
+  }
+  .privacy-section-evidence .privacy-policy-row-controls {
+    grid-template-columns: 90px 65px;
+  }
+}
+@media (max-width: 1050px) {
+  .connections-page > .page-heading,
+  .connections-page > .mantine-Tabs-root,
+  .connections-page .feature-toolbar,
+  .connections-layout,
+  .private-runner-note {
+    width: 100% !important;
+  }
+  .connections-page .page-heading {
+    padding-right: 160px;
+  }
+  .connection-add-action {
+    right: 0;
+  }
+  .connection-inspector {
+    position: static;
+    width: 100%;
+    min-height: 0;
+    margin-top: 20px;
+  }
+  .private-runner-note {
+    margin-top: 24px;
+  }
+  .models-management .management-split,
+  .connector-library-layout,
+  .agents-utilities {
+    grid-template-columns: 1fr;
+  }
+  .connector-context-panel {
+    min-height: 0;
+  }
+  .connector-library-note {
+    width: 100%;
+    margin-top: 20px;
+  }
+  .privacy-section-evidence .privacy-editor:has(> .privacy-policy-row) {
+    grid-template-columns: 1fr;
+  }
+  .privacy-redaction-notice {
+    max-width: 200px;
+  }
+  .agent-roster-row {
+    grid-template-columns: 48px minmax(0, 1fr) 140px 28px;
+  }
+  .agent-roster-row time {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+@media (max-width: 700px) {
+  .connection-edit-form,
+  .connector-library,
+  .connection-auth-fields,
+  .connection-setup-summary {
+    grid-template-columns: 1fr;
+  }
+  .connection-setup-summary > div + div {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .connection-setup-modal .mantine-Modal-header {
+    padding: 20px 20px 0;
+  }
+  .connection-setup-modal .mantine-Modal-body {
+    padding: 0 20px 16px;
+  }
+  .connection-authentication > .mantine-Group-root {
+    display: block;
+  }
+  .connection-auth-tabs {
+    width: 100%;
+    max-width: none;
+    margin-top: 10px;
+  }
+  .connection-credential-note {
+    margin-left: 0;
+  }
+  .connection-setup-footer {
+    flex-wrap: wrap;
+  }
+  .privacy-policy-row {
+    grid-template-columns: 1fr 180px;
+    padding: 8px;
+    gap: 12px;
+  }
+  .privacy-policy-row-controls {
+    grid-template-columns: 80px 90px;
+  }
+  .privacy-head {
+    flex-wrap: wrap;
+  }
+  .privacy-redaction-notice {
+    max-width: none;
+  }
+  .privacy-retention-save-line {
+    flex-wrap: wrap;
+  }
+  .privacy-retention-save-line .privacy-duration-warning {
+    flex-basis: 100%;
+  }
+  .privacy-section-repository .privacy-policy-row {
+    grid-template-columns: 1fr;
+  }
+  .agent-roster-row {
+    grid-template-columns: 44px minmax(0, 1fr) 28px;
+    gap: 12px;
+  }
+  .agent-access-badge {
+    grid-column: 2;
+    width: fit-content;
+  }
+  .agent-roster-row > .mantine-Menu-root {
+    grid-column: 3;
+  }
+  .ai-installed-provider {
+    gap: 12px;
+  }
+  .ai-installed-provider strong {
+    margin-right: 0;
+  }
+}
+
+/* Keep lazy legacy policy styles from changing canonical inline row geometry. */
+.privacy-management .privacy-row {
+  padding: 0 4px;
+  border: 0;
+  gap: 18px;
+}
+.privacy-management .privacy-row strong {
+  font-size: 22px;
+}
+.privacy-management .privacy-footer {
+  border: 0;
+  padding: 0;
+  margin-top: -28px;
+}
+.connections-page {
+  min-height: 854px;
+}
+.connection-inspector {
+  min-height: 854px;
+}
+.inspector-more-configuration,
+.inspector-session-details {
+  font-size: 10px;
+  color: var(--rc-muted);
+}
+.inspector-more-configuration summary,
+.inspector-session-details summary {
+  cursor: pointer;
+}
+.inspector-more-configuration .management-muted {
+  font-size: 11px;
+}
+.inspector-test-section .management-muted {
+  font-size: 13px;
+  margin: 8px 0;
+}
+.connection-row-status .rc-badge {
+  font-size: 12px;
+  min-height: 28px;
+}
+.connection-inspector .rc-badge {
+  font-size: 12px;
+  height: 26px;
+  border-radius: 10px;
+}
+.agent-host-icon img {
+  width: 32px;
+  height: 32px;
+}
+.ai-model-row > img {
+  flex-shrink: 0;
+}
+
+.nav-management {
+  border-top: 1px solid var(--rc-border);
+  margin-top: 20px;
+  padding-top: 12px;
+}
+.settings-management-page .page-description {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.settings-management-page .feature-tabs > .rc-tabs {
+  margin-bottom: 16px;
+}
+.connections-page:not(.secondary-view) .feature-toolbar {
+  grid-template-columns: minmax(0, 438px) 242px;
+  justify-content: space-between;
+}
+.vision-segment span:has(> svg),
+.vision-segment span:has(> .host-brand-mark) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.connection-setup-modal .mantine-Modal-inner {
+  padding-left: 220px;
+  padding-right: 0;
+}
+.connection-setup-modal .mantine-Modal-content {
+  max-height: calc(100dvh - 96px);
+}
+.connection-setup-modal .connection-setup-footer {
+  bottom: 0;
+  padding-bottom: 12px;
+}
+.connection-setup-modal .numbered-config-editor {
+  margin-top: -8px;
+}
+.connection-setup-modal .config-highlight,
+.connection-setup-modal .config-line-numbers,
+.connection-setup-modal .numbered-config-editor textarea {
+  font-size: 13px;
+}
+.privacy-management .privacy-policy-row strong {
+  font-size: 13px;
+}
+.privacy-management .privacy-policy-row small {
+  font-size: 12px;
+}
+.privacy-management
+  .mantine-Switch-root:has(input:checked)
+  .mantine-Switch-track {
+  background: var(--rc-accent);
+  border-color: var(--rc-accent);
+}
+.privacy-management .mantine-Switch-root .mantine-Switch-thumb {
+  background: var(--rc-surface);
+}
+.privacy-management .mantine-Switch-input {
+  z-index: 1;
+  cursor: pointer;
+}
+.privacy-management .mantine-Switch-input:disabled {
+  cursor: default;
+}
+.privacy-management .mantine-Switch-track {
+  pointer-events: none;
+}
+.privacy-management .privacy-section-evidence .privacy-policy-row small {
+  display: none;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-policy-row {
+  min-height: 36px;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-policy-row:last-of-type {
+  min-height: 26px;
+}
+.privacy-management .privacy-section-evidence .privacy-row {
+  margin-bottom: 6px;
+}
+.ai-automatic-memory .rc-badge {
+  flex: 0 0 auto;
+}
+.ai-installed-models .ai-model-row > .rc-badge {
+  flex: 0 0 auto;
+  min-width: 78px;
+}
+.ai-model-row {
+  gap: 12px;
+}
+.ai-installed-models .ai-model-row {
+  padding: 12px 0;
+}
+.host-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.host-brand-mark img {
+  display: block;
+  flex-shrink: 0;
+  width: 150%;
+  height: 150%;
+  max-width: none;
+}
+.ai-installed-provider .host-brand-mark,
+.ai-model-row .host-brand-mark {
+  margin-right: 3px;
+}
+.agent-memory-utility > .mantine-Group-root {
+  grid-template-columns: minmax(0, 1fr);
+}
+.agent-memory-utility > .mantine-Group-root > .rc-button {
+  width: 100%;
+  max-width: none;
+}
+.agent-roster-row time {
+  font-size: 16px;
+}
+@media (max-width: 1050px) {
+  .connection-setup-modal .mantine-Modal-inner {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+.connection-row-status .rc-badge {
+  background: color-mix(in srgb, var(--rc-accent) 14%, var(--rc-surface));
+}
+.ai-search-coverage .management-stats {
+  padding-top: 10px;
+}
+.agents-utilities .agent-connect-utility {
+  padding-bottom: 18px;
+}
+.agents-utilities .agent-connect-utility > .feature-advanced {
+  margin-top: 8px;
+}
+/* Match the reference's readable text scale after compacting card geometry. */
+.privacy-management .privacy-policy-row strong {
+  font-size: 14px;
+}
+.privacy-management .privacy-policy-row small {
+  font-size: 13px;
+}
+.privacy-management .privacy-head .mantine-Text-root,
+.privacy-management .privacy-row > div::after {
+  font-size: 13px;
+}
+.models-management .management-row-main strong {
+  font-size: 16px;
+}
+.models-management .management-row-main p {
+  font-size: 13px;
+}
+.ai-automatic-memory strong {
+  font-size: 16px;
+}
+.ai-automatic-memory p {
+  font-size: 13px;
+}
+.ai-installed-models.management-surface {
+  padding: 18px 22px;
+}
+.ai-installed-models .ai-model-row {
+  padding: 9px 0;
+}
+.ai-model-row strong {
+  font-size: 15px;
+}
+.ai-model-row p {
+  font-size: 12px;
+}
+
+/* Keep the auxiliary privacy controls in the reference's compact card rhythm. */
+.privacy-management .privacy-row strong {
+  display: block;
+  line-height: 1.15;
+}
+.privacy-management
+  .privacy-section:not(.privacy-section-raw)
+  .privacy-row
+  > div::after {
+  display: none;
+}
+.privacy-management .privacy-section:not(.privacy-section-raw) .privacy-row {
+  margin-bottom: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+.privacy-management .privacy-section-capture {
+  position: relative;
+}
+.privacy-management .privacy-section-capture .privacy-row > div {
+  padding-right: 300px;
+}
+.privacy-management .privacy-capture-enabled {
+  position: absolute;
+  z-index: 2;
+  right: 76px;
+  top: 13px;
+  margin: 0;
+  height: 25px;
+}
+.privacy-management .privacy-section-capture .privacy-policy-row {
+  min-height: 44px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.privacy-management .privacy-section-evidence > .privacy-section-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.privacy-management
+  .privacy-section-evidence
+  > .privacy-section-controls
+  > .privacy-editor {
+  display: contents;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-policy-row {
+  padding: 3px 14px;
+  min-height: 36px;
+}
+.privacy-management
+  .privacy-section-evidence
+  .privacy-editor
+  > .privacy-policy-row:last-of-type {
+  grid-column: 1;
+  min-height: 28px;
+}
+.privacy-management .privacy-section-evidence .privacy-document-storage {
+  grid-column: 2;
+  grid-row: 3;
+}
+.privacy-management .privacy-duration-value {
+  font-size: 14px;
+  line-height: 1.3;
+}
+.privacy-management .privacy-document-storage .privacy-policy-row {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.privacy-management .privacy-section-repository .privacy-policy-row small {
+  display: none;
+}
+.ai-automatic-memory {
+  min-height: 66px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+.ai-automatic-memory .ai-memory-state {
+  min-width: 80px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--rc-accent) 14%, var(--rc-surface));
+  color: var(--rc-accent);
+  border-radius: 18px;
+}
+.ai-installed-models.management-surface {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+.ai-more-options button {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.models-management .ai-more-options {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.ai-more-options .management-title {
+  margin-bottom: 6px;
+}
+.management-chip:not(.denied) svg {
+  background: var(--rc-accent);
+  border-radius: 3px;
+  color: var(--rc-surface);
+  padding: 2px;
+  flex-shrink: 0;
+}
+.agents-utilities .management-surface {
+  padding-top: 20px;
+  padding-bottom: 14px;
+}
+.agents-utilities .agent-connect-utility {
+  padding-bottom: 12px;
+}
+.agent-setup-prompt {
+  margin-top: 12px;
+}
+@media (max-width: 1050px) {
+  .privacy-management .privacy-section-evidence > .privacy-section-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .privacy-management .privacy-section-evidence .privacy-document-storage {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .privacy-management .privacy-section-capture .privacy-row > div {
+    padding-right: 0;
+  }
+  .privacy-management .privacy-capture-enabled {
+    position: static;
+    margin-bottom: 6px;
+    justify-content: flex-start;
+  }
+}
+.ai-search-coverage > .mantine-Group-root {
+  margin-bottom: 8px;
+}
+.ai-search-coverage .management-stats {
+  padding-bottom: 12px;
+}
+.semantic-coverage-note {
+  font-size: 14px;
+}
+.connection-setup-modal .config-highlight,
+.connection-setup-modal .config-line-numbers,
+.connection-setup-modal .numbered-config-editor textarea {
+  font-size: 14px;
+}
+.agent-roster-row .mantine-Text-root {
+  font-size: 18px;
+}

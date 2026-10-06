@@ -130,6 +130,9 @@ pub struct ClaimView {
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct ClaimPage {
     pub items: Vec<ClaimView>,
+    /// Earliest canonical retention deadline for content in this bounded page.
+    #[serde(default)]
+    pub expires_at: Option<DateTime<Utc>>,
     pub total_candidates: i64,
     pub offset: i64,
     pub next_offset: Option<i64>,

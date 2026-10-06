@@ -5,12 +5,10 @@ import {
   Group,
   Loader,
   Stack,
-  Text,
   Title,
 } from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "../../api";
-import { useIdempotency } from "../../useIdempotency";
 import { ErrorState } from "../../components/AsyncState";
 
 export function ManagedMemoryPanel({
@@ -20,8 +18,6 @@ export function ManagedMemoryPanel({
   brain: Brain;
   compact?: boolean;
 }) {
-  const cache = useQueryClient();
-  const command = useIdempotency();
   const settings = useQuery({
     queryKey: ["automation", brain.id],
     queryFn: async ({ signal }) =>
@@ -32,29 +28,8 @@ export function ManagedMemoryPanel({
         }),
       ),
     refetchInterval: 5000,
-  });
-  const activate = useMutation({
-    mutationFn: async () => {
-      if (!settings.data || settings.isError)
-        throw new Error("Reload Brain settings before continuing.");
-      const body = {
-        model_change: settings.data.models.current.change_id,
-        capture_change: settings.data.capture.change_id,
-      };
-      return result(
-        await client.PUT("/api/brains/{brain}/automation", {
-          params: { path: { brain: brain.id } },
-          body,
-          headers: { "Idempotency-Key": command.forInput(body) },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      command.reset();
-      await cache.invalidateQueries({
-        predicate: (q) => q.queryKey.includes(brain.id),
-      });
-    },
+    retry: false,
+    gcTime: 0,
   });
   const data = settings.isError ? undefined : settings.data;
   const policy = data?.models.current.policy;
@@ -77,95 +52,40 @@ export function ManagedMemoryPanel({
     data?.capture.policy.enabled &&
     data.capture.policy.managed_tools;
   return (
-    <section className="feature-setting" aria-label="Autonomous memory setup">
+    <section className="feature-setting" aria-label="AI permissions summary">
       <Stack gap="md">
         <Group justify="space-between">
           <Title order={3}>
-            {compact ? "Set up autonomous memory" : "Autonomous memory"}
+            {compact ? "AI permissions" : "Memory permissions"}
           </Title>
-          {data && (
-            <Badge color={ready ? "brand" : "gray"}>
-              {ready ? "Configured" : "Setup needed"}
+          {policy && (
+            <Badge color={policy.enabled ? "brand" : "gray"}>
+              {!policy.enabled
+                ? "Off"
+                : ready
+                  ? "Configured"
+                  : "Custom permissions"}
             </Badge>
           )}
         </Group>
-        <Text size="sm">
-          Your agents contribute evidence. Recollect learns from it, updates
-          memory when evidence changes, builds semantic search and removes
-          expired material automatically.
-        </Text>
         {settings.isPending && <Loader size="sm" />}
-        <ErrorState error={settings.error ?? activate.error} />
-        {data && !data.models.installed.credentials_present && (
-          <Alert color="yellow" title="Model provider is not connected">
-            The installation needs a provider credential before learning or Ask
-            can run. Capture and evidence search remain available.
-          </Alert>
-        )}
-        {data && !ready && (
-          <>
-            <Text size="sm">
-              One setup enables Ask, learning and supported agent capture for
-              this Brain. Its retained documents, repository evidence, memories,
-              questions and sanitized sessions/tool results may be processed by
-              the installed {data.models.installed.provider} models. Resource
-              limits are managed for you.
-            </Text>
-            {brain.role === "admin" && !brain.archived ? (
-              <Button
-                w="fit-content"
-                loading={activate.isPending}
-                onClick={() => activate.mutate()}
-              >
-                Enable autonomous memory
-              </Button>
-            ) : (
-              <Text size="sm" c="dimmed">
-                {brain.archived
-                  ? "Reopen this Brain to resume setup."
-                  : "A Brain administrator can enable autonomous memory once."}
-              </Text>
-            )}
-          </>
-        )}
-        {ready && (
-          <Text size="sm">
-            Ask, source learning, semantic indexing and supported capture are
-            enabled. Background work follows this Brain’s evidence and retention
-            rules; individual memories do not need approval.
-          </Text>
-        )}
-        {!compact && data && (
-          <>
-            <Text size="sm" c="dimmed">
-              Raw sessions expire after {data.retention.policy.raw_session_days}{" "}
-              days and tool output after{" "}
-              {data.retention.policy.tool_output_days} days. Useful supported
-              knowledge follows its own lifecycle. Existing exclusions and
-              retention choices are preserved.
-            </Text>
-            <Group>
-              <Button
-                component="a"
-                href={`/brains/${brain.id}/agents`}
-                variant="light"
-              >
-                Connect your agent
-              </Button>
-              <Button
-                component="a"
-                href={`/brains/${brain.id}/activity`}
-                variant="subtle"
-              >
-                View processing activity
-              </Button>
-            </Group>
-            <Text size="xs" c="dimmed">
-              Configured permissions are shown here. Agent coverage and
-              successful processing appear in Agents and Activity.
-            </Text>
-          </>
-        )}
+        <ErrorState error={settings.error} />
+        {policy?.enabled &&
+          data &&
+          !data.models.installed.credentials_present && (
+            <Alert color="yellow" title="Provider credential missing">
+              An administrator must connect the installed provider before
+              permitted model processing can run.
+            </Alert>
+          )}
+        <Button
+          component="a"
+          href={`/brains/${brain.id}/settings?tab=ai`}
+          variant="default"
+          w="fit-content"
+        >
+          Review AI permissions
+        </Button>
       </Stack>
     </section>
   );

@@ -13,12 +13,14 @@ unresolved product decisions; do not invent them in code.
 ## Repository boundary
 
 - Recollect is this Git repository. Keep its writes inside this repository.
-- `cognee/` is a separate, ignored reference checkout. Recollect owns its Rust
-  core; Cognee is not a mandatory product runtime. Do not alter that checkout
-  as a side effect of Recollect documentation or implementation.
-- `agent-memory-atlas/` is a separate, ignored research checkout. Use its
-  `content/patterns/` and relevant `content/overview.md` sections as evidence;
-  its reports and agent workflows do not govern Recollect implementation.
+- `references/` holds separate, ignored research checkouts: `cognee/`,
+  `agent-memory-atlas/`, and `claude-mem/`. Recollect owns its Rust core; none
+  of these is a mandatory product runtime. Do not alter those checkouts as a
+  side effect of Recollect documentation or implementation. Use Cognee's source
+  for the design decisions recorded in the mappings, the Atlas
+  `content/patterns/` and relevant `content/overview.md` sections as evidence,
+  and claude-mem as a study reference for agent-memory UX and plugin
+  mechanics; their reports and workflows do not govern Recollect implementation.
 - Preserve unrelated work, credentials, and external state.
 - Foundation documents contain the accepted independent Rust product baseline,
   including Brain collections/areas, graphs, the MCP coordinator and Vault.

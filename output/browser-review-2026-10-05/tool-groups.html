@@ -1,0 +1,134 @@
+<div id="rc-tool-group-concept" aria-label="Recollect tool group design example">
+  <style>
+    #rc-tool-group-concept { --paper:#fffdf8; --cream:#f7f4ec; --side:#eee9de; --ink:#101b2a; --sage:#3d6b59; --tint:#e5eee7; --line:#d8d3c7; --muted:#62706d; color:var(--ink); background:var(--cream); font:14px/1.45 Manrope,system-ui,sans-serif; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+    #rc-tool-group-concept * { box-sizing:border-box; }
+    #rc-tool-group-concept button, #rc-tool-group-concept input, #rc-tool-group-concept select { font:inherit; }
+    #rc-tool-group-concept button { cursor:inherit; }
+    #rc-tool-group-concept .shell { display:grid; grid-template-columns:180px minmax(0,1fr); min-height:650px; }
+    #rc-tool-group-concept .sidebar { background:var(--side); border-right:1px solid var(--line); padding:22px 14px; display:flex; flex-direction:column; gap:20px; }
+    #rc-tool-group-concept .brand { font:500 25px/1.2 Georgia,serif; padding:0 8px; letter-spacing:-.7px; }
+    #rc-tool-group-concept .nav { display:grid; gap:4px; }
+    #rc-tool-group-concept .nav span { display:flex; align-items:center; gap:10px; padding:9px 10px; }
+    #rc-tool-group-concept .nav .active { background:var(--tint); color:var(--sage); border-radius:4px; border-left:2px solid var(--sage); }
+    #rc-tool-group-concept .divider { border-top:1px solid var(--line); padding-top:18px; }
+    #rc-tool-group-concept .brain { display:flex; justify-content:space-between; gap:8px; padding:0 10px; font-weight:500; }
+    #rc-tool-group-concept .account { margin-top:auto; display:flex; align-items:center; gap:9px; padding:12px 8px 0; border-top:1px solid var(--line); }
+    #rc-tool-group-concept .avatar { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:var(--tint); color:var(--sage); flex:none; }
+    #rc-tool-group-concept .topbar { min-height:48px; border-bottom:1px solid var(--line); background:var(--paper); padding:9px 24px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    #rc-tool-group-concept .muted { color:var(--muted); }
+    #rc-tool-group-concept .small { font-size:12px; }
+    #rc-tool-group-concept .top-actions { display:flex; align-items:center; gap:14px; }
+    #rc-tool-group-concept .icon-button { background:transparent; border:0; display:grid; place-items:center; width:30px; height:30px; color:var(--sage); }
+    #rc-tool-group-concept .content { padding:22px 24px 28px; }
+    #rc-tool-group-concept h1 { margin:0 0 12px; font:500 36px/1.1 Georgia,serif; letter-spacing:-1px; }
+    #rc-tool-group-concept h2 { margin:0; font:500 22px/1.2 Georgia,serif; }
+    #rc-tool-group-concept h3 { margin:0; font-size:14px; font-weight:500; }
+    #rc-tool-group-concept .tabs { display:flex; gap:22px; border-bottom:1px solid var(--line); margin-bottom:20px; }
+    #rc-tool-group-concept .tabs span { padding:8px 0; }
+    #rc-tool-group-concept .tabs .active { border-bottom:2px solid var(--sage); color:var(--sage); font-weight:500; }
+    #rc-tool-group-concept .layout { display:grid; grid-template-columns:minmax(180px,.8fr) minmax(340px,1.4fr); align-items:start; gap:16px; }
+    #rc-tool-group-concept .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    #rc-tool-group-concept .button { background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:7px 11px; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+    #rc-tool-group-concept .button.primary { background:var(--sage); color:var(--paper); border-color:var(--sage); }
+    #rc-tool-group-concept .button:disabled { opacity:.5; }
+    #rc-tool-group-concept .group { width:100%; text-align:left; padding:14px; margin-top:12px; border:1px solid var(--sage); border-left:3px solid var(--sage); border-radius:5px; background:var(--tint); color:var(--ink); }
+    #rc-tool-group-concept .group strong { font-weight:500; display:block; margin-bottom:6px; }
+    #rc-tool-group-concept .inspector { background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:18px; }
+    #rc-tool-group-concept .section { padding-top:16px; margin-top:16px; border-top:1px solid var(--line); }
+    #rc-tool-group-concept .field { display:grid; grid-template-columns:90px minmax(0,1fr); align-items:center; gap:12px; margin-top:10px; min-height:36px; }
+    #rc-tool-group-concept .value { display:block; min-height:36px; padding:6px 0; }
+    #rc-tool-group-concept input[type=text], #rc-tool-group-concept select { color:var(--ink); background:var(--cream); border:1px solid var(--line); border-radius:4px; width:100%; min-width:0; min-height:36px; padding:6px 8px; }
+    #rc-tool-group-concept input[type=checkbox] { accent-color:var(--sage); width:16px; height:16px; }
+    #rc-tool-group-concept .connection { display:flex; align-items:center; gap:10px; padding:12px 0; }
+    #rc-tool-group-concept .connection-icon { width:32px; height:32px; background:var(--side); border-radius:5px; display:grid; place-items:center; }
+    #rc-tool-group-concept table { width:100%; border-collapse:collapse; margin-top:10px; }
+    #rc-tool-group-concept th { font-weight:400; color:var(--muted); font-size:12px; }
+    #rc-tool-group-concept td, #rc-tool-group-concept th { padding:8px 3px; text-align:center; border-bottom:1px solid var(--line); }
+    #rc-tool-group-concept td:first-child, #rc-tool-group-concept th:first-child { text-align:left; }
+    #rc-tool-group-concept .person { display:flex; gap:8px; align-items:center; }
+    #rc-tool-group-concept .people-note { margin-top:9px; }
+    #rc-tool-group-concept .footer { min-height:46px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+    #rc-tool-group-concept .footer-message { margin-right:auto; color:var(--muted); font-size:12px; }
+    #rc-tool-group-concept [hidden] { display:none !important; }
+    #rc-tool-group-concept .hidden-action { visibility:hidden; }
+    #rc-tool-group-concept i { width:16px; height:16px; display:inline-block; }
+    @media(max-width:820px) { #rc-tool-group-concept .shell { grid-template-columns:145px minmax(0,1fr); } #rc-tool-group-concept .layout { grid-template-columns:1fr; } #rc-tool-group-concept .content { padding:18px; } }
+    @media(max-width:480px) { #rc-tool-group-concept .shell { grid-template-columns:1fr; } #rc-tool-group-concept .sidebar { display:none; } #rc-tool-group-concept .topbar { padding:9px 14px; } #rc-tool-group-concept .top-actions .small { display:none; } }
+  </style>
+  <div class="shell">
+    <aside class="sidebar" aria-label="App navigation example">
+      <div class="brand">Recollect.</div>
+      <div class="nav"><span><i data-lucide="boxes" aria-hidden="true"></i>Brains</span><span><i data-lucide="bot" aria-hidden="true"></i>My agents</span><span><i data-lucide="plug" aria-hidden="true"></i>Connectors</span></div>
+      <div class="divider brain">SWEG — test <i data-lucide="chevron-down" aria-hidden="true"></i></div>
+      <div class="nav"><span><i data-lucide="layout-dashboard" aria-hidden="true"></i>Dashboard</span><span><i data-lucide="message-circle" aria-hidden="true"></i>Ask</span><span><i data-lucide="network" aria-hidden="true"></i>Graph</span><span><i data-lucide="compass" aria-hidden="true"></i>Explore</span></div>
+      <div class="divider nav"><span><i data-lucide="bot" aria-hidden="true"></i>Agents</span><span class="active"><i data-lucide="plug" aria-hidden="true"></i>Connections</span><span><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Settings</span></div>
+      <div class="account"><span class="avatar">O</span><span>owner</span></div>
+    </aside>
+    <main>
+      <div class="topbar"><span class="small muted">SWEG — test / Connections</span><div class="top-actions"><span class="small muted">Design example</span><button class="icon-button" aria-label="Runtime diagnostics"><i data-lucide="activity" aria-hidden="true"></i></button></div></div>
+      <div class="content">
+        <h1>Connections</h1>
+        <div class="tabs"><span>Connections</span><span class="active">Tool access</span><span>Runners</span></div>
+        <div class="layout">
+          <section aria-label="Tool group list"><div class="row"><h3>Tool groups</h3><button class="button" id="rc-new-group" aria-label="Create group (illustrative action)" data-tooltip="Creation is illustrative in this preview"><i data-lucide="plus" aria-hidden="true"></i>Create</button></div><button class="group" aria-pressed="true"><strong id="rc-list-title">test</strong><span class="small muted">Context7 · proof</span></button></section>
+          <aside class="inspector" aria-label="Selected tool group">
+            <div class="row"><h2 id="rc-group-title">test</h2><button class="button" id="rc-edit-group"><i data-lucide="pencil" aria-hidden="true"></i>Edit</button></div>
+            <div class="field"><label for="rc-name" class="small muted">Name</label><span class="value" data-read="name">test</span><input id="rc-name" data-edit="name" type="text" value="test" hidden></div>
+            <div class="field"><label for="rc-enabled" class="small muted">Enabled</label><span class="value" data-read="enabled">Yes</span><label data-edit="enabled" hidden><input id="rc-enabled" type="checkbox" checked> Allow this group</label></div>
+            <div class="field"><span class="small muted">Environment</span><span class="value">Brain-wide</span></div>
+            <div class="section"><div class="row"><h3>MCP connections</h3><button class="button hidden-action" data-edit-action id="rc-add-connection"><i data-lucide="plus" aria-hidden="true"></i>Add</button></div><div class="connection"><span class="connection-icon"><i data-lucide="box" aria-hidden="true"></i></span><div><span>Context7 · proof</span><div class="small muted">2 tools</div></div><button class="icon-button hidden-action" data-edit-action aria-label="Remove Context7 connection" id="rc-remove-connection"><i data-lucide="x" aria-hidden="true"></i></button></div><div id="rc-connection-options" hidden><label><input type="checkbox" id="rc-context7-choice" checked> Context7 · proof</label></div></div>
+            <div class="section"><div class="row"><h3>People</h3><button class="button hidden-action" data-edit-action id="rc-add-person" aria-label="Add person or group (illustrative action)" data-tooltip="The account/group picker is illustrative in this preview"><i data-lucide="plus" aria-hidden="true"></i>Add</button></div>
+              <table aria-label="Independent tool permissions"><thead><tr><th>Person</th><th>Use</th><th>Manage</th><th>Share</th></tr></thead><tbody><tr><td><div class="person"><span class="avatar">O</span>owner</div></td><td><input type="checkbox" data-grant="owner-use" aria-label="owner Use" checked disabled></td><td><input type="checkbox" data-grant="owner-manage" aria-label="owner Manage" checked disabled></td><td><input type="checkbox" data-grant="owner-share" aria-label="owner Share" checked disabled></td></tr><tr id="rc-example-person"><td><div class="person"><span class="avatar">E</span>Example teammate</div></td><td><input type="checkbox" data-grant="example-use" aria-label="Example teammate Use" checked disabled></td><td><input type="checkbox" data-grant="example-manage" aria-label="Example teammate Manage" disabled></td><td><input type="checkbox" data-grant="example-share" aria-label="Example teammate Share" disabled></td></tr></tbody></table>
+              <div class="people-note small muted">Direct grants <span>·</span> <button class="icon-button" id="rc-grant-details" aria-label="Explain effective access" style="display:inline-flex;width:22px;height:22px;vertical-align:middle"><i data-lucide="info" aria-hidden="true"></i></button></div><p class="small muted" id="rc-grant-explanation" hidden>Use, Manage and Share are independent. Inherited access is shown separately.</p>
+            </div>
+            <div class="footer"><span class="footer-message" id="rc-save-state" aria-live="polite"> </span><button class="button hidden-action" data-edit-action id="rc-cancel">Cancel</button><button class="button primary hidden-action" data-edit-action id="rc-save">Save changes</button></div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    (() => {
+      const root=document.getElementById('rc-tool-group-concept');
+      const el=id=>root.querySelector('#'+id);
+      let editing=false;
+      let saved={name:'test',enabled:true,connection:true,grants:[true,true,true,true,false,false]};
+      function mode(value) {
+        editing=value;
+        root.querySelectorAll('[data-read]').forEach(n=>n.hidden=value);
+        root.querySelectorAll('[data-edit]').forEach(n=>n.hidden=!value);
+        root.querySelectorAll('[data-edit-action]').forEach(n=>n.classList.toggle('hidden-action',!value));
+        root.querySelectorAll('[data-grant]').forEach(n=>n.disabled=!value);
+        el('rc-edit-group').disabled=value;
+        el('rc-connection-options').hidden=true;
+        el('rc-save-state').textContent=value?'Editing':'';
+      }
+      function restore() {
+        el('rc-name').value=saved.name;
+        el('rc-enabled').checked=saved.enabled;
+        el('rc-context7-choice').checked=saved.connection;
+        root.querySelector('.connection').hidden=!saved.connection;
+        root.querySelectorAll('[data-grant]').forEach((n,i)=>n.checked=saved.grants[i]);
+      }
+      el('rc-edit-group').onclick=()=>{restore();mode(true);};
+      el('rc-cancel').onclick=()=>{restore();mode(false);};
+      el('rc-save').onclick=()=>{
+        const name=el('rc-name').value.trim();
+        if(!name){el('rc-save-state').textContent='Enter a name';return;}
+        saved={name,enabled:el('rc-enabled').checked,connection:el('rc-context7-choice').checked,grants:[...root.querySelectorAll('[data-grant]')].map(n=>n.checked)};
+        el('rc-group-title').textContent=name;el('rc-list-title').textContent=name;
+        root.querySelector('[data-read="name"]').textContent=name;
+        root.querySelector('[data-read="enabled"]').textContent=saved.enabled?'Yes':'No';
+        root.querySelector('.connection').hidden=!saved.connection;
+        mode(false);el('rc-save-state').textContent='Saved in this preview';
+      };
+      el('rc-add-connection').onclick=()=>el('rc-connection-options').hidden=!el('rc-connection-options').hidden;
+      el('rc-context7-choice').onchange=()=>root.querySelector('.connection').hidden=!el('rc-context7-choice').checked;
+      el('rc-remove-connection').onclick=()=>{el('rc-context7-choice').checked=false;root.querySelector('.connection').hidden=true;};
+      el('rc-add-person').onclick=()=>{el('rc-save-state').textContent='Account/group picker is outside this preview';};
+      el('rc-new-group').onclick=()=>{el('rc-save-state').textContent='Group creation is outside this preview';};
+      el('rc-grant-details').onclick=()=>el('rc-grant-explanation').hidden=!el('rc-grant-explanation').hidden;
+      root.querySelector('[aria-label="Runtime diagnostics"]').onclick=()=>el('rc-save-state').textContent='Runtime diagnostics opens here';
+    })();
+  </script>
+</div>

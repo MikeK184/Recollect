@@ -19,6 +19,8 @@ use serde_json::json;
 use sqlx::types::Json as SqlJson;
 use uuid::Uuid;
 
+pub mod catalogue;
+
 pub(crate) const PURPOSES: &[&str] = &[
     "extraction",
     "synthesis",
@@ -111,9 +113,11 @@ pub(crate) fn identifier(s: &str, max: usize) -> bool {
 pub(crate) fn matches_installation(state: &AppState, policy: &ModelPolicy) -> bool {
     let model = &state.config.models;
     policy.provider == "openai"
-        && policy.text_model == model.text_model
-        && policy.embedding_model == model.embedding_model
-        && policy.embedding_dimensions == model.embedding_dimensions
+        && (catalogue::text_supported(&policy.text_model) || policy.text_model == model.text_model)
+        && (catalogue::embedding_supported(&policy.embedding_model, policy.embedding_dimensions)
+            || (catalogue::max_dimensions(&policy.embedding_model).is_none()
+                && policy.embedding_model == model.embedding_model
+                && policy.embedding_dimensions == model.embedding_dimensions))
 }
 fn values(values: &mut Vec<String>, allowed: &[&str]) -> Result<()> {
     if values.len() > allowed.len() || values.iter().any(|v| !allowed.contains(&v.as_str())) {
@@ -136,7 +140,7 @@ async fn validate(
     if !matches_installation(state, p) {
         return Err(failure(
             "model_configuration_changed",
-            "Choose the models currently installed before saving this policy.",
+            "Choose compatible supported text and embedding models and dimensions.",
         ));
     }
     if !(256..=32768).contains(&p.max_input_bytes)
@@ -274,7 +278,20 @@ pub async fn update(
             "This model policy changed. Reload it before saving.",
         ));
     }
+    let previous = current(&state, &mut tx, brain).await?;
+    catalogue::validate_selection(&state, &previous.policy, &input.policy).await?;
+    let rebuild = previous.policy.embedding_model != input.policy.embedding_model
+        || previous.policy.embedding_dimensions != input.policy.embedding_dimensions;
+    if rebuild && !input.rebuild_embeddings {
+        return Err(failure(
+            "embedding_rebuild_required",
+            "Changing embeddings requires Save and rebuild.",
+        ));
+    }
     let response = persist(&state, &mut tx, brain, auth.user.id, input.policy).await?;
+    if rebuild {
+        crate::semantic::rebuild(&state, &mut tx, brain, auth.user.id, &response).await?;
+    }
     commands::finish(&mut tx, key.as_deref(), brain, &response).await?;
     tx.commit().await?;
     Ok(Json(response))

@@ -1,0 +1,35 @@
+.explore-workspace,
+.explore-browser-region {
+  min-width: 0;
+}
+
+.explore-view-switch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-md);
+  margin-bottom: var(--mantine-spacing-lg);
+}
+
+.explore-view-switch .mantine-SegmentedControl-root {
+  background: var(--rc-canvas);
+  border: 1px solid var(--rc-border);
+}
+
+.explore-view-switch .mantine-SegmentedControl-label {
+  padding-inline: 1.25rem;
+}
+
+.explore-browser-region {
+  min-height: 20rem;
+}
+
+.explore-secondary-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--mantine-spacing-sm);
+}
+
+.knowledge-view-links {
+  padding-bottom: var(--mantine-spacing-xs);
+}

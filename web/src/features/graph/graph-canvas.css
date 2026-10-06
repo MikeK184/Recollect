@@ -1,0 +1,86 @@
+/* Compact controls operate on the already loaded graph, not server scope. */
+.graph-renderer.rc-graph-renderer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+}
+.graph-renderer.rc-graph-renderer[data-has-inspector="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 19rem);
+}
+.graph-renderer-inspector {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.graph-renderer-canvas > .rc-graph-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.graph-canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-sm);
+  background: var(--rc-surface);
+}
+.graph-canvas-finder {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+  min-width: 0;
+}
+.graph-canvas-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mantine-spacing-xs);
+  padding: 0 var(--mantine-spacing-sm) var(--mantine-spacing-xs);
+  border-bottom: 1px solid var(--rc-border);
+}
+.graph-canvas-filters {
+  flex-wrap: wrap;
+}
+.graph-canvas-counts {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.graph-canvas-viewport {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.rc-graph-stage .graph-canvas {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.rc-graph-stage .graph-canvas-controls {
+  padding: 4px var(--mantine-spacing-xs);
+}
+.graph-canvas-empty {
+  position: absolute;
+  top: var(--mantine-spacing-xl);
+  left: var(--mantine-spacing-md);
+  right: var(--mantine-spacing-md);
+  pointer-events: none;
+  text-align: center;
+  z-index: 1;
+}
+.graph-canvas-hover-label {
+  position: absolute;
+  top: var(--mantine-spacing-sm);
+  left: var(--mantine-spacing-sm);
+  max-width: min(26rem, calc(100% - 2 * var(--mantine-spacing-sm)));
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border: 1px solid var(--rc-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--rc-surface);
+  color: var(--rc-ink);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  z-index: 1;
+}

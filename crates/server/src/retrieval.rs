@@ -33,6 +33,16 @@ type Tx<'a> = memory_evidence::Tx<'a>;
 
 pub(crate) fn validate(input: &mut RecallRequest) -> Result<()> {
     input.query = input.query.trim().into();
+    if input.semantic_request_id.is_some_and(|id| id.is_nil()) {
+        return Err(Error::invalid(
+            "Use a non-nil explicit semantic attempt ID.",
+        ));
+    }
+    if !matches!(input.strategy.as_str(), "auto" | "manual") {
+        return Err(Error::invalid(
+            "Choose automatic or manual retrieval strategy.",
+        ));
+    }
     if input.query.len() > 512
         || (input.query.is_empty() && input.exact.is_none())
         || input
@@ -72,6 +82,7 @@ pub(crate) fn validate(input: &mut RecallRequest) -> Result<()> {
     if (semantic
         && (input.query.is_empty() || input.semantic_request_id.is_none_or(|id| id.is_nil())))
         || (!semantic
+            && input.strategy != "auto"
             && (input.semantic_request_id.is_some() || input.semantic_min_similarity.is_some()))
         || input
             .semantic_min_similarity
@@ -649,6 +660,21 @@ async fn execute(
 ) -> Result<RecallResponse> {
     let started = Instant::now();
     validate(&mut input)?;
+    let automatic = input.strategy == "auto";
+    let semantic_query = input.query.clone();
+    if automatic {
+        input.channels = vec!["exact".into(), "lexical".into()];
+        input.graph = None;
+        input.semantic_min_similarity = None;
+        if input.exact.is_none() {
+            input.query = crate::answers::question_query(&semantic_query);
+            if input.query.is_empty() {
+                return Err(Error::invalid(
+                    "Name a subject so the Brain can find evidence.",
+                ));
+            }
+        }
+    }
     publication::safe_payload(state, &json!(input.query))?;
     let mut tx = auth.tx(&state.pool).await?;
     sqlx::query("SET LOCAL statement_timeout='2s'")
@@ -667,26 +693,105 @@ async fn execute(
     };
     let manifest = selected_manifest(&mut tx, brain, &input, at).await?;
     let mut coverage = RecallCoverage::default();
+    if automatic && input.exact.is_none() {
+        // Routing adds channels only within the caller's unchanged scope.
+        if input.semantic_request_id.is_some() {
+            input.channels.push("semantic".into());
+        } else {
+            coverage.partial = true;
+            coverage
+                .reasons
+                .push("automatic_semantic_attempt_required".into());
+        }
+    }
+    let wants_graph = automatic
+        && input.exact.is_none()
+        && input.knowledge_at.is_none()
+        && input.mode != "history"
+        && semantic_query
+            .split(|c: char| !c.is_alphanumeric())
+            .any(|term| {
+                matches!(
+                    term.to_lowercase().as_str(),
+                    "relationship"
+                        | "relationships"
+                        | "related"
+                        | "connect"
+                        | "connected"
+                        | "connections"
+                        | "depends"
+                        | "dependencies"
+                        | "supports"
+                        | "supported"
+                        | "calls"
+                        | "imports"
+                        | "impact"
+                )
+            });
+    if wants_graph {
+        input.channels.push("graph".into());
+        input.graph = Some(RecallGraphOptions::default());
+    }
     let mut graph_admission = if input.channels.iter().any(|c| c == "graph") {
-        Some(crate::graph::recall::prepare(state, &mut tx, auth, brain, &input, at, None).await?)
+        match crate::graph::recall::prepare(state, &mut tx, auth, brain, &input, at, None).await {
+            Ok(admission) => Some(admission),
+            Err(error)
+                if automatic
+                    && matches!(
+                        error.1,
+                        "graph_projection_missing"
+                            | "graph_input_unavailable"
+                            | "graph_read_input_too_large"
+                            | "graph_input_too_large"
+                            | "graph_scope_too_large"
+                            | "graph_input_changed"
+                            | "graph_busy"
+                    ) =>
+            {
+                coverage.partial = true;
+                coverage.reasons.push(format!("automatic_{}", error.1));
+                input.channels.retain(|c| c != "graph");
+                input.graph = None;
+                None
+            }
+            Err(error) => return Err(error),
+        }
     } else {
         None
     };
     let mut semantic_admission = if input.channels.iter().any(|c| c == "semantic") {
-        Some(
-            semantic::prepare(
-                state,
-                &mut tx,
-                &ReadContext {
-                    brain,
-                    input: &input,
-                    at,
-                    manifest: manifest.as_ref(),
-                },
-                &mut coverage,
-            )
-            .await?,
+        match semantic::prepare(
+            state,
+            &mut tx,
+            &ReadContext {
+                brain,
+                input: &input,
+                at,
+                manifest: manifest.as_ref(),
+            },
+            &mut coverage,
         )
+        .await
+        {
+            Ok(admission) => Some(admission),
+            Err(error)
+                if automatic
+                    && matches!(
+                        error.1,
+                        "model_policy_denied"
+                            | "model_credentials_missing"
+                            | "semantic_profile_mismatch"
+                            | "semantic_scope_too_large"
+                    ) =>
+            {
+                coverage.partial = true;
+                coverage.reasons.push(format!("automatic_{}", error.1));
+                input.channels.retain(|c| c != "semantic");
+                input.semantic_request_id = None;
+                None
+            }
+            Err(error) => return Err(error),
+        }
     } else {
         None
     };
@@ -698,7 +803,20 @@ async fn execute(
             // Query embedding enters the shared writer gateway. Release this
             // reader transaction first, retaining only its immutable selection.
             tx.commit().await?;
-            let vector = semantic::embed(state, auth, brain, &input, admission, answer).await?;
+            let vector = semantic::embed(
+                state,
+                auth,
+                brain,
+                &input,
+                if automatic {
+                    &semantic_query
+                } else {
+                    &input.query
+                },
+                admission,
+                answer,
+            )
+            .await?;
             tx = auth.tx(&state.pool).await?;
             sqlx::query("SET LOCAL statement_timeout='2s'")
                 .execute(&mut *tx)
@@ -932,7 +1050,7 @@ async fn bounded(
             "Recall is busy. Retry shortly.",
         )
     })?;
-    let seconds = if input.channels.iter().any(|c| c == "semantic") {
+    let seconds = if input.strategy == "auto" || input.channels.iter().any(|c| c == "semantic") {
         90
     } else if input.channels.iter().any(|c| c == "graph") {
         30

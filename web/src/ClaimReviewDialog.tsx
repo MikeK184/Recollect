@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import {
   Alert,
   Badge,
@@ -26,8 +26,8 @@ type View = components["schemas"]["ClaimView"];
 type Catalogue = components["schemas"]["WorkspaceCatalogue"];
 type Evidence = components["schemas"]["ClaimEvidenceChoice"];
 type Outcome = components["schemas"]["ReviewOutcome"];
-type Editor = typeof ClaimEditor;
-type EvidenceViewer = typeof EvidenceDialog;
+type Editor = ComponentType<Parameters<typeof ClaimEditor>[0]>;
+type EvidenceViewer = ComponentType<Parameters<typeof EvidenceDialog>[0]>;
 const label = (s: string) => s.replaceAll("_", " ");
 const time = (s: string) => new Date(s).toLocaleString();
 

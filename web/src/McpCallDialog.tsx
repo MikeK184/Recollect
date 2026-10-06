@@ -1,9 +1,9 @@
+import { CodeBlock } from "./components/CodeBlock";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
   Button,
-  Code,
   Group,
   Loader,
   Modal,
@@ -18,8 +18,29 @@ import { callLabel, activeCall } from "./McpRuntimePanel";
 import { McpResolveForm } from "./McpResolveForm";
 import { useContentDeadline } from "./useContentDeadline";
 import { McpObservations } from "./McpObservations";
+import {
+  TerminalCard,
+  type TerminalStatusTone,
+} from "./components/TerminalCard";
+import "./features/connections/call-inspection.css";
 type Call = components["schemas"]["McpCall"];
 type Resolution = components["schemas"]["McpResolution"];
+const callStateTone = (state: string): TerminalStatusTone =>
+  state === "succeeded"
+    ? "ok"
+    : ["tool_error", "failed", "cancelled"].includes(state)
+      ? "error"
+      : "pending";
+function runnerName(reference: string) {
+  if (reference === "central") return "Recollect service";
+  if (reference.startsWith("device:")) return "Paired device";
+  if (reference.startsWith("private:")) return "Private runner";
+  return reference;
+}
+const reasonName = (code: string) =>
+  code === "connector_response"
+    ? "Server responded"
+    : code.replaceAll("_", " ");
 function displayedResult(value: unknown): string {
   if (value && typeof value === "object") {
     const response = value as {
@@ -28,8 +49,12 @@ function displayedResult(value: unknown): string {
     };
     if (response.structuredContent != null)
       return JSON.stringify(response.structuredContent, null, 2);
-    if (Array.isArray(response.content))
-      return response.content.map((block) => block.text ?? "").join("\n");
+    if (Array.isArray(response.content)) {
+      const text = response.content
+        .filter((block) => typeof block.text === "string" && block.text.trim())
+        .map((block) => block.text);
+      if (text.length) return text.join("\n");
+    }
   }
   return JSON.stringify(value, null, 2);
 }
@@ -90,6 +115,9 @@ export function McpCallDialog({
   });
   const call = query.error ? undefined : query.data;
   const profile = catalogue.profiles.find((p) => p.id === call?.profile_id);
+  const connection = catalogue.connections.find(
+    (c) => c.id === call?.connection_id,
+  );
   const canUse = !!profile?.rights.use_profile;
   const expired = useContentDeadline(call?.payload_expires_at);
   useEffect(() => {
@@ -143,6 +171,7 @@ export function McpCallDialog({
       onClose={close}
       title="Tool call"
       size="xl"
+      className="mcp-call-inspection"
       closeOnEscape={!viewingEvidence}
       closeOnClickOutside={!viewingEvidence}
       trapFocus={!viewingEvidence}
@@ -159,31 +188,103 @@ export function McpCallDialog({
         )}
         {call && (
           <>
-            <Group justify="space-between">
-              <Text fw={600}>{call.tool_name}</Text>
-              <Badge
-                color={
-                  call.state === "succeeded"
-                    ? "teal"
-                    : call.state === "unknown"
-                      ? "yellow"
-                      : "gray"
-                }
-              >
-                {callLabel(call.state)}
-              </Badge>
-            </Group>
-            <Text size="sm">Call {call.id}</Text>
-            <Text size="sm">Runner: {call.runner_reference}</Text>
-            <Text size="sm">
-              Environment: {call.environment_id ?? "Brain-wide"} · Timeout{" "}
-              {call.timeout_seconds}s
-            </Text>
-            {call.code && <Text size="sm">Reason: {call.code}</Text>}
+            <section className="mcp-call-summary" aria-label="Call summary">
+              <div className="mcp-call-heading">
+                <div>
+                  <h2>{call.tool_name}</h2>
+                  {(connection || profile) && (
+                    <p>
+                      {[connection?.name, profile?.name]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                </div>
+                <Badge
+                  color={
+                    call.state === "succeeded"
+                      ? "teal"
+                      : call.state === "unknown"
+                        ? "yellow"
+                        : "gray"
+                  }
+                >
+                  {callLabel(call.state)}
+                </Badge>
+              </div>
+              <dl className="mcp-call-facts">
+                <div>
+                  <dt>Runs on</dt>
+                  <dd>{runnerName(call.runner_reference)}</dd>
+                </div>
+                <div>
+                  <dt>Scope</dt>
+                  <dd>
+                    {call.scope?.environment?.name ??
+                      call.environment_id ??
+                      "Brain-wide"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Requested</dt>
+                  <dd>{new Date(call.created_at).toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt>Timeout</dt>
+                  <dd>{call.timeout_seconds} seconds</dd>
+                </div>
+                {call.started_at && (
+                  <div>
+                    <dt>Started</dt>
+                    <dd>{new Date(call.started_at).toLocaleString()}</dd>
+                  </div>
+                )}
+                {call.completed_at && (
+                  <div>
+                    <dt>Finished</dt>
+                    <dd>{new Date(call.completed_at).toLocaleString()}</dd>
+                  </div>
+                )}
+                {call.code && (
+                  <div>
+                    <dt>Result</dt>
+                    <dd>{reasonName(call.code)}</dd>
+                  </div>
+                )}
+              </dl>
+              <details className="mcp-call-technical">
+                <summary>Call identifiers</summary>
+                <dl className="mcp-call-identifiers">
+                  <div>
+                    <dt>Call</dt>
+                    <dd>
+                      <code>{call.id}</code>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Runner</dt>
+                    <dd>
+                      <code>{call.runner_reference}</code>
+                    </dd>
+                  </div>
+                  {call.code && (
+                    <div>
+                      <dt>Code</dt>
+                      <dd>
+                        <code>{call.code}</code>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </details>
+            </section>
             {call.scope && (
-              <details>
+              <details className="mcp-call-section mcp-call-technical">
                 <summary>Recorded scope</summary>
-                <Code block>{JSON.stringify(call.scope, null, 2)}</Code>
+                <CodeBlock
+                  language="json"
+                  code={JSON.stringify(call.scope, null, 2)}
+                />
               </details>
             )}
             {activeCall(call.state) && (
@@ -224,21 +325,34 @@ export function McpCallDialog({
               </Alert>
             )}
             {canUse && (expired || call.output_access === "expired") && (
-              <Text>Retained output has expired.</Text>
+              <section
+                className="mcp-call-section mcp-call-output-state"
+                aria-label="Tool output"
+              >
+                <h3>Tool output</h3>
+                <span className="mcp-call-state-label">Expired</span>
+                <p>Retained output has expired.</p>
+              </section>
             )}
             {canUse && !expired && call.result != null && (
-              <>
-                <Text fw={600}>Sanitized result</Text>
-                <Code block style={{ maxHeight: 420, overflow: "auto" }}>
-                  {displayedResult(call.result)}
-                </Code>
+              <section className="mcp-call-section" aria-label="Tool output">
+                <h3>Tool output</h3>
+                <TerminalCard
+                  title={`mcp.call · ${call.tool_name}`}
+                  status={{
+                    label: callLabel(call.state),
+                    tone: callStateTone(call.state),
+                  }}
+                  text={displayedResult(call.result)}
+                />
                 <details>
                   <summary>Full response</summary>
-                  <Code block style={{ maxHeight: 300, overflow: "auto" }}>
-                    {JSON.stringify(call.result, null, 2)}
-                  </Code>
+                  <CodeBlock
+                    language="json"
+                    code={JSON.stringify(call.result, null, 2)}
+                  />
                 </details>
-              </>
+              </section>
             )}
             {call.reconciles_call_id && (
               <Button
@@ -248,13 +362,15 @@ export function McpCallDialog({
                 Inspect original call
               </Button>
             )}
-            <McpObservations
-              key={call.id}
-              brain={brain}
-              call={call.id}
-              disposition={call.capture_disposition}
-              onInspectChange={setViewingEvidence}
-            />
+            <section className="mcp-call-section" aria-label="Memory capture">
+              <McpObservations
+                key={call.id}
+                brain={brain}
+                call={call.id}
+                disposition={call.capture_disposition}
+                onInspectChange={setViewingEvidence}
+              />
+            </section>
             {canUse &&
               call.resolutions.map((r) => (
                 <ResolutionRow key={r.id} resolution={r} />

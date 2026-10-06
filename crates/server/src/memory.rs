@@ -546,9 +546,48 @@ pub async fn list(
             });
         }
     }
+    // The page includes claim bodies and supporting-evidence labels. Advertise
+    // their earliest canonical deadline so a long-lived display cannot retain
+    // content past that deadline between authorized refreshes. Already removed
+    // support is represented by unavailable metadata, not its former content.
+    // Membership follows the emitted labels: a deadline that passes during
+    // page construction still belongs to content already read into this page.
+    let revisions: Vec<_> = items.iter().map(|v| v.revision.id).collect();
+    let sources: Vec<_> = items
+        .iter()
+        .flat_map(|v| &v.evidence)
+        .filter(|e| {
+            e.kind == "source_version" && !matches!(e.availability.as_str(), "expired" | "erased")
+        })
+        .map(|e| e.id)
+        .collect();
+    let facts: Vec<_> = items
+        .iter()
+        .flat_map(|v| &v.evidence)
+        .filter(|e| {
+            e.kind == "repository_fact" && !matches!(e.availability.as_str(), "expired" | "erased")
+        })
+        .map(|e| e.id)
+        .collect();
+    let expires_at = sqlx::query_scalar(
+        "WITH deadlines AS (
+          SELECT recollect_retention_deadline(brain_id,'claim',recorded_at) AS deadline
+          FROM claim_revisions WHERE brain_id=$1 AND id=ANY($2)
+          UNION ALL
+          SELECT recollect_retention_deadline(brain_id,retention_class,created_at)
+          FROM source_versions WHERE brain_id=$1 AND id=ANY($3)
+          UNION ALL
+          SELECT recollect_retention_deadline(p.brain_id,'repository',p.created_at)
+          FROM repository_facts f JOIN repository_snapshots p ON p.id=f.snapshot_id AND p.brain_id=f.brain_id
+          WHERE f.brain_id=$1 AND f.id=ANY($4)
+        ) SELECT min(deadline) FROM deadlines",
+    )
+    .bind(brain).bind(&revisions).bind(&sources).bind(&facts)
+    .fetch_one(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(ClaimPage {
         items,
+        expires_at,
         unavailable,
         total_candidates: total,
         offset,

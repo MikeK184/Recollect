@@ -1,3 +1,4 @@
+import { useStableRows } from "./components/useStableRows";
 import { MemoryNoteDialog } from "./features/memory/MemoryNoteDialog";
 import { FilterBar } from "./components/FilterBar";
 import { ScopeSummary } from "./components/ScopeSummary";
@@ -9,6 +10,8 @@ import { useEffect, useState } from "react";
 import { useBrainSearch } from "./app/useBrainSearch";
 import { useDebouncedValue } from "@mantine/hooks";
 import { EmptyState } from "./components/AsyncState";
+import { SkeletonRows } from "./components/Skeleton";
+import { staggerStyle } from "./components/Motion";
 import "./features/feature-views.css";
 import {
   Alert,
@@ -52,6 +55,13 @@ const label = (s: string) => s.replaceAll("_", " ");
 const time = (s: string) => new Date(s).toLocaleString();
 const utc = (s?: string | null) => (s ? s.replace(/Z$/, "").slice(0, 19) : "");
 const instant = (s: string) => (s ? new Date(`${s}Z`).toISOString() : null);
+// Memory kinds carry their category accent; the badge text keeps the meaning.
+const kindBadgeColor: Record<string, string> = {
+  claim: "blue",
+  decision: "yellow",
+  procedure: "violet",
+  handover: "cyan",
+};
 const freshOptions = ["current", "needs_verification", "superseded"].map(
   (value) => ({ value, label: label(value) }),
 );
@@ -68,10 +78,12 @@ function Failure({ error }: { error: Error | null }) {
 function Pages({
   offset,
   total,
+  nextOffset,
   onChange,
 }: {
   offset: number;
   total: number;
+  nextOffset?: number | null;
   onChange: (value: number) => void;
 }) {
   return total > 20 ? (
@@ -88,8 +100,11 @@ function Pages({
       </Text>
       <Button
         variant="subtle"
-        disabled={offset + 20 >= total}
-        onClick={() => onChange(offset + 20)}
+        disabled={
+          nextOffset === null ||
+          (nextOffset === undefined && offset + 20 >= total)
+        }
+        onClick={() => onChange(nextOffset ?? offset + 20)}
       >
         Next page
       </Button>
@@ -134,11 +149,13 @@ function CompositeStatus({ view }: { view: View }) {
   if (view.eligibility.conflicting_claim_ids?.length)
     flags.push("Unresolved conflict");
   const text = [
-    `Review: ${label(view.revision.review)}`,
-    `Freshness: ${label(view.eligibility.effective_freshness)}`,
-    `Operational: ${label(view.revision.content.operational)}`,
+    label(view.revision.review),
+    ...(view.eligibility.effective_freshness === "current"
+      ? []
+      : [label(view.eligibility.effective_freshness)]),
     ...flags,
   ].join(" · ");
+  const full = `Review: ${label(view.revision.review)} · Freshness: ${label(view.eligibility.effective_freshness)} · Operational: ${label(view.revision.content.operational)}`;
   const state = flags.length
     ? "attention"
     : view.revision.review === "accepted" &&
@@ -146,7 +163,7 @@ function CompositeStatus({ view }: { view: View }) {
       ? "positive"
       : "neutral";
   return (
-    <div className="memory-record-status">
+    <div className="memory-record-status" aria-label={full} title={full}>
       <StatusBadge state={state}>{text}</StatusBadge>
     </div>
   );
@@ -1302,6 +1319,7 @@ export function ClaimsPanel({
     onSelectedIdChange?.(value);
   };
   const catalogue = useQuery({
+    enabled: filtering || noting || structuring || route.detail === "record",
     queryKey: ["workspace", brain.id],
     queryFn: async ({ signal }) =>
       result(
@@ -1365,14 +1383,33 @@ export function ClaimsPanel({
     setOffset(0);
   };
   const filtered =
+    !!memoryKind ||
     mode !== "investigation" ||
     !!environment ||
     !!repository ||
     !!times.fact_at ||
     !!times.knowledge_at;
   const data = claims.error || catalogue.error ? undefined : claims.data;
+  const stable = useStableRows(
+    data?.items,
+    JSON.stringify([
+      brain.id,
+      memoryKind,
+      mode,
+      environment,
+      repository,
+      times,
+      query,
+      offset,
+    ]),
+    !!selected,
+    (row) => row.revision.claim_id,
+  );
   return (
-    <section className="feature-view claims-panel" aria-label="Memory records">
+    <section
+      className="feature-view claims-panel rc-enter"
+      aria-label="Memory records"
+    >
       <FilterBar>
         <TextInput
           className="feature-search"
@@ -1397,7 +1434,6 @@ export function ClaimsPanel({
           <Button
             leftSection={<Plus size={iconSize.small} />}
             onClick={() => setNoting(true)}
-            disabled={!catalogue.data || !!catalogue.error}
           >
             Add memory
           </Button>
@@ -1405,6 +1441,12 @@ export function ClaimsPanel({
       </FilterBar>
       {filtered && (
         <ScopeSummary>
+          {memoryKind && (
+            <Badge variant="light">
+              {memoryKinds.find((item) => item.value === memoryKind)?.label ??
+                label(memoryKind)}
+            </Badge>
+          )}
           {mode !== "investigation" && (
             <Badge variant="light">{label(mode ?? "investigation")}</Badge>
           )}
@@ -1547,7 +1589,7 @@ export function ClaimsPanel({
           Retry memory
         </Button>
       )}
-      {claims.isPending && <Loader />}
+      {claims.isPending && <SkeletonRows label="Loading memory…" />}
       {data && (
         <>
           {data.items.length === 0 && !data.unavailable?.length && (
@@ -1567,8 +1609,22 @@ export function ClaimsPanel({
           )}
           {!!data.items.length && (
             <div className="feature-list">
-              {data.items.map((view) => (
-                <article className="memory-record" key={view.revision.claim_id}>
+              {stable.pending > 0 && (
+                <Button
+                  variant="light"
+                  size="xs"
+                  m="sm"
+                  onClick={stable.reveal}
+                >
+                  {stable.pending} new records · Show updates
+                </Button>
+              )}
+              {stable.rows.map((view, index) => (
+                <article
+                  className="memory-record rc-enter"
+                  style={staggerStyle(index)}
+                  key={view.revision.claim_id}
+                >
                   {/* Dense row: one primary identifier line plus one composite
                       status line. Value, evidence and knowledge time move to
                       the shared lineage inspector. */}
@@ -1582,16 +1638,34 @@ export function ClaimsPanel({
                         className="memory-record-title"
                         onClick={() => setSelected(view.revision.claim_id)}
                       >
-                        {view.revision.content.subject} ·{" "}
-                        {view.revision.content.predicate}
+                        <span className="memory-assertion">
+                          <span className="memory-subject">
+                            {view.revision.content.subject} ·{" "}
+                            {label(view.revision.content.predicate)}
+                          </span>
+                          <strong>{view.revision.content.value}</strong>
+                        </span>
                       </Button>
-                      <Badge variant="light" color="gray">
+                      <Badge
+                        variant="light"
+                        color={
+                          kindBadgeColor[view.revision.content.kind] ?? "gray"
+                        }
+                      >
                         {memoryKinds.find(
                           (item) => item.value === view.revision.content.kind,
                         )?.label ?? label(view.revision.content.kind)}
                       </Badge>
                     </Group>
-                    <CompositeStatus view={view} />
+                    <Group gap="md" className="memory-row-meta">
+                      <Text size="xs" c="dimmed">
+                        {view.revision.actor_name} ·{" "}
+                        {new Date(
+                          view.revision.recorded_at,
+                        ).toLocaleDateString()}
+                      </Text>
+                      <CompositeStatus view={view} />
+                    </Group>
                   </Stack>
                 </article>
               ))}
@@ -1614,14 +1688,12 @@ export function ClaimsPanel({
           <Pages
             offset={offset}
             total={data.total_candidates}
+            nextOffset={data.next_offset}
             onChange={setOffset}
           />
         </>
       )}
-      <Text size="xs" c="dimmed" mt="md">
-        Memory search matches the recorded assertion. Evidence, review,
-        freshness and operational assessment remain separate.
-      </Text>
+
       {noting && (
         <MemoryNoteDialog
           brain={brain}

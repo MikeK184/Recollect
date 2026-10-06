@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  Badge,
   Button,
   Card,
   Checkbox,
@@ -15,13 +14,19 @@ import {
   Title,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Check, Copy, History, Laptop, ShieldCheck } from "lucide-react";
 import type { components } from "./api-schema";
 import { client, result } from "./api";
 import { StatusBadge } from "./components/StatusBadge";
+import { HostIcon } from "./components/HostIcon";
 
 const date = (value: string) => new Date(value).toLocaleString();
+const hostLabels: Record<string, string> = {
+  codex: "Codex",
+  claude_code: "Claude Code",
+  opencode: "OpenCode",
+};
 
 type Device = components["schemas"]["Device"];
 type Mark = "positive" | "attention" | "negative" | "neutral";
@@ -43,24 +48,20 @@ function statusOf(device: Device): {
   if (new Date(device.expires_at).getTime() <= Date.now())
     return { label: "Expired", mark: "attention", historical: true };
   if (device.claimed)
-    return { label: "Active", mark: "positive", historical: false };
+    return { label: "Credential enabled", mark: "positive", historical: false };
   return { label: "Waiting for host", mark: "neutral", historical: false };
 }
 
 /** Active records first, then the pending pairing, then history. */
 const order: Record<string, number> = {
-  Active: 0,
+  "Credential enabled": 0,
   "Waiting for host": 1,
   Expired: 2,
   Revoked: 3,
 };
 
-export function DevicesPanel() {
+export function AgentAccessPanel({ code }: { code?: string }) {
   const cache = useQueryClient();
-  const search = useRouterState({
-    select: (state) => state.location.searchStr,
-  });
-  const code = new URLSearchParams(search).get("code") ?? "";
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(
     null,
   );
@@ -83,6 +84,8 @@ export function DevicesPanel() {
       // open the historical filter rather than hiding it again.
       setShowHistory(true);
       void cache.invalidateQueries({ queryKey: ["devices"] });
+      void cache.invalidateQueries({ queryKey: ["account-agents"] });
+      void cache.invalidateQueries({ queryKey: ["brain-agents"] });
     },
   });
   useEffect(() => {
@@ -119,25 +122,9 @@ export function DevicesPanel() {
   }, [devices.data]);
   return (
     <Stack gap="xl">
-      <div className="page-heading">
-        <div>
-          <Title order={1}>Devices</Title>
-          <Text c="dimmed" mt="xs">
-            Complete account device list. Connect and manage agents from a
-            Brain&apos;s Agents page.
-          </Text>
-        </div>
-        <Badge
-          variant="light"
-          color="teal"
-          leftSection={<ShieldCheck size={13} />}
-        >
-          Browser approved
-        </Badge>
-      </div>
       {code && <PairingApproval key={code} code={code} />}
       {devices.error && (
-        <Alert color="red" title="Devices could not be loaded">
+        <Alert color="red" title="Connections could not be loaded">
           {devices.error.message}
           <Button variant="subtle" onClick={() => void devices.refetch()}>
             Try again
@@ -150,7 +137,7 @@ export function DevicesPanel() {
         !devices.error && (
           <Stack gap="lg">
             <Text fw={600}>
-              Your devices{" "}
+              Your access tokens{" "}
               <span className="count-pill">{devices.data?.length ?? 0}</span>
             </Text>
             {!devices.data?.length ? (
@@ -158,7 +145,7 @@ export function DevicesPanel() {
                 <div className="empty-icon">
                   <Laptop size={26} />
                 </div>
-                <Title order={3}>No devices paired yet</Title>
+                <Title order={3}>No access tokens yet</Title>
                 <Text c="dimmed" size="sm" ta="center">
                   Connect an agent from a Brain&apos;s Agents page.
                 </Text>
@@ -174,16 +161,15 @@ export function DevicesPanel() {
                       setShowHistory(event.currentTarget.checked)
                     }
                     label="Show revoked and expired devices"
-                    description="History stays collapsed until you ask for it. Revealing it only lists records that already lost access; it never changes their access."
                   />
                   <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                    {rows.current.length} connected · {rows.history.length} in
-                    history
+                    {rows.current.length} enabled credentials ·{" "}
+                    {rows.history.length} in history
                   </Text>
                 </Group>
                 <Stack gap="md">
                   <Text fw={600}>
-                    Connected now{" "}
+                    Enabled credentials{" "}
                     <span className="count-pill">{rows.current.length}</span>
                   </Text>
                   {rows.current.map((device) => (
@@ -201,7 +187,7 @@ export function DevicesPanel() {
                       <div className="empty-icon">
                         <Laptop size={26} />
                       </div>
-                      <Title order={3}>No device is connected right now</Title>
+                      <Title order={3}>No enabled device credentials</Title>
                       <Text c="dimmed" size="sm" ta="center">
                         Every device is revoked or expired and belongs to the
                         history section below.
@@ -253,8 +239,8 @@ export function DevicesPanel() {
         <Stack>
           <Text size="sm">
             This revokes <strong>{selected?.name}</strong>&apos;s keycard from{" "}
-            <b>all Brains</b>. Its token stops working at once; captured
-            history stays in place.
+            <b>all Brains</b>. Its token stops working at once; captured history
+            stays in place.
           </Text>
           {revoke.error && <Alert color="red">{revoke.error.message}</Alert>}
           <Group justify="flex-end">
@@ -294,7 +280,7 @@ function DeviceCard({
       <Group justify="space-between" align="flex-start" gap="md">
         <Stack gap={7} style={{ minWidth: 0, flex: "1 1 230px" }}>
           <Group gap="xs">
-            <Laptop size={18} />
+            <HostIcon host={device.host_kind} size={18} />
             <Text
               fw={600}
               data-testid="device-row-name"
@@ -304,6 +290,16 @@ function DeviceCard({
             </Text>
             <StatusBadge state={status.mark}>{status.label}</StatusBadge>
           </Group>
+          {(device.host_kind || device.integration) && (
+            <Text size="xs" c="dimmed">
+              {hostLabels[device.host_kind ?? ""] ?? "Host unreported"} ·{" "}
+              {device.integration === "plugin"
+                ? "Recollect plugin"
+                : device.integration === "mcp"
+                  ? "MCP token"
+                  : "Integration unreported"}
+            </Text>
+          )}
           <Text size="xs" c="dimmed">
             Paired {date(device.created_at)}
           </Text>
@@ -371,6 +367,8 @@ function PairingApproval({ code }: { code: string }) {
     onSuccess: (value) => {
       cache.setQueryData(["pairing", code], value);
       void cache.invalidateQueries({ queryKey: ["devices"] });
+      void cache.invalidateQueries({ queryKey: ["account-agents"] });
+      void cache.invalidateQueries({ queryKey: ["brain-agents"] });
     },
   });
   return (
@@ -439,7 +437,7 @@ function PairingApproval({ code }: { code: string }) {
                   {pairing.data.state === "approved"
                     ? "Approved. Waiting for your host to finish pairing."
                     : pairing.data.state === "claimed"
-                      ? "Your host is connected."
+                      ? "Pairing complete. Credential enabled."
                       : "This pairing was declined or cancelled. Start a new request to try again."}
                 </Alert>
               )}
@@ -449,7 +447,7 @@ function PairingApproval({ code }: { code: string }) {
         {decision.error && <Alert color="red">{decision.error.message}</Alert>}
         <Button
           onClick={() =>
-            void navigate({ to: "/devices", search: { code: undefined } })
+            void navigate({ to: "/agents", search: { access: true } })
           }
           variant="subtle"
           size="xs"

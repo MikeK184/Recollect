@@ -1,0 +1,29 @@
+{
+  "before": {
+    "definitions": [
+      {
+        "key": "demo-exa-anonymous-20261006",
+        "digest": "330909e4c382bbb7307bb16c475dbcfa"
+      },
+      {
+        "key": "http-659e8072-af86-4719-af32-abc7816ea9c7",
+        "digest": "09b148a9abb3cd809210ecdfdba74764"
+      }
+    ],
+    "calls": 3
+  },
+  "after": {
+    "definitions": [
+      {
+        "key": "demo-exa-anonymous-20261006",
+        "digest": "330909e4c382bbb7307bb16c475dbcfa"
+      },
+      {
+        "key": "http-659e8072-af86-4719-af32-abc7816ea9c7",
+        "digest": "09b148a9abb3cd809210ecdfdba74764"
+      }
+    ],
+    "calls": 3
+  },
+  "unchanged": true
+}

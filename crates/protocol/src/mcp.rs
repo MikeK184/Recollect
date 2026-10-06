@@ -4,11 +4,43 @@ use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct McpHttpInspection {
     pub name: String,
     pub url: String,
+    #[serde(default)]
+    pub headers: std::collections::BTreeMap<String, String>,
+}
+
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct McpSecretHeader {
+    pub name: String,
+    #[serde(default)]
+    pub prefix: String,
+    pub value: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct McpCredentialProvision {
+    pub base_revision: Uuid,
+    #[serde(default)]
+    pub headers: Vec<McpSecretHeader>,
+    #[serde(default)]
+    pub environment: std::collections::BTreeMap<String, String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct McpCredentialProvisioned {
+    pub configured: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct McpGlobalDefinition {
+    pub summary: McpDefinitionSummary,
+    pub manifest: McpDefinitionManifest,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -41,6 +73,9 @@ pub struct McpDefinitionManifest {
     #[serde(default)]
     pub credential_aliases: Vec<String>,
     pub tools: Vec<McpToolDescriptor>,
+    /// Bounded, validated, metadata-free cached PNG; never a remote URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_png: Option<String>,
     #[serde(default)]
     pub receipt_policies: Vec<McpReceiptPolicy>,
 }
@@ -62,6 +97,8 @@ pub struct McpDefinitionSummary {
     pub transport: String,
     pub enabled: bool,
     pub tool_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_png: Option<String>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -110,6 +147,7 @@ pub struct McpConnectionSummary {
     pub revision: Uuid,
     pub availability: String,
     pub updated_at: DateTime<Utc>,
+    pub last_successful_call_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]

@@ -14,11 +14,11 @@ use sqlx::types::Json;
 use uuid::Uuid;
 
 pub const REPRESENTATION: &str = "engineering-text-1";
-pub const DIMENSIONS: i32 = 3072;
 pub const INPUT_BYTES: usize = 6000;
 
 mod queue;
 mod work;
+pub(crate) use queue::rebuild;
 pub use queue::{
     __path_get, __path_reindex, __path_retry, get, maintain_brain, reindex, retry, run_once,
 };
@@ -52,11 +52,13 @@ pub(crate) async fn profile(tx: &mut Tx<'_>, brain: Uuid) -> Result<Option<Seman
     Ok(profile.map(|p| p.0))
 }
 
-pub(crate) fn compatible(state: &AppState, profile: &SemanticProfile) -> bool {
-    profile.provider == "openai"
-        && profile.model == state.config.models.embedding_model
-        && profile.dimensions == DIMENSIONS
-        && profile.dimensions == state.config.models.embedding_dimensions
+pub(crate) fn compatible(
+    policy: &recollect_protocol::ModelPolicy,
+    profile: &SemanticProfile,
+) -> bool {
+    profile.provider == policy.provider
+        && profile.model == policy.embedding_model
+        && profile.dimensions == policy.embedding_dimensions
         && profile.representation == REPRESENTATION
 }
 
@@ -82,7 +84,8 @@ pub(crate) async fn representation(
         return Err(crate::retention::unavailable());
     }
     let profile = profile(tx, brain).await?.ok_or_else(Error::missing)?;
-    if profile.id != entry.profile_id || !compatible(state, &profile) {
+    let policy = model_policy::current(state, tx, brain).await?;
+    if profile.id != entry.profile_id || !compatible(&policy.policy, &profile) {
         return Err(model_policy::failure(
             "semantic_profile_mismatch",
             "The semantic profile changed or is incompatible. Reindex using the approved model.",

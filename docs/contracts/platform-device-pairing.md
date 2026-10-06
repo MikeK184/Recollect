@@ -91,7 +91,7 @@ the `plugin` integration marker. `whoami` proves a real authenticated call;
 deleting its stored credential. An already-revoked/expired token can be removed
 locally. A network failure preserves the credential for retry. Forgetting a local
 credential explicitly removes only the local copy and tells the user to revoke the
-server record in the Brain's Agents list or the Devices route. Pairing does not
+server record in the Brain's Agents list or Agents → Manage access. Pairing does not
 overwrite an existing local profile.
 
 `RECOLLECT_URL` selects an HTTPS service (loopback HTTP is allowed locally).
@@ -104,12 +104,15 @@ without falling back to a pretend or unencrypted credential store. The companion
 continues to depend only on protocol/HTTP/OS-store libraries, never server database
 drivers. Provider tokens and browser session cookies are not copied to it.
 
-The Devices route `/devices` is available to every signed-in account by direct URL
-for pairing approval (including across a sign-in redirect) and the complete account
-device list; it is no longer listed in global navigation, and per-Brain agent
-visibility lives on the Brain's Agents surface. It shows name, creation, last-use,
-expiry and claimed/revoked status, with pending/error/empty states and revocation
-controls.
+The Agents Manage access drawer holds the complete own-account credential list,
+including unused/pending connections and collapsed revoked/expired history.
+`/devices` is a compatibility redirect to `/agents?access=true`; a `code` query
+parameter opens pairing approval in that drawer, including across sign-in.
+Codes remain opaque eight-hex strings (including leading zeroes and E digits).
+There is no separate normal Devices page. The drawer shows name, creation,
+last-use, expiry and claimed/revoked status, with pending/error/empty states and
+revocation controls. The global roster is own-account-only, even for installation owners. Per-Brain
+contributor metadata never grants authority to revoke another account's credential.
 Companion messages distinguish waiting, denial, expiry, connection failure and
 credential-store failure; no secret is printed in error output.
 

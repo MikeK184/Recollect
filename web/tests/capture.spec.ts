@@ -1,4 +1,3 @@
-import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 
 test("capture policy, companion delivery states and retained source erasure", async ({
@@ -81,18 +80,62 @@ test("capture policy, companion delivery states and retained source erasure", as
   });
   await page.goto(`/brains/${fixture.brain}/settings?tab=capture`);
   const panel = page.getByRole("region", {
-    name: "Session capture",
+    name: /Capture permissions|Captured activity/,
+  });
+  const captureEnabled = page.getByRole("switch", {
+    name: "Enable automatic session capture",
     exact: true,
   });
+  await expect(captureEnabled).not.toBeChecked();
+  await expect(captureEnabled).toBeDisabled();
+  await page.screenshot({
+    path: "../.cache/guided-privacy-off.png",
+    animations: "disabled",
+  });
+  await page.goto(`/brains/${fixture.brain}/agents?tab=contexts`);
+  await expect(page).toHaveURL(new RegExp(`/brains/${fixture.brain}/agents$`));
   await expect(
-    panel.getByText(/Enable autonomous memory once under AI & automation/),
-  ).toBeVisible();
+    page.getByRole("dialog", { name: "Your private context" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Your private context" }),
+  ).toHaveCount(0);
+  // Hiding automatic context controls does not remove the native scope record.
+  const scope = await page.request.get(
+    `/api/brains/${fixture.brain}/workspace`,
+  );
+  expect(scope.ok()).toBe(true);
+  expect(
+    (await scope.json()).tasks.some(
+      (task: { label: string }) => task.label === "Browser capture",
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Connect agent", exact: true })
+    .click();
+  const setup = page.getByRole("dialog", {
+    name: "Connect a coding agent",
+    exact: true,
+  });
+  await setup.getByRole("button", { name: "Next", exact: true }).click();
+  await setup
+    .getByLabel("Plugin package folder", { exact: true })
+    .fill("/tmp/recollect-plugin");
+  await expect(setup.getByTestId("agent-plugin-command")).toContainText(
+    "codex plugin marketplace add",
+  );
+  await page.screenshot({
+    path: "../.cache/guided-setup-install.png",
+    animations: "disabled",
+  });
+  await page.keyboard.press("Escape");
+
   await page.goto(`/brains/${fixture.brain}/agents?tab=sessions`);
   await panel
-    .getByRole("button", { name: "Capture coverage", exact: true })
+    .getByRole("button", { name: "Capture diagnostics", exact: true })
     .click();
   const coverage = page.getByRole("dialog", {
-    name: "Capture coverage",
+    name: "Capture diagnostics",
     exact: true,
   });
   await expect(
@@ -100,38 +143,71 @@ test("capture policy, companion delivery states and retained source erasure", as
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto(`/brains/${fixture.brain}/settings?tab=capture`);
-  await panel
-    .getByRole("button", { name: "Connect capture", exact: true })
-    .click();
-  let dialog = page.getByRole("dialog", {
-    name: "Connect session capture",
-    exact: true,
-  });
-  await expect(dialog).toContainText("Recollect plugin");
   await expect(
-    dialog.getByRole("link", { name: "Connect an agent", exact: true }),
-  ).toHaveAttribute("href", `/brains/${fixture.brain}/agents?tab=setup`);
-  await page.keyboard.press("Escape");
-  await openDetails(page, "Advanced capture controls");
-  await panel
-    .getByRole("button", { name: "Capture policy", exact: true })
+    page.getByRole("tab", { name: "Privacy", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page
+    .getByRole("button", { name: "Edit privacy settings", exact: true })
     .click();
-  dialog = page.getByRole("dialog", {
-    name: "Session capture policy",
+  let dialog = page.getByRole("form", {
+    name: "Privacy settings",
     exact: true,
   });
+  await page.evaluate(async (brain) => {
+    const me = await (await fetch("/api/auth/me")).json();
+    const path = `/api/brains/${brain}/capture/policy`;
+    const current = await (await fetch(path)).json();
+    current.policy.excluded_tools = ["concurrent-policy-exclusion"];
+    const response = await fetch(path, {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf-token": me.csrf_token,
+      },
+      body: JSON.stringify({
+        base_change: current.change_id,
+        policy: current.policy,
+      }),
+    });
+    if (!response.ok)
+      throw new Error(`Concurrent capture policy ${response.status}`);
+  }, fixture.brain);
+  await expect
+    .poll(async () =>
+      page.evaluate(async (brain) => {
+        const current = await (
+          await fetch(`/api/brains/${brain}/capture/policy`)
+        ).json();
+        return current.policy.excluded_tools;
+      }, fixture.brain),
+    )
+    .toEqual(["concurrent-policy-exclusion"]);
+  await page.screenshot({
+    path: "../.cache/guided-privacy-custom.png",
+    animations: "disabled",
+  });
+  await expect(dialog).toContainText(/changed elsewhere/i);
+  await expect(dialog.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByText("concurrent-policy-exclusion", { exact: true })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Edit privacy settings", exact: true })
+    .click();
+  await expect(
+    dialog.getByLabel("Excluded tools", { exact: true }),
+  ).toHaveCount(0);
   await dialog
     .getByLabel("Enable automatic session capture", { exact: true })
     .check();
   await dialog
-    .getByLabel("Excluded tools", { exact: true })
-    .fill("sensitive_fixture_tool");
-  await dialog
-    .getByRole("button", { name: "Save capture policy", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
-  await expect(
-    panel.getByText("Capture enabled", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit privacy settings", exact: true })).toBeVisible();
+  await expect(captureEnabled).toBeChecked();
+  expect(await page.evaluate(async (brain) => {
+    const current = await (await fetch(`/api/brains/${brain}/capture/policy`)).json();
+    return current.policy.excluded_tools;
+  }, fixture.brain)).toEqual(["concurrent-policy-exclusion"]);
   await page.evaluate(async (f) => {
     const headers = {
       "content-type": "application/json",
@@ -179,7 +255,7 @@ test("capture policy, companion delivery states and retained source erasure", as
   }, fixture);
   await page.goto(`/brains/${fixture.brain}/agents?tab=sessions`);
   await panel
-    .getByRole("button", { name: "Capture coverage", exact: true })
+    .getByRole("button", { name: "Capture diagnostics", exact: true })
     .click();
   await expect(
     coverage.getByText("Partial delivery", { exact: true }),
@@ -190,7 +266,7 @@ test("capture policy, companion delivery states and retained source erasure", as
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await panel
-    .getByRole("button", { name: "View captured source", exact: true })
+    .getByRole("button", { name: "Open evidence", exact: true })
     .click();
   dialog = page.getByRole("dialog", {
     name: "Captured source evidence",
@@ -226,7 +302,7 @@ test("capture policy, companion delivery states and retained source erasure", as
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("capture-source-content")).toHaveCount(0);
   await expect(
-    panel.getByRole("button", { name: "View captured source", exact: true }),
+    panel.getByRole("button", { name: "Open evidence", exact: true }),
   ).toHaveCount(0);
   await page.evaluate(async (f) => {
     const r = await fetch(`/api/brains/${f.brain}/capture/devices`, {
@@ -246,7 +322,7 @@ test("capture policy, companion delivery states and retained source erasure", as
     if (!r.ok) throw new Error(`Capture report recovery ${r.status}`);
   }, fixture);
   await panel
-    .getByRole("button", { name: "Capture coverage", exact: true })
+    .getByRole("button", { name: "Capture diagnostics", exact: true })
     .click();
   await expect(
     coverage.getByText("Connected · queue empty", { exact: true }),

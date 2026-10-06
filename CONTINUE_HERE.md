@@ -1,3 +1,375 @@
+# Connections inspection follow-up delivered locally — 2026-10-06
+
+All five marked concerns now run on the ready local stack: actual scope/runner
+badges; explicit loading/failure/reload states; single readable descriptions;
+lossless JSON Format/Compact with real indentation; aligned recorded-call facts
+and separate expired output/capture sections. Existing gates and data preserved.
+
+Exa's false Draft 7 schema failure is fixed by a bounded inspection-only root
+declaration conversion followed by strict validation. Its explicit anonymous
+check returned two tools; it executed no tool and changed no approvals/grants.
+Read-only before/after comparisons show identical approved manifests and three
+SWEG calls. The actual expired demo call was inspected, not replayed.
+
+[Current source/build/runtime/screenshots](docs/mappings/mcp-inspection-readability-2026-10-06.md)
+record five pure UI tests, three schema tests, one owned handler fixture, clippy,
+build/design, governance32, CodeGraph and independent source/pixel acceptance.
+Both current packs are archived; the visual epic is complete. The local Linux
+release build reused the exact verified cached builder offline and copied only
+the two changed production files; clean-build disk guard was preserved.
+Normal stack startup installed the final binary/web image; no cache/data purge.
+The user's original browser tab/drafts were untouched; test-tab network/viewport
+settings reset and temporary tab closed. Version N/A; work uncommitted.
+Separate OpenCode native-token acceptance remains open below.
+
+# Selected General, bounded Privacy and demo delivered locally — 2026-10-06
+
+Concept images were generated first and the user selected General plus inline
+environment addition. That layout now runs on the ready local stack: Brain
+details/environment main column and compact status/deletion rail, safe reused
+inline identity editing and stable Add/Rename Save/Cancel. General is capped at
+1200 px; Privacy at 1120 px with thin row separators and a focused-row highlight.
+Manual Excluded tools/content controls are removed; stored rules and automatic
+redaction remain intact. No real settings save/archive/delete was used for proof.
+
+The [archived General pack](docs/roadmap/execution/archive/desktop-general-inline-environments.md)
+and [current evidence/screenshots](docs/mappings/settings-demo-scenario-2026-10-06.md)
+record source/build/governance checks, CUA owner/reader/cancel/2504 px proof and
+independent final source/pixel acceptance. Full build stopped at its disk guard;
+the actual deployment used a small frontend layer over the exact existing backend
+image, then normal stack startup. No cache purge or fresh backend-build claim.
+
+Local non-owner account `demo` has reader access only to SWEG — test, one actual
+`Demo MCP · SWEG` Direct MCP credential, and Use-only `Demo web research`.
+One new anonymous Exa MCP was approved after a reviewed schema-dialect conversion;
+a real public search succeeded from that agent. Manage/share, Brain/policy writes,
+Team/catalogue/Access and another Brain were denied; reader memory capture was
+correctly blocked by `knowledge_write_required`. Secrets stay in ignored files.
+Owner browser was restored. Final inventory: 16 Brains, 2 accounts, 36 devices,
+2 definitions, 3 connections across Brains and 2 groups. Existing data preserved.
+
+DeepWiki/Microsoft Learn have recorded SDK/protocol initialization failures and
+were not added as connected services. These are separate from completed visual
+work. Separate OpenCode native-token host acceptance below remains open.
+Version N/A; all work uncommitted.
+
+# Unified Privacy form delivered locally — 2026-10-06
+
+The latest correction is running on the ready local stack: one Privacy form,
+simple title separators, shared Edit/Save/Cancel, all previous policy controls
+and individually labeled Questions/Replies. The Activity/backup explanations
+and bottom AI transmission link are removed. This supersedes the separate-card
+Privacy layout in the preceding seven-point delivery.
+
+The [archived pack](docs/roadmap/execution/archive/desktop-unified-privacy-form.md)
+and [dated evidence/screenshots](docs/mappings/desktop-unified-privacy-form-2026-10-06.md)
+record four pure draft/save checks, type/design/build, 32 governance tests,
+whitespace, CodeGraph and independent final source/pixel acceptance. CUA edited
+four policy domains then Cancelled; read-only SQL confirmed every original
+revision/value unchanged. No real policy save was used for validation.
+
+Activity-detail expiry is implemented. Recovery tooling enforces backup archive
+windows, but this source audit does not establish a running backup schedule or
+recent backup. No backup operation was performed. Work remains uncommitted;
+version N/A. Separate OpenCode native-token acceptance remains open below.
+
+# Seven management follow-ups delivered locally — 2026-10-06
+
+The user's seven marked corrections are implemented on the ready local stack:
+bottom Team nav, no redundant roster/footer or preview metadata, structured tool
+descriptions and highlighted JSON, aligned AI provider icon, visible automatic
+processing controls, no normal Search coverage/review card, and visible Privacy
+limits/activity/backup controls. Capture Edit exposes the existing 1–64 KiB limit
+and optional exclusions; empty read-view exclusions are hidden, configured rules
+and all saved policy payloads remain preserved.
+
+The [archived pack](docs/roadmap/execution/archive/desktop-visible-management-settings.md)
+and [dated evidence/screenshots](docs/mappings/desktop-visible-management-settings-2026-10-06.md)
+record two pure formatting tests, build/type/design, governance/whitespace,
+CodeGraph, CUA real screens, cancelled drafts and independent final source/pixel
+review. Existing recovery retries confirmed transient failures after 5/30 minutes,
+reconsiders pre-request blocks after one minute, and safely leaves other failures
+idle. This was a source audit; no paid provider retry probe or policy save was used.
+Local inventory remains 16 Brains/35 devices/two connections/one tool group.
+Work uncommitted; version N/A. Unrelated OpenCode token-host acceptance below
+remains open; no native-host claim is changed by this frontend correction.
+
+# Ten-point browser management implemented — 2026-10-05
+
+All ten approved UI changes are implemented on the ready local stack at
+`http://127.0.0.1:8787`: shared compact shell, persistent top-right diagnostics,
+copy-ready literal-token TOML/JSON and Access tokens, inline compact agent
+activity, hidden automatic context/folder controls, stable connection editing,
+safe highlighted code, Connections-style tool-group cards with adjacent green/red
+permissions, and inline AI/model selection with dated prices and safe rebuilds.
+
+[Current evidence and screenshots](docs/mappings/desktop-browser-management-2026-10-05.md)
+records backend fixtures, final production build, CUA functional checks and
+independent final visual review. Actual account model metadata refresh succeeds;
+real model/policy drafts were cancelled. Existing inventory remains 16 Brains,
+35 devices, two connections and one tool group. All owned test fixtures were
+cleaned up. Work is local/uncommitted; version N/A, no push or external release.
+
+Five packs are archived and desktop/model acceptance is complete. The
+[direct-token pack](docs/roadmap/execution/active/mcp-copy-ready-agent-config.md)
+keeps final fresh native-host acceptance open: installed OpenCode times out
+waiting for its background service. Codex native config recognition and real
+HTTP MCP memory recall using the copied disposable header pass; neither is
+reported as a successful fresh OpenCode session. Repeat only that bounded owned
+host proof once the installed service starts. LongMemEval remains separate.
+Earlier sections below preserve superseded delivery history.
+
+# Management vision correction delivered locally — 2026-10-05
+
+The UI agent corrected all six approved management images' layout, typography,
+icons and edit fields after the user's rejection. The independent reviewer
+accepted final actual pixels at 1586 × 992, 1440 × 900 and 1920 × 1080, including
+lower forms and populated diagnostics. The [archived fidelity pack](docs/roadmap/execution/archive/desktop-management-vision-fidelity.md)
+and [current evidence](docs/mappings/desktop-management-vision-fidelity-2026-10-05.md)
+record the correction; earlier acceptance below remains superseded history.
+
+The rebuilt local stack is ready at `http://127.0.0.1:8787`. All 12 focused
+browser cases passed sequentially, with normal Capture clicks, stale/cancel
+recovery, masked config/credential drafts and working inspector actions. The
+[comparison HTML](output/ui-review/2026-10-05-management/comparison/before-vision-after.html)
+embeds 88 unchanged images, with fresh final captures and rejected states.
+It is served locally at `http://127.0.0.1:8896/before-vision-after.html`.
+
+Exact existing Brain/connection/definition/device identities are preserved
+(16/2/1/35); sources grew from 115 to 153 through existing automatic capture.
+No real credential, policy or connection was saved for visual evidence. Work is
+local/uncommitted; version N/A, with no push or release requested. Real data,
+supported setup behavior and minor font/shell differences remain documented;
+there is no pixel-identical or external-connectivity claim.
+
+# Six approved management concepts accepted — 2026-10-05
+
+All six Connections, setup, global Connectors, Privacy, AI permissions and Agents
+concepts are implemented and ready at `http://127.0.0.1:8787`. The independent UI
+review compared before/vision/runtime at 1440 × 900 and 1920 × 1080; twelve gaps
+were fixed and final pixels accepted. Final review provenance is explicit: the
+reviewer independently exercised the first deployment and inspected parent live
+captures after subagent browser routing failed; functional proof remains separate.
+
+[Dated evidence](docs/mappings/desktop-management-concepts-2026-10-05.md) records
+12 focused browser cases, authenticated metadata reflection redaction with zero
+tool calls, owner/revision/archive/private-file/rotation proof, partial credential
+retry without duplicate creation, Clippy, build/typecheck/design, 182 API operations,
+32 governance tests, CodeGraph and whitespace. API/worker healthy, readiness true;
+same 16 Brains, two connections, one definition, 90 sources and 35 devices.
+
+Secret entry explicitly uses a private installation-local development file;
+existing operator Vault/OS/environment aliases remain. Imports never execute
+commands. No real credential/policy/connection was changed for visual testing.
+Pack archived and visual epic complete; no accepted concept work remains.
+Version N/A; work uncommitted, no push or external release. Earlier dated sections
+preserve the prior delivery history and former remaining-work notes.
+
+# Actionable management accepted — 2026-10-04
+
+Live locally at `http://127.0.0.1:8787`: neutral connection setup and actual
+installation catalogue, bounded explicit metadata Test, compact tools, member
+list/popups and inline Privacy edits. Managed autonomy handles routine learning;
+literal-only overrides are secondary when autonomy is off. Optional environments
+are created/renamed under Settings → General; private runners are only for
+private-network tool execution. Existing custom policies, grants and inventory
+remain intact. No file-size splitting, new dependency or API/schema change.
+
+[Dated evidence](docs/mappings/desktop-actionable-management-2026-10-04.md) records
+six existing focused browser journeys, build/typecheck/design, independent source
+and actual deployed UI review, final governance/whitespace and CodeGraph checks.
+Privacy editors load on demand; the entry remains about 607 KB / 191 KB gzip.
+The stack is ready and still lists the same 16 Brains. The correction pack is
+archived and the visual epic is complete. Work remains uncommitted; research and
+LongMemEval remain separate. Earlier dated sections preserve delivery history.
+
+# Visual epic complete — 2026-10-04
+
+Live locally at `http://127.0.0.1:8787` with the original cream/ink/sage theme
+and flat graph. TV now preserves exact revision selection, clears both cards and
+the timestamp on failure/expiry, retains proposed/conflict qualifications, pauses
+while hidden and supports reduced motion and safe exit. Graph tools is compact;
+Connections has loaded-name search and compact cards; setup links to recorded
+Brain activity; Privacy rows open their corresponding section with permission-aware
+Edit/View labels. Heavy presentation imports are deferred within existing files.
+No file was split by line count and no dependency was added.
+
+[Final evidence](docs/mappings/desktop-visual-closeout-2026-10-04.md) records seven
+focused browser journeys, canonical deadline proof, independent actual UI review,
+build/typecheck/design, clippy, final governance/whitespace and CodeGraph checks.
+Entry JavaScript is 607 KB (192 KB gzip), down from 842 KB; measured first-route
+and feature loading costs remain separately stated. The existing local stack is
+healthy and serves the new build; all 16 Brains remain present.
+
+TV and final-polish packs are archived; the visual epic and indexes are complete.
+Work remains uncommitted. The research backlog and blocked LongMemEval protocol/
+cost approval are separate; no commit, push, version bump or external release.
+Earlier dated sections below preserve history and their former remaining work.
+
+# Guided setup and automatic privacy delivered — 2026-10-04
+
+Live locally at `http://127.0.0.1:8787`: one-step Plugin/Direct MCP setup,
+compact private contexts, one Add connection flow, observed sessions with
+explicit Pause/Enable use, independent tool rights and an automatic Privacy
+overview. Custom/off policies remain unchanged; canonical customization is
+secondary and retention saves keep its drawer open. No new dependencies.
+
+[Delivery and dated checks](docs/roadmap/execution/archive/desktop-guided-setup-and-controls.md)
+records seven existing local UI cases, focused backend proof, typecheck/build,
+clippy and independent source/actual test-screenshot review. Production readiness
+and served assets are verified separately; in-app browser control timed out.
+Final governance/whitespace and CodeGraph checks complete this slice. Work is
+uncommitted. TV failure/expiry acceptance and overall visual-epic closeout remain
+open. Earlier sections preserve delivery history.
+
+# Setup and exception management delivered — 2026-10-04
+
+The approved Agents, Connections and Settings simplification is implemented and
+live in the existing local stack at `http://127.0.0.1:8787`. Agents is an observed
+contributor roster with Connect and exact agent activity. Private contexts and
+manual verification are troubleshooting; captured events belong in Activity.
+Connections keeps independent Use/Manage/Share and execution placement, with
+runner/schema/runtime details secondary. Settings has General, Access, Privacy
+and AI permissions; granular policies and restrictive/off states remain valid.
+
+[Delivery and dated proof](docs/roadmap/execution/archive/desktop-management-simplification.md)
+records two focused backend acceptance tests, four existing UI cases, build,
+typecheck/design, clippy, independent actual UI review, exact legacy scope and
+failed-refresh handling. A complete 37-second browser observation confirms no
+closed diagnostic history polling while access/session refresh remains active;
+read-only navigation makes no mutations. No new dependencies or live fixtures.
+Final governance/whitespace and CodeGraph checks pass. Work is uncommitted;
+no release or push. TV acceptance and overall visual epic closeout remain open.
+Earlier sections below preserve delivery history.
+
+# Compact 2D graph controls delivered — 2026-10-03
+
+Both graph perspectives now share a finder, exact-kind filters, Auto/All/None
+labels, readable hover titles, direct-connection focus and compact qualified
+inspection. Full evidence opens canonical exact reads; complete paths override
+local masks. Existing local stack is rebuilt with the light theme. Independent
+source/screenshot review, web build and focused real browser checks pass;
+[delivery evidence](docs/roadmap/execution/archive/desktop-graph-interactions.md)
+records camera stability, actual counts, path and failed-refresh proof.
+Final repository validation/whitespace and synchronized CodeGraph checks pass.
+No new dependencies, tests, model
+calls or live fixtures. Work is uncommitted. TV acceptance and overall epic
+closeout remain open. Earlier sections preserve delivery history.
+
+# Flat graph correction delivered — 2026-10-03
+
+The user rejected the delivered 3D spheres and asked to assess Graphify. The
+current correction removes the Three.js renderer and dimension toggle, retaining
+the existing lazy Cytoscape 2D canvas for Evidence and Contributions. Real data,
+exact identities, validity clearing, inspection, focus and canonical paths stay.
+The corrected image is live at `http://127.0.0.1:8787` and ready. Build,
+design/typecheck, dependency audit and independent source/screenshot review pass.
+Focused browser proof confirms both graph inspectors and unchanged Core/camera/
+positions across 29 successful contribution refreshes. No new tests or fixtures.
+
+Graphify's inspected v8 HTML export uses vis-network 9.1.6 and static embedded
+data. Its UI ideas are useful, but no Graphify package/extractor was added:
+Cytoscape already provides the flat library renderer with Recollect's live data
+and evidence lifecycle. The owning epic carries pinned source and dated proof.
+Work is uncommitted. TV acceptance and overall epic closeout remain open. The
+prior Graph-led section below is historical for its renderer choice.
+
+# Graph-led Brain workspace delivered — 2026-10-03
+
+The cream/ink/sage interface is live at `http://127.0.0.1:8787`. Daily destinations
+are Dashboard, Ask, Graph and Explore; Manage contains wiring. Graph offers lazy
+bounded 3D/2D, orbit/zoom/neighborhood focus, canonical paths and a separate exact
+recorded contribution view. Contributions preserve their selected repository and
+snapshot on reload and clear invalid/failed/expired observations. Nothing implies
+agent presence, file authorship or invented agent-to-current-memory causality.
+Explore groups bounded Memory/Sources/Repositories browsers, with optional kinds
+and secondary handover tools. Ask/Find use natural evidence queries, qualified
+automatic channels, safe Markdown/tables/code and calmer visible limitations.
+
+[Delivery and dated evidence](docs/roadmap/execution/archive/desktop-graph-led-workspace.md)
+records existing focused tests, web/Rust checks, independent UI review, live graph
+controls, WebGL fallback, mismatch/scope/failure handling and performance bounds.
+All original 16 Brains remain. No new live fixtures, release, commit or push.
+
+Remaining in this visual epic: `memory-tv-ambient` failure/expiry acceptance,
+then overall epic closeout. Nine research ideas remain deferred. Older sections
+below retain earlier history; the flat correction above is the current renderer.
+
+# Brain Dashboard and Knowledge pages delivered — 2026-10-03
+
+The approved cream/ink/sage redesign is live at `http://127.0.0.1:8787`.
+Brain entry opens Dashboard with actual processing and recorded outcomes. Ask is
+compact; Memory shows assertion values and preserves search; Sources has one
+version-aware inspector; Graph is canvas-first; Repositories is searchable and
+server-paged, with structured snapshot facts and contributor names.
+
+[Delivery record](docs/roadmap/execution/archive/desktop-brain-pages.md) includes
+focused database/browser proof, desktop accessibility and independent UI review.
+Web build/typecheck/design, clippy and governance pass. All 16 original Brains
+remain; browser fixtures were removed. Work is uncommitted; no release or push.
+
+Remaining: `memory-tv-ambient` failure/expiry acceptance, then overall visual-epic
+closeout. Nine research ideas remain deferred. Earlier sections are history.
+
+# Brain chooser, icons and personal Agents delivered — 2026-10-03
+
+Latest user correction is implemented and live at `http://127.0.0.1:8787`:
+Brains is a chooser, with no global activity panel. Brain creation and Settings
+→ General → Edit Brain support PNG/SVG/ICO icons, replacement and removal.
+Global Agents shows only the signed-in account's observed agents, including for
+installation owners, grouped by used Brain. Within a Brain, the roster shows
+safe observed contributors across users; only own credentials can be revoked.
+Devices has no separate normal page: `/devices` and pairing links redirect into
+Agents Manage access, which retains unused credentials, history and approval.
+The light theme and per-Brain truthful Activity pipeline remain.
+
+See [archived pack](docs/roadmap/execution/archive/desktop-brain-identity-and-navigation.md)
+and [dated evidence](docs/mappings/desktop-brain-identity-2026-10-03.md).
+Migrations 032–033 are applied locally. API/database, browser, independent review,
+build/typecheck/design, clippy and governance checks passed; live inventory is
+unchanged and browser proof reports no errors. Work is uncommitted; no push/release.
+
+Remaining in this UI epic: `memory-tv-ambient` failure/expiry handling and full
+acceptance, then overall epic closeout. Nine research ideas remain deferred.
+Earlier sections below are history; their owner-wide global roster and global
+Brains pipeline statements are superseded by this correction.
+
+# Flat light control panel and truthful pipeline delivered — 2026-10-03
+
+The approved cream/ink/sage control panel is implemented and deployed to the
+existing local stack at `http://127.0.0.1:8787`. Brains, global Agents, Team,
+creation/inspection drawers and runtime diagnostics share the flat design.
+The new bounded pipeline ties real contributor/capture/source/job/run IDs,
+refreshes every two seconds while visible, distinguishes current work from last
+activity and clears expired/failed observations. Historical activity never
+replays; graph status remains independent. Agent credentials never imply presence.
+
+See the [archived pack](docs/roadmap/execution/archive/desktop-live-control-panel.md)
+and [evidence](docs/mappings/desktop-live-control-panel-2026-10-03.md). API,
+browser, independent review, build/typecheck/design, clippy and governance proofs
+passed. The local inventory is unchanged. Everything remains uncommitted.
+
+Remaining: finish the separate `memory-tv-ambient` failure/expiry and acceptance
+work, then close the visual epic. The nine research adoption ideas remain deferred.
+Older sections below preserve historical context and do not override this state.
+
+# Light theme restored; visual epic still active — 2026-10-03
+
+The user explicitly rejected dark mode. Keep the original cream/ink/sage palette
+with the new motion, pipeline and terminal features. The contract/design system,
+logo and local Compose UI now match that instruction. Browser palette and
+reduced-motion checks, frontend build/design/typecheck, readiness and repository
+validation pass; see [evidence](docs/mappings/desktop-light-palette-2026-10-03.md).
+All work remains local and uncommitted.
+
+Remaining in the [visual epic](docs/roadmap/epics/desktop-visual-experience.md):
+`memory-tv-ambient` already has a route, component, styles and Activity toggle,
+but its acceptance and closeout are unfinished. Fix cached-content handling on
+refresh failure/expiry and verify the full TV behaviour before archiving its
+pack. Then close the epic and reconcile indexes/evidence/handoff. The nine
+claude-mem adoption ideas remain deferred. The older sections below retain
+historical context; they do not override this light-theme decision.
+
 # Agent surface, Ask chat and desktop chrome refinements shipped — 2026-10-03
 
 The 2026-10-03 screenshot direction is delivered across three shipped packs:

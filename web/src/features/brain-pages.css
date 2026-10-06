@@ -1,0 +1,221 @@
+/* Flat light-theme libraries and a focused daily workspace. */
+.feature-drawer .source-content.source-inspector-content {
+  max-height: min(35vh, 22rem);
+  overflow: auto;
+}
+.source-linked-memory {
+  max-height: min(26vh, 16rem);
+  overflow: auto;
+}
+.brain-dashboard .page-heading {
+  margin-bottom: 22px;
+}
+.dashboard-outcome-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 18px 20px 0;
+  padding: 16px 18px;
+  background: var(--rc-canvas);
+  border-radius: 7px;
+}
+.dashboard-outcome-strip span {
+  display: block;
+  color: var(--rc-muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.dashboard-outcome-strip strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.knowledge-surface .page-heading {
+  margin-bottom: 22px;
+}
+.knowledge-surface .page-heading h1 {
+  font-size: 34px;
+}
+.memory-assertion {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+.memory-subject {
+  font-size: 12px;
+  color: var(--rc-muted);
+  font-weight: 400;
+}
+.memory-assertion strong {
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.6;
+  color: var(--rc-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.memory-record {
+  padding: 18px 22px;
+  transition: background var(--rc-motion-fast);
+}
+.memory-record:hover,
+.source-record.is-selected,
+.repository-library-row.is-selected {
+  background: var(--rc-selection);
+}
+.memory-row-meta {
+  margin-top: 4px;
+}
+.memory-record-status .status-badge {
+  font-size: 11px;
+}
+.source-record-dense .source-record-line + .source-record-line {
+  justify-content: flex-start;
+  padding-left: 34px;
+  gap: 14px;
+}
+.source-record-dense .source-record-name {
+  line-height: 1.5;
+}
+.repository-library-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--rc-border);
+  transition: background var(--rc-motion-fast);
+}
+.repository-library-row:last-child {
+  border-bottom: 0;
+}
+.repository-library-row:hover {
+  background: var(--rc-canvas);
+}
+.repository-library-name {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--rc-ink);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.repository-library-name > span:last-child {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.repository-library-name strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.library-icon {
+  color: var(--rc-accent);
+  background: var(--rc-selection);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.derived-memory-row {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-canvas);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: left;
+  font: inherit;
+  color: var(--rc-ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.derived-memory-row strong {
+  font-size: 13px;
+}
+.derived-memory-row span {
+  font-size: 12px;
+  color: var(--rc-muted);
+}
+.derived-memory-row:hover {
+  background: var(--rc-selection);
+}
+.ask-page.is-empty {
+  min-height: 0;
+}
+.ask-page.is-empty .ask-body {
+  flex: 0;
+}
+.ask-page.is-empty .ask-welcome {
+  padding: 52px 0 24px;
+  gap: 20px;
+}
+.ask-page.is-empty .ask-welcome .brand img {
+  width: 40px;
+  height: 40px;
+}
+.ask-page.is-empty .ask-composer {
+  width: min(100%, 900px);
+  margin: 10px auto 0;
+}
+.ask-page.is-empty .ask-composer textarea {
+  min-height: 112px;
+  background: var(--rc-surface);
+}
+.ask-page.is-empty .ask-privacy {
+  width: min(100%, 900px);
+  margin-inline: auto;
+}
+.ask-privacy details {
+  max-width: 28rem;
+  font-size: 12px;
+  color: var(--rc-muted);
+}
+.ask-privacy summary {
+  cursor: pointer;
+  text-align: right;
+}
+.ask-toolbar {
+  padding-block: 10px;
+  margin-bottom: 12px;
+}
+.ask-welcome h2 {
+  font-size: 30px;
+}
+.question-suggestions {
+  margin-top: 0;
+}
+.question-suggestions button {
+  transition:
+    background var(--rc-motion-fast),
+    border-color var(--rc-motion-fast);
+}
+.question-suggestions button:hover {
+  background: var(--rc-selection);
+}
+.graph-stage-area {
+  border-radius: 8px;
+}
+@media (max-width: 1100px) {
+  .repository-library-row {
+    flex-wrap: wrap;
+  }
+  .repository-library-name {
+    flex-basis: 70%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .memory-record,
+  .repository-library-row,
+  .question-suggestions button {
+    transition: none;
+  }
+}

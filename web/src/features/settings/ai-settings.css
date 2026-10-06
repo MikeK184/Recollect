@@ -1,0 +1,44 @@
+.models-management .ai-inline-actions {
+  flex-wrap: nowrap;
+}
+.ai-provider-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.models-management .ai-installed-models .mantine-Select-root {
+  margin-top: 14px;
+}
+.models-management .ai-model-price {
+  margin: 6px 0 14px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.models-management .ai-model-price a {
+  display: block;
+  color: var(--rc-muted);
+  text-decoration-color: var(--rc-border);
+}
+.models-management .ai-catalogue-state {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+.models-management .management-chip .mantine-Checkbox-root {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.models-management .management-chip {
+  gap: 8px;
+}
+.models-management .ai-installed-provider .mantine-Switch-root {
+  margin-left: auto;
+}
+@media (max-width: 780px) {
+  .models-management .ai-inline-actions {
+    flex-wrap: wrap;
+  }
+  .models-management .management-row .mantine-Checkbox-root {
+    flex-shrink: 0;
+  }
+}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Alert, Button, Loader, Text, Title } from "@mantine/core";
+import { Alert, Button, Text, Title } from "@mantine/core";
 import { CircleAlert, Inbox, type LucideIcon } from "lucide-react";
+import { SkeletonRows } from "./Skeleton";
 
 export function EmptyState({
   icon: Icon = Inbox,
@@ -14,7 +15,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="empty-state">
+    <div className="empty-state rc-enter">
       <span className="empty-icon">
         <Icon size={28} />
       </span>
@@ -35,24 +36,26 @@ export function ErrorState({
 }) {
   if (!error) return null;
   return (
-    <Alert
-      color="red"
-      title="Something needs attention"
-      icon={<CircleAlert size={18} />}
-    >
-      <Text size="sm">{error.message}</Text>
-      {retry && (
-        <Button variant="subtle" color="red" size="xs" mt="sm" onClick={retry}>
-          Try again
-        </Button>
-      )}
-    </Alert>
+    <div className="rc-enter">
+      <Alert
+        color="red"
+        title="Something needs attention"
+        icon={<CircleAlert size={18} />}
+      >
+        <Text size="sm">{error.message}</Text>
+        {retry && (
+          <Button variant="subtle" color="red" size="xs" mt="sm" onClick={retry}>
+            Try again
+          </Button>
+        )}
+      </Alert>
+    </div>
   );
 }
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="loading-state" role="status">
-      <Loader size="sm" />
+    <div className="loading-state rc-enter" role="status">
+      <SkeletonRows label={label} />
       <Text c="dimmed">{label}</Text>
     </div>
   );

@@ -23,6 +23,7 @@ pub mod plugin_migration;
 pub mod plugin_runtime;
 pub mod plugin_session;
 pub mod plugin_storage;
+pub mod presentation;
 pub mod privacy;
 pub mod publication;
 pub mod publication_cli;

@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, Check, CircleDashed, TriangleAlert } from "lucide-react";
 import { Button } from "@mantine/core";
 import { client, result } from "../../api";
@@ -17,7 +17,7 @@ type Exception = {
   search: BrainSearch;
 };
 
-function useAssuranceReads() {
+function useAssuranceReads(active: boolean) {
   const brain = useBrain();
   const admin = brain.role === "admin";
   // Separate role/revision positions, no payload cache across a changed Brain.
@@ -26,6 +26,7 @@ function useAssuranceReads() {
   const base = {
     gcTime: 0,
     staleTime: 5000,
+    enabled: active,
     refetchInterval: 10_000,
     retry: false,
   };
@@ -121,7 +122,7 @@ function useAssuranceReads() {
   const devices = useQuery({
     ...base,
     queryKey: key("devices"),
-    enabled: admin,
+    enabled: active && admin,
     queryFn: async ({ signal }) => {
       const data = result(
         await client.GET("/api/brains/{brain}/capture/devices", {
@@ -146,7 +147,7 @@ function useAssuranceReads() {
   const calls = useQuery({
     ...base,
     queryKey: key("calls"),
-    enabled: admin,
+    enabled: active && admin,
     queryFn: async ({ signal }) => {
       const data = result(
         await client.GET("/api/brains/{brain}/mcp/calls", {
@@ -166,7 +167,7 @@ function useAssuranceReads() {
   const erasures = useQuery({
     ...base,
     queryKey: key("erasures"),
-    enabled: admin,
+    enabled: active && admin,
     queryFn: async ({ signal }) => {
       const data = result(
         await client.GET("/api/brains/{brain}/erasures", {
@@ -303,10 +304,16 @@ function useAssurance() {
   return value;
 }
 export function AssuranceProvider({ children }: { children: ReactNode }) {
-  const value = useAssuranceReads();
+  const active = useRouterState({
+    select: (state) =>
+      state.location.pathname.endsWith("/dashboard") ||
+      (state.location.pathname.endsWith("/activity") &&
+        (state.location.search as BrainSearch).tab === "attention"),
+  });
+  const value = useAssuranceReads(active);
   return (
     <AssuranceContext.Provider value={value}>
-      <AssuranceBand />
+      {active && <AssuranceBand />}
       {children}
     </AssuranceContext.Provider>
   );

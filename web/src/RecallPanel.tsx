@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Accordion,
   Alert,
+  Badge,
   Button,
   Card,
   Checkbox,
@@ -14,6 +15,7 @@ import {
   Stack,
   Text,
   TextInput,
+  Textarea,
   Title,
 } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,6 +25,8 @@ import { RecallResults, RecallSelectionSummary } from "./RecallResults";
 import { RecallGraphDialog } from "./RecallGraphDialog";
 import { useContentDeadline } from "./useContentDeadline";
 import type { components } from "./api-schema";
+import { EvidenceNotes } from "./components/EvidenceNotes";
+import { Search, SlidersHorizontal } from "lucide-react";
 
 type Request = components["schemas"]["RecallRequest"];
 type Item = components["schemas"]["RecallItem"];
@@ -40,6 +44,7 @@ type Filters = {
   knowledge: string;
   fact: string;
   channels: string[];
+  strategy: "auto" | "manual";
   budget: number;
   limit: number;
   similarity: number;
@@ -63,6 +68,7 @@ const initial = (): Filters => ({
   knowledge: "",
   fact: "",
   channels: ["exact", "lexical"],
+  strategy: "auto",
   budget: 8,
   limit: 10,
   similarity: 0,
@@ -73,51 +79,17 @@ const initial = (): Filters => ({
   sourceDiversity: true,
 });
 const instant = (s: string) => (s ? new Date(`${s}Z`).toISOString() : null);
-const messages: Record<string, string> = {
-  semantic_scoped_coverage_missing:
-    "No compatible embeddings are available for this scope. No query was sent to the model.",
-  semantic_scoped_coverage_partial:
-    "Some scoped evidence has no compatible embedding yet. Check semantic readiness in Model learning.",
-  semantic_representation_truncated:
-    "Some embedding inputs were shortened. Original source attribution remains available.",
-  semantic_candidate_limit:
-    "More semantic matches may be available. Narrow the scope to inspect them.",
-  graph_candidate_limit:
-    "More connected evidence may be available. Narrow the scope or hop bound.",
-  source_lineage_unknown:
-    "Some source ancestry could not be resolved within the lookup bounds. These records remain eligible by rank.",
-  candidate_limit:
-    "The candidate limit was reached. Narrow the query for more coverage.",
-  result_limit:
-    "More matching results may be available. Narrow the query to inspect them.",
-  context_budget:
-    "Some results did not fit the context budget with their provenance.",
-  source_text_not_fully_indexed:
-    "Some source text is still processing or is not retained.",
-  source_text_unavailable:
-    "Some source bytes are unavailable; stale text was withheld.",
-  lexical_representation_limited:
-    "Some large repository or manifest records are only partly indexed. Exact identity lookup remains available.",
-  content_expired_during_recall:
-    "Content that expired while this request ran was withheld.",
-  known_ineligible_claims_excluded:
-    "Claims outside the selected trust or lifecycle state were excluded before ranking.",
-  raw_evidence_blocked_by_review_rule:
-    "Raw fragments covered by a correction or withdrawal were withheld.",
-  repository_manifest_required_for_environment:
-    "Select a revision manifest to include repository evidence for this environment.",
-  manifest_snapshot_unavailable:
-    "The manifest includes repository revisions without an available snapshot.",
-  fragment_truncated:
-    "Long fragments were shortened; their original source spans remain linked.",
-};
 
 export function RecallPanel({
   brain,
   initialQuery = "",
+  draft,
+  setDraft,
 }: {
   brain: Brain;
   initialQuery?: string;
+  draft?: string;
+  setDraft?: (value: string) => void;
 }) {
   const cache = useQueryClient();
   const [filters, setFilters] = useState(() => ({
@@ -137,6 +109,8 @@ export function RecallPanel({
   const [copyError, setCopyError] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [manifestOffset, setManifestOffset] = useState(0);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const queryText = draft ?? filters.query;
   useEffect(
     () =>
       cache.getQueryCache().subscribe((event) => {
@@ -186,6 +160,7 @@ export function RecallPanel({
     [cache, brain.id],
   );
   function change(patch: Partial<Filters>) {
+    if (patch.query !== undefined) setDraft?.(patch.query);
     if (Object.hasOwn(patch, "environment")) setManifestOffset(0);
     setFilters((f) => ({ ...f, ...patch }));
     setSubmitted(null);
@@ -197,6 +172,7 @@ export function RecallPanel({
   }
   const catalogue = useQuery({
     queryKey: ["workspace", brain.id, "recall"],
+    enabled: optionsOpen || !!submitted,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/workspace", {
@@ -206,6 +182,7 @@ export function RecallPanel({
   });
   const groups = useQuery({
     queryKey: ["evidence", brain.id, "recall"],
+    enabled: optionsOpen || !!submitted,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/evidence", {
@@ -220,6 +197,7 @@ export function RecallPanel({
       filters.environment,
       manifestOffset,
     ],
+    enabled: optionsOpen,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/revision-manifests", {
@@ -260,7 +238,7 @@ export function RecallPanel({
     const next = {
       nonce: crypto.randomUUID(),
       request: {
-        query: filters.query,
+        query: queryText,
         exact: filters.exactKind
           ? { kind: filters.exactKind, id: filters.exactId }
           : null,
@@ -275,24 +253,29 @@ export function RecallPanel({
         knowledge_at: instant(filters.knowledge),
         fact_at: instant(filters.fact),
         mode: filters.mode,
-        channels: filters.channels,
-        semantic_request_id: filters.channels.includes("semantic")
-          ? crypto.randomUUID()
-          : null,
-        semantic_min_similarity: filters.channels.includes("semantic")
-          ? filters.similarity
-          : null,
-        graph: filters.channels.includes("graph")
-          ? {
-              kind: filters.graphKind,
-              direction: filters.graphDirection,
-              max_hops: filters.graphHops,
-              relations: filters.graphRelations
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean),
-            }
-          : null,
+        channels:
+          filters.strategy === "auto" ? ["exact", "lexical"] : filters.channels,
+        strategy: filters.strategy,
+        semantic_request_id:
+          filters.strategy === "auto" || filters.channels.includes("semantic")
+            ? crypto.randomUUID()
+            : null,
+        semantic_min_similarity:
+          filters.strategy === "manual" && filters.channels.includes("semantic")
+            ? filters.similarity
+            : null,
+        graph:
+          filters.strategy === "manual" && filters.channels.includes("graph")
+            ? {
+                kind: filters.graphKind,
+                direction: filters.graphDirection,
+                max_hops: filters.graphHops,
+                relations: filters.graphRelations
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              }
+            : null,
         source_diversity: filters.sourceDiversity,
         limit: filters.limit,
         context_bytes: filters.budget * 1024,
@@ -383,7 +366,8 @@ export function RecallPanel({
     });
   }
   const disabled =
-    (filters.channels.includes("graph") &&
+    (filters.strategy === "manual" &&
+      filters.channels.includes("graph") &&
       (filters.channels.length === 1 ||
         filters.mode === "history" ||
         !!filters.knowledge ||
@@ -391,40 +375,119 @@ export function RecallPanel({
           filters.repositories.length !== 1) ||
         (filters.graphKind === "combined" &&
           (!filters.environment || !filters.manifest)))) ||
-    (filters.channels.includes("semantic") && !filters.query.trim()) ||
-    (!filters.query.trim() && !filters.exactKind) ||
-    !filters.channels.length ||
+    (filters.strategy === "manual" &&
+      filters.channels.includes("semantic") &&
+      !queryText.trim()) ||
+    (!queryText.trim() && !filters.exactKind) ||
+    (filters.strategy === "manual" && !filters.channels.length) ||
     (!!filters.exactKind &&
       !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(filters.exactId));
+  const selectedCount =
+    filters.repositories.length +
+    filters.areas.length +
+    (filters.environment ? 1 : 0) +
+    (filters.collection ? 1 : 0);
   return (
     <Card
-      className="recall-view"
+      className="recall-view evidence-search"
       p={0}
       component="section"
       aria-label="Recall memory"
     >
       <Stack>
-        <Title order={2}>Search evidence</Title>
-        <Text size="sm" c="dimmed">
-          Find claims and source evidence in this Brain. Results retain their
-          scope, time and review status.
-        </Text>
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!disabled) search();
+            if (!disabled && !query.isFetching) search();
           }}
         >
           <Stack gap="sm">
-            <TextInput
-              label="Search memory"
-              placeholder="A question, identifier, title or exact phrase"
-              value={filters.query}
-              onChange={(e) => change({ query: e.currentTarget.value })}
-              maxLength={512}
-            />
-            <details className="feature-advanced">
+            <Group gap="xs" className="evidence-search-toolbar">
+              <Badge color="gray">
+                {selectedCount
+                  ? `${selectedCount} scope filters`
+                  : "Entire Brain"}
+              </Badge>
+              {(filters.knowledge || filters.fact) && (
+                <Badge color="yellow">Time filtered</Badge>
+              )}
+              {filters.mode !== "investigation" && (
+                <Badge color="brand">{label(filters.mode)}</Badge>
+              )}
+              <Button
+                variant="default"
+                size="xs"
+                leftSection={<SlidersHorizontal size={15} />}
+                onClick={() => setOptionsOpen((value) => !value)}
+                aria-expanded={optionsOpen}
+              >
+                Refine
+              </Button>
+              {!!submitted && (
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => {
+                    void cache.cancelQueries({
+                      queryKey: ["recall", brain.id],
+                    });
+                    setSubmitted(null);
+                    setDetail(null);
+                  }}
+                >
+                  Clear results
+                </Button>
+              )}
+            </Group>
+            <div className="evidence-search-composer">
+              <Textarea
+                aria-label="Search evidence"
+                placeholder="Find the evidence behind a decision, system or past work…"
+                value={queryText}
+                onChange={(e) => change({ query: e.currentTarget.value })}
+                maxLength={512}
+                autosize
+                minRows={2}
+                maxRows={6}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    if (!disabled && !query.isFetching) search();
+                  }
+                }}
+              />
+              <Button
+                type="submit"
+                disabled={disabled || query.isFetching}
+                loading={query.isFetching && !!submitted}
+                leftSection={<Search size={16} />}
+              >
+                Find evidence
+              </Button>
+            </div>
+            <Text size="xs" c="dimmed">
+              Finds stored evidence without generating an answer. Automatic
+              retrieval may use the permitted embedding model.
+            </Text>
+            <details
+              className="feature-advanced evidence-search-options"
+              open={optionsOpen}
+              onToggle={(e) => setOptionsOpen(e.currentTarget.open)}
+            >
               <summary>Refine evidence search</summary>
+              <Select
+                label="Retrieval strategy"
+                value={filters.strategy}
+                allowDeselect={false}
+                data={[
+                  { value: "auto", label: "Automatic" },
+                  { value: "manual", label: "Choose methods" },
+                ]}
+                onChange={(value) =>
+                  change({ strategy: value === "manual" ? "manual" : "auto" })
+                }
+                mb="md"
+              />
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Select
                   label="Recall mode"
@@ -607,24 +670,37 @@ export function RecallPanel({
                           }
                         />
                       </SimpleGrid>
-                      <Checkbox.Group
-                        label="Search channels"
-                        value={filters.channels}
-                        onChange={(v) => change({ channels: v })}
-                      >
-                        <Group mt="xs">
-                          <Checkbox
-                            value="exact"
-                            label="Exact identities and literals"
-                          />
-                          <Checkbox value="lexical" label="Text search" />
-                          <Checkbox value="graph" label="Graph relationships" />
-                          <Checkbox
-                            value="semantic"
-                            label="Semantic similarity"
-                          />
-                        </Group>
-                      </Checkbox.Group>
+                      {filters.strategy === "manual" ? (
+                        <Checkbox.Group
+                          label="Search channels"
+                          value={filters.channels}
+                          onChange={(v) =>
+                            change({ channels: v, strategy: "manual" })
+                          }
+                        >
+                          <Group mt="xs">
+                            <Checkbox
+                              value="exact"
+                              label="Exact identities and literals"
+                            />
+                            <Checkbox value="lexical" label="Text search" />
+                            <Checkbox
+                              value="graph"
+                              label="Graph relationships"
+                            />
+                            <Checkbox
+                              value="semantic"
+                              label="Semantic similarity"
+                            />
+                          </Group>
+                        </Checkbox.Group>
+                      ) : (
+                        <Text size="sm" c="dimmed">
+                          Automatic retrieval chooses eligible methods for this
+                          query. Scope, time and evidence eligibility stay
+                          fixed.
+                        </Text>
+                      )}
                       <Checkbox
                         label="Prefer source coverage before adding depth"
                         checked={filters.sourceDiversity}
@@ -632,137 +708,126 @@ export function RecallPanel({
                           change({ sourceDiversity: e.currentTarget.checked })
                         }
                       />
-                      {filters.channels.includes("graph") && (
-                        <Stack gap="xs">
-                          <Text size="sm">
-                            Graph search expands up to three eligible matches
-                            from the other selected channels. Recorded
-                            relationships do not establish truth or deployment
-                            behavior. Current knowledge only.
-                          </Text>
-                          {(filters.mode === "history" ||
-                            !!filters.knowledge ||
-                            filters.channels.length === 1) && (
-                            <Alert
-                              color="yellow"
-                              title="Graph search needs current query anchors"
-                            >
-                              Select another search channel and current
-                              knowledge, or disable graph search for history.
-                            </Alert>
-                          )}
-                          <SimpleGrid cols={3}>
-                            <Select
-                              label="Recall graph"
-                              value={filters.graphKind}
-                              data={["knowledge", "repository", "combined"].map(
-                                (value) => ({ value, label: label(value) }),
-                              )}
-                              onChange={(value) =>
-                                change({ graphKind: value ?? "knowledge" })
-                              }
-                            />
-                            <Select
-                              label="Recall graph direction"
-                              value={filters.graphDirection}
-                              data={["both", "outgoing", "incoming"].map(
-                                (value) => ({ value, label: label(value) }),
-                              )}
-                              onChange={(value) =>
-                                change({ graphDirection: value ?? "both" })
-                              }
-                            />
-                            <NumberInput
-                              label="Recall graph hops"
-                              min={1}
-                              max={3}
-                              allowDecimal={false}
-                              value={filters.graphHops}
-                              onChange={(value) =>
+                      {filters.strategy === "manual" &&
+                        filters.channels.includes("graph") && (
+                          <Stack gap="xs">
+                            <Text size="sm">
+                              Graph search expands up to three eligible matches
+                              from the other selected channels. Recorded
+                              relationships do not establish truth or deployment
+                              behavior. Current knowledge only.
+                            </Text>
+                            {(filters.mode === "history" ||
+                              !!filters.knowledge ||
+                              filters.channels.length === 1) && (
+                              <Alert
+                                color="yellow"
+                                title="Graph search needs current query anchors"
+                              >
+                                Select another search channel and current
+                                knowledge, or disable graph search for history.
+                              </Alert>
+                            )}
+                            <SimpleGrid cols={3}>
+                              <Select
+                                label="Recall graph"
+                                value={filters.graphKind}
+                                data={[
+                                  "knowledge",
+                                  "repository",
+                                  "combined",
+                                ].map((value) => ({
+                                  value,
+                                  label: label(value),
+                                }))}
+                                onChange={(value) =>
+                                  change({ graphKind: value ?? "knowledge" })
+                                }
+                              />
+                              <Select
+                                label="Recall graph direction"
+                                value={filters.graphDirection}
+                                data={["both", "outgoing", "incoming"].map(
+                                  (value) => ({ value, label: label(value) }),
+                                )}
+                                onChange={(value) =>
+                                  change({ graphDirection: value ?? "both" })
+                                }
+                              />
+                              <NumberInput
+                                label="Recall graph hops"
+                                min={1}
+                                max={3}
+                                allowDecimal={false}
+                                value={filters.graphHops}
+                                onChange={(value) =>
+                                  change({
+                                    graphHops:
+                                      typeof value === "number" ? value : 2,
+                                  })
+                                }
+                              />
+                            </SimpleGrid>
+                            <TextInput
+                              label="Recall relationships"
+                              description="Optional comma-separated relationship names; empty includes all eligible relationships."
+                              value={filters.graphRelations}
+                              onChange={(e) =>
                                 change({
-                                  graphHops:
-                                    typeof value === "number" ? value : 2,
+                                  graphRelations: e.currentTarget.value,
                                 })
                               }
                             />
-                          </SimpleGrid>
-                          <TextInput
-                            label="Recall relationships"
-                            description="Optional comma-separated relationship names; empty includes all eligible relationships."
-                            value={filters.graphRelations}
-                            onChange={(e) =>
-                              change({ graphRelations: e.currentTarget.value })
-                            }
-                          />
-                          {filters.graphKind === "repository" &&
-                            filters.repositories.length !== 1 && (
-                              <Text c="orange">
-                                Select one repository above for its structural
-                                graph.
-                              </Text>
-                            )}
-                          {filters.graphKind === "combined" &&
-                            (!filters.environment || !filters.manifest) && (
-                              <Text c="orange">
-                                Select an environment and exact manifest above
-                                for combined relationships.
-                              </Text>
-                            )}
-                        </Stack>
-                      )}
-                      {filters.channels.includes("semantic") && (
-                        <>
-                          <Text size="sm">
-                            Each Recall action may send this query to the
-                            approved embedding model. Failed queries are not
-                            automatically resent. Similarity does not establish
-                            truth or acceptance.
-                          </Text>
-                          <NumberInput
-                            label="Minimum semantic similarity"
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            decimalScale={2}
-                            value={filters.similarity}
-                            onChange={(v) =>
-                              change({
-                                similarity: typeof v === "number" ? v : 0,
-                              })
-                            }
-                          />
-                          <Text size="xs" c="dimmed">
-                            Zero applies no positive similarity threshold. A
-                            higher value can exclude useful evidence; it is not
-                            a confidence score.
-                          </Text>
-                        </>
-                      )}
+                            {filters.graphKind === "repository" &&
+                              filters.repositories.length !== 1 && (
+                                <Text c="orange">
+                                  Select one repository above for its structural
+                                  graph.
+                                </Text>
+                              )}
+                            {filters.graphKind === "combined" &&
+                              (!filters.environment || !filters.manifest) && (
+                                <Text c="orange">
+                                  Select an environment and exact manifest above
+                                  for combined relationships.
+                                </Text>
+                              )}
+                          </Stack>
+                        )}
+                      {filters.strategy === "manual" &&
+                        filters.channels.includes("semantic") && (
+                          <>
+                            <Text size="sm">
+                              Each Recall action may send this query to the
+                              approved embedding model. Failed queries are not
+                              automatically resent. Similarity does not
+                              establish truth or acceptance.
+                            </Text>
+                            <NumberInput
+                              label="Minimum semantic similarity"
+                              min={0}
+                              max={1}
+                              step={0.05}
+                              decimalScale={2}
+                              value={filters.similarity}
+                              onChange={(v) =>
+                                change({
+                                  similarity: typeof v === "number" ? v : 0,
+                                })
+                              }
+                            />
+                            <Text size="xs" c="dimmed">
+                              Zero applies no positive similarity threshold. A
+                              higher value can exclude useful evidence; it is
+                              not a confidence score.
+                            </Text>
+                          </>
+                        )}
                     </Stack>
                   </Accordion.Panel>
                 </Accordion.Item>
               </Accordion>
             </details>
-            <Group>
-              <Button
-                type="submit"
-                disabled={disabled}
-                loading={query.isFetching && !!submitted}
-              >
-                Recall
-              </Button>
-              {!!submitted && (
-                <Button
-                  variant="subtle"
-                  onClick={() => {
-                    setSubmitted(null);
-                    setDetail(null);
-                  }}
-                >
-                  Clear results
-                </Button>
-              )}
-            </Group>
           </Stack>
         </form>
         {(catalogue.error || groups.error || manifests.error) && (
@@ -781,23 +846,39 @@ export function RecallPanel({
         )}
         {answer && (
           <Stack aria-label="Recall results">
-            <RecallSelectionSummary
-              answer={answer}
-              request={submitted!.request}
-              brainName={brain.name}
-              catalogue={catalogue.data}
-              collectionName={
-                groups.data?.groups.find(
-                  (g) => g.id === submitted!.request.collection_id,
-                )?.name
-              }
-            />
+            <details className="evidence-result-details">
+              <summary>Scope and retrieval details</summary>
+              <RecallSelectionSummary
+                answer={answer}
+                request={submitted!.request}
+                brainName={brain.name}
+                catalogue={catalogue.data}
+                collectionName={
+                  groups.data?.groups.find(
+                    (g) => g.id === submitted!.request.collection_id,
+                  )?.name
+                }
+              />
+            </details>
             <Group justify="space-between">
               <Text size="sm">
                 {answer.context.items.length} result
                 {answer.context.items.length === 1 ? "" : "s"} ·{" "}
-                {answer.context_bytes.toLocaleString()} context bytes ·{" "}
-                {answer.elapsed_ms} ms
+                {Array.from(
+                  new Set(
+                    answer.context.items.flatMap((item) => item.channels),
+                  ),
+                )
+                  .map((channel) =>
+                    channel === "lexical"
+                      ? "text"
+                      : channel === "semantic"
+                        ? "meaning"
+                        : channel === "graph"
+                          ? "relationships"
+                          : channel,
+                  )
+                  .join(" + ") || "No matches"}
               </Text>
               <Button
                 variant="subtle"
@@ -826,51 +907,48 @@ export function RecallPanel({
                 again.
               </Alert>
             )}
-            {answer.coverage.partial && (
-              <Alert title="Partial coverage" color="yellow">
-                <Stack gap={4}>
-                  {answer.coverage.reasons.map((reason) => (
-                    <Text size="sm" key={reason}>
-                      {messages[reason] ?? label(reason)}
-                    </Text>
-                  ))}
-                </Stack>
-              </Alert>
-            )}
-            {answer.semantic && (
+            <EvidenceNotes
+              notes={answer.coverage.reasons}
+              partial={answer.coverage.partial}
+            />
+            <details className="evidence-result-details">
+              <summary>Coverage and recorded methods</summary>
+              {answer.semantic && (
+                <Text size="xs" c="dimmed">
+                  Semantic coverage:{" "}
+                  {answer.semantic.scoped_entries.toLocaleString()} scoped
+                  representations ·{" "}
+                  {answer.semantic.profile?.model ?? "No index available"}.{" "}
+                  {answer.semantic.model_request_id
+                    ? "One query embedding request recorded."
+                    : "No query model call."}
+                </Text>
+              )}
               <Text size="xs" c="dimmed">
-                Semantic coverage:{" "}
-                {answer.semantic.scoped_entries.toLocaleString()} scoped
-                representations ·{" "}
-                {answer.semantic.profile?.model ?? "No index available"}.{" "}
-                {answer.semantic.model_request_id
-                  ? "One query embedding request recorded."
-                  : "No query model call."}
-              </Text>
-            )}
-            <Text size="xs" c="dimmed">
-              Source coverage: {answer.context_selection.distinct_source_groups}{" "}
-              resolved groups
-              {answer.context_selection.unknown_lineage_items > 0
-                ? ` · ${answer.context_selection.unknown_lineage_items} results with unknown ancestry`
-                : ""}
-              .
-              {answer.context_selection.source_diversity
-                ? " Coverage preference enabled."
-                : " Rank-only selection."}{" "}
-              Source groups do not establish independent corroboration.
-            </Text>
-            {answer.graph && (
-              <Text size="sm" data-testid="recall-graph-status">
-                Graph: {label(answer.graph.state)} ·{" "}
-                {answer.graph.anchors.length} anchors ·{" "}
-                {answer.graph.candidates} connected candidates
-                {answer.graph.view.coverage.partial
-                  ? " · partial graph coverage"
+                Source coverage:{" "}
+                {answer.context_selection.distinct_source_groups} resolved
+                groups
+                {answer.context_selection.unknown_lineage_items > 0
+                  ? ` · ${answer.context_selection.unknown_lineage_items} results with unknown ancestry`
                   : ""}
                 .
+                {answer.context_selection.source_diversity
+                  ? " Coverage preference enabled."
+                  : " Rank-only selection."}{" "}
+                Source groups do not establish independent corroboration.
               </Text>
-            )}
+              {answer.graph && (
+                <Text size="sm" data-testid="recall-graph-status">
+                  Graph: {label(answer.graph.state)} ·{" "}
+                  {answer.graph.anchors.length} anchors ·{" "}
+                  {answer.graph.candidates} connected candidates
+                  {answer.graph.view.coverage.partial
+                    ? " · partial graph coverage"
+                    : ""}
+                  .
+                </Text>
+              )}
+            </details>
             {!answer.context.items.length && (
               <Alert
                 title={
@@ -880,7 +958,7 @@ export function RecallPanel({
                 }
               >
                 {answer.status === "no_match"
-                  ? "Try a different phrase or exact identifier; Search matches recorded assertion text."
+                  ? "Try a more specific subject, another phrase or an exact identifier."
                   : "No result fits scope/trust/budget. Check qualifications, widen scope, or add evidence and let autonomous learning process it."}
               </Alert>
             )}

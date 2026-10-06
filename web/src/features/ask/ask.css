@@ -96,7 +96,6 @@
   line-height: 1.7;
   margin-block: 18px;
   max-width: 78ch;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .citation-marker {
@@ -149,6 +148,81 @@
   padding-left: 24px;
   border-left: 1px solid var(--rc-border);
 }
+.answer-evidence-content {
+  margin-block: 20px;
+  max-height: min(65vh, 800px);
+  overflow: auto;
+  padding-right: 6px;
+}
+.statement-citations {
+  display: inline-flex;
+  margin-top: 5px;
+  gap: 3px;
+}
+.statement-citations .citation-marker {
+  margin-left: 0;
+}
+.ask-intents .feature-tabs > .rc-tabs {
+  border-bottom: 0;
+  width: fit-content;
+  padding: 3px;
+  border-radius: 6px;
+  background: var(--rc-sidebar);
+}
+.ask-intents .feature-tabs > .rc-tabs [role="tab"] {
+  border: 0;
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+.ask-intents .feature-tabs > .rc-tabs [role="tab"][data-active] {
+  background: var(--rc-surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--rc-ink) 7%, transparent);
+}
+.evidence-search.mantine-Card-root {
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+.evidence-search-composer {
+  position: relative;
+}
+.evidence-search-composer textarea {
+  padding: 16px 175px 16px 16px;
+  font-size: 0.9375rem;
+  min-height: 86px;
+}
+.evidence-search-composer > button {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+}
+.evidence-search-options {
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  padding-inline: 16px;
+  background: var(--rc-surface);
+}
+.evidence-search-options[open] {
+  padding-bottom: 16px;
+}
+.evidence-result-details {
+  font-size: 0.75rem;
+  color: var(--rc-muted);
+}
+.evidence-result-details > summary {
+  cursor: pointer;
+  width: fit-content;
+  margin-bottom: 6px;
+}
+.recall-fragment {
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  background: var(--rc-surface);
+}
 .answer-scope {
   margin-top: 20px;
   font-size: 0.75rem;
@@ -194,5 +268,9 @@
     padding: 24px 0;
     border-left: 0;
     border-top: 1px solid var(--rc-border);
+  }
+  .evidence-search-composer textarea {
+    padding-right: 16px;
+    padding-bottom: 64px;
   }
 }

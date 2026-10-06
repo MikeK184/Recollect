@@ -1,0 +1,654 @@
+{
+  "pages": [
+    {
+      "id": "connections",
+      "title": "Connections",
+      "number": "01",
+      "intent": "A composed connection list with a useful adjacent inspector.",
+      "before": [
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/01-edit-connection.png",
+          "label": "Original edit dialog \u00b7 overview visible behind"
+        }
+      ],
+      "vision": [
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/01-connections.png",
+          "label": "Approved generated concept"
+        }
+      ],
+      "after": [
+        {
+          "label": "Overview + inspector",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/01-connections-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/01-connections-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/01-connections-1600.jpg"
+          }
+        },
+        {
+          "label": "Inspector \u00b7 Tools tab",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/01-connections-tools-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/01-connections-tools-1920.jpg"
+          }
+        },
+        {
+          "label": "Edit dialog \u00b7 top",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/02-edit-top-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/02-edit-top-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/02-edit-1600.jpg"
+          }
+        },
+        {
+          "label": "Edit dialog \u00b7 bottom",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/02-edit-bottom-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/02-edit-bottom-1920.jpg"
+          }
+        }
+      ],
+      "gaps": [
+        "The vision anchors the inspector beside the page heading. The implementation puts it below the full-width tabs and toolbar, leaving a much larger empty list area.",
+        "The heading, icon tiles, text contrast and status pills are smaller and quieter. The Add connection action moved from the header into the toolbar.",
+        "The concept illustrates three connections; the real Brain has one. That inventory difference is separate from the composition and typography gaps."
+      ]
+    },
+    {
+      "id": "add-connection",
+      "title": "Add connection",
+      "number": "02",
+      "intent": "One polished setup surface for URL, pasted configuration and credentials.",
+      "before": [
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/02-add-url.png",
+          "label": "Original URL-only setup"
+        },
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/02-add-approved.png",
+          "label": "Original five-step approved connector wizard"
+        }
+      ],
+      "vision": [
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/02-add-connection.png",
+          "label": "Approved generated concept"
+        }
+      ],
+      "after": [
+        {
+          "label": "Paste config \u00b7 parsed example; secret unset",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/02-add-config-parsed-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/02-add-config-parsed-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/02-add-config-1600.jpg"
+          }
+        },
+        {
+          "label": "Server URL \u00b7 empty form",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/02-add-url-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/02-add-url-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/02-add-url-1600.jpg"
+          }
+        },
+        {
+          "label": "Approved connector \u00b7 top",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/02-add-approved-top-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/02-add-approved-top-1920.jpg"
+          }
+        },
+        {
+          "label": "Approved connector \u00b7 bottom",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/02-add-approved-bottom-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/02-add-approved-bottom-1920.jpg"
+          }
+        }
+      ],
+      "gaps": [
+        "The vision uses a broad, tightly grouped dialog. The implementation has a smaller relative width, larger vertical gaps and a scrollbar even at 1600 \u00d7 1000.",
+        "The format tabs, numbered syntax-highlighted editor, success strip and horizontal credential controls are replaced by a dropdown, plain textarea, sentence and stacked fields.",
+        "The compact execution/environment summary, optional connection name and Review connection footer from the vision are absent from this parsed state."
+      ]
+    },
+    {
+      "id": "connectors",
+      "title": "Global connectors",
+      "number": "03",
+      "intent": "An installation-level library with deliberate catalogue and import layouts.",
+      "before": [
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/02-add-approved.png",
+          "label": "Previously: connector selection inside a Brain wizard"
+        }
+      ],
+      "beforeNote": "There was no installation-level Connectors page. This original screenshot shows where approved connectors were selected before.",
+      "vision": [
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/03-global-connectors-v2.png",
+          "label": "Approved generated concept"
+        },
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/03-global-connectors.png",
+          "label": "Initial generated variant \u00b7 superseded"
+        }
+      ],
+      "after": [
+        {
+          "label": "Installation connector library",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/03-connectors-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/03-connectors-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/03-connectors-1600.jpg"
+          }
+        },
+        {
+          "label": "Search \u00b7 no matches",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/03-connectors-no-match-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/03-connectors-no-match-1920.jpg"
+          }
+        }
+      ],
+      "gaps": [
+        "The vision uses compact catalogue cards beside a prominent import/review/approve panel. The implementation has a wide single card and a distant narrow helper panel.",
+        "The colourful icon tiles, transport chips, approval tabs and structured import steps were simplified; the resulting visual hierarchy is substantially weaker.",
+        "The concept illustrates six definitions; the real installation has one. No additional definitions were invented for this comparison."
+      ]
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy",
+      "number": "04",
+      "intent": "Compact, stable inline settings with the key sections visible together.",
+      "before": [
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/04-privacy-edit.png",
+          "label": "Original retention edit state \u00b7 scrolled page"
+        }
+      ],
+      "vision": [
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/04-privacy.png",
+          "label": "Approved generated concept"
+        }
+      ],
+      "after": [
+        {
+          "label": "Retention edit \u00b7 page auto-scrolled to editor",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/04-privacy-edit-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/04-privacy-edit-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/04-privacy-edit-1600.jpg"
+          }
+        },
+        {
+          "label": "Read view \u00b7 top of page",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/04-privacy-view-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/04-privacy-view-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/04-privacy-view-1600.jpg"
+          }
+        }
+      ],
+      "gaps": [
+        "The vision fits retention, capture, evidence and repository controls into a compact viewport. The implementation uses much taller sections; later settings fall below the fold.",
+        "Capture remains summary prose rather than the pictured switches. Retention follows Capture, and evidence is expanded into several separate rows.",
+        "Inline inputs now exist, but section rhythm, compact units, notice placement and action styling differ. Opening retention also scrolls the current page away from its heading."
+      ]
+    },
+    {
+      "id": "ai-permissions",
+      "title": "AI permissions",
+      "number": "05",
+      "intent": "A clear permission policy with calm coverage and model information beside it.",
+      "before": [
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/05-ai-permissions.png",
+          "label": "Original AI policy + expanded diagnostics"
+        }
+      ],
+      "vision": [
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/05-ai-permissions-v2.png",
+          "label": "Approved generated concept"
+        },
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/05-ai-permissions.png",
+          "label": "Initial generated variant \u00b7 superseded"
+        }
+      ],
+      "after": [
+        {
+          "label": "Policy + search coverage",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/05-ai-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/05-ai-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/05-ai-1600.jpg"
+          }
+        },
+        {
+          "label": "Expanded model diagnostics",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/05-ai-diagnostics-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/05-ai-diagnostics-1920.jpg"
+          }
+        }
+      ],
+      "gaps": [
+        "The broad two-column structure is present, but the provider identity row and prominent Automatic memory strip from the vision are missing from the policy card.",
+        "Permission helpers sit beside labels rather than beneath them, compressing the hierarchy. Allowed-content chips use three columns instead of two.",
+        "The vision separates Search coverage, Installed models and More options. The implementation combines provider/models with a single diagnostics link and adds a large amber warning. Counts differ because these are real captures taken at different times."
+      ]
+    },
+    {
+      "id": "agents",
+      "title": "Agents",
+      "number": "06",
+      "intent": "A legible roster and two focused companion cards, with useful visual weight.",
+      "before": [
+        {
+          "asset": "output/ui-review/2026-10-05-management/before/06-agents.png",
+          "label": "Original attached Agents screenshot \u00b7 content only"
+        }
+      ],
+      "vision": [
+        {
+          "asset": "output/imagegen/2026-10-05-management-concepts-01a10b36/06-agents.png",
+          "label": "Approved generated concept"
+        }
+      ],
+      "after": [
+        {
+          "label": "Observed roster + setup + memory check",
+          "images": {
+            "1440": "output/ui-review/2026-10-05-management/after-final/06-agents-1440.jpg",
+            "1920": "output/ui-review/2026-10-05-management/after-final/06-agents-1920.jpg",
+            "1600": "output/ui-review/2026-10-05-management/after-comparison/06-agents-1600.jpg"
+          }
+        }
+      ],
+      "gaps": [
+        "The roster and two companion cards exist, but names, icons and status pills have much less contrast and visual weight than the vision.",
+        "The concept has an owner avatar, recognisable host tiles, compact observed dates and a roster footer action. The implementation uses generic tiles, full timestamps and a separate My agents link.",
+        "The setup card is instruction-heavy and uses disclosures and a full-width copy action. It does not reproduce the concise command surface and small setup link shown in the concept."
+      ]
+    }
+  ],
+  "assets": {
+    "output/ui-review/2026-10-05-management/before/01-edit-connection.png": {
+      "width": 1280,
+      "height": 887,
+      "file": "01-edit-connection.png",
+      "path": "output/ui-review/2026-10-05-management/before/01-edit-connection.png",
+      "sha256": "f7a9aeaab5908517039d021c18d2fde11e4129c0f159ad672dd5848ce546aabe"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/01-connections.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "01-connections.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/01-connections.png",
+      "sha256": "ad2de9bace7be24384d4680688e08ff913bd612cb3e273130c1522bc219df53a"
+    },
+    "output/ui-review/2026-10-05-management/after-final/01-connections-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "01-connections-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/01-connections-1440.jpg",
+      "sha256": "1598e1d261fab797dd5bc22c8f3ceaa40b6d493ad901669123be7134bcad7dbf"
+    },
+    "output/ui-review/2026-10-05-management/after-final/01-connections-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "01-connections-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/01-connections-1920.jpg",
+      "sha256": "d8d5ede426623f0f64f3142ae946ee168b841465d183a96bf75e03076f54ed00"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/01-connections-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "01-connections-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/01-connections-1600.jpg",
+      "sha256": "0547456c0bc291fb6599345c17ba6063a66aefa3f541e8e27ab7b8cc4deea6a8"
+    },
+    "output/ui-review/2026-10-05-management/after-final/01-connections-tools-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "01-connections-tools-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/01-connections-tools-1440.jpg",
+      "sha256": "bd20ce35db61b9712b2ce179341d002d0573f31163fa3dcf238ff97e8cb7e213"
+    },
+    "output/ui-review/2026-10-05-management/after-final/01-connections-tools-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "01-connections-tools-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/01-connections-tools-1920.jpg",
+      "sha256": "149f79f527de507023bf028317ee342a04205994be79ff12862f0145c18a2602"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-edit-top-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "02-edit-top-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-edit-top-1440.jpg",
+      "sha256": "10c04743f4054b2f740459bce412fb826bb4b9409786cf6d798f1093897567ba"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-edit-top-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "02-edit-top-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-edit-top-1920.jpg",
+      "sha256": "f65201e8e3e7750a8c4eeeb5307b53b22753750f1e0b20651b7a2ae6f29d617b"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/02-edit-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "02-edit-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/02-edit-1600.jpg",
+      "sha256": "a96d70c08683859117792e6643be07bfeba3b98ef39c315b2d237e48f8c3da1e"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-edit-bottom-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "02-edit-bottom-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-edit-bottom-1440.jpg",
+      "sha256": "2b35f81e88aeee9f99a8405dadcac913f033ad6910cdea4851d498e2f4ae86ea"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-edit-bottom-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "02-edit-bottom-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-edit-bottom-1920.jpg",
+      "sha256": "3af4b566887ac09be0c13960f9bbe755b40f224c323a44d3c0f4163799e33618"
+    },
+    "output/ui-review/2026-10-05-management/before/02-add-url.png": {
+      "width": 1280,
+      "height": 887,
+      "file": "02-add-url.png",
+      "path": "output/ui-review/2026-10-05-management/before/02-add-url.png",
+      "sha256": "4639cd7a6534bf62d4adcfe02b13d662151763650b3db754e1ca2a91663d10f1"
+    },
+    "output/ui-review/2026-10-05-management/before/02-add-approved.png": {
+      "width": 1280,
+      "height": 887,
+      "file": "02-add-approved.png",
+      "path": "output/ui-review/2026-10-05-management/before/02-add-approved.png",
+      "sha256": "ccb59699231cc152d90fe7f593a963c0078c9d131b3260d232269a5e4e19c473"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/02-add-connection.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "02-add-connection.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/02-add-connection.png",
+      "sha256": "7869863d7a8019e349977b701ec9c44be9b15e0932e53878d38e51bd1e4982ab"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-config-parsed-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "02-add-config-parsed-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-config-parsed-1440.jpg",
+      "sha256": "43e2f9a653d995e6aedd2573fd616b4980ee4a375a118bc480e5490c8ff78d0a"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-config-parsed-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "02-add-config-parsed-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-config-parsed-1920.jpg",
+      "sha256": "952a5fc502010568d78b6906a7b378e023370e595ca7d8b0cc596295a70641d3"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/02-add-config-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "02-add-config-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/02-add-config-1600.jpg",
+      "sha256": "fba13efae42009070f6c4ec71e01670f4bbf03a042545fcc933b8569bec16f94"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-url-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "02-add-url-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-url-1440.jpg",
+      "sha256": "b81f1d1b78b299e1c9db604da1e5f5836914494e11e00ee6de8f474d9e432f91"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-url-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "02-add-url-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-url-1920.jpg",
+      "sha256": "409e0802c252c61f2a99275f1346b067cb05809209b8d543e6b395bdd823ce5e"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/02-add-url-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "02-add-url-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/02-add-url-1600.jpg",
+      "sha256": "7da7a5638e0a0cba2e4d110d78c000362ef15153445ce62c70ef0121ea1e5709"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-approved-top-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "02-add-approved-top-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-approved-top-1440.jpg",
+      "sha256": "691269c70b24d498b44108dc980bbabd94f67be872eb1bf8efd92511a8f66edf"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-approved-top-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "02-add-approved-top-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-approved-top-1920.jpg",
+      "sha256": "cdf9b076d0c04e498805427ebc02bc5c5eef6bbb343de7b7321d7b460daa0f15"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-approved-bottom-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "02-add-approved-bottom-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-approved-bottom-1440.jpg",
+      "sha256": "b787d5a377bf67749f23160b2c801e33e59d995bab4c2ce2f548cd9853581220"
+    },
+    "output/ui-review/2026-10-05-management/after-final/02-add-approved-bottom-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "02-add-approved-bottom-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/02-add-approved-bottom-1920.jpg",
+      "sha256": "c3251ff6e6e5c4c12d35f85f06a94574f328e0bd2028eb6ef3c66ed10207028c"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/03-global-connectors-v2.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "03-global-connectors-v2.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/03-global-connectors-v2.png",
+      "sha256": "52290d8ffd181874d77084251325e5ecafa31d2f74a056636cdae3d8b8122966"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/03-global-connectors.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "03-global-connectors.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/03-global-connectors.png",
+      "sha256": "e0adb53e5a16cc97e5c2624c1ef8341f82682a78b61a464a7231fb8488a36a78"
+    },
+    "output/ui-review/2026-10-05-management/after-final/03-connectors-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "03-connectors-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/03-connectors-1440.jpg",
+      "sha256": "bd1e2985a209524a277c9d9f19c9f1357744a6de94f6e4172f04b5a606464343"
+    },
+    "output/ui-review/2026-10-05-management/after-final/03-connectors-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "03-connectors-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/03-connectors-1920.jpg",
+      "sha256": "b8c18fe625daee4b99aa147b1f4e79aca004f4e9be814e3937b8752ce5b4e5d9"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/03-connectors-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "03-connectors-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/03-connectors-1600.jpg",
+      "sha256": "e148418e119fd3ca16135ddcb355086ab615344d55c1330633df2865a58a2e78"
+    },
+    "output/ui-review/2026-10-05-management/after-final/03-connectors-no-match-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "03-connectors-no-match-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/03-connectors-no-match-1440.jpg",
+      "sha256": "c08041591dc1e3ec66522312dde571fbd41b4c8e23f2f1ed372cae05d4499db2"
+    },
+    "output/ui-review/2026-10-05-management/after-final/03-connectors-no-match-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "03-connectors-no-match-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/03-connectors-no-match-1920.jpg",
+      "sha256": "eb5386c06f8b3f831cc637ac2901048143accd249a142b0678e3ab770605ea87"
+    },
+    "output/ui-review/2026-10-05-management/before/04-privacy-edit.png": {
+      "width": 1280,
+      "height": 887,
+      "file": "04-privacy-edit.png",
+      "path": "output/ui-review/2026-10-05-management/before/04-privacy-edit.png",
+      "sha256": "6fe2763f4278ccd8da64a79635c052562aead758f2c80b8b2564a58fa2158bfc"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/04-privacy.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "04-privacy.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/04-privacy.png",
+      "sha256": "0ce76ac230df61ea7ff8d09d50652e6ffcfe3a60c398738d6c0473267081db7a"
+    },
+    "output/ui-review/2026-10-05-management/after-final/04-privacy-edit-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "04-privacy-edit-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/04-privacy-edit-1440.jpg",
+      "sha256": "790d83423cd6d33983cdff1b9b4cf5193bddf1cc953e6631522a941794b5ff96"
+    },
+    "output/ui-review/2026-10-05-management/after-final/04-privacy-edit-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "04-privacy-edit-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/04-privacy-edit-1920.jpg",
+      "sha256": "31d4a067bff7a9884fbe015a9150e6ba9565a22b016bf71c5724c197fb08476b"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/04-privacy-edit-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "04-privacy-edit-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/04-privacy-edit-1600.jpg",
+      "sha256": "25898884cfe63a47a18ff77f9efb6aad539a6acf9dec07145e8060e6f8e68168"
+    },
+    "output/ui-review/2026-10-05-management/after-final/04-privacy-view-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "04-privacy-view-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/04-privacy-view-1440.jpg",
+      "sha256": "13acc66ea867d69c3b84b182907513a76f6e009f101cca882c755298d3286d87"
+    },
+    "output/ui-review/2026-10-05-management/after-final/04-privacy-view-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "04-privacy-view-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/04-privacy-view-1920.jpg",
+      "sha256": "8f451961fc6c2108b5a811e6ce6d29cd6f469477e6a44ee9006b6d0831d93293"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/04-privacy-view-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "04-privacy-view-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/04-privacy-view-1600.jpg",
+      "sha256": "fff4c514122968740cfd208a37f1240e5aecc14f8fe849aed8d6e550075d9513"
+    },
+    "output/ui-review/2026-10-05-management/before/05-ai-permissions.png": {
+      "width": 1280,
+      "height": 887,
+      "file": "05-ai-permissions.png",
+      "path": "output/ui-review/2026-10-05-management/before/05-ai-permissions.png",
+      "sha256": "dcf46e3a2800d9c5808c9590adaceb2aaa17ebc6e5b251be58e6357aa2919ba0"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/05-ai-permissions-v2.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "05-ai-permissions-v2.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/05-ai-permissions-v2.png",
+      "sha256": "d95d42d6992763106b6d9100c796ef8619bcc723f01cb97ccd1f46cdc94a9e02"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/05-ai-permissions.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "05-ai-permissions.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/05-ai-permissions.png",
+      "sha256": "c0922b2270cfec79ffb0e2fba3c6e88171aa2811ffb76613add32b15776c54d1"
+    },
+    "output/ui-review/2026-10-05-management/after-final/05-ai-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "05-ai-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/05-ai-1440.jpg",
+      "sha256": "8711b1629fc3e2543bb4bdc01600b4c96dc664d33e42a36784d6bfd1346c10fd"
+    },
+    "output/ui-review/2026-10-05-management/after-final/05-ai-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "05-ai-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/05-ai-1920.jpg",
+      "sha256": "5588d01451540ab3ca94b9736cd8a6e49aba6356f834e411d2d70d1f29b4d5c2"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/05-ai-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "05-ai-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/05-ai-1600.jpg",
+      "sha256": "8f8a990b829725e48faec674fa4afc9f7c264633f548654b2e2e9da89f81e875"
+    },
+    "output/ui-review/2026-10-05-management/after-final/05-ai-diagnostics-1440.jpg": {
+      "width": 1440,
+      "height": 900,
+      "file": "05-ai-diagnostics-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/05-ai-diagnostics-1440.jpg",
+      "sha256": "c9d21a2f697d3c43b0c87043c2b354daf91deb84b439cb1bb1779c89e519e40e"
+    },
+    "output/ui-review/2026-10-05-management/after-final/05-ai-diagnostics-1920.jpg": {
+      "width": 1920,
+      "height": 1080,
+      "file": "05-ai-diagnostics-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/05-ai-diagnostics-1920.jpg",
+      "sha256": "ac7f87ae59fa26a81e490537b440d97b02c8fa07ef7d64d1352352f9a78055ed"
+    },
+    "output/ui-review/2026-10-05-management/before/06-agents.png": {
+      "width": 1642,
+      "height": 1253,
+      "file": "06-agents.png",
+      "path": "output/ui-review/2026-10-05-management/before/06-agents.png",
+      "sha256": "36ceb8a69e61204b499effd3b3c5a3d0c632c205e5ea93d2bc362a46a0be5403"
+    },
+    "output/imagegen/2026-10-05-management-concepts-01a10b36/06-agents.png": {
+      "width": 1586,
+      "height": 992,
+      "file": "06-agents.png",
+      "path": "output/imagegen/2026-10-05-management-concepts-01a10b36/06-agents.png",
+      "sha256": "ac41df2ec75502f9bf675ee338a2b126313b262ae1ab4388f2b266595d4a6bcf"
+    },
+    "output/ui-review/2026-10-05-management/after-final/06-agents-1440.jpg": {
+      "width": 1425,
+      "height": 900,
+      "file": "06-agents-1440.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/06-agents-1440.jpg",
+      "sha256": "f02ef502082e90d61225afb469dcb7fd15ddb50734f72c6acaaf7ec8b219456a"
+    },
+    "output/ui-review/2026-10-05-management/after-final/06-agents-1920.jpg": {
+      "width": 1905,
+      "height": 1080,
+      "file": "06-agents-1920.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-final/06-agents-1920.jpg",
+      "sha256": "8a8e6d78cc64655ebde6cd25c52ab905fe85a0544d145ff0388fdc1ef501e9e7"
+    },
+    "output/ui-review/2026-10-05-management/after-comparison/06-agents-1600.jpg": {
+      "width": 1600,
+      "height": 1000,
+      "file": "06-agents-1600.jpg",
+      "path": "output/ui-review/2026-10-05-management/after-comparison/06-agents-1600.jpg",
+      "sha256": "2e0eb94150ce98215fc27c6508960797bf067f6d5db205283278a8d3e2eb155b"
+    }
+  }
+}

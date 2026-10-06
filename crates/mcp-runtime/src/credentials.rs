@@ -15,12 +15,57 @@ use uuid::Uuid;
 mod tests_live;
 mod vault;
 
+/// Private development values only; bounded, no symlinks and current owner permissions.
+pub fn read_local_values(
+    path: &std::path::Path,
+    allow_missing: bool,
+) -> Result<BTreeMap<Uuid, String>> {
+    #[cfg(unix)]
+    {
+        use std::{
+            io::Read,
+            os::unix::fs::{MetadataExt, OpenOptionsExt},
+        };
+        let file = match std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(nix::libc::O_NOFOLLOW)
+            .open(path)
+        {
+            Ok(file) => file,
+            Err(error) if allow_missing && error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(BTreeMap::new());
+            }
+            Err(_) => return Err(RuntimeError("credential_unavailable")),
+        };
+        let metadata = file
+            .metadata()
+            .map_err(|_| RuntimeError("credential_unavailable"))?;
+        if !metadata.is_file()
+            || metadata.mode() & 0o077 != 0
+            || metadata.uid() != nix::unistd::Uid::effective().as_raw()
+        {
+            return Err(RuntimeError("credential_file_invalid"));
+        }
+        let mut bytes = Vec::new();
+        file.take(8 * 1024 * 1024 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| RuntimeError("credential_unavailable"))?;
+        if bytes.len() > 8 * 1024 * 1024 {
+            return Err(RuntimeError("credential_file_invalid"));
+        }
+        serde_json::from_slice(&bytes).map_err(|_| RuntimeError("credential_file_invalid"))
+    }
+    #[cfg(not(unix))]
+    Err(RuntimeError("credential_file_unsupported"))
+}
+
 #[derive(Clone, Deserialize)]
 #[serde(tag = "provider", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SecretReference {
     Environment { name: String },
     OsStore { account: String },
     Vault { source: String, field: String },
+    LocalFile { path: PathBuf, key: Uuid },
 }
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -292,7 +337,7 @@ fn variable(name: &str) -> bool {
             .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
         && !name.as_bytes()[0].is_ascii_digit()
 }
-fn environment_destination(name: &str) -> bool {
+pub fn environment_destination(name: &str) -> bool {
     variable(name)
         && !name.starts_with("RECOLLECT_")
         && !name.starts_with("DYLD_")
@@ -326,7 +371,7 @@ fn environment_destination(name: &str) -> bool {
                 | "POSTGRES_PASSWORD"
         )
 }
-fn header_destination(name: &str) -> bool {
+pub fn header_destination(name: &str) -> bool {
     http::HeaderName::from_bytes(name.as_bytes()).is_ok()
         && !name.starts_with("mcp-")
         && !name.starts_with("proxy-")
@@ -400,6 +445,15 @@ async fn resolve(
             .and_then(serde_json::Value::as_str)
             .ok_or(RuntimeError("credential_value_invalid"))?
             .to_owned(),
+        SecretReference::LocalFile { path, key } => {
+            let values = tokio::task::spawn_blocking(move || read_local_values(&path, false))
+                .await
+                .map_err(|_| RuntimeError("credential_unavailable"))??;
+            values
+                .get(&key)
+                .cloned()
+                .ok_or(RuntimeError("credential_unavailable"))?
+        }
     };
     // Exact redaction uses the shared minimum of four bytes.
     if value.len() < 4 || value.len() > 16384 || value.contains('\0') {

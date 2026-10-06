@@ -1,3 +1,4 @@
+import { CodeBlock } from "./components/CodeBlock";
 import { useState } from "react";
 import {
   Alert,
@@ -103,7 +104,10 @@ export function McpRunDialog({
         </Text>
         <details>
           <summary>Input schema</summary>
-          <Code block>{JSON.stringify(tool.tool.inputSchema, null, 2)}</Code>
+          <CodeBlock
+            language="json"
+            code={JSON.stringify(tool.tool.inputSchema, null, 2)}
+          />
         </details>
         <Textarea
           label="Tool arguments"

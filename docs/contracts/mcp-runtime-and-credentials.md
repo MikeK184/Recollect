@@ -2,6 +2,43 @@
 
 Status: accepted
 
+### Browser-managed credential provisioning — 2026-10-05
+
+The user's approval of the config/secret-entry concept authorizes an explicit
+installation-owner browser provisioning path for central connections. Existing
+Vault/environment/OS-store bindings and local/private runner setup stay valid.
+`POST /api/brains/{brain}/mcp/connections/{id}/credentials` requires an owner
+browser session, Brain admin, open Brain, exact current connection revision,
+central placement and a currently approved credential alias. It accepts bounded
+masked header or environment values. Existing provider references are selected
+through approved connection aliases rather than copied into this endpoint. It
+never grants Use/Manage/Share, executes a tool or changes a target.
+
+The installation-local file provider reuses ADR 0003's existing private-file
+credential writer, in a separate sibling MCP credential file. Bindings retain
+only file/key references, exact connection/alias/runner, allowed header names and
+literal prefixes. Files are bounded, atomically written at mode 0600, with
+symlink/ownership/permission checks on runtime reads. No values enter PostgreSQL,
+manifest/configuration, audit, generated schemas, model input or response. This
+is the current installation's local development provider, not a general Vault
+replacement or a hardened shared-deployment claim. The UI names this destination
+honestly. Environment/OS-store/Vault references remain selectable for existing
+operator-managed aliases; browser provisioning never writes to Vault or another
+runner. Missing provider values fail closed without fallback.
+
+The central executor uses `RECOLLECT_MCP_CREDENTIALS_FILE` when configured;
+otherwise its credential bindings are a sibling of `RECOLLECT_CREDENTIAL_FILE`.
+Only the exact selected binding is changed. The runtime continues to resolve
+after authority checks, redact exact values and rotate compatible instances.
+Secret fields and raw config are cleared on close/success/authority loss and
+are never placed in URLs, local storage, caches or diagnostic errors.
+
+HTTP inspection may receive explicit allowed headers transiently under the same
+owner boundary. It performs only bounded initialize/list-tools, forbids routing,
+cookie/protocol headers and redirects, sanitizes returned metadata with the
+exact supplied values and never stores those values. Editing target/auth/config
+invalidates the inspection preview. Actual tool use remains independently granted.
+
 ## Source
 
 [ADR 0008](../adr/0008-managed-mcp-runtime.md), the
@@ -177,17 +214,24 @@ Hosted HTTP services are never terminated; only our transport is closed.
 ### Credential-provider boundary
 
 The selected runner reads a bounded operator-owned JSON binding file named by
-`RECOLLECT_MCP_CREDENTIALS_FILE`; absence means no credential bindings. Each entry
+`RECOLLECT_MCP_CREDENTIALS_FILE`; central execution uses the private sibling
+`mcp-bindings` file when the override is absent. Paired runners retain their
+operator-configured binding boundary. Each entry
 binds exact connection UUID, approved alias and runner reference to delivery
 mappings. Environment delivery maps approved destination variable names to a
 provider reference. HTTP delivery maps approved header names to a reference and
 optional literal prefix (for example `Bearer `). Host/routing/cookie/protocol
 headers cannot be overridden. A binding cannot alter the approved target.
-These files contain references only, never secret values; neither models nor
-Brain configuration APIs can edit the provider mapping.
+These files contain references only, never secret values. Models and ordinary
+Brain configuration APIs cannot edit provider mappings. The explicit owner
+provisioning endpoint may update exact central bindings under the October 5
+amendment above.
 
 Supported initial references are `environment` with an exact variable name and
 `os_store` with an entry in service `recollect-mcp` and a non-secret account key.
+The October 5 browser-managed development provider adds `local_file` with an
+exact path and opaque UUID key; its bounded file must be owned by the executor,
+private (0600), regular and opened without following symlinks.
 Missing/locked/short/oversized values fail before dispatch, without a fallback.
 Values must contain 4–16,384 bytes, matching the shared exact-value redactor's
 minimum; shorter values cannot provide the promised exact-output protection.
@@ -296,3 +340,32 @@ MCP tools and host refresh are slice 25; governed observation capture is slice 2
 General OAuth enrollment, arbitrary shell/image execution, detached daemons,
 universal connector adaptation, automatic effectful retries and mobile UI are
 outside this slice. These exclusions do not defer any named foundation capability.
+
+## Desktop session observation — 2026-10-04
+
+The bounded runtime read returns up to 50 authorized visible SDK sessions, sorting
+raw active states first. `current_configuration` qualifies whether the instance
+matches the currently enabled connection revision and approved enabled definition
+revision visible to the actor. Stale configuration instances cannot establish
+current readiness. Runner lease loss still rewrites active state to `lost`.
+
+Desktop Connections separates these observed sessions from configuration and
+recorded successful calls. An absent instance in a bounded read is only absence
+in that observation. Remote service processes are not controlled by this view.
+Explicit Pause/Enable use updates the existing connection with its original
+revision and all other fields preserved; it does not probe or launch a server,
+expand tool grants or claim cancellation of dispatched work.
+
+## Stable inline connection editing — 2026-10-05
+
+The Connections inspector edits its existing configuration rows in place.
+Identity, navigation tabs, test status and tool-access sections remain present.
+Saving never tests or executes a tool. The editor retains masked secret entry,
+approved schemas and placement/credential restrictions. A configuration revision
+conflict preserves the draft and requires explicit reload; a failed current
+authority refresh hides sensitive configuration. Connection configuration and
+credential provisioning remain separate operations: a failed credential step
+reports the configured connection and permits only that unfinished provisioning
+step to retry against its saved revision, without duplicate creation/configuration
+mutation. Name/URL/environment/configuration changes invalidate applicable prior
+test evidence through the existing canonical revision rules.

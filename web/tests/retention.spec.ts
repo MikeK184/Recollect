@@ -78,27 +78,57 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   });
   await page.goto("/brains/" + brain + "/settings?tab=privacy");
   await expect(
-    page.getByRole("heading", { name: "Retention & privacy" }),
+    page.getByRole("heading", { name: "Privacy", exact: true }),
   ).toBeVisible();
-  await openDetails(page, "Advanced retention and storage controls");
   await page
-    .getByRole("button", { name: "Edit retention", exact: true })
+    .getByRole("button", { name: "Edit privacy settings", exact: true })
     .click();
-  let dialog = page.getByRole("dialog", {
-    name: "Retention policy",
+  let dialog = page.getByRole("form", {
+    name: "Privacy settings",
     exact: true,
+  });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    dialog.getByLabel("Maximum text per event · KiB", { exact: true }),
+  ).toBeEditable();
+  await page.screenshot({
+    path: "../.cache/actionable-privacy-inline.png",
+    animations: "disabled",
   });
   await dialog.getByLabel("Raw sessions · days", { exact: true }).fill("14");
   await dialog
-    .getByRole("button", { name: "Save retention policy", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
-  await expect(page.getByText(/Raw sessions: 14 days/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit privacy settings", exact: true })).toBeVisible();
+  await expect(dialog.getByLabel("Raw sessions · days", { exact: true })).toHaveValue("14");
+  await page
+    .getByRole("button", { name: "Edit privacy settings", exact: true })
+    .click();
+  let storageChanged = false;
+  await page.route(`**/api/brains/${brain}/evidence`, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.policy.allow_document_content = false;
+    storageChanged = true;
+    await route.fulfill({ response, json: body });
+  });
+  await expect(
+    page.getByText(
+      "Privacy settings changed elsewhere. Cancel and reopen to edit them.",
+    ),
+  ).toBeVisible();
+  expect(storageChanged).toBe(true);
+  await expect(
+    page.getByRole("button", { name: "Save changes", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.unroute(`**/api/brains/${brain}/evidence`);
+  await expect(
+    page.getByRole("heading", { name: "Privacy", exact: true }),
+  ).toBeVisible();
   await page.goto(`/brains/${brain}/sources`);
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
-    .click();
-  await page
-    .getByRole("button", { name: "Source history & actions", exact: true })
     .click();
   await openDetails(page, "More source actions");
   await page
@@ -118,20 +148,26 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     dialog.getByText("Excerpt retained. It is available as a separate source."),
   ).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  const lineage = page.getByRole("dialog", {
+    name: "Knowledge lineage",
+    exact: true,
+  });
+  await expect(lineage).toBeVisible();
+  await expect
+    .poll(() =>
+      lineage.evaluate((element) => element.contains(document.activeElement)),
+    )
+    .toBeTruthy();
   await page.keyboard.press("Escape");
+  await expect(lineage).not.toBeVisible();
   await page.getByRole("button", { name: /Browser retained excerpt/ }).click();
-  await page
-    .getByRole("button", { name: "Source history & actions", exact: true })
-    .click();
   await expect(page.getByTestId("source-content")).toHaveText(
     "Retained excerpt line.\n",
   );
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
-    .click();
-  await page
-    .getByRole("button", { name: "Source history & actions", exact: true })
     .click();
   await openDetails(page, "More source actions");
   await page.getByRole("button", { name: "Erase source", exact: true }).click();
@@ -179,9 +215,17 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     page.getByRole("button", { name: /Browser retained excerpt/ }),
   ).toHaveCount(0);
   await page.goto(`/brains/${brain}/activity?tab=removal`);
-  await page
-    .getByRole("button", { name: "Retry cleanup", exact: true })
-    .click();
+  const retryCleanup = page.getByRole("button", {
+    name: "Retry cleanup",
+    exact: true,
+  });
+  // The worker may have finished central cleanup before this view opens.
+  await expect(
+    page
+      .getByText("Central cleanup complete", { exact: true })
+      .or(retryCleanup),
+  ).toBeVisible();
+  if (await retryCleanup.isVisible()) await retryCleanup.click();
   await expect(
     page.getByText("Central cleanup complete", { exact: true }),
   ).toBeVisible();
@@ -219,7 +263,7 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto(`/brains/${brain}/settings?tab=privacy`);
   await page
-    .getByRole("heading", { name: "Retention & privacy" })
+    .getByRole("heading", { name: "Privacy", exact: true })
     .scrollIntoViewIfNeeded();
   await page.screenshot({ path: "../.cache/ui-retention-desktop.png" });
   expect(errors).toEqual([]);

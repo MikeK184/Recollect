@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
@@ -9,27 +9,35 @@ import {
   Stack,
   Text,
   TextInput,
+  ActionIcon,
 } from "@mantine/core";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Archive, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  GitBranch,
+  Plus,
+} from "lucide-react";
 import { client, result, RequestError, type Brain } from "../../api";
 import type { components } from "../../api-schema";
 import "./brain-deletion.css";
+import "./general-settings.css";
+import { useBrainSearch } from "../../app/useBrainSearch";
 import { useBrain, useWorkspace } from "../../app/context";
 import { useIdempotency } from "../../useIdempotency";
 import { PageHeader } from "../../components/PageHeader";
 import { FeatureTabs, useFeatureTab } from "../../components/FeatureTabs";
 import { SettingsSection } from "../../components/SettingsSection";
 import { ErrorState } from "../../components/AsyncState";
+import { BrainIcon } from "../../components/BrainIcon";
 import { BrainForm } from "../../components/BrainForm";
 import { AccessPanel } from "../../AccessPanel";
 import { ModelsPanel } from "../../ModelsPanel";
-import { CapturePanel } from "../../CapturePanel";
-import { RetentionPanel } from "../../RetentionPanel";
-import { SourcesStoragePolicy } from "../../EvidencePanel";
-import { RepositoryStoragePolicy } from "../../PublicationPanel";
-import { ManagedMemoryPanel } from "./ManagedMemoryPanel";
+
+import { PrivacyOverview } from "./PrivacyOverview";
 import { deletionReceiptKey } from "./DeletionNotice";
 type DeletionResult = components["schemas"]["BrainDeletionResult"];
 // Carries the API error code so the confirmation flow can tell a mismatched
@@ -46,33 +54,37 @@ class DeletionError extends RequestError {
 const tabs = [
   { value: "general", label: "General" },
   { value: "access", label: "Access" },
-  { value: "ai", label: "AI & automation" },
-  { value: "capture", label: "Capture" },
-  { value: "privacy", label: "Retention & privacy" },
+  { value: "privacy", label: "Privacy" },
+  { value: "ai", label: "AI permissions" },
 ] as const;
 export function SettingsPage() {
   const brain = useBrain();
   const session = useWorkspace();
+  const navigate = useNavigate();
+  const [search] = useBrainSearch();
+  useEffect(() => {
+    if (search.tab === "capture")
+      void navigate({
+        to: "/brains/$brainId/settings",
+        params: { brainId: brain.id },
+        search: { ...search, tab: "privacy" },
+        replace: true,
+      });
+  }, [navigate, brain.id, search]);
   const [tab, setTab] = useFeatureTab(
     tabs.map((t) => t.value),
     "general",
   );
   return (
-    <>
+    <div className="settings-management-page">
       <PageHeader
         title="Settings"
-        description="Connect your agents once. Memory learns and maintains itself."
+        description="Keep this Brain working the way you want."
       />
       <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
         {tab === "general" && <GeneralSettings />}
         {tab === "access" && (
-          <SettingsSection
-            title="Who can use this Brain"
-            description="Brain access is separate from permission to use connected tools."
-          >
-            <Text size="sm" mb="md">
-              Your role: <strong>{brain.role}</strong>
-            </Text>
+          <section className="settings-members">
             {brain.role === "admin" ? (
               <AccessPanel brain={brain} actor={session.user.id} embedded />
             ) : (
@@ -80,58 +92,12 @@ export function SettingsPage() {
                 A Brain administrator can manage its members and roles.
               </Alert>
             )}
-          </SettingsSection>
+          </section>
         )}
-        {tab === "ai" && (
-          <Stack gap="xl">
-            <ManagedMemoryPanel brain={brain} />
-            <AdvancedSettings label="Advanced model controls">
-              <ModelsPanel brain={brain} section="settings" />
-            </AdvancedSettings>
-          </Stack>
-        )}
-        {tab === "capture" && (
-          <Stack gap="xl">
-            <CapturePanel brain={brain} section="settings" simple />
-            <AdvancedSettings label="Advanced capture controls">
-              <CapturePanel brain={brain} section="settings" />
-            </AdvancedSettings>
-          </Stack>
-        )}
-        {tab === "privacy" && (
-          <Stack gap="xl">
-            <RetentionPanel brain={brain} section="settings" simple />
-            {/* Content retention is a primary privacy control, not an
-                advanced one: it stays visible without expanding anything. */}
-            <SourcesStoragePolicy brain={brain} />
-            <AdvancedSettings label="Advanced retention and storage controls">
-              <Stack gap="xl">
-                <RepositoryStoragePolicy brain={brain} />
-                <RetentionPanel brain={brain} section="settings" />
-              </Stack>
-            </AdvancedSettings>
-          </Stack>
-        )}
+        {tab === "ai" && <ModelsPanel brain={brain} section="settings" />}
+        {tab === "privacy" && <PrivacyOverview brain={brain} />}
       </FeatureTabs>
-    </>
-  );
-}
-function AdvancedSettings({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <details
-      className="feature-advanced"
-      onToggle={(e) => setOpen(e.currentTarget.open)}
-    >
-      <summary>{label}</summary>
-      {open && <div className="feature-advanced-content">{children}</div>}
-    </details>
+    </div>
   );
 }
 function GeneralSettings() {
@@ -140,9 +106,17 @@ function GeneralSettings() {
   const command = useIdempotency();
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [environmentEditing, setEnvironmentEditing] = useState(false);
+  const admin = brain.role === "admin";
+  useEffect(() => {
+    setEditing(false);
+    setConfirming(false);
+  }, [brain.id, admin]);
   const archive = useMutation({
-    mutationFn: async () =>
-      result(
+    mutationFn: async () => {
+      if (!admin)
+        throw new Error("Brain administration is no longer available.");
+      return result(
         await client.PATCH("/api/brains/{id}", {
           params: { path: { id: brain.id } },
           body: { archived: !brain.archived },
@@ -150,7 +124,8 @@ function GeneralSettings() {
             "Idempotency-Key": command.forInput({ archived: !brain.archived }),
           },
         }),
-      ),
+      );
+    },
     onSuccess: () => {
       command.reset();
       setConfirming(false);
@@ -160,63 +135,134 @@ function GeneralSettings() {
   });
   return (
     <>
-      <SettingsSection
-        title="Brain details"
-        description="Make this space easy to recognize."
-      >
-        <Stack gap="md">
-          <Text fw={600}>{brain.name}</Text>
-          <Text c="dimmed">{brain.description || "No description yet."}</Text>
-          <Group>
-            <Badge color={brain.archived ? "gray" : "brand"}>
+      <div className="general-settings-layout">
+        <div className="general-settings-main">
+          <section
+            className="general-settings-card general-brain-details"
+            aria-label="Brain details"
+          >
+            <header className="general-card-heading">
+              <h2>Brain details</h2>
+              {admin && !editing && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  aria-label="Edit Brain"
+                  leftSection={<Pencil size={16} />}
+                  disabled={environmentEditing || archive.isPending}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+            </header>
+            {editing && admin ? (
+              <BrainForm
+                key={brain.id}
+                brain={brain}
+                opened
+                inline
+                disabled={!admin}
+                close={() => setEditing(false)}
+                saved={() => {
+                  setEditing(false);
+                  void cache.invalidateQueries({
+                    queryKey: ["brain", brain.id],
+                  });
+                  void cache.invalidateQueries({ queryKey: ["brains"] });
+                }}
+              />
+            ) : (
+              <>
+                <div className="general-brain-identity">
+                  <BrainIcon
+                    id={brain.id}
+                    revision={brain.icon_revision}
+                    size={56}
+                  />
+                  <strong>{brain.name}</strong>
+                  <Badge
+                    variant="light"
+                    color={brain.archived ? "gray" : "brand"}
+                  >
+                    {brain.archived ? "Archived" : "Active"}
+                  </Badge>
+                </div>
+                <dl className="general-brain-fields">
+                  <div>
+                    <dt>Name</dt>
+                    <dd>{brain.name}</dd>
+                  </div>
+                  <div>
+                    <dt>Description</dt>
+                    <dd className={!brain.description ? "is-empty" : undefined}>
+                      {brain.description || "No description yet."}
+                    </dd>
+                  </div>
+                </dl>
+              </>
+            )}
+            <p className="general-created">
+              Created {new Date(brain.created_at).toLocaleDateString()}
+            </p>
+          </section>
+          <EnvironmentsSettings
+            key={brain.id}
+            brain={brain}
+            blocked={editing || archive.isPending}
+            onEditingChange={setEnvironmentEditing}
+          />
+        </div>
+        <aside
+          className="general-settings-side"
+          aria-label="Brain status and permanent deletion"
+        >
+          <section
+            className="general-settings-card general-brain-status"
+            aria-label="Brain status"
+          >
+            <h2>Brain status</h2>
+            <Badge variant="light" color={brain.archived ? "gray" : "brand"}>
               {brain.archived ? "Archived" : "Active"}
             </Badge>
-            <Text size="xs" c="dimmed">
-              Created {new Date(brain.created_at).toLocaleDateString()}
-            </Text>
-          </Group>
-          {brain.role === "admin" && (
-            <Button
-              variant="default"
-              w="fit-content"
-              leftSection={<Pencil size={16} />}
-              onClick={() => setEditing(true)}
+            {admin && (
+              <Button
+                fullWidth
+                variant="default"
+                disabled={editing || environmentEditing || archive.isPending}
+                leftSection={
+                  brain.archived ? (
+                    <RotateCcw size={16} />
+                  ) : (
+                    <Archive size={16} />
+                  )
+                }
+                onClick={() => {
+                  archive.reset();
+                  setConfirming(true);
+                }}
+              >
+                {brain.archived ? "Reopen Brain" : "Archive Brain"}
+              </Button>
+            )}
+            <p>
+              {brain.archived
+                ? "Content and history are preserved. Reopen to resume work."
+                : "Content and history are preserved when archived."}
+            </p>
+          </section>
+          {admin && (
+            <fieldset
+              className="general-deletion-card"
+              disabled={editing || environmentEditing || archive.isPending}
             >
-              Edit Brain
-            </Button>
+              <DeleteBrainSection brain={brain} />
+            </fieldset>
           )}
-        </Stack>
-      </SettingsSection>
-      {brain.role === "admin" && (
-        <SettingsSection
-          title={brain.archived ? "Reopen this Brain" : "Archive this Brain"}
-          description="Archiving preserves its content and history. It can be reopened later."
-        >
-          <Button
-            variant="default"
-            leftSection={
-              brain.archived ? <RotateCcw size={16} /> : <Archive size={16} />
-            }
-            onClick={() => setConfirming(true)}
-          >
-            {brain.archived ? "Reopen Brain" : "Archive Brain"}
-          </Button>
-        </SettingsSection>
-      )}
-      {brain.role === "admin" && <DeleteBrainSection brain={brain} />}
-      <BrainForm
-        key={brain.updated_at}
-        brain={brain}
-        opened={editing}
-        close={() => setEditing(false)}
-        saved={() => {
-          setEditing(false);
-          void cache.invalidateQueries({ queryKey: ["brain", brain.id] });
-          void cache.invalidateQueries({ queryKey: ["brains"] });
-        }}
-      />
+        </aside>
+      </div>
       <Modal
-        opened={confirming}
+        opened={confirming && admin}
         onClose={() => !archive.isPending && setConfirming(false)}
         title={brain.archived ? "Reopen Brain" : "Archive Brain"}
       >
@@ -490,9 +536,245 @@ function DeletionOutcome({
       )}
       <Text size="xs" c="dimmed">
         Retained copies in managed backups can remain for up to{" "}
-        {result.backup_days} days. Offline host copies are removed on their
-        next check-in.
+        {result.backup_days} days. Offline host copies are removed on their next
+        check-in.
       </Text>
     </Stack>
+  );
+}
+
+function EnvironmentsSettings({
+  brain,
+  blocked = false,
+  onEditingChange,
+}: {
+  brain: Brain;
+  blocked?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [originalName, setOriginalName] = useState("");
+  const cache = useQueryClient();
+  const command = useIdempotency();
+  const canEdit = brain.role === "admin" && !brain.archived && !blocked;
+  const workspace = useQuery({
+    queryKey: ["workspace", brain.id],
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/workspace", {
+          params: { path: { brain: brain.id } },
+          signal,
+        }),
+      ),
+    refetchInterval: 5000,
+    retry: false,
+    gcTime: 0,
+  });
+  useEffect(() => {
+    if (workspace.error || !canEdit) {
+      setEditing(null);
+      setName("");
+    }
+  }, [workspace.error, canEdit]);
+  useEffect(() => {
+    onEditingChange?.(editing !== null);
+    return () => onEditingChange?.(false);
+  }, [editing, onEditingChange]);
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!canEdit || workspace.error || !workspace.data || !editing)
+        throw new Error(
+          "Environment editing is no longer available. Reload settings.",
+        );
+      if (editing !== "new") {
+        const catalogue = result(
+          await client.GET("/api/brains/{brain}/evidence", {
+            params: { path: { brain: brain.id } },
+          }),
+        );
+        const current = catalogue.groups.find(
+          (e) => e.id === editing && e.kind === "environment",
+        );
+        if (!current)
+          throw new Error(
+            "This environment is no longer available. Reload settings.",
+          );
+        return result(
+          await client.PATCH("/api/brains/{brain}/evidence/groups/{group}", {
+            params: { path: { brain: brain.id, group: editing! } },
+            body: { name, description: current.description },
+          }),
+        );
+      }
+      const body = { kind: "environment", name, description: "" };
+      return result(
+        await client.POST("/api/brains/{brain}/evidence/groups", {
+          params: { path: { brain: brain.id } },
+          body,
+          headers: { "Idempotency-Key": command.forInput(body) },
+        }),
+      );
+    },
+    onSuccess: async () => {
+      command.reset();
+      setEditing(null);
+      await cache.invalidateQueries({
+        predicate: (q) => q.queryKey.includes(brain.id),
+      });
+    },
+  });
+  const environments = workspace.error
+    ? []
+    : (workspace.data?.environments ?? []);
+  const missing =
+    !!editing &&
+    editing !== "new" &&
+    !!workspace.data &&
+    !workspace.error &&
+    !environments.some((environment) => environment.id === editing);
+  const cancel = () => {
+    if (save.isPending) return;
+    setEditing(null);
+    setName("");
+    save.reset();
+    command.reset();
+  };
+  const editor = (creating: boolean) => (
+    <form
+      className={`general-environment-editor${creating ? " is-new" : ""}`}
+      role="region"
+      aria-label={creating ? "Add environment" : "Rename environment"}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canEdit && !save.isPending && !missing && name.trim())
+          save.mutate();
+      }}
+    >
+      <h3>{creating ? "New environment" : `Rename ${originalName}`}</h3>
+      <TextInput
+        label="Environment name"
+        placeholder="Staging"
+        required
+        maxLength={120}
+        value={name}
+        autoFocus
+        disabled={save.isPending || missing || !canEdit}
+        onChange={(event) => setName(event.currentTarget.value)}
+      />
+      {missing && (
+        <Alert color="orange">
+          This environment is no longer available. Cancel and reload settings.
+        </Alert>
+      )}
+      <ErrorState error={save.error} />
+      <Group justify="flex-end">
+        <Button variant="default" disabled={save.isPending} onClick={cancel}>
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          loading={save.isPending}
+          disabled={!name.trim() || missing || !canEdit}
+        >
+          Save environment
+        </Button>
+      </Group>
+    </form>
+  );
+  return (
+    <section
+      id="environments"
+      className="general-settings-card general-environments"
+      aria-label="Environments"
+    >
+      <header className="general-card-heading">
+        <div>
+          <h2>Environments</h2>
+          <p>Optional scopes for this Brain.</p>
+        </div>
+        {canEdit && (
+          <Button
+            variant="filled"
+            size="sm"
+            leftSection={<Plus size={16} />}
+            disabled={
+              !!workspace.error ||
+              !workspace.data ||
+              !!editing ||
+              save.isPending
+            }
+            onClick={() => {
+              setName("");
+              save.reset();
+              command.reset();
+              setOriginalName("");
+              setEditing("new");
+            }}
+          >
+            Add environment
+          </Button>
+        )}
+      </header>
+      <ErrorState
+        error={workspace.error}
+        retry={() => void workspace.refetch()}
+      />
+      {workspace.isPending && (
+        <Group py="md">
+          <Loader size="sm" />
+          <Text size="sm" c="dimmed">
+            Loading environments…
+          </Text>
+        </Group>
+      )}
+      <div className="general-environment-list">
+        {environments.map((e) => (
+          <div
+            key={e.id}
+            className={`general-environment-row${editing === e.id ? " is-editing" : ""}`}
+            data-testid="general-environment-row"
+          >
+            <span className="general-environment-icon">
+              <GitBranch size={20} />
+            </span>
+            <div className="general-environment-content">
+              {editing === e.id && canEdit ? (
+                editor(false)
+              ) : (
+                <span>{e.name}</span>
+              )}
+            </div>
+            {canEdit && editing !== e.id && (
+              <ActionIcon
+                variant="subtle"
+                size="md"
+                aria-label={`Rename ${e.name}`}
+                title={`Rename ${e.name}`}
+                disabled={!!editing || save.isPending}
+                onClick={() => {
+                  setName(e.name);
+                  setOriginalName(e.name);
+                  save.reset();
+                  command.reset();
+                  setEditing(e.id);
+                }}
+              >
+                <Pencil size={17} />
+              </ActionIcon>
+            )}
+          </div>
+        ))}
+      </div>
+      {!workspace.error &&
+        workspace.data?.environments.length === 0 &&
+        !editing && (
+          <p className="general-environments-empty">
+            No environments yet. Your agents can work Brain-wide.
+          </p>
+        )}
+      {editing === "new" && canEdit && !workspace.error && editor(true)}
+      {missing && canEdit && editor(false)}
+    </section>
   );
 }

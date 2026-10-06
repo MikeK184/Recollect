@@ -1,3 +1,4 @@
+import { BrainIcon } from "./components/BrainIcon";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   Alert,
@@ -17,18 +18,14 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import {
-  Link,
-  Outlet,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
   ChevronDown,
   LogOut,
   RefreshCw,
+  Users,
 } from "lucide-react";
 import { Enrollment, initialInvitation } from "./Enrollment";
 import {
@@ -41,6 +38,8 @@ import {
 } from "./api";
 import { Brand } from "./components/Brand";
 import { ErrorState as Failure } from "./components/AsyncState";
+import { PageTransition } from "./components/PageTransition";
+import { StatusDot } from "./components/StatusDot";
 import {
   brainNavigation,
   brainTiers,
@@ -231,7 +230,10 @@ function Login() {
                 const code = new URLSearchParams(window.location.search).get(
                   "code",
                 );
-                if (window.location.pathname === "/devices" && code) {
+                if (
+                  ["/devices", "/agents"].includes(window.location.pathname) &&
+                  code
+                ) {
                   try {
                     sessionStorage.setItem(
                       "recollect-pairing-return",
@@ -263,7 +265,11 @@ function Workspace({ user }: { user: Session }) {
   const navigate = useNavigate();
   const path = useRouterState({ select: (state) => state.location.pathname });
   const brainId = path.startsWith("/brains/") ? path.split("/")[2] : undefined;
-  const section = path.split("/")[3] || "ask";
+  const section = path.split("/")[3] || "dashboard";
+  const [lastBrain, setLastBrain] = useState<{
+    actor: string;
+    id: string;
+  } | null>(null);
   const brains = useQuery({
     queryKey: ["brains"],
     queryFn: async ({ signal }) =>
@@ -288,12 +294,45 @@ function Workspace({ user }: { user: Session }) {
   });
   const visibleBrains = brains.isError ? [] : (brains.data ?? []);
   const current = visibleBrains.find((b) => b.id === brainId);
+  useEffect(() => {
+    if (brainId && current && !current.archived && !brains.error)
+      setLastBrain({ actor: user.user.id, id: brainId });
+    else if (
+      brains.error ||
+      (lastBrain &&
+        (lastBrain.actor !== user.user.id ||
+          !visibleBrains.some((b) => b.id === lastBrain.id && !b.archived)))
+    )
+      setLastBrain(null);
+  }, [
+    brainId,
+    current?.id,
+    current?.archived,
+    brains.error,
+    user.user.id,
+    lastBrain?.actor,
+    lastBrain?.id,
+    visibleBrains,
+  ]);
+  const retainedBrain =
+    path === "/connectors" && lastBrain?.actor === user.user.id && !brains.error
+      ? visibleBrains.find((b) => b.id === lastBrain.id && !b.archived)
+      : undefined;
+  const navigationBrain = brainId ? current : retainedBrain;
+  const navigationBrainId = brainId ?? retainedBrain?.id;
+  const navigationSection = brainId ? section : undefined;
+
   const selectedLabel = brainId
-    ? (brainNavigation.find((n) => n.section === section)?.label ?? "Ask")
+    ? section === "tv"
+      ? "Ambient display"
+      : (brainNavigation.find((n) => n.section === section)?.label ?? "Ask")
     : (globalNavigation.find((n) => n.to === path)?.label ?? "Workspace");
   const expired = [brains.error, health.error].some(
     (e) => e instanceof RequestError && e.status === 401,
   );
+  useEffect(() => {
+    if (expired) setLastBrain(null);
+  }, [expired]);
   useEffect(() => {
     document.title = `${current ? `${current.name} · ` : ""}${selectedLabel} · Recollect`;
   }, [current?.name, selectedLabel]);
@@ -303,33 +342,61 @@ function Workspace({ user }: { user: Session }) {
         Skip to content
       </a>
       <div className="workspace">
-        <aside className="sidebar">
+        <aside className="sidebar rc-enter">
           <Link to="/" className="brand-link" aria-label="Recollect home">
             <Brand />
           </Link>
-          {brainId ? (
+          {navigationBrainId ? (
             <>
-              <Link to="/" className="all-brains">
-                <ArrowLeft size={16} />
-                All Brains
-              </Link>
-              <div className="brain-switcher">
+              <nav
+                aria-label="Workspace navigation"
+                className="workspace-nav global-nav brain-global-nav"
+              >
+                {globalNavigation
+                  .filter(
+                    (n) =>
+                      n.to !== "/team" &&
+                      (n.to !== "/connectors" || user.user.installation_owner),
+                  )
+                  .map(({ to, label, icon: Icon }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      search={{}}
+                      className={`nav-item ${path === to ? "selected" : ""}`}
+                      aria-current={path === to ? "page" : undefined}
+                    >
+                      <Icon size={18} />
+                      <span>{label}</span>
+                    </Link>
+                  ))}
+              </nav>
+              <div
+                className={`brain-switcher ${navigationBrain?.icon_revision ? "has-artwork" : ""}`}
+              >
+                {navigationBrain?.icon_revision && (
+                  <BrainIcon
+                    id={navigationBrain.id}
+                    revision={navigationBrain.icon_revision}
+                    size={28}
+                  />
+                )}
                 <label htmlFor="brain-switcher" className="sr-only">
                   Switch Brain
                 </label>
                 <select
                   id="brain-switcher"
-                  value={brainId}
+                  value={navigationBrainId}
                   onChange={(e) => {
                     void navigate({
-                      to: "/brains/$brainId/ask",
+                      to: "/brains/$brainId/dashboard",
                       params: { brainId: e.currentTarget.value },
                       search: {},
                     });
                   }}
                 >
-                  {!current && (
-                    <option value={brainId}>
+                  {!navigationBrain && (
+                    <option value={navigationBrainId}>
                       {brains.isPending ? "Opening Brain…" : "Current Brain"}
                     </option>
                   )}
@@ -342,44 +409,92 @@ function Workspace({ user }: { user: Session }) {
                 </select>
                 <ChevronDown size={15} aria-hidden="true" />
                 <span className="brain-switcher-meta">
-                  {current?.archived
+                  {navigationBrain?.archived
                     ? "Archived Brain"
-                    : current
-                      ? `${current.role} access`
+                    : navigationBrain
+                      ? `${navigationBrain.role} access`
                       : "Knowledge workspace"}
                 </span>
               </div>
               <nav aria-label="Brain navigation" className="workspace-nav">
-                {brainTiers.map((tier) => (
-                  <div
-                    key={tier}
-                    className="nav-group"
-                    role="group"
-                    aria-labelledby={`nav-tier-${tier.toLowerCase()}`}
-                  >
-                    <span
-                      className="nav-label"
-                      id={`nav-tier-${tier.toLowerCase()}`}
+                {brainTiers.map((tier) =>
+                  tier === "Manage" ? (
+                    <details
+                      key={tier}
+                      className="nav-group nav-management"
+                      open={
+                        !brainId ||
+                        navigationSection === "agents" ||
+                        navigationSection === "connections" ||
+                        navigationSection === "settings"
+                      }
+                      role="group"
+                      aria-labelledby={`nav-tier-${tier.toLowerCase()}`}
                     >
-                      {tier}
-                    </span>
-                    {brainNavigation
-                      .filter((n) => n.tier === tier)
-                      .map(({ section: value, label, icon: Icon }) => (
-                        <Link
-                          key={value}
-                          to={`/brains/$brainId/${value}`}
-                          params={{ brainId }}
-                          search={{}}
-                          className={`nav-item ${section === value ? "selected" : ""}`}
-                          aria-current={section === value ? "page" : undefined}
-                        >
-                          <Icon size={18} />
-                          <span>{label}</span>
-                        </Link>
-                      ))}
-                  </div>
-                ))}
+                      <summary
+                        className="nav-label"
+                        id={`nav-tier-${tier.toLowerCase()}`}
+                      >
+                        <span>{tier}</span>
+                        <ChevronDown size={14} aria-hidden="true" />
+                      </summary>
+                      {brainNavigation
+                        .filter((n) => n.tier === tier && !n.hidden)
+                        .map(({ section: value, label, icon: Icon }) => (
+                          <Link
+                            key={value}
+                            to={`/brains/$brainId/${value}`}
+                            params={{ brainId: navigationBrainId }}
+                            search={{}}
+                            className={`nav-item ${navigationSection === value ? "selected" : ""}`}
+                            aria-current={
+                              navigationSection === value ? "page" : undefined
+                            }
+                          >
+                            <Icon size={18} />
+                            <span>{label}</span>
+                          </Link>
+                        ))}
+                    </details>
+                  ) : (
+                    <div
+                      key={tier}
+                      className="nav-group"
+                      role="group"
+                      aria-labelledby={`nav-tier-${tier.toLowerCase()}`}
+                    >
+                      <span
+                        className="nav-label"
+                        id={`nav-tier-${tier.toLowerCase()}`}
+                      >
+                        {tier}
+                      </span>
+                      {brainNavigation
+                        .filter((n) => n.tier === tier && !n.hidden)
+                        .map(({ section: value, label, icon: Icon }) => (
+                          <Link
+                            key={value}
+                            to={`/brains/$brainId/${value}`}
+                            params={{ brainId: navigationBrainId }}
+                            search={{}}
+                            className={`nav-item ${navigationSection === value || (value === "explore" && ["memory", "sources", "repositories"].includes(navigationSection ?? "")) ? "selected" : ""}`}
+                            aria-current={
+                              navigationSection === value ||
+                              (value === "explore" &&
+                                ["memory", "sources", "repositories"].includes(
+                                  section,
+                                ))
+                                ? "page"
+                                : undefined
+                            }
+                          >
+                            <Icon size={18} />
+                            <span>{label}</span>
+                          </Link>
+                        ))}
+                    </div>
+                  ),
+                )}
               </nav>
             </>
           ) : (
@@ -389,7 +504,11 @@ function Workspace({ user }: { user: Session }) {
             >
               <span className="nav-label">Workspace</span>
               {globalNavigation
-                .filter((n) => n.to !== "/team" || user.user.installation_owner)
+                .filter(
+                  (n) =>
+                    n.to !== "/team" &&
+                    (n.to !== "/connectors" || user.user.installation_owner),
+                )
                 .map(({ to, label, icon: Icon }) => (
                   <Link
                     key={to}
@@ -403,6 +522,21 @@ function Workspace({ user }: { user: Session }) {
                     {to === "/" && <small>{visibleBrains.length}</small>}
                   </Link>
                 ))}
+            </nav>
+          )}
+          {user.user.installation_owner && (
+            <nav
+              className="sidebar-utilities"
+              aria-label="Installation navigation"
+            >
+              <Link
+                to="/team"
+                className={`nav-item ${path === "/team" ? "selected" : ""}`}
+                aria-current={path === "/team" ? "page" : undefined}
+              >
+                <Users size={18} />
+                <span>Team</span>
+              </Link>
             </nav>
           )}
           <div className="sidebar-bottom">
@@ -429,34 +563,51 @@ function Workspace({ user }: { user: Session }) {
           </div>
         </aside>
         <main className="main" id="main-content" tabIndex={-1}>
-          <header className="topbar">
+          <header className="topbar rc-enter">
             <div className="breadcrumb">
-              <Link to="/">{current?.name ?? "Workspace"}</Link>
+              <Link to="/">
+                {path === "/connectors"
+                  ? "Installation"
+                  : (current?.name ?? "Workspace")}
+              </Link>
               <span aria-hidden="true">/</span>
               <strong>{selectedLabel}</strong>
             </div>
             <Group gap="sm" wrap="nowrap">
-              <span
-                className={`status-dot ${!health.isError && health.data?.ready ? "healthy" : ""}`}
-                aria-hidden="true"
-              />
-              <Text size="xs" c="dimmed">
-                {health.isPending
-                  ? "Checking services"
-                  : health.isError
-                    ? "Health unavailable"
-                    : health.data?.ready
-                      ? "All services connected"
-                      : "Services need attention"}
-              </Text>
-              {user.user.installation_owner && <OperationsDialog />}
-              <button
-                className="icon-button"
-                aria-label="Refresh service status"
-                onClick={() => void health.refetch()}
+              <Group
+                gap="sm"
+                wrap="nowrap"
+                className={
+                  health.isError || (health.data && !health.data.ready)
+                    ? undefined
+                    : "healthy-service-status"
+                }
               >
-                <RefreshCw size={15} />
-              </button>
+                <StatusDot
+                  tone={
+                    !health.isError && health.data?.ready ? "accent" : "idle"
+                  }
+                  live={false}
+                  size={7}
+                />
+                <Text size="xs" c="dimmed">
+                  {health.isPending
+                    ? "Checking services"
+                    : health.isError
+                      ? "Health unavailable"
+                      : health.data?.ready
+                        ? "Core stores reachable"
+                        : "Services need attention"}
+                </Text>
+                <button
+                  className="icon-button"
+                  aria-label="Refresh service status"
+                  onClick={() => void health.refetch()}
+                >
+                  <RefreshCw size={15} />
+                </button>
+              </Group>
+              {user.user.installation_owner && <OperationsDialog />}
             </Group>
           </header>
           <div className="content">
@@ -472,7 +623,7 @@ function Workspace({ user }: { user: Session }) {
                 </Button>
               </Alert>
             ) : (
-              <Outlet />
+              <PageTransition />
             )}
           </div>
           <footer className="footer">

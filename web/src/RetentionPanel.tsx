@@ -9,6 +9,7 @@ import {
   Loader,
   Modal,
   NumberInput,
+  Select,
   Stack,
   Switch,
   Text,
@@ -18,8 +19,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
+import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
 import { useLineageOverlay } from "./features/knowledge/selection";
+import { TriangleAlert } from "lucide-react";
 type Policy = components["schemas"]["RetentionPolicy"];
 type Settings = components["schemas"]["RetentionSettings"];
 type Erasure = components["schemas"]["ErasureStatus"];
@@ -48,14 +51,20 @@ const policyFields: {
   { key: "audit_days", title: "Activity detail" },
   { key: "backup_days", title: "Managed backup window", max: 365 },
 ];
-function PolicyEditor({
+export function RetentionPolicyEditor({
   brain,
   settings,
   onClose,
+  inline = false,
+  fields,
+  readOnly = false,
 }: {
   brain: string;
   settings: Settings;
   onClose: () => void;
+  inline?: boolean;
+  fields?: (keyof Policy)[];
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState(settings.policy);
   const [base] = useState(settings.change_id);
@@ -73,58 +82,157 @@ function PolicyEditor({
       );
     },
     onSuccess: async () => {
-      await cache.resetQueries({
-        predicate: (q) => q.queryKey.includes(brain),
-      });
+      await Promise.all([
+        cache.resetQueries({
+          predicate: (q) =>
+            q.queryKey.includes(brain) && q.queryKey[0] !== "brain",
+        }),
+        cache.invalidateQueries({ queryKey: ["brain", brain] }),
+      ]);
       onClose();
     },
   });
-  return (
-    <Modal opened onClose={onClose} title="Retention policy" size="lg">
-      <Stack>
-        <Text size="sm">
-          Durations apply from capture time, including existing records.
-          Shortening a duration can make content expire immediately. Extending
-          it does not recover removed content.
-        </Text>
-        {policyFields.map((f) => (
-          <NumberInput
-            key={f.key}
-            label={f.title + " · days"}
-            description={
-              f.optional ? "Leave blank to retain until erased." : undefined
-            }
-            min={1}
-            max={f.max ?? 3650}
-            allowDecimal={false}
-            value={(draft[f.key] as number | null) ?? ""}
-            onChange={(v) =>
-              setDraft({
-                ...draft,
-                [f.key]: typeof v === "number" ? v : f.optional ? null : 0,
-              })
-            }
-          />
-        ))}
-        <Switch
-          label="Allow explicitly retained supporting excerpts"
-          checked={draft.allow_support_excerpts}
-          onChange={(e) =>
-            setDraft({
-              ...draft,
-              allow_support_excerpts: e.currentTarget.checked,
-            })
-          }
-        />
+  const form = (
+    <Stack className={inline ? "privacy-editor" : undefined}>
+      {policyFields
+        .filter((f) => !fields || fields.includes(f.key))
+        .map((f) =>
+          inline ? (
+            <PolicyRow
+              key={f.key}
+              title={f.key === "claim_days" ? "Memory" : f.title}
+              description={
+                f.key === "raw_session_days"
+                  ? "Conversation events and session text"
+                  : f.key === "tool_output_days"
+                    ? "Captured results from managed tools"
+                    : f.optional
+                      ? "Blank keeps content until erased."
+                      : "Expiry runs automatically."
+              }
+            >
+              {readOnly && f.optional ? (
+                <span className="privacy-duration-value">
+                  {settings.policy[f.key] == null
+                    ? "Until erased"
+                    : `${settings.policy[f.key]} days`}
+                </span>
+              ) : (
+                <div className="privacy-policy-row-controls">
+                  <NumberInput
+                    aria-label={f.title + " · days"}
+                    min={1}
+                    max={f.max ?? 3650}
+                    allowDecimal={false}
+                    value={
+                      readOnly
+                        ? ((settings.policy[f.key] as number | null) ?? "")
+                        : ((draft[f.key] as number | null) ?? "")
+                    }
+                    placeholder={f.optional ? "Until erased" : undefined}
+                    readOnly={readOnly}
+                    hideControls={readOnly}
+                    onChange={(v) =>
+                      setDraft({
+                        ...draft,
+                        [f.key]:
+                          typeof v === "number" ? v : f.optional ? null : 0,
+                      })
+                    }
+                  />
+                  <Select
+                    aria-label={f.title + " duration unit"}
+                    data={["days"]}
+                    value="days"
+                    readOnly
+                  />
+                </div>
+              )}
+            </PolicyRow>
+          ) : (
+            <NumberInput
+              key={f.key}
+              label={f.title + " · days"}
+              description={
+                f.optional ? "Leave blank to retain until erased." : undefined
+              }
+              min={1}
+              max={f.max ?? 3650}
+              allowDecimal={false}
+              value={(draft[f.key] as number | null) ?? ""}
+              onChange={(v) =>
+                setDraft({
+                  ...draft,
+                  [f.key]: typeof v === "number" ? v : f.optional ? null : 0,
+                })
+              }
+            />
+          ),
+        )}
+      {(!fields || fields.includes("allow_support_excerpts")) && (
+        <PolicyRow title="Supporting excerpt capture">
+          {readOnly ? (
+            settings.policy.allow_support_excerpts ? (
+              "Allowed"
+            ) : (
+              "Disabled"
+            )
+          ) : (
+            <Switch
+              aria-label="Allow explicitly retained supporting excerpts"
+              checked={draft.allow_support_excerpts}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  allow_support_excerpts: e.currentTarget.checked,
+                })
+              }
+            />
+          )}
+        </PolicyRow>
+      )}
+      {(!fields || fields.includes("backup_days")) && (
         <Text size="xs" c="dimmed">
           The backup window is recorded for the forthcoming backup adapter.
-          External copies remain outside this installation's control.
+          External copies remain outside this installation’s control.
         </Text>
-        <Failure error={save.error} />
-        <Button loading={save.isPending} onClick={() => save.mutate()}>
-          Save retention policy
-        </Button>
-      </Stack>
+      )}
+      {!readOnly && (
+        <div className="privacy-retention-save-line">
+          <Text size="xs" className="privacy-duration-warning">
+            <TriangleAlert size={17} aria-hidden="true" />
+            <span>
+              Shortening a duration can expire existing content immediately.
+              Extending it does not recover removed content.
+            </span>
+          </Text>
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              disabled={save.isPending}
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button loading={save.isPending} onClick={() => save.mutate()}>
+              Save changes
+            </Button>
+          </Group>
+        </div>
+      )}
+      <Failure error={save.error} />
+    </Stack>
+  );
+  return inline ? (
+    form
+  ) : (
+    <Modal
+      opened
+      onClose={() => !save.isPending && onClose()}
+      title="Retention policy"
+      size="lg"
+    >
+      {form}
     </Modal>
   );
 }
@@ -319,8 +427,7 @@ export function EraseAction({
                     {!!preview.data.capture_event_fences && (
                       <Text size="sm">
                         {preview.data.capture_event_fences} capture events will
-                        be removed from host inboxes during
-                        synchronization.
+                        be removed from host inboxes during synchronization.
                       </Text>
                     )}
                     {!!preview.data.model_claim_fences && (
@@ -382,6 +489,7 @@ export function ExcerptAction({
   title: string;
 }) {
   const [opened, setOpened] = useState(false);
+  useLineageOverlay(opened);
   const [first, setFirst] = useState(1);
   const [last, setLast] = useState(1);
   const [name, setName] = useState((title + " excerpt").slice(0, 120));
@@ -479,25 +587,39 @@ export function RetentionPanel({
   section = "settings",
   simple = false,
   selectedRequest,
+  onInspectorChange,
 }: {
   brain: Brain;
   section?: "settings" | "activity";
   simple?: boolean;
   selectedRequest?: string;
+  onInspectorChange?: (opened: boolean) => void;
 }) {
   const focused = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    onInspectorChange?.(editing);
+    return () => onInspectorChange?.(false);
+  }, [editing, onInspectorChange]);
   const [offset, setOffset] = useState(0);
   const policy = useQuery({
     queryKey: ["retention", brain.id],
     enabled: section === "settings",
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/retention", {
+          signal,
           params: { path: { brain: brain.id } },
         }),
       ),
+    refetchInterval: 4000,
+    retry: false,
+    gcTime: 0,
   });
+  useEffect(() => {
+    if (brain.role !== "admin" || brain.archived || policy.isError)
+      setEditing(false);
+  }, [brain.role, brain.archived, policy.isError]);
   const erasures = useQuery({
     queryKey: ["erasures", brain.id, offset],
     enabled: section === "activity",
@@ -518,25 +640,24 @@ export function RetentionPanel({
       <Stack>
         {simple && (
           <Text size="sm">
-            Recollect enforces these retention rules in the background. It
-            revises memory as evidence changes and excludes obsolete information
-            from current recall. You do not need to manage individual expiry
-            dates.
+            Retention runs automatically. Durations differ by content type.
           </Text>
         )}
         <Group justify="space-between">
           <Title order={3}>
-            {section === "settings" ? "Retention & privacy" : "Data removal"}
+            {section === "settings" ? "Retention" : "Data removal"}
           </Title>
-          {section === "settings" && !simple && brain.role === "admin" && (
-            <Button
-              variant="default"
-              disabled={!policy.data}
-              onClick={() => setEditing(true)}
-            >
-              Edit retention
-            </Button>
-          )}
+          {section === "settings" &&
+            brain.role === "admin" &&
+            !brain.archived && (
+              <Button
+                variant="default"
+                disabled={!policy.data}
+                onClick={() => setEditing(true)}
+              >
+                Edit retention
+              </Button>
+            )}
         </Group>
         {section === "settings" && (
           <>
@@ -567,10 +688,22 @@ export function RetentionPanel({
                 </Group>
               </>
             )}
-            <Text size="sm" c="dimmed">
-              Open a source, claim, snapshot or manifest to preview erasure.
-              Collection erasure includes its associated sources.
-            </Text>
+            <details className="feature-details">
+              <summary>Retention details and history</summary>
+              <Text size="sm" mt="sm">
+                Open evidence to preview erasure. Turning storage off only
+                affects future captures.
+              </Text>
+              {brain.role === "admin" && (
+                <Button
+                  component="a"
+                  href={`/brains/${brain.id}/activity?tab=timeline`}
+                  variant="subtle"
+                >
+                  View policy changes in activity
+                </Button>
+              )}
+            </details>
           </>
         )}
         {section === "activity" && (
@@ -640,13 +773,17 @@ export function RetentionPanel({
             )}
           </>
         )}
-        {editing && policy.data && !policy.error && (
-          <PolicyEditor
-            brain={brain.id}
-            settings={policy.data}
-            onClose={() => setEditing(false)}
-          />
-        )}
+        {editing &&
+          brain.role === "admin" &&
+          !brain.archived &&
+          policy.data &&
+          !policy.error && (
+            <RetentionPolicyEditor
+              brain={brain.id}
+              settings={policy.data}
+              onClose={() => setEditing(false)}
+            />
+          )}
       </Stack>
     </section>
   );

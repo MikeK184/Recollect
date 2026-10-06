@@ -5,11 +5,11 @@
 Use CodeGraph 1.6.0 to navigate Cognee while developing Recollect. The local
 launcher lives under `.codex/tools/codegraph/` and always starts in Recollect's
 root. Node.js and npm are required for setup; npm installs the platform package
-containing CodeGraph's own Node runtime. The separate `cognee/` Git checkout
-must already exist.
+containing CodeGraph's own Node runtime. The separate `references/cognee/` Git
+checkout must already exist.
 
-The root [configuration](../../codegraph.json) includes `cognee/` despite the
-parent Git ignore rule. Its own ignore rules still apply. Index/cache/runtime
+The root [configuration](../../codegraph.json) includes `references/cognee/`
+despite the parent Git ignore rule. Its own ignore rules still apply. Index/cache/runtime
 files stay in Recollect; the upstream checkout is read-only input. This setup
 uses the CLI and works in the current session without an MCP restart.
 
@@ -45,12 +45,13 @@ Use file mode to disambiguate or inspect a particular source range:
 
 ```bash
 ./.codex/tools/codegraph/codegraph node \
-  --file cognee/cognee/modules/data/methods/get_authorized_dataset.py \
+  --file references/cognee/cognee/modules/data/methods/get_authorized_dataset.py \
   --offset 11 --limit 20
 ```
 
 Paths in results are relative to Recollect, so core files start with
-`cognee/cognee/` and UI files with `cognee/cognee-frontend/`. Invoking the
+`references/cognee/cognee/` and UI files with
+`references/cognee/cognee-frontend/`. Invoking the
 launcher by its absolute path also works from a nested directory. With no
 arguments it shows status; it does not run the upstream agent installer.
 

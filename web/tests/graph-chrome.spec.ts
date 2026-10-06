@@ -6,7 +6,7 @@ const expect = baseExpect.configure({ timeout: 20_000 });
 // region at 1440x900, its controls live in canvas chrome, coverage limitations
 // collapse to one persistent indicator, the bounded default issues exactly one
 // existing read (no model call, rebuild, analytics or traversal), and the
-// keyboard list alternative stays reachable from the canvas chrome.
+// bounded entity picker stays reachable through the tools menu.
 test("graph canvas dominates its chrome with one bounded default read", async ({
   page,
 }) => {
@@ -203,19 +203,16 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
     page.getByRole("textbox", { name: "Inspect graph entity", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("textbox", {
-      name: "Inspect graph relationship",
-      exact: true,
-    }),
+    page.getByRole("button", { name: "View", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Explore from an entity", exact: true }),
+    page.getByRole("button", { name: "Explore", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Filters", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Graph status", exact: true }),
+    page.getByRole("button", { name: "Graph tools", exact: true }),
   ).toBeVisible();
   // --- Coverage limitation: one persistent indicator, visible collapsed,
   // expanded on demand. The fixture responses are intercepted to report a
@@ -254,30 +251,34 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
   await expect(page.getByText("source text unavailable")).toBeVisible();
   await page.unroute("**/graph/view");
   await page.unroute("**/graph/explore");
-  // --- Keyboard-accessible list alternative, reachable from the canvas chrome.
-  // The Canvas/List switch is a radiogroup in the canvas chrome; its items are
-  // focusable radio inputs activated with Space.
-  const listLabel = page.getByText("List", { exact: true });
-  await expect(listLabel).toBeVisible();
-  const listRadio = page.getByRole("radio", { name: "List", exact: true });
-  await listRadio.focus();
-  await page.keyboard.press("Space");
-  const nodeButtons = page.locator(".graph-node-button");
-  await expect(nodeButtons).toHaveCount(4);
-  // List order is not guaranteed; select the Amber claim by its label.
-  const amberButton = nodeButtons.filter({
-    has: page.getByText("Amber graph service", { exact: true }),
-  });
-  await amberButton.focus();
+  // The flat graph remains the main view. The bounded entity picker stays
+  // reachable by keyboard through the secondary tools menu.
+  const tools = page.getByRole("button", { name: "Graph tools", exact: true });
+  await tools.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByTestId("exploration-node")).toContainText(
-    "Amber graph service",
-  );
+  const entitiesItem = page.getByRole("menuitem", {
+    name: "Entities",
+    exact: true,
+  });
+  await expect(entitiesItem).toBeVisible();
+  await entitiesItem.focus();
+  await page.keyboard.press("Enter");
+  const entities = page.getByRole("dialog", { name: "Entities", exact: true });
+  const choices = entities.getByTestId("graph-entity");
+  await expect(choices).toHaveCount(4);
+  const amber = choices.filter({ hasText: "Amber graph service" });
+  await amber
+    .getByRole("button", { name: "Inspect evidence", exact: true })
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("dialog", {
+      name: "Claim and knowledge history",
+      exact: true,
+    }),
+  ).toContainText("Amber graph service");
   await page.keyboard.press("Escape");
-  // The canvas representation returns from the chrome switch as well.
-  const canvasRadio = page.getByRole("radio", { name: "Canvas", exact: true });
-  await canvasRadio.focus();
-  await page.keyboard.press("Space");
+  await page.keyboard.press("Escape");
   await expect(canvas).toHaveAttribute("data-ready", "true");
   expect(errors).toEqual([]);
 });

@@ -128,6 +128,9 @@ pub struct CaptureFence {
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct CaptureEventView {
+    pub device_id: Option<Uuid>,
+    pub agent_name: Option<String>,
+    pub user_name: String,
     pub receipt: CaptureReceipt,
     pub host: String,
     pub host_version: String,
@@ -136,6 +139,8 @@ pub struct CaptureEventView {
     pub selection: crate::ScopeSelection,
     pub event: Option<CapturedHook>,
     pub source_available: bool,
+    pub processing: Option<String>,
+    pub learning: Option<crate::PipelineLearning>,
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct CaptureEventPage {

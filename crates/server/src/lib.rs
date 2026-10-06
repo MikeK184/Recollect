@@ -5,6 +5,7 @@ pub mod auth;
 mod automation;
 pub mod autonomous;
 pub mod brain_deletion;
+pub mod brain_icons;
 pub mod brains;
 pub mod capture;
 pub mod commands;
@@ -31,6 +32,7 @@ pub mod model_gateway;
 pub mod model_policy;
 pub mod oidc;
 pub mod operations;
+pub mod pipeline;
 pub mod privacy;
 pub mod privacy_journal;
 pub mod procedures;
@@ -75,6 +77,7 @@ pub struct AppState {
     pub mcp_inspections: Arc<tokio::sync::Semaphore>,
     pub answer_capacity: Arc<tokio::sync::Semaphore>,
     pub metrics: Arc<operations::Metrics>,
+    pub model_catalogue: model_policy::catalogue::SharedCache,
 }
 impl AppState {
     pub fn new(pool: sqlx::PgPool, config: config::Config) -> anyhow::Result<Self> {
@@ -90,6 +93,7 @@ impl AppState {
             mcp_inspections: Arc::new(tokio::sync::Semaphore::new(4)),
             answer_capacity: Arc::new(tokio::sync::Semaphore::new(4)),
             metrics: Arc::new(operations::Metrics::default()),
+            model_catalogue: Arc::new(tokio::sync::Mutex::new(Default::default())),
         })
     }
 }
@@ -138,8 +142,12 @@ impl AppState {
         brains::get,
         brains::update,
         brains::audit,
+        brain_icons::get,
+        brain_icons::put,
+        brain_icons::remove,
         health::status,
         operations::status,
+        pipeline::get,
         capture::get_policy,
         capture::update_policy,
         capture::bind,
@@ -167,7 +175,12 @@ impl AppState {
         automation::update,
         mcp::definitions::approve,
         mcp::definitions::inspect_http,
+        mcp::definitions::list,
+        mcp::definitions::get_global,
+        mcp::credentials::provision,
         model_policy::get,
+        model_policy::catalogue::get,
+        model_policy::catalogue::refresh,
         model_policy::update,
         model_policy::history,
         model_policy::usage,
@@ -213,6 +226,7 @@ impl AppState {
         devices::revoke,
         devices::revoke_self,
         evidence::catalogue,
+        evidence::identity,
         evidence::policy,
         evidence::create_group,
         evidence::update_group,
@@ -224,6 +238,8 @@ impl AppState {
         evidence::content,
         evidence::process,
         workspace::catalogue,
+        workspace::repositories,
+        workspace::repository_identity,
         workspace::refresh,
         workspace::alias,
         workspace::create_task,
@@ -396,6 +412,14 @@ pub(crate) fn api_routes() -> Router<AppState> {
                 .delete(brain_deletion::delete),
         )
         .route("/brains/{id}/audit", get(brains::audit))
+        .route(
+            "/brains/{id}/icon",
+            get(brain_icons::get)
+                .put(brain_icons::put)
+                .delete(brain_icons::remove)
+                .layer(DefaultBodyLimit::max(brain_icons::MAX_BYTES)),
+        )
+        .route("/brains/{brain}/pipeline", get(pipeline::get))
         .route("/brains/{id}/access", get(access::get))
         .route("/brains/{id}/grants", post(access::by_name))
         .route(
@@ -477,10 +501,22 @@ pub(crate) fn api_routes() -> Router<AppState> {
         )
         .route("/brains/{brain}/models/usage", get(model_policy::usage))
         .route(
+            "/brains/{brain}/models/catalogue",
+            get(model_policy::catalogue::get).post(model_policy::catalogue::refresh),
+        )
+        .route(
             "/brains/{brain}/automation",
             get(automation::get).put(automation::update),
         )
-        .route("/mcp/definitions", post(mcp::definitions::approve))
+        .route(
+            "/mcp/definitions",
+            get(mcp::definitions::list).post(mcp::definitions::approve),
+        )
+        .route("/mcp/definitions/{key}", get(mcp::definitions::get_global))
+        .route(
+            "/brains/{brain}/mcp/connections/{id}/credentials",
+            post(mcp::credentials::provision),
+        )
         .route(
             "/mcp/definitions/inspect-http",
             post(mcp::definitions::inspect_http),
@@ -542,6 +578,15 @@ pub(crate) fn api_routes() -> Router<AppState> {
             post(evidence::process),
         )
         .route("/brains/{brain}/workspace", get(workspace::catalogue))
+        .route(
+            "/brains/{brain}/workspace/repositories",
+            get(workspace::repositories),
+        )
+        .route(
+            "/brains/{brain}/workspace/repositories/{repository}",
+            get(workspace::repository_identity),
+        )
+        .route("/brains/{brain}/sources/{source}", get(evidence::identity))
         .route(
             "/brains/{brain}/workspace/checkouts",
             post(workspace::refresh).layer(DefaultBodyLimit::max(2 * 1024 * 1024)),

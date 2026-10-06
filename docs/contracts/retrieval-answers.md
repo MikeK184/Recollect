@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The [October 3 automatic retrieval amendment](#automatic-retrieval-strategy--2026-10-03)
+governs the desktop default strategy. Existing explicit API defaults and the
+answer lifecycle below remain compatible.
+
 The [managed experience amendment](memory-managed-experience.md) governs the
 2026-09-28 managed setup, progressive disclosure and owner connector approval
 changes; earlier explicit APIs and stored policies remain compatible.
@@ -190,3 +194,20 @@ questions, action-capable Ask, new MCP administrative tools, historical graph
 reconstruction, unvalidated token streaming, provider installation and automatic
 provider failover. Ordinary Ask does not promise exhaustive corpus search or
 universal correctness from a citation.
+
+## Automatic retrieval strategy — 2026-10-03
+
+RecallRequest gains optional strategy `manual` (compatible API default) or
+`auto` (desktop default on explicit submit). Auto retains exact/lexical anchors
+and all supplied scope, time, mode, manifest and budget constraints. Exact
+record lookup stays exact. Natural-language queries may include semantic recall
+only under current query-embedding policy and a compatible index, using a fresh
+explicit attempt ID and the existing bounded admission/gateway. Relationship
+intent may add bounded knowledge graph expansion from canonical anchor matches
+when current graph inputs are available; history never guesses a current graph.
+Missing/unsupported optional channels are reported in coverage and retain the
+exact/lexical baseline. Database/provider failures after admission are errors,
+not silent retries or unapproved provider fallbacks. Manual channel selections
+remain available unchanged. Auto is deterministic routing, not an LLM planner
+or natural-language time parser; it never widens scope or guesses latest manifest.
+No Ask-driven writes, tool calls or durable conversations are introduced.

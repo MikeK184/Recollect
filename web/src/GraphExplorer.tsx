@@ -1,12 +1,11 @@
 import { iconSize } from "./design/tokens";
-import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Alert,
   Badge,
   Button,
   Card,
   Drawer,
-  SegmentedControl,
   Group,
   Loader,
   NumberInput,
@@ -17,7 +16,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { Search, Settings2, Network, TriangleAlert } from "lucide-react";
+import { Settings2, Network, TriangleAlert } from "lucide-react";
 import { EmptyState } from "./components/AsyncState";
 import "./features/feature-views.css";
 import { useQuery } from "@tanstack/react-query";
@@ -25,7 +24,8 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { GraphChoice } from "./GraphCanvas";
 import { useKnowledgeSelection } from "./features/knowledge/selection";
-const GraphCanvas = lazy(() => import("./GraphCanvas"));
+import { GraphRenderer } from "./GraphRenderer";
+import { GraphSelectionPanel } from "./GraphSelectionPanel";
 type Node = components["schemas"]["GraphNode"];
 type View = components["schemas"]["GraphView"];
 type Path = components["schemas"]["GraphPath"];
@@ -62,8 +62,6 @@ export function GraphExplorer({
 }) {
   const [center, setCenter] = useState(initialCenter);
   const [controlsOpened, setControlsOpened] = useState(false);
-  const [representation, setRepresentation] = useState("canvas");
-  const [entitySearch, setEntitySearch] = useState("");
   const [direction, setDirection] = useState(initialDirection);
   const [hops, setHops] = useState(initialHops);
   const [request, setRequest] = useState({
@@ -90,7 +88,11 @@ export function GraphExplorer({
       max_hops: initialHops,
     });
   }, [initialCenter, initialDirection, initialHops]);
-  const [choice, setChoice] = useState<GraphChoice>(null);
+  const [choice, setGraphChoice] = useState<GraphChoice>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const setChoice = (next: GraphChoice) => {
+    setGraphChoice(next);
+  };
   const [showPath, setShowPath] = useState(false);
   const [expired, setExpired] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
@@ -190,9 +192,31 @@ export function GraphExplorer({
         n.evidence.id === chosenEdge.evidence_id ||
         n.evidence.revision_id === chosenEdge.evidence_id,
     );
-  const { select, selection, available } = useKnowledgeSelection();
+  const { select, available } = useKnowledgeSelection();
   const ownsSelection = useRef(false);
+  const focusInGraph = () => {
+    ownsSelection.current = false;
+    setFocusRequest((value) => value + 1);
+    select(null);
+  };
   const details = useRef<React.ReactNode>(null);
+  function openEvidence(node: Node) {
+    if (available && node.evidence.kind === "claim") {
+      ownsSelection.current = true;
+      select(
+        {
+          kind: "graph-node",
+          key: node.key,
+          claimId: node.evidence.id,
+          revision: node.evidence.revision_id,
+        },
+        details.current,
+      );
+    } else {
+      select(null);
+      inspect(node);
+    }
+  }
   details.current = (
     <>
       {" "}
@@ -230,9 +254,16 @@ export function GraphExplorer({
             <Group>
               <Button
                 size="xs"
+                variant="default"
+                disabled={!!pathNodes.length}
+                onClick={focusInGraph}
+              >
+                Focus in graph
+              </Button>
+              <Button
+                size="xs"
                 onClick={() => {
-                  select(null);
-                  inspect(chosenNode);
+                  openEvidence(chosenNode);
                 }}
               >
                 Inspect selected evidence
@@ -297,12 +328,19 @@ export function GraphExplorer({
             </Text>
             <Text size="xs">Relationship {chosenEdge.id}</Text>
             <Group>
+              <Button
+                size="xs"
+                variant="default"
+                disabled={!!pathNodes.length}
+                onClick={focusInGraph}
+              >
+                Focus in graph
+              </Button>
               {edgeEvidence && (
                 <Button
                   size="xs"
                   onClick={() => {
-                    select(null);
-                    inspect(edgeEvidence);
+                    openEvidence(edgeEvidence);
                   }}
                 >
                   Inspect relationship evidence
@@ -329,43 +367,21 @@ export function GraphExplorer({
     </>
   );
   useEffect(() => {
-    if (!available) return;
-    if (chosenNode && data) {
-      ownsSelection.current = true;
-      select(
-        {
-          kind: "graph-node",
-          key: chosenNode.key,
-          claimId:
-            chosenNode.evidence.kind === "claim"
-              ? chosenNode.evidence.id
-              : undefined,
-          revision:
-            chosenNode.evidence.kind === "claim"
-              ? chosenNode.evidence.revision_id
-              : undefined,
-        },
-        details.current,
-      );
-    } else if (chosenEdge && data) {
-      ownsSelection.current = true;
-      select(
-        {
-          kind: "graph-edge",
-          relation: chosenEdge.relation,
-          evidenceKind: chosenEdge.evidence_kind,
-          evidenceId: chosenEdge.evidence_id,
-        },
-        details.current,
-      );
-    } else if (ownsSelection.current) {
+    if (!data && ownsSelection.current) {
       ownsSelection.current = false;
       select(null);
     }
-  }, [chosenNode, chosenEdge, data, select, available]);
+  }, [data, select]);
   useEffect(() => {
-    if (available && !selection) setChoice(null);
-  }, [selection, available]);
+    if (
+      choice &&
+      (!data ||
+        (choice.kind === "node"
+          ? !nodeMap.has(choice.id)
+          : !edges.some((edge) => edge.id === choice.id)))
+    )
+      setChoice(null);
+  }, [data, nodeMap, edges, choice]);
   const settings = (
     <SimpleGrid cols={{ base: 1, sm: 2 }}>
       <TextInput
@@ -401,67 +417,14 @@ export function GraphExplorer({
       />
     </SimpleGrid>
   );
-  const listedNodes = nodes.filter((node) =>
-    `${node.evidence.label} ${node.evidence.kind} ${node.key}`
-      .toLocaleLowerCase()
-      .includes(entitySearch.toLocaleLowerCase()),
-  );
-  // Canvas chrome: entity search, the keyboard list alternative, exploration
-  // and path controls. On the canvas it floats on the stage edge; in the list
-  // it is a compact row above the list so the switch stays reachable.
-  const canvasChrome = (
-    <div
-      className={
-        representation === "canvas"
-          ? "graph-chrome graph-stage-overlay"
-          : "graph-chrome graph-list-toolbar"
-      }
-      data-graph-chrome=""
-    >
-      <Select
-        className="graph-entity-search"
-        aria-label="Inspect graph entity"
-        placeholder="Find an entity…"
-        leftSection={<Search size={iconSize.small} />}
-        searchable
-        clearable
-        limit={50}
-        value={choice?.kind === "node" ? choice.id : null}
-        data={nodes.map((node) => ({
-          value: node.key,
-          label: `${node.evidence.label} · ${label(node.evidence.kind)}`,
-        }))}
-        onChange={(id) => setChoice(id ? { kind: "node", id } : null)}
-      />
-      <Select
-        className="graph-relationship-search"
-        aria-label="Inspect graph relationship"
-        placeholder="Search directed relationships"
-        searchable
-        clearable
-        limit={50}
-        value={choice?.kind === "edge" ? choice.id : null}
-        data={edges.map((edge) => ({
-          value: edge.id,
-          label: `${nodeMap.get(edge.from)?.evidence.label} → ${nodeMap.get(edge.to)?.evidence.label} · ${label(edge.relation)}`,
-        }))}
-        onChange={(id) => setChoice(id ? { kind: "edge", id } : null)}
-      />
-      <SegmentedControl
-        aria-label="Graph presentation"
-        value={representation}
-        onChange={setRepresentation}
-        data={[
-          { value: "canvas", label: "Canvas" },
-          { value: "list", label: "List" },
-        ]}
-      />
+  const canvasTools = (
+    <>
       <Button
         variant="default"
         leftSection={<Settings2 size={iconSize.small} />}
         onClick={() => setControlsOpened(true)}
       >
-        Explore from an entity
+        Explore
       </Button>
       {path?.status === "path" && data && (
         <Button
@@ -474,7 +437,7 @@ export function GraphExplorer({
           {inPath ? "Return to exploration" : "Show shortest path on canvas"}
         </Button>
       )}
-    </div>
+    </>
   );
   return (
     <section
@@ -518,67 +481,126 @@ export function GraphExplorer({
             leftSection={<Settings2 size={iconSize.small} />}
             onClick={() => setControlsOpened(true)}
           >
-            Explore from an entity
+            Explore
           </Button>
         </div>
       )}
       {data && nodes.length > 0 && (
         <>
           <div className="graph-stage-area">
-            {canvasChrome}
-            {representation === "canvas" ? (
-              <Suspense
-                fallback={
-                  <Group role="status">
-                    <Loader size="sm" />
-                    <Text>Loading graph renderer…</Text>
-                  </Group>
-                }
-              >
-                <GraphCanvas
-                  nodes={nodes}
-                  edges={edges}
-                  choice={choice}
-                  onChoose={setChoice}
-                  pathNodes={pathNodes}
-                  pathEdges={pathEdges}
-                />
-              </Suspense>
-            ) : (
-              <div className="graph-list-view">
-                <TextInput
-                  label="Filter displayed entities"
-                  placeholder="Search the displayed graph…"
-                  value={entitySearch}
-                  onChange={(event) =>
-                    setEntitySearch(event.currentTarget.value)
-                  }
-                  leftSection={<Search size={iconSize.small} />}
-                />
-                <Text size="xs" c="dimmed">
-                  {listedNodes.length} matches in the {nodes.length} displayed
-                  entities. Select an item to inspect its evidence and
-                  relationships.
-                </Text>
-                <div className="graph-node-list">
-                  {listedNodes.map((node) => (
-                    <button
-                      className="graph-node-button"
-                      key={node.key}
-                      onClick={() => setChoice({ kind: "node", id: node.key })}
-                    >
-                      <strong>{node.evidence.label}</strong>
-                      <span className="feature-meta">
-                        {label(node.evidence.kind)}
-                      </span>
-                      <span className="feature-meta">
-                        {node.evidence.qualifications.map(label).join(" · ")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <GraphRenderer
+              key={JSON.stringify([
+                brain.id,
+                view.scope,
+                request.center,
+                request.direction,
+                request.max_hops,
+                inPath,
+              ])}
+              tools={canvasTools}
+              inspector={
+                choice && (chosenNode || chosenEdge) ? (
+                  <GraphSelectionPanel
+                    nodes={nodes}
+                    edges={edges}
+                    choice={choice}
+                    onChoose={setChoice}
+                    onFocus={focusInGraph}
+                    focusEnabled={!pathNodes.length}
+                    description={
+                      chosenNode ? (
+                        <>
+                          {chosenNode.evidence.claim && (
+                            <Text size="xs" c="dimmed">
+                              Review: {label(chosenNode.evidence.claim.review)}{" "}
+                              · Freshness:{" "}
+                              {label(chosenNode.evidence.claim.freshness)} ·
+                              Operational:{" "}
+                              {label(chosenNode.evidence.claim.operational)}
+                            </Text>
+                          )}
+                          {chosenNode.evidence.kind !== "claim" && (
+                            <Text size="xs" c="dimmed">
+                              Recorded evidence in this qualified selection.
+                            </Text>
+                          )}
+                          {!!(
+                            chosenNode.evidence.qualifications.length ||
+                            chosenNode.evidence.claim?.conflicting_claim_ids
+                              .length
+                          ) && (
+                            <Text size="xs" c="orange.9">
+                              {[
+                                ...(chosenNode.evidence.claim
+                                  ?.conflicting_claim_ids.length
+                                  ? ["Unresolved conflict"]
+                                  : []),
+                                ...chosenNode.evidence.qualifications.map(
+                                  label,
+                                ),
+                              ]
+                                .filter(
+                                  (value) =>
+                                    value !==
+                                    `review ${chosenNode.evidence.claim?.review}`,
+                                )
+                                .filter(
+                                  (value, index, values) =>
+                                    values.findIndex(
+                                      (item) =>
+                                        item.toLowerCase() ===
+                                        value.toLowerCase(),
+                                    ) === index,
+                                )
+                                .join(" · ")}
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <Text size="xs" c="dimmed">
+                          {chosenEdge!.family === "provenance"
+                            ? "Recorded evidence contribution; acceptance is separate."
+                            : "Recorded dependency or reference; runtime impact is not established."}
+                        </Text>
+                      )
+                    }
+                    actions={
+                      <Button
+                        size="xs"
+                        disabled={
+                          !!chosenNode &&
+                          chosenNode.evidence.kind !== "claim" &&
+                          !chosenNode.evidence.provenance.length
+                        }
+                        onClick={() => {
+                          if (chosenNode) openEvidence(chosenNode);
+                          else if (edgeEvidence) openEvidence(edgeEvidence);
+                          else if (chosenEdge) {
+                            ownsSelection.current = true;
+                            select({
+                              kind: "graph-edge",
+                              relation: chosenEdge.relation,
+                              evidenceKind: chosenEdge.evidence_kind,
+                              evidenceId: chosenEdge.evidence_id,
+                            });
+                          }
+                        }}
+                      >
+                        Open evidence
+                      </Button>
+                    }
+                    details={details.current}
+                  />
+                ) : null
+              }
+              nodes={nodes}
+              edges={edges}
+              choice={choice}
+              focusRequest={focusRequest}
+              onChoose={setChoice}
+              pathNodes={pathNodes}
+              pathEdges={pathEdges}
+            />
           </div>
           {data.center && nodes.length === 1 && (
             <Text size="sm">
@@ -591,7 +613,7 @@ export function GraphExplorer({
             data-graph-chrome=""
           >
             <Text size="xs" c="dimmed" data-testid="exploration-counts">
-              {nodes.length} displayed entities · {edges.length} directed
+              {nodes.length} loaded entities · {edges.length} directed
               relationships
             </Text>
             <Badge variant="light">
@@ -668,20 +690,6 @@ export function GraphExplorer({
           )}
         </Stack>
       </Drawer>
-      {/* Ask's frozen recalled graph is outside the Knowledge surface. Keep
-          its existing secondary graph controls within that investigation. */}
-      {!available && (
-        <Drawer
-          className="feature-drawer"
-          opened={!!choice && !!data}
-          onClose={() => setChoice(null)}
-          position="right"
-          title={chosenNode ? "Graph entity" : "Graph relationship"}
-          size="md"
-        >
-          {details.current}
-        </Drawer>
-      )}
     </section>
   );
 }

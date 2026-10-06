@@ -82,6 +82,8 @@ cleanup() {
   fi
   ./scripts/docker.sh compose exec -T postgres dropdb -U recollect_admin --force "$RECOLLECT_TEST_DB"
   rm -f ".cache/ui/$RECOLLECT_TEST_DB-credentials.json"
+  rm -f ".cache/ui/$RECOLLECT_TEST_DB-credentials.mcp-bindings.json"
+  rm -f ".cache/ui/$RECOLLECT_TEST_DB-credentials.mcp-secrets.json"
   rm -rf ".cache/ui/$RECOLLECT_TEST_DB-artifacts"
   rm -rf ".cache/ui/$RECOLLECT_TEST_DB-erasure-journal"
   rm -f ".cache/ui/$RECOLLECT_TEST_DB-mcp-runtime.json"
@@ -93,6 +95,7 @@ export RECOLLECT_BIND=127.0.0.1:8788
 export RECOLLECT_PUBLIC_ORIGIN=http://127.0.0.1:8788
 export RECOLLECT_UI_TEST_ORIGIN="$RECOLLECT_PUBLIC_ORIGIN"
 export RECOLLECT_CREDENTIAL_FILE=".cache/ui/$RECOLLECT_TEST_DB-credentials.json"
+export RECOLLECT_MCP_CREDENTIALS_FILE=".cache/ui/$RECOLLECT_TEST_DB-credentials.mcp-bindings.json"
 export RECOLLECT_ARTIFACT_DIR="$PWD/.cache/ui/$RECOLLECT_TEST_DB-artifacts"
 export RECOLLECT_ERASURE_JOURNAL="$PWD/.cache/ui/$RECOLLECT_TEST_DB-erasure-journal"
 export RECOLLECT_STATIC_DIR="$PWD/.cache/ui/web-dist"

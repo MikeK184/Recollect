@@ -48,6 +48,18 @@ workers retain responsibility for revision, expiry, erasure and recovery fences.
 
 ### Human and agent experience
 
+The latest [unified Privacy form](desktop-experience.md#unified-privacy-form-follow-up--2026-10-06)
+uses title separators and a single Edit/Save/Cancel group for the existing fields.
+It preserves independent canonical commands and partial-save receipts, without
+the redundant AI footer link or Activity/backup explanation paragraphs.
+
+The [visible settings follow-up](desktop-experience.md#visible-management-settings-follow-up--2026-10-06)
+supersedes collapsed Privacy/AI field presentation below. Automatic processing,
+capture limits and activity/backup settings use visible inline sections; empty
+privacy exclusions are omitted from the normal read view. Semantic coverage is
+optional diagnostic information, not a required human-review task. Existing
+standing permissions and bounded automatic recovery remain authoritative.
+
 Amended 2026-09-29 by [ADR 0017](../adr/0017-desktop-knowledge-and-ask-experience.md)
 and the [tiered surface amendment](desktop-knowledge-surface.md): the agent
 connection cards named below no longer live inside Connections. Agents is the

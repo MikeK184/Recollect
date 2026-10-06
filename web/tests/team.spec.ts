@@ -58,8 +58,13 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
   await createBrain(page, "Shared team evidence");
   const brainUrl = page.url();
   dialog = page.getByRole("region", { name: "Brain access", exact: true });
-  await dialog.getByLabel(/^Account username/).fill(username);
-  await dialog.getByRole("button", { name: "Save direct grant" }).click();
+  await dialog.getByRole("button", { name: "Add member", exact: true }).click();
+  const editMember = page.getByRole("dialog", {
+    name: "Add member",
+    exact: true,
+  });
+  await editMember.getByLabel(/^Account username/).fill(username);
+  await editMember.getByRole("button", { name: "Save direct grant" }).click();
   await expect(
     dialog.getByText("Effective access is now reader."),
   ).toBeVisible();
@@ -76,9 +81,18 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
     member.getByRole("button", { name: "Edit Brain", exact: true }),
   ).toHaveCount(0);
   const memberCard = dialog
-    .locator(".mantine-Card-root")
+    .getByTestId("brain-member")
     .filter({ has: page.getByText(username, { exact: true }) });
-  await memberCard.getByRole("button", { name: "Remove direct grant" }).click();
+  await memberCard
+    .getByRole("button", { name: `Manage ${username}`, exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Remove direct grant", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Remove direct access", exact: true })
+    .getByRole("button", { name: "Remove grant", exact: true })
+    .click();
   await expect(dialog.getByText("Effective access is now none.")).toBeVisible();
   await expect(
     member.getByRole("heading", { name: "Settings", level: 1, exact: true }),
@@ -95,12 +109,20 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
       has: page.getByRole("button", { name: "Disable", exact: true }),
     });
   await account.getByRole("button", { name: "Disable", exact: true }).click();
+  await page
+    .getByRole("tab", { name: "Account activity", exact: true })
+    .click();
   await expect(page.getByText("account status · disabled")).toBeVisible();
   await member.reload();
   await expect(
     member.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
-  await page.screenshot({ path: "../.cache/ui/team.png", fullPage: true });
+  await page.getByRole("tab", { name: "Accounts", exact: true }).click();
+  await page.screenshot({
+    animations: "disabled",
+    path: "../.cache/ui/team.png",
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   await expect(
@@ -174,7 +196,7 @@ test("organization sign-in obtains a Brain role from a real signed group claim",
     page.getByText("organization-browser", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("heading", { name: "Organization evidence", exact: true })
+    .getByRole("link", { name: "Open Organization evidence", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Brain navigation" })
@@ -182,7 +204,7 @@ test("organization sign-in obtains a Brain role from a real signed group claim",
     .click();
   await page.getByRole("tab", { name: "Access", exact: true }).click();
   await expect(page.getByText("Your role:")).toContainText("reader");
-  await expect(page.getByRole("button", { name: "Manage access" })).toHaveCount(
+  await expect(page.getByRole("button", { name: "Access tokens" })).toHaveCount(
     0,
   );
   await page.screenshot({

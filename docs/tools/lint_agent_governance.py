@@ -205,7 +205,7 @@ class Validator:
     def validate(self) -> list[str]:
         for file in REQUIRED:
             self.read(file)
-        require("/cognee/" in self.read(".gitignore").splitlines(), ".gitignore", "ignore the separate /cognee/ checkout")
+        require("/references/" in self.read(".gitignore").splitlines(), ".gitignore", "ignore the separate /references/ research checkouts")
         self.configuration()
 
         accepted: set[str] = set()

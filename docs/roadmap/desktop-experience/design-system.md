@@ -1,9 +1,12 @@
 # Accepted desktop design system
 
 Status: accepted
-Evidence date: 2026-09-26
+Evidence date: 2026-10-03 (light-palette correction); originally 2026-09-26
 Accepted: 2026-09-26, by explicit user approval and implementation request.
-Scope: desktop browser UI, light theme only; implementation follows the desktop contract.
+Amended: 2026-10-03, by explicit user correction restoring the original light
+cream/ink/sage palette while retaining the new motion and visual features.
+Scope: desktop browser UI, light theme only; implementation follows the
+desktop contract.
 
 The [desktop contract](../../contracts/desktop-experience.md) makes these tokens
 and shared visual rules authoritative for the redesign. Add the user's requested
@@ -71,6 +74,52 @@ Accepted application extensions, not original Atlas primitives:
 
 Do not copy the reference site's large navy marketing hero into the app.
 The sidebar and main canvas stay light. No dark-mode switch.
+
+Terminal card body / title bar: light paper `#fffdf8` / cream `#eee9de`.
+Safe ANSI foregrounds use the readable semantic/category shades; white maps to
+ink. macOS traffic-light dots remain decorative red/yellow/green.
+
+### Category accents
+
+Each record category carries an accent plus a low-alpha tint (~12–16%) used
+for badges, glows and selection. Status meaning stays non-color: icons and
+labels always accompany these marks.
+
+| Category | Accent | Tint |
+| --- | --- | --- |
+| claim (memory kind) | `#365f8c` | `rgba(127, 159, 198, 0.14)` |
+| decision (memory kind) | `#805817` | `rgba(232, 184, 97, 0.14)` |
+| procedure (memory kind) | `#715389` | `rgba(165, 143, 189, 0.14)` |
+| handover (memory kind) | `#286963` | `rgba(122, 181, 178, 0.14)` |
+| source | `#3d6b59` | `rgba(143, 183, 162, 0.14)` |
+| graph-node | `#326747` | `rgba(143, 183, 162, 0.14)` |
+| tool-call | `#884568` | `rgba(189, 143, 165, 0.14)` |
+
+### Motion system
+
+Shared motion tokens (durations, easings, stagger step) live in the token
+layer and are exposed as CSS custom properties. Entrances use the emphasized
+decelerate curve; state changes use the standard curve.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| duration fast | `150ms` | Hover/border/state changes |
+| duration base | `250ms` | Entrance fade+rise, page transitions |
+| duration slow | `450ms` | Larger region entrances |
+| duration ambient | `1200ms` | Pulse rings, skeleton shimmer |
+| easing standard | `cubic-bezier(0.2, 0, 0, 1)` | State changes |
+| easing emphasized | `cubic-bezier(0.16, 1, 0.3, 1)` | Entrances (decelerate) |
+| stagger step | `40ms` | List/card entrance stagger (capped at 12 steps) |
+
+Shared primitives: entrance fade+rise with stagger (`rc-enter`, `Stagger` /
+`staggerStyle`), pulsing status dot for processing/live indicators
+(`StatusDot`), skeleton loader blocks (`Skeleton` / `SkeletonRows`), and a
+page-content transition wrapper on route changes (`PageTransition`).
+`prefers-reduced-motion: reduce` disables all transform/opacity animation —
+durations and delays collapse to zero so content appears instantly and fully.
+
+The Recollect mark uses the original dark ink strokes and sage accent paths
+on light surfaces; it stays self-contained and titled.
 
 ## Typography and geometry
 
@@ -235,3 +284,33 @@ switch, offline fonts, component states, keyboard interaction and desktop width.
 Preserve domain regressions while adding a small number of meaningful visual
 baselines. Run frontend build/typecheck and repository checks in implementation.
 Mockup review alone is not functional, runtime, or accessibility acceptance.
+
+## Approved management layout — 2026-10-05
+
+The [accepted management amendment](../../contracts/desktop-experience.md#approved-management-concepts--2026-10-05)
+and retained six-image concept set guide Connections, setup, global Connectors,
+Privacy, AI permissions and Agents. Use the existing serif headings, cream surfaces,
+ink actions, sage selections and shared icons. Reuse semantic tokens in
+`features/management.css`; no separate theme or generated illustration data.
+
+Keep global navigation directly above the Brain selector. Connection rows and a
+selected inspector share the same top edge; primary actions stay visible at
+laptop height. Broad setup forms use a persistent action footer and scrollable
+fields. Global connector metadata uses real tiles plus useful import/review context.
+Policy labels retain their row position between read and edit. AI purposes and
+content permissions remain visible, with actual coverage exceptions emphasized;
+dimensions, histories and provider checks belong in explicit diagnostics. Agent
+setup and memory-read checks foreground copy controls with optional full prompts.
+
+Independent acceptance compares baseline, approved concepts and deployed screens
+at 1440 × 900 and 1920 × 1080, including long forms, empty/filter states and Cancel.
+
+## Management fidelity correction — 2026-10-05
+
+The user rejected the delivered visual match and now prioritizes faithfully
+matching the six final approved PNGs. Measure composition at 1586 × 992 and
+verify practical desktop widths. Keep the original brand and true inventory,
+but reproduce header alignment, typography hierarchy, icon weights, compact
+fields and card grouping. Prior structural acceptance does not establish visual
+fidelity. The [follow-up pack](../execution/archive/desktop-management-vision-fidelity.md)
+requires independent inspection of fresh actual captures and fixes.

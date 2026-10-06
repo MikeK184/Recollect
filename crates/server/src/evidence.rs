@@ -254,6 +254,19 @@ async fn summary(
     .ok_or_else(Error::missing)?;
     Ok(row.dto(&state.config.artifact_dir).await)
 }
+
+#[utoipa::path(get,path="/api/brains/{brain}/sources/{source}",operation_id="sourceIdentity",params(("brain"=Uuid,Path),("source"=Uuid,Path)),responses((status=200,body=SourceSummary)))]
+pub async fn identity(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path((brain, source)): Path<(Uuid, Uuid)>,
+) -> Result<Json<SourceSummary>> {
+    let mut tx = auth.tx(&state.pool).await?;
+    db::require_role(&mut tx, brain, false).await?;
+    let value = summary(&state, &mut tx, brain, source).await?;
+    tx.commit().await?;
+    Ok(Json(value))
+}
 async fn version_row(
     tx: &mut Transaction<'_, Postgres>,
     brain: Uuid,

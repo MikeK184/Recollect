@@ -1,6 +1,42 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
+import { parse as parseToml } from "smol-toml";
+import {
+  directAgentConfig,
+  directAgentCredentialName,
+} from "../src/features/agents/agentConfig";
+
+test("native direct configuration round-trips headers and distinct issuance labels", () => {
+  // Generated locally only: no credential value lives in this fixture/source/output.
+  const token = randomUUID();
+  const url = "https://memory.example.test/api/brains/example/mcp/agent";
+  const codex = parseToml(directAgentConfig("codex", url, token)) as {
+    mcp_servers: {
+      recollect: { url: string; http_headers: { Authorization: string } };
+    };
+  };
+  expect(codex.mcp_servers.recollect.url).toBe(url);
+  expect(
+    codex.mcp_servers.recollect.http_headers.Authorization ===
+      `Bearer ${token}`,
+  ).toBe(true);
+  const claude = JSON.parse(directAgentConfig("claude", url, token)).mcpServers
+    .recollect;
+  const opencode = JSON.parse(directAgentConfig("opencode", url, token)).mcp
+    .servers.recollect;
+  for (const server of [claude, opencode]) {
+    expect(server.headers.Authorization === `Bearer ${token}`).toBe(true);
+    expect(server.url).toBe(url);
+  }
+  expect(claude.type).toBe("http");
+  expect(opencode.type).toBe("remote");
+  expect(opencode.oauth).toBe(false);
+  const first = directAgentCredentialName("a".repeat(90), randomUUID());
+  const second = directAgentCredentialName("a".repeat(90), randomUUID());
+  expect(first.length).toBeLessThanOrEqual(120);
+  expect(first === second).toBe(false);
+});
 
 async function setup(page: Page, name: string) {
   await page.goto("/");
@@ -40,68 +76,63 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
   page,
 }) => {
   const { brain, base, api } = await setup(page, "Direct MCP proof");
-  await page.goto(`/brains/${brain.id}/connections?tab=coding-agents`);
-  await expect(page).toHaveURL(
-    new RegExp(`/brains/${brain.id}/agents\\?tab=setup$`),
-  );
-  await page
-    .getByRole("button", { name: "Connect coding agent", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Install the Recollect plugin",
-  );
-  await expect(page.getByRole("dialog")).toContainText(
-    "Optional execution runner",
-  );
-  for (const [width, height] of [
-    [1280, 800],
-    [1440, 900],
-    [1920, 1080],
-  ]) {
-    await page.setViewportSize({ width, height });
-    const setup = page.getByRole("dialog");
-    await setup
-      .getByText("Step 1 · Install the Recollect plugin", { exact: true })
-      .scrollIntoViewIfNeeded();
-    expect(
-      await setup.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth + 1,
-      ),
-    ).toBe(true);
-    await page.screenshot({
-      path: `../.cache/ui/plugin-setup-${width}-top.png`,
-    });
-    await setup
-      .getByText("Optional execution runner", { exact: true })
-      .scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: `../.cache/ui/plugin-setup-${width}-bottom.png`,
-    });
-  }
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page
-    .getByText("Advanced · Direct MCP connection", { exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Set up direct MCP", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog").last();
-  await dialog.getByLabel("Store your access token", { exact: true }).click();
-  await page
-    .getByRole("option", { name: "Environment variable", exact: true })
-    .click();
-  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    'bearer_token_env_var = "RECOLLECT_MCP_TOKEN"',
-  );
-  await expect(dialog.getByTestId("agent-credential-command")).toContainText(
-    "read -r -s RECOLLECT_MCP_TOKEN",
-  );
-  await expect(dialog.getByText(/It is a variable name/)).toBeVisible();
-  await expect(dialog.getByText(/recollect-agent pair/)).not.toBeVisible();
-  await page.screenshot({
-    path: "../.cache/ui/direct-mcp.png",
-    fullPage: true,
+  const previousPair = await api("/api/devices/pairings", {
+    name: "Codex MCP · Direct MCP proof",
+    host_kind: "codex",
+    integration: "mcp",
   });
+  await api(`/api/devices/pairings/${previousPair.user_code}/approve`, {
+    approve: true,
+  });
+  const previous = await api("/api/devices/pairings/poll", {
+    device_code: previousPair.device_code,
+  });
+  await api("/api/devices/pairings/finish", {
+    device_code: previousPair.device_code,
+  });
+  await page.goto(`/brains/${brain.id}/connections?tab=coding-agents`);
+  await expect(page).toHaveURL(new RegExp(`/brains/${brain.id}/agents$`));
+  await page
+    .getByRole("button", { name: "Connect agent", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Connect a coding agent",
+    exact: true,
+  });
+  let pairings = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/api/devices/pairings")
+    )
+      pairings++;
+  });
+  await expect(dialog.getByTestId("agent-setup-stage-1")).toBeVisible();
+  await expect(dialog.getByTestId("agent-setup-stage-2")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    dialog.getByRole("heading", { name: "Install the plugin", exact: true }),
+  ).toBeVisible();
+  await dialog
+    .getByLabel("Plugin package folder", { exact: true })
+    .fill("/tmp/recollect-plugin");
+  await expect(dialog.getByTestId("agent-plugin-command")).toContainText(
+    "codex plugin marketplace add",
+  );
+  await page.screenshot({
+    path: "../.cache/guided-setup-install.png",
+    animations: "disabled",
+  });
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await dialog.getByRole("button", { name: /^Direct MCP/ }).click();
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: "Next", exact: true }),
+  ).toBeDisabled();
+  expect(pairings).toBe(0);
+  await expect(dialog.getByLabel("Token name", { exact: true })).toHaveValue(
+    "Codex MCP · Direct MCP proof",
+  );
   await dialog
     .getByRole("button", { name: "Create access token", exact: true })
     .click();
@@ -109,27 +140,75 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
   await expect(field).toBeVisible();
   const token = await field.inputValue();
   expect(token.length).toBe(36);
-  await dialog.getByLabel("Store your access token", { exact: true }).click();
-  await page
-    .getByRole("option", { name: "macOS Keychain", exact: true })
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
+    "http_headers = { Authorization =",
+  );
+  expect(
+    (await dialog.getByTestId("agent-setup-command").innerText()).includes(
+      token,
+    ),
+  ).toBe(false);
+  await expect(dialog.getByTestId("agent-credential-command")).toHaveCount(0);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          (window as unknown as { copiedConfig: string }).copiedConfig = value;
+        },
+      },
+    });
+  });
+  await dialog
+    .getByRole("button", { name: "Copy MCP configuration", exact: true })
     .click();
-  const secret = await dialog
-    .getByLabel("Keychain secret · shown once", { exact: true })
-    .inputValue();
-  // Never expose the credential in assertion diagnostics.
-  expect(JSON.parse(secret).Authorization === `Bearer ${token}`).toBe(true);
+  const copied = await page.evaluate(
+    () => (window as unknown as { copiedConfig: string }).copiedConfig,
+  );
+  const parsed = parseToml(copied) as {
+    mcp_servers: { recollect: { http_headers: { Authorization: string } } };
+  };
+  expect(
+    parsed.mcp_servers.recollect.http_headers.Authorization ===
+      `Bearer ${token}`,
+  ).toBe(true);
+  expect(copied.includes("RECOLLECT_MCP_TOKEN")).toBe(false);
+  await dialog
+    .getByRole("button", { name: "Reveal token in configuration", exact: true })
+    .click();
+  expect(
+    (await dialog.getByTestId("agent-setup-command").innerText()).includes(
+      token,
+    ),
+  ).toBe(true);
+  await dialog
+    .getByRole("button", { name: "Hide token in configuration", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  expect((await field.inputValue()) === token).toBe(true);
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: /^Direct MCP/ }),
+  ).toBeDisabled();
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  expect(pairings).toBe(1);
   const configuration = await dialog
     .getByTestId("agent-setup-command")
     .innerText();
-  expect(configuration.includes("http_headers_helper")).toBe(true);
-  expect(configuration.includes("find-generic-password")).toBe(true);
+  expect(configuration.includes("http_headers =")).toBe(true);
   expect(configuration.includes(token)).toBe(false);
   expect(configuration.includes("bearer_token_env_var")).toBe(false);
-  const credentialCommand = await dialog
-    .getByTestId("agent-credential-command")
-    .innerText();
-  expect(credentialCommand.endsWith(" -w")).toBe(true);
-  expect(credentialCommand.includes(token)).toBe(false);
+  const previousRead = await page.request.post(base + "/mcp/agent", {
+    headers: {
+      Authorization: `Bearer ${previous.token}`,
+      Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-11-25",
+    },
+    data: { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} },
+  });
+  expect(previousRead.status()).toBe(200);
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: "application/json, text/event-stream",
@@ -212,9 +291,23 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
     },
   );
   expect(forbidden.status()).toBe(403);
-  await page.keyboard.press("Escape");
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  const activityLink = dialog.getByRole("link", {
+    name: "View recorded activity",
+    exact: true,
+  });
+  await expect(activityLink).toBeVisible();
+  await page.screenshot({
+    path: "../.cache/desktop-final-setup.png",
+    animations: "disabled",
+  });
+  await activityLink.click();
+  await expect(page).toHaveURL(
+    new RegExp(`/brains/${brain.id}/activity[?]tab=capture$`),
+  );
+  await page.goto(`/brains/${brain.id}/agents`);
   await page
-    .getByRole("button", { name: "Connect coding agent", exact: true })
+    .getByRole("button", { name: "Connect agent", exact: true })
     .click();
   await expect(
     page.getByLabel("Access token · shown once", { exact: true }),
@@ -223,12 +316,19 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
     page.getByLabel("Keychain secret · shown once", { exact: true }),
   ).toHaveCount(0);
   const devices = await api("/api/devices");
-  const device = devices.find(
-    (d: { name: string }) => d.name === "Codex MCP · Direct MCP proof",
+  const device = devices.find((d: { name: string }) =>
+    d.name.startsWith("Codex MCP · Direct MCP proof · "),
   );
   expect(Boolean(device?.claimed)).toBe(true);
+  expect(device.host_kind).toBe("codex");
+  expect(device.integration).toBe("mcp");
+  expect("token" in device).toBe(false);
   await api(`/api/devices/${device.id}`, undefined, "DELETE");
   expect((await rpc("tools/list")).status()).toBe(401);
+  const previousDevice = devices.find(
+    (d: { name: string }) => d.name === "Codex MCP · Direct MCP proof",
+  );
+  await api(`/api/devices/${previousDevice.id}`, undefined, "DELETE");
 });
 
 test("name and URL form discovers without calling tools, invalidates edits and saves", async ({
@@ -292,9 +392,10 @@ test("name and URL form discovers without calling tools, invalidates edits and s
       .getByRole("button", { name: "Add connection", exact: true })
       .click();
     const dialog = page.getByRole("dialog", {
-      name: "Add an MCP connector",
+      name: "Add connection",
       exact: true,
     });
+
     await dialog
       .getByRole("textbox", { name: "Server name", exact: true })
       .fill("Fixture HTTP");
@@ -308,6 +409,29 @@ test("name and URL form discovers without calling tools, invalidates edits and s
       dialog.getByText("1 tools found", { exact: true }),
     ).toBeVisible({ timeout: 30000 });
     expect(calls).toBe(0);
+    await page.route("**/api/mcp/definitions/inspect-http", (route) =>
+      route.fulfill({
+        status: 502,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "provider_unavailable",
+          message: "Controlled discovery failure",
+        }),
+      }),
+    );
+    await dialog
+      .getByRole("button", { name: "Find tools", exact: true })
+      .click();
+    await expect(
+      dialog.getByRole("button", { name: "Add server", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      dialog.getByText("1 tools found", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      dialog.getByText("Controlled discovery failure", { exact: true }),
+    ).toBeVisible();
+    await page.unroute("**/api/mcp/definitions/inspect-http");
     await dialog
       .getByRole("textbox", { name: "Server name", exact: true })
       .fill("Renamed HTTP");
@@ -332,6 +456,51 @@ test("name and URL form discovers without calling tools, invalidates edits and s
     ).toBe(true);
     expect(catalogue.profiles).toHaveLength(0);
     expect(calls).toBe(0);
+    const card = page
+      .getByTestId("mcp-connection")
+      .filter({ hasText: "Renamed HTTP" });
+    await card
+      .getByRole("button", { name: "Test connection", exact: true })
+      .click();
+    const check = page.getByRole("dialog", {
+      name: "Test connection · Renamed HTTP",
+      exact: true,
+    });
+    await check
+      .getByRole("button", { name: "Check server", exact: true })
+      .click();
+    await expect(
+      check.getByText("Server responded · 1 tools listed", { exact: true }),
+    ).toBeVisible();
+    expect(calls).toBe(0);
+    // The real handshake is not recorded as a successful tool call.
+    const checked = await api(base + "/mcp");
+    expect(checked.connections[0].last_successful_call_at ?? null).toBeNull();
+    await check.screenshot({
+      path: "../.cache/actionable-connection-test.png",
+      animations: "disabled",
+    });
+    await page.route("**/api/mcp/definitions/inspect-http", (route) =>
+      route.fulfill({
+        status: 502,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "provider_unavailable",
+          message: "Controlled test failure",
+        }),
+      }),
+    );
+    await check
+      .getByRole("button", { name: "Check server", exact: true })
+      .click();
+    await expect(
+      check.getByText("Server check failed", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      check.getByText("Server responded · 1 tools listed", { exact: true }),
+    ).toHaveCount(0);
+    await page.unroute("**/api/mcp/definitions/inspect-http");
+    await page.keyboard.press("Escape");
   } finally {
     await new Promise<void>((resolve) => fixture.close(() => resolve()));
   }
@@ -351,12 +520,13 @@ test("Context7 anonymous documentation probe through Recollect", async ({
     .getByRole("button", { name: "Add connection", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Add an MCP connector",
+    name: "Add connection",
     exact: true,
   });
+  await dialog.getByLabel("Server name", { exact: true }).fill("Context7");
   await dialog
-    .getByRole("button", { name: "Use Context7 · no API key", exact: true })
-    .click();
+    .getByLabel("MCP server URL", { exact: true })
+    .fill("https://mcp.context7.com/mcp");
   const inspected = page.waitForResponse((r) =>
     r.url().endsWith("/api/mcp/definitions/inspect-http"),
   );

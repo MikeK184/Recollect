@@ -16,7 +16,7 @@ import {
   type CSSVariablesResolver,
   type VariantColorsResolver,
 } from "@mantine/core";
-import { fonts, palette, tokens } from "./tokens";
+import { categories, fonts, motion, palette, tokens } from "./tokens";
 
 const sage = [
   palette.selection,
@@ -30,6 +30,28 @@ const sage = [
   palette.inkSoft,
   palette.ink,
 ] as const;
+// Category accent pairs keep Mantine's named colors honest on the light paper
+// surfaces: soft tints for light variants, readable accents for text.
+const categoryRole = (name: string) => {
+  switch (name) {
+    case "blue":
+      return { soft: categories.claim.tint, foreground: categories.claim.color };
+    case "violet":
+      return {
+        soft: categories.procedure.tint,
+        foreground: categories.procedure.color,
+      };
+    case "cyan":
+      return {
+        soft: categories.handover.tint,
+        foreground: categories.handover.color,
+      };
+    case "indigo":
+      return { soft: "rgba(133, 137, 190, 0.14)", foreground: "#55599a" };
+    default:
+      return undefined;
+  }
+};
 const variants: VariantColorsResolver = (input) => {
   const normal = defaultVariantColorsResolver(input);
   const name = input.color ?? input.theme.primaryColor;
@@ -42,9 +64,7 @@ const variants: VariantColorsResolver = (input) => {
           ? { soft: tokens.sidebar, foreground: tokens.secondary }
           : ["brand", "teal", "green"].includes(name)
             ? { soft: tokens.selection, foreground: tokens.accent }
-            : ["blue", "indigo", "violet", "cyan"].includes(name)
-              ? { soft: tokens.sidebar, foreground: tokens.secondary }
-              : undefined;
+            : categoryRole(name);
   if (!role) return normal;
   if (input.variant === "light")
     return {
@@ -102,6 +122,66 @@ export const theme = createTheme({
       palette.field,
       palette.muted,
       palette.inkSoft,
+      palette.inkSoft,
+      palette.ink,
+    ],
+    yellow: [
+      palette.amberSoft,
+      palette.amberSoft,
+      palette.amber,
+      palette.amber,
+      palette.amber,
+      tokens.amber,
+      tokens.amber,
+      tokens.amber,
+      palette.inkSoft,
+      palette.ink,
+    ],
+    blue: [
+      categories.claim.tint,
+      categories.claim.tint,
+      palette.blue,
+      palette.blue,
+      palette.blue,
+      categories.claim.color,
+      categories.claim.color,
+      categories.claim.color,
+      palette.inkSoft,
+      palette.ink,
+    ],
+    violet: [
+      categories.procedure.tint,
+      categories.procedure.tint,
+      palette.violet,
+      palette.violet,
+      palette.violet,
+      categories.procedure.color,
+      categories.procedure.color,
+      categories.procedure.color,
+      palette.inkSoft,
+      palette.ink,
+    ],
+    cyan: [
+      categories.handover.tint,
+      categories.handover.tint,
+      palette.cyan,
+      palette.cyan,
+      palette.cyan,
+      categories.handover.color,
+      categories.handover.color,
+      categories.handover.color,
+      palette.inkSoft,
+      palette.ink,
+    ],
+    indigo: [
+      "rgba(133, 137, 190, 0.14)",
+      "rgba(133, 137, 190, 0.14)",
+      "#55599a",
+      "#55599a",
+      "#55599a",
+      "#55599a",
+      "#55599a",
+      "#55599a",
       palette.inkSoft,
       palette.ink,
     ],
@@ -241,6 +321,19 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     "--rc-font-display": fonts.display,
     "--rc-font-ui": fonts.ui,
     "--rc-font-mono": fonts.mono,
+    "--rc-motion-fast": motion.fast,
+    "--rc-motion-base": motion.base,
+    "--rc-motion-slow": motion.slow,
+    "--rc-motion-ambient": motion.ambient,
+    "--rc-ease-standard": motion.standard,
+    "--rc-ease-emphasized": motion.emphasized,
+    "--rc-stagger-step": motion.staggerStep,
+    ...Object.fromEntries(
+      Object.entries(categories).flatMap(([name, value]) => [
+        [`--rc-cat-${name}`, value.color],
+        [`--rc-cat-${name}-tint`, value.tint],
+      ]),
+    ),
   },
   light: {
     "--mantine-color-body": tokens.canvas,

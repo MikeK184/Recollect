@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -30,9 +32,7 @@ import {
 import "../feature-views.css";
 import "./knowledge-inspector.css";
 import {
-  brainNavigation,
   defaultKnowledgeView,
-  knowledgeSections,
   resolveKnowledgeView,
   type KnowledgeSection,
 } from "../../app/navigation";
@@ -42,9 +42,31 @@ import { DetailInspector } from "../../components/DetailInspector";
 import { useContentDeadline } from "../../useContentDeadline";
 import { client, result, type Brain } from "../../api";
 import type { components } from "../../api-schema";
-import { ClaimEditor, EvidenceDialog } from "../../ClaimsPanel";
-import { ClaimReviewDialog } from "../../ClaimReviewDialog";
-import { EraseAction } from "../../RetentionPanel";
+const SourceInspector = lazy(() =>
+  import("../../EvidencePanel").then((m) => ({ default: m.SourceInspector })),
+);
+const AliasDialog = lazy(() =>
+  import("../../WorkspacePanel").then((m) => ({ default: m.AliasDialog })),
+);
+const RepositoryDialog = lazy(() =>
+  import("../../PublicationPanel").then((m) => ({
+    default: m.RepositoryDialog,
+  })),
+);
+const ClaimEditor = lazy(() =>
+  import("../../ClaimsPanel").then((m) => ({ default: m.ClaimEditor })),
+);
+const EvidenceDialog = lazy(() =>
+  import("../../ClaimsPanel").then((m) => ({ default: m.EvidenceDialog })),
+);
+const ClaimReviewDialog = lazy(() =>
+  import("../../ClaimReviewDialog").then((m) => ({
+    default: m.ClaimReviewDialog,
+  })),
+);
+const EraseAction = lazy(() =>
+  import("../../RetentionPanel").then((m) => ({ default: m.EraseAction })),
+);
 import {
   KnowledgeSelectionContext,
   useKnowledgeSelection,
@@ -55,20 +77,26 @@ import {
 // The surface's view value is the contracted route suffix, so `/memory`,
 // `/sources`, `/graph` and `/repositories` stay deep-linkable, reloadable and
 // Back/forward safe while one shell hosts the switcher and the inspector.
-export type KnowledgeView = KnowledgeSection;
+export type KnowledgeView = KnowledgeSection | "explore";
 
 export { defaultKnowledgeView, resolveKnowledgeView };
 
-/** Switcher order and labels, sourced from the sidebar so they cannot drift. */
+/** Legacy view names remain addressable even when their sidebar links move. */
 export const knowledgeViews: readonly { view: KnowledgeView; label: string }[] =
-  knowledgeSections.map((view) => ({
-    view,
-    label: brainNavigation.find((entry) => entry.section === view)!.label,
-  }));
+  [
+    { view: "memory", label: "Memory" },
+    { view: "sources", label: "Sources" },
+    { view: "graph", label: "Graph" },
+    { view: "repositories", label: "Repositories" },
+    { view: "explore", label: "Explore" },
+  ];
 
 /** The view the current route selects, resolved against the four known values. */
 export function useKnowledgeView(): KnowledgeView {
   const path = useRouterState({ select: (state) => state.location.pathname });
+  const [search] = useBrainSearch();
+  if (path.split("/")[3] === "explore")
+    return resolveKnowledgeView(search.view);
   return resolveKnowledgeView(path.split("/")[3]);
 }
 
@@ -77,9 +105,47 @@ export function useKnowledgeView(): KnowledgeView {
 function selectionSearch(
   selection: KnowledgeSelection,
   view: KnowledgeView,
+  current: BrainSearch = {},
 ): BrainSearch {
+  if (view === "explore") {
+    if (selection?.kind === "memory")
+      return {
+        view: "memory",
+        claim: selection.id,
+        knowledge: current.knowledge,
+        fact: current.fact,
+        revision: current.revision,
+      };
+    if (selection?.kind === "source")
+      return {
+        view: "sources",
+        source: selection.id,
+        version: selection.version,
+      };
+    if (selection?.kind === "repository")
+      return { view: "repositories", repository: selection.id };
+    if (selection?.kind === "graph-node") {
+      if (selection.key.startsWith("claim:"))
+        return { view: "memory", center: selection.key };
+      if (selection.key.startsWith("source_version:"))
+        return {
+          view: "sources",
+          version: selection.key.slice("source_version:".length),
+        };
+    }
+    return {};
+  }
   if (selection?.kind === "memory" && (view === "memory" || view === "graph"))
-    return { claim: selection.id };
+    return view === "memory"
+      ? {
+          claim: selection.id,
+          knowledge: current.knowledge,
+          fact: current.fact,
+          revision: current.revision,
+        }
+      : current.knowledge || current.revision
+        ? {}
+        : { claim: selection.id };
   if (selection?.kind === "source" && (view === "sources" || view === "graph"))
     return { source: selection.id, version: selection.version };
   if (selection?.kind === "graph-node") {
@@ -122,11 +188,12 @@ function knowledgeScope() {
 
 /** One bounded read around a graph center; never an unbounded traversal. */
 function useNeighbourhood(brain: Brain, center: string, enabled = true) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["lineage-neighbourhood", brain.id, center],
     enabled: enabled && !!center,
     retry: false,
     gcTime: 0,
+    refetchInterval: 4000,
     queryFn: async ({ signal }) =>
       result(
         await client.POST("/api/brains/{brain}/graph/explore", {
@@ -141,11 +208,23 @@ function useNeighbourhood(brain: Brain, center: string, enabled = true) {
         }),
       ),
   });
+  const expired = useContentDeadline(query.data?.expires_at);
+  return {
+    ...query,
+    data: expired || query.isError ? undefined : query.data,
+    expired,
+  };
 }
 
 function Neighbourhood({ brain, center }: { brain: Brain; center: string }) {
   const { select } = useKnowledgeSelection();
   const query = useNeighbourhood(brain, center);
+  if (query.expired)
+    return (
+      <Text size="sm" c="dimmed">
+        Neighbourhood expired; waiting for a fresh read.
+      </Text>
+    );
   if (query.isPending) return <Loader size="sm" />;
   if (query.isError)
     return (
@@ -471,8 +550,12 @@ function ClaimLineageView({
         evidence={view.evidence}
         supports={r.content.supports}
       />
-      <Divider label="Bounded graph neighbourhood" />
-      <Neighbourhood brain={brain} center={centerKey} />
+      {!view.knowledge_until && (
+        <>
+          <Divider label="Current graph neighbourhood" />
+          <Neighbourhood brain={brain} center={centerKey} />
+        </>
+      )}
     </Stack>
   );
 }
@@ -593,219 +676,78 @@ function SourceLineage({
   id: string;
   version?: string;
 }) {
-  const { select } = useKnowledgeSelection();
-  const history = useQuery({
-    queryKey: ["lineage-source-history", brain.id, id],
-    retry: false,
-    gcTime: 0,
-    refetchInterval: 4000,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/sources/{source}/versions", {
-          signal,
-          params: {
-            path: { brain: brain.id, source: id },
-            query: { offset: 0 },
-          },
-        }),
-      ),
-  });
-  const currentVersion = version ?? history.data?.versions[0]?.id;
-  const content = useQuery({
-    queryKey: ["lineage-source-content", brain.id, id, currentVersion],
-    enabled: !!currentVersion,
-    retry: false,
-    gcTime: 0,
-    refetchInterval: 4000,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET(
-          "/api/brains/{brain}/sources/{source}/versions/{version}",
-          {
-            signal,
-            params: {
-              path: { brain: brain.id, source: id, version: currentVersion! },
-            },
-          },
-        ),
-      ),
-  });
-  const supports = useNeighbourhood(
-    brain,
-    currentVersion ? `source_version:${currentVersion}` : "",
-    !!currentVersion,
+  return (
+    <SourceInspector
+      brain={brain}
+      id={id}
+      version={version}
+      derived={(exact) => (
+        <SourceDerivations key={exact} brain={brain} version={exact} />
+      )}
+    />
   );
-  const catalogue = useQuery({
-    queryKey: ["evidence", brain.id],
-    retry: false,
-    gcTime: 0,
-    refetchInterval: 4000,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          signal,
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
-  const expired = useContentDeadline(content.data?.version.expires_at);
-  const sourceSummary = catalogue.isError
-    ? undefined
-    : catalogue.data?.sources.find((s) => s.id === id);
-  if (history.isPending) return <Loader size="sm" />;
-  if (history.isError || !history.data)
+}
+
+function SourceDerivations({
+  brain,
+  version,
+}: {
+  brain: Brain;
+  version: string;
+}) {
+  const { select } = useKnowledgeSelection();
+  const query = useNeighbourhood(brain, `source_version:${version}`);
+  if (query.expired)
     return (
-      <Alert color="red">
-        {history.error?.message ?? "This source is unavailable."}
-        <Button
-          variant="subtle"
-          size="xs"
-          mt="xs"
-          onClick={() => void history.refetch()}
-        >
-          Retry source read
-        </Button>
+      <Text size="sm" c="dimmed">
+        Linked memory expired; waiting for a fresh read.
+      </Text>
+    );
+  if (query.isError)
+    return (
+      <Alert color="gray" title="Derived memory unavailable">
+        {query.error.message}
       </Alert>
     );
-  const shown =
-    !content.isError && !expired ? content.data?.version : undefined;
-  const derived =
-    !supports.isError && !content.isError && !expired
-      ? (supports.data?.nodes.filter(
-          (node) => node.evidence.kind === "claim",
-        ) ?? [])
-      : [];
+  if (query.isPending) return <Loader size="sm" />;
+  const nodes =
+    query.data?.nodes.filter((node) => node.evidence.kind === "claim") ?? [];
   return (
-    <Stack gap="sm">
-      <Title order={4}>{shown?.title ?? "Source"}</Title>
-      {shown && (
-        <Group gap="xs">
-          <Badge size="xs">
-            {shown.availability === "retained"
-              ? shown.processing === "ready"
-                ? "Processed"
-                : label(shown.processing)
-              : label(shown.availability)}
-          </Badge>
-          <Text size="xs" c="dimmed">
-            {history.data.total} recorded version
-            {history.data.total === 1 ? "" : "s"}
-          </Text>
-        </Group>
-      )}
-      {!!sourceSummary?.group_ids.length && (
-        <Text size="sm" className="lineage-wrap">
-          Views:{" "}
-          {sourceSummary.group_ids
-            .map(
-              (groupId) =>
-                catalogue.data?.groups.find((g) => g.id === groupId)?.name ??
-                groupId,
-            )
-            .join(", ")}
-        </Text>
-      )}
-      <Stack gap="4px">
-        {history.data.versions.map((v) => (
-          <Text
-            key={v.id}
-            size="xs"
-            c={v.id === currentVersion ? undefined : "dimmed"}
+    <details className="feature-details" open>
+      <summary>Linked memory · {nodes.length} in this view</summary>
+      <Stack gap="xs" className="source-linked-memory">
+        {nodes.map((node) => (
+          <button
+            type="button"
+            className="derived-memory-row"
+            key={node.key}
+            onClick={() => select({ kind: "graph-node", key: node.key })}
           >
-            {v.id === currentVersion ? "Selected · " : "Version · "}
-            {time(v.recorded_at)} · {v.contributor}
-          </Text>
+            <strong>{node.evidence.label}</strong>
+            <span>
+              {[
+                node.evidence.claim?.review,
+                node.evidence.claim?.freshness,
+                node.evidence.claim?.operational,
+                ...node.evidence.qualifications,
+              ]
+                .filter(Boolean)
+                .map((value) => label(value!))
+                .join(" · ")}
+            </span>
+          </button>
         ))}
-      </Stack>
-      <Divider label="Content" />
-      {content.isError || expired ? (
-        <Alert color="yellow">
-          {expired
-            ? "This source reached its retention deadline. Its content is no longer displayed."
-            : "This exact source version is unavailable. Retry its authorized read."}
-        </Alert>
-      ) : content.isPending ? (
-        <Loader size="sm" />
-      ) : content.data?.content != null ? (
-        <pre className="lineage-content" data-testid="source-content">
-          {content.data.content}
-        </pre>
-      ) : content.data ? (
-        <Alert color="yellow">
-          {content.data.version.availability === "reference_only"
-            ? "Reference without retained text. A reference does not confirm remote availability."
-            : ["expired", "erased"].includes(
-                  content.data.version.privacy_state ?? "active",
-                )
-              ? `This content was ${content.data.version.privacy_state}. Retention changes cannot restore removed content.`
-              : "Source text is unavailable here. Existing metadata does not recreate missing evidence."}
-        </Alert>
-      ) : (
-        <Text size="sm" c="dimmed">
-          No exact version is selected.
-        </Text>
-      )}
-      <Divider label="What this source supports" />
-      {supports.isError || content.isError || expired ? (
-        <Text size="sm" c="dimmed">
-          Related records are unavailable until their evidence can be checked.
-        </Text>
-      ) : supports.isPending ? (
-        <Loader size="sm" />
-      ) : supports.data ? (
-        <Stack gap="xs">
-          {derived.length === 0 && (
-            <Text size="sm" c="dimmed">
-              No derived records in the current eligible graph.
-            </Text>
-          )}
-          {derived.map((node) => (
-            <Group
-              key={node.key}
-              justify="space-between"
-              gap="xs"
-              wrap="nowrap"
-            >
-              <Button
-                variant="subtle"
-                size="compact-xs"
-                className="lineage-node-button"
-                // The node key carries the revision id; resolve it through
-                // the canonical graph-node selection, not as a claim id.
-                onClick={() => {
-                  select({
-                    kind: "graph-node",
-                    key: node.key,
-                    claimId:
-                      node.evidence.kind === "claim"
-                        ? node.evidence.id
-                        : undefined,
-                    revision:
-                      node.evidence.kind === "claim"
-                        ? node.evidence.revision_id
-                        : undefined,
-                  });
-                }}
-              >
-                {node.evidence.label}
-              </Button>
-              <Badge size="xs" variant="light" color="gray">
-                derivation
-              </Badge>
-            </Group>
-          ))}
-          <Text size="xs" c="dimmed">
-            These records derive from this source version. They are not
-            independent support for one another.
+        {!nodes.length && (
+          <Text size="sm" c="dimmed">
+            No linked memory in the current eligible graph.
           </Text>
-        </Stack>
-      ) : (
-        <Text size="sm" c="dimmed">
-          No eligible graph generation for this Brain yet, so derived records
-          are not listed. Nothing is inferred from the missing structure.
+        )}
+        <Text size="xs" c="dimmed">
+          Cites this exact version; shared evidence is not independent
+          corroboration.
         </Text>
-      )}
-    </Stack>
+      </Stack>
+    </details>
   );
 }
 
@@ -869,17 +811,24 @@ function GraphEdgeLineage({
 }
 
 function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
+  const cache = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [snapshots, setSnapshots] = useState(false);
+  useLineageOverlay(adding || snapshots);
   const catalogue = useQuery({
-    queryKey: ["workspace", brain.id],
+    queryKey: ["repository-identity", brain.id, id],
     retry: false,
     gcTime: 0,
     refetchInterval: 4000,
     queryFn: async ({ signal }) =>
       result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          signal,
-          params: { path: { brain: brain.id } },
-        }),
+        await client.GET(
+          "/api/brains/{brain}/workspace/repositories/{repository}",
+          {
+            signal,
+            params: { path: { brain: brain.id, repository: id } },
+          },
+        ),
       ),
   });
   if (catalogue.isPending) return <Loader size="sm" />;
@@ -896,7 +845,7 @@ function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
         </Button>
       </Alert>
     );
-  const repo = catalogue.data?.repositories.find((r) => r.id === id);
+  const repo = catalogue.data;
   if (!repo)
     return (
       <Alert color="yellow">
@@ -909,7 +858,40 @@ function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
   );
   return (
     <Stack gap="sm">
+      {snapshots && (
+        <RepositoryDialog
+          brain={brain}
+          repository={repo}
+          onClose={() => setSnapshots(false)}
+        />
+      )}
+      {adding && (
+        <AliasDialog
+          brain={brain}
+          repository={repo}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            for (const key of [
+              "repository-identity",
+              "repository-catalogue",
+              "workspace",
+            ])
+              void cache.invalidateQueries({ queryKey: [key, brain.id] });
+          }}
+        />
+      )}
       <Title order={4}>{repo.canonical_origin}</Title>
+      <Group>
+        <Button variant="default" size="xs" onClick={() => setSnapshots(true)}>
+          Snapshots
+        </Button>
+        {brain.role === "admin" && !brain.archived && (
+          <Button variant="default" size="xs" onClick={() => setAdding(true)}>
+            Add origin
+          </Button>
+        )}
+      </Group>
       <Text size="xs" c="dimmed">
         Canonical normalized origin.
       </Text>
@@ -1013,7 +995,9 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
   }, [selection]);
   const [search, patch] = useBrainSearch();
   const detailed =
-    search.detail === "record" || !!search.knowledge || !!search.revision;
+    (selection?.kind !== "source" && search.detail === "record") ||
+    !!search.knowledge ||
+    !!search.revision;
   const close = () => {
     select(null);
     patch({
@@ -1022,6 +1006,7 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
       version: null,
       center: null,
       detail: null,
+      ...(selection?.kind === "repository" ? { repository: null } : {}),
     });
   };
   return (
@@ -1050,24 +1035,32 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
                   : undefined
             }
           >
-            <Group gap="xs">
+            <Group gap="xs" className="knowledge-view-links">
               {knowledgeViews
-                .filter((entry) => entry.view !== view)
+                .filter(
+                  (entry) =>
+                    (entry.view === "explore" || entry.view === "graph") &&
+                    entry.view !== view,
+                )
                 .map((entry) => {
-                  const search = selectionSearch(selection, entry.view);
-                  return Object.keys(search).length ? (
+                  const destinationSearch = selectionSearch(
+                    selection,
+                    entry.view,
+                    search,
+                  );
+                  return Object.keys(destinationSearch).length ? (
                     <Link
                       key={entry.view}
                       to={`/brains/$brainId/${entry.view}`}
                       params={{ brainId: brain.id }}
-                      search={search}
+                      search={destinationSearch}
                     >
                       Show in {entry.label}
                     </Link>
                   ) : null;
                 })}
             </Group>
-            {(selection?.kind === "memory" || selection?.kind === "source") && (
+            {selection?.kind === "memory" && (
               <Button
                 onClick={() =>
                   void navigate({
@@ -1077,6 +1070,7 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
                       ...selectionSearch(
                         selection,
                         selection.kind === "memory" ? "memory" : "sources",
+                        search,
                       ),
                       detail: "record",
                     },
@@ -1091,7 +1085,15 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
               </Button>
             )}
             {actions}
-            <LineageInspector />
+            <Suspense
+              fallback={
+                <Text role="status" size="sm">
+                  Loading inspection…
+                </Text>
+              }
+            >
+              <LineageInspector />
+            </Suspense>
           </Stack>
         </DetailInspector>
       </aside>

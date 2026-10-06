@@ -4,6 +4,7 @@
 
 .knowledge-surface[data-knowledge-view="graph"] {
   height: calc(100vh - 200px);
+  min-height: 640px;
   gap: var(--mantine-spacing-md);
 }
 /* The shared inspector region stays present and visible in the graph view; it
@@ -163,5 +164,104 @@
 .graph-coverage-reasons {
   color: var(--rc-muted);
   font-size: var(--mantine-font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.graph-renderer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 420px;
+}
+.graph-renderer-canvas {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 420px;
+}
+.graph-renderer-canvas > .graph-stage {
+  flex: 1;
+  min-height: 420px;
+}
+.graph-provenance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  flex: 1;
+  min-width: 0;
+}
+.graph-provenance .graph-stage-area {
+  min-height: 420px;
+}
+.graph-provenance-details {
+  overflow-wrap: anywhere;
+}
+
+.graph-selection-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-md);
+  border-left: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+  min-width: 0;
+  overflow: auto;
+  max-height: 100%;
+}
+.graph-selection-panel h3 {
+  font-family: var(--mantine-font-family);
+  font-size: var(--mantine-font-size-md);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.graph-selection-panel .graph-selection-connections {
+  border-top: 1px solid var(--rc-border);
+  padding-top: var(--mantine-spacing-sm);
+}
+.graph-connection-link {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--mantine-radius-sm);
+  background: transparent;
+  color: var(--rc-ink);
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--mantine-font-size-sm);
+}
+.graph-connection-link:hover,
+.graph-connection-link:focus-visible {
+  background: var(--rc-sidebar);
+  outline-color: var(--rc-accent);
+}
+.graph-connection-link > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.graph-connection-link > small {
+  color: var(--rc-muted);
+  font-size: var(--mantine-font-size-xs);
+}
+.graph-selection-details {
+  border-top: 1px solid var(--rc-border);
+  padding-top: var(--mantine-spacing-sm);
+  color: var(--rc-muted);
+  font-size: var(--mantine-font-size-xs);
+}
+.graph-selection-details > summary {
+  cursor: pointer;
+  padding-bottom: var(--mantine-spacing-xs);
+}
+.graph-exact-identity {
   overflow-wrap: anywhere;
 }

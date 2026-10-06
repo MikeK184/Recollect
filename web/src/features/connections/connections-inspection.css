@@ -1,0 +1,66 @@
+.connection-scope-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+.connection-scope-badges .mantine-Badge-root {
+  min-height: 23px;
+  max-width: 100%;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+}
+.connection-scope-badges .mantine-Badge-label {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.connection-test-meaning {
+  color: var(--rc-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0;
+}
+.connection-inspector .inspector-tool-group {
+  padding: 14px;
+}
+.connection-inspector .inspector-tool-group > .mantine-Group-root {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.connection-inspector .inspector-tool-group strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+}
+.connection-inspector .inspector-tool-group .mantine-Badge-root {
+  font-size: 10px;
+  text-transform: none;
+}
+.connection-tools-loading {
+  margin: 12px 0;
+}
+.connection-inspector .inspector-tool-name {
+  align-items: start;
+  gap: 8px;
+  font-size: 12px;
+}
+.inspector-tool-name > svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.connection-inspector .inspector-tool-name code {
+  overflow-wrap: anywhere;
+}
+.inspector-approved-tool {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rc-border);
+}
+.inspector-approved-tool:last-child {
+  border-bottom: 0;
+}
+.connection-inspector .inspector-tool-pagination {
+  flex-wrap: wrap;
+  gap: 8px;
+}

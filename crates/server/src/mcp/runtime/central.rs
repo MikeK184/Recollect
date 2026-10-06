@@ -66,9 +66,8 @@ async fn run_owned(state: AppState, stop: CancellationToken) -> recollect_mcp_ru
     runner::maintain(&state).await.map_err(safe)?;
     let directory = receipt_directory(&state.config);
     let outbox = Outbox::open(directory, format!("central:{}", state.config.public_origin)).await?;
-    let credentials = CredentialResolver::new(
-        std::env::var_os("RECOLLECT_MCP_CREDENTIALS_FILE").map(PathBuf::from),
-    );
+    let credentials =
+        CredentialResolver::new(Some(crate::mcp::credentials::binding_path(&state.config)));
     let supervisor = std::env::current_exe().map_err(|_| RuntimeError("supervisor_unavailable"))?;
     let runner = Runner::central(Uuid::new_v4());
     let lease = runner.register(&state).await.map_err(safe)?;

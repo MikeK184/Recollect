@@ -236,6 +236,7 @@ pub(super) async fn select_at(
     let relations: BTreeSet<_> = edges.iter().map(|e| e.relation.clone()).collect();
     let view = GraphView {
         brain_id: brain,
+        expires_at: deadline,
         scope,
         scope_id: qualified.scope_id,
         inputs: projections

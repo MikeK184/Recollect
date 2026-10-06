@@ -1,0 +1,59 @@
+{
+  "brain_id": "5c054930-d266-4c18-a42b-942729f942aa",
+  "account_id": "1725db3a-c74f-4573-b065-64c6cc79b77c",
+  "device_id": "d7eaafe6-beab-4b8d-89dd-b36bdea46843",
+  "role": "reader",
+  "denied_reads": [
+    {
+      "path": "/api/team",
+      "status": 403
+    },
+    {
+      "path": "/api/mcp/definitions",
+      "status": 403
+    },
+    {
+      "path": "/api/brains/5c054930-d266-4c18-a42b-942729f942aa/access",
+      "status": 403
+    },
+    {
+      "path": "/api/brains/3926ac6f-2d1c-45cb-9d72-202491a859c1",
+      "status": 404
+    }
+  ],
+  "connections": {
+    "exa": "b694e0b8-8c47-4e3e-846e-a9848d3cd7fe"
+  },
+  "profiles": {
+    "research": "d034fa97-ec4b-4f3a-b168-435f8037ef19"
+  },
+  "calls": [
+    {
+      "id": "d0ec9c5f-420f-47eb-8fc3-685f262a093e",
+      "tool": "web_search_exa",
+      "state": "succeeded",
+      "code": "connector_response",
+      "device_id": "d7eaafe6-beab-4b8d-89dd-b36bdea46843",
+      "capture_disposition": "knowledge_write_required",
+      "has_result": true,
+      "tool_error": false,
+      "contains_official_public_result": true
+    }
+  ],
+  "definition_key": "demo-exa-anonymous-20261006",
+  "effective_rights": {
+    "use_profile": true,
+    "manage": false,
+    "share": false
+  },
+  "denied_mutations": [
+    "tool_group_manage",
+    "tool_group_share",
+    "brain_metadata",
+    "capture_policy"
+  ],
+  "task_id": "985b0092-7be4-43cc-9be8-c15e97a89557",
+  "scope_id": "732c76ed-ec20-421f-ad80-c93ca98df019",
+  "operation_id": "74774290-7b69-40ee-a2fe-4e3774e73e99",
+  "own_agent_count": 1
+}

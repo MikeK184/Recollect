@@ -25,6 +25,8 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 utoipa.workspace = true
 uuid.workspace = true
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+base64 = "0.22"
 
 [dev-dependencies]
 recollect-agent = { path = "../agent" }

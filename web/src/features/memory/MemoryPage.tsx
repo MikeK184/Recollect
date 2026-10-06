@@ -1,26 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Button, Drawer } from "@mantine/core";
+import { History } from "lucide-react";
 import { ClaimsPanel } from "../../ClaimsPanel";
 import { HandoversPanel } from "../../HandoversPanel";
 import { useBrain } from "../../app/context";
 import { useBrainSearch } from "../../app/useBrainSearch";
 import { PageHeader } from "../../components/PageHeader";
-import { FeatureTabs, useFeatureTab } from "../../components/FeatureTabs";
 import { useKnowledgeSelection } from "../knowledge/selection";
-const tabs = [
-  { value: "all", label: "All memory" },
-  { value: "claim", label: "Claims" },
-  { value: "decision", label: "Decisions" },
-  { value: "procedure", label: "Procedures" },
-  { value: "handover", label: "Handovers" },
-] as const;
-export function MemoryPage() {
+import "../knowledge/explore.css";
+const kinds = ["claim", "decision", "procedure", "handover"];
+export function MemoryPage({ embedded = false }: { embedded?: boolean }) {
   const brain = useBrain();
-  const [search] = useBrainSearch();
+  const [search, patch] = useBrainSearch();
   const { select } = useKnowledgeSelection();
-  const [tab, setTab] = useFeatureTab(
-    tabs.map((t) => t.value),
-    tabs.some((t) => t.value === search.kind) ? search.kind! : "all",
-  );
+  const [handovers, setHandovers] = useState(false);
+  // Older type-tab links resolve to the optional filter. Keep unrelated tabs
+  // (for example repository environments) out of the memory query.
+  useEffect(() => {
+    if (search.tab && kinds.includes(search.tab))
+      patch({ kind: search.kind ?? search.tab, tab: null });
+  }, [search.tab, search.kind]);
   // Selection lives in validated URL state, including browser Back/Forward.
   useEffect(() => {
     select(
@@ -36,15 +35,28 @@ export function MemoryPage() {
   useEffect(() => () => select(null), [select]);
   return (
     <>
-      <PageHeader title="Memory" />
-      <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
-        <ClaimsPanel
-          key={`${brain.id}-${tab}`}
-          brain={brain}
-          kind={tab === "all" ? null : tab}
-        />
-        {tab === "handover" && <HandoversPanel brain={brain} />}
-      </FeatureTabs>
+      {!embedded && <PageHeader title="Memory" />}
+      <ClaimsPanel key={brain.id} brain={brain} />
+      <div className="explore-secondary-actions">
+        <Button
+          variant="subtle"
+          size="xs"
+          leftSection={<History size={14} />}
+          onClick={() => setHandovers(true)}
+        >
+          Handover tools &amp; history
+        </Button>
+      </div>
+      <Drawer
+        opened={handovers}
+        onClose={() => setHandovers(false)}
+        title="Handover tools & history"
+        closeButtonProps={{ "aria-label": "Close handover history" }}
+        position="right"
+        size="xl"
+      >
+        {handovers && <HandoversPanel key={brain.id} brain={brain} />}
+      </Drawer>
     </>
   );
 }

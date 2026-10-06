@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { writeFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 
 // The shared lineage inspector: one canonical definition serving all four
@@ -158,10 +159,27 @@ test("selecting a memory shows content, evidence with exact versions and a bound
   const fixture = await createFixture(page);
   const base = `/api/brains/${fixture.brain}`;
   await readyKnowledgeGraph(page, base);
+  const scripts = () =>
+    page.evaluate(() =>
+      performance
+        .getEntriesByType("resource")
+        .filter((entry) => new URL(entry.name).pathname.endsWith(".js"))
+        .map((entry) => ({
+          file: new URL(entry.name).pathname,
+          bytes: (entry as PerformanceResourceTiming).decodedBodySize,
+        })),
+    );
+  const beforeKnowledge = await scripts();
+  expect(
+    beforeKnowledge.some((entry) =>
+      /KnowledgeSurface-|ClaimsPanel-|ClaimReviewDialog-/.test(entry.file),
+    ),
+  ).toBe(false);
   await page.goto(`/brains/${fixture.brain}/memory`);
+  const beforeSelection = await scripts();
   const region = inspector(page);
   await page
-    .getByRole("button", { name: "Lineage service · port", exact: true })
+    .getByRole("button", { name: "Lineage service · port 8080", exact: true })
     .click();
   // The first selection opens the canonical lineage inspector directly.
   await expect(
@@ -190,9 +208,17 @@ test("selecting a memory shows content, evidence with exact versions and a bound
   );
   await page.keyboard.press("Escape");
   await expect(evidenceDialog).not.toBeVisible();
+  writeFileSync(
+    "../.cache/desktop-final-browser-assets.json",
+    JSON.stringify(
+      { beforeKnowledge, beforeSelection, afterEvidence: await scripts() },
+      null,
+      2,
+    ),
+  );
   // The bounded neighbourhood sits inline beneath the evidence.
   await expect(
-    region.getByText("Bounded graph neighbourhood", { exact: true }),
+    region.getByText("Current graph neighbourhood", { exact: true }),
   ).toBeVisible();
   await expect(
     region.locator(".lineage-node-button", { hasText: "Lineage notes" }),
@@ -207,10 +233,13 @@ test("selecting a memory shows content, evidence with exact versions and a bound
   );
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("button", { name: "Lineage service · port", exact: true }),
+    page.getByRole("button", {
+      name: "Lineage service · port 8080",
+      exact: true,
+    }),
   ).toBeFocused();
   await page
-    .getByRole("button", { name: "Lineage service · port", exact: true })
+    .getByRole("button", { name: "Lineage service · port 8080", exact: true })
     .click();
   await region
     .getByRole("link", { name: "Show in Graph", exact: true })
@@ -220,9 +249,11 @@ test("selecting a memory shows content, evidence with exact versions and a bound
     region.getByText("Review: accepted", { exact: true }),
   ).toBeVisible();
   await region
-    .getByRole("link", { name: "Show in Memory", exact: true })
+    .getByRole("link", { name: "Show in Explore", exact: true })
     .click();
-  await expect(page).toHaveURL(new RegExp(`/memory\\?claim=${fixture.claim}$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/explore[?]view=memory&claim=${fixture.claim}$`),
+  );
   await expect(
     region.getByText("Review: accepted", { exact: true }),
   ).toBeVisible();
@@ -395,7 +426,12 @@ test("lineage correction loads scope, saves reviewed content and refreshes canon
   const session = await (await page.request.get("/api/auth/me")).json();
   const source = await page.request.post(`${base}/sources`, {
     headers: { "x-csrf-token": session.csrf_token },
-    data: { title: "Corrected lineage evidence", media_type: "text/plain", content: "Lineage declares port 9090.\n", retain_content: true },
+    data: {
+      title: "Corrected lineage evidence",
+      media_type: "text/plain",
+      content: "Lineage declares port 9090.\n",
+      retain_content: true,
+    },
   });
   expect(source.ok()).toBe(true);
   const updatedEvidence = await source.json();
@@ -414,10 +450,18 @@ test("lineage correction loads scope, saves reviewed content and refreshes canon
     name: "Edit reviewed content",
     exact: true,
   });
-  await editor.getByRole("textbox", { name: "Claim value", exact: true }).fill("9090");
-  await editor.getByRole("button", { name: "Remove support", exact: true }).click();
-  await editor.getByLabel("Find evidence", { exact: true }).fill("Corrected lineage evidence");
-  await editor.getByRole("button", { name: "Use evidence", exact: true }).click();
+  await editor
+    .getByRole("textbox", { name: "Claim value", exact: true })
+    .fill("9090");
+  await editor
+    .getByRole("button", { name: "Remove support", exact: true })
+    .click();
+  await editor
+    .getByLabel("Find evidence", { exact: true })
+    .fill("Corrected lineage evidence");
+  await editor
+    .getByRole("button", { name: "Use evidence", exact: true })
+    .click();
   await editor
     .getByRole("button", { name: "Use this content", exact: true })
     .click();
@@ -433,7 +477,9 @@ test("lineage correction loads scope, saves reviewed content and refreshes canon
   const current = (
     await (await page.request.get(`${base}/claims/${fixture.claim}`)).json()
   ).selected;
-  expect(current.revision.content.supports[0].id).toBe(updatedEvidence.version.id);
+  expect(current.revision.content.supports[0].id).toBe(
+    updatedEvidence.version.id,
+  );
   expect(current.revision.review).toBe("accepted");
   expect(current.revision.content.value).toBe("9090");
   expect(current.revision.content.supports).toHaveLength(1);

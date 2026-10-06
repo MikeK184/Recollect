@@ -103,6 +103,60 @@ async fn repository(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<Repository
             .into(),
     )
 }
+
+#[derive(Default, Deserialize)]
+pub struct RepositoryQuery {
+    q: Option<String>,
+    offset: Option<i64>,
+}
+#[utoipa::path(get,path="/api/brains/{brain}/workspace/repositories",operation_id="repositoryCatalogue",params(("brain"=Uuid,Path),("q"=Option<String>,Query),("offset"=Option<i64>,Query)),responses((status=200,body=RepositoryPage)))]
+pub async fn repositories(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path(brain): Path<Uuid>,
+    Query(query): Query<RepositoryQuery>,
+) -> Result<Json<RepositoryPage>> {
+    let page_offset = offset(query.offset)?;
+    let search = crate::publication::list_query(query.q.as_deref())?;
+    let mut tx = auth.tx(&state.pool).await?;
+    db::require_role(&mut tx, brain, false).await?;
+    let condition = "r.brain_id=$1 AND ($2='' OR position(lower($2) in lower(r.canonical_origin))>0 OR EXISTS(SELECT 1 FROM repository_origins o WHERE o.repository_id=r.id AND position(lower($2) in lower(o.origin))>0))";
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM repositories r WHERE {condition}"
+    ))
+    .bind(brain)
+    .bind(&search)
+    .fetch_one(&mut *tx)
+    .await?;
+    let rows = sqlx::query_as::<_, RepoRow>(&format!(
+        "{REPO_SELECT} WHERE {condition} ORDER BY r.canonical_origin,r.id LIMIT 50 OFFSET $3"
+    ))
+    .bind(brain)
+    .bind(&search)
+    .bind(page_offset)
+    .fetch_all(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(Json(RepositoryPage {
+        items: rows.into_iter().map(Into::into).collect(),
+        total,
+        offset: page_offset,
+        next_offset: (page_offset + 50 < total).then_some(page_offset + 50),
+    }))
+}
+
+#[utoipa::path(get,path="/api/brains/{brain}/workspace/repositories/{repository}",operation_id="repositoryIdentity",params(("brain"=Uuid,Path),("repository"=Uuid,Path)),responses((status=200,body=Repository)))]
+pub async fn repository_identity(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path((brain, id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<Repository>> {
+    let mut tx = auth.tx(&state.pool).await?;
+    db::require_role(&mut tx, brain, false).await?;
+    let value = repository(&mut tx, brain, id).await?;
+    tx.commit().await?;
+    Ok(Json(value))
+}
 #[derive(sqlx::FromRow)]
 struct WorkspaceRow {
     id: Uuid,
@@ -378,8 +432,9 @@ pub struct CatalogueQuery {
     workspace_id: Option<Uuid>,
     checkout_offset: Option<i64>,
     task_offset: Option<i64>,
+    include_repositories: Option<bool>,
 }
-#[utoipa::path(get,path="/api/brains/{brain}/workspace",operation_id="workspaceCatalogue",params(("brain"=Uuid,Path),("workspace_id"=Option<Uuid>,Query),("checkout_offset"=Option<i64>,Query),("task_offset"=Option<i64>,Query)),responses((status=200,body=WorkspaceCatalogue)))]
+#[utoipa::path(get,path="/api/brains/{brain}/workspace",operation_id="workspaceCatalogue",params(("brain"=Uuid,Path),("workspace_id"=Option<Uuid>,Query),("checkout_offset"=Option<i64>,Query),("task_offset"=Option<i64>,Query),("include_repositories"=Option<bool>,Query)),responses((status=200,body=WorkspaceCatalogue)))]
 pub async fn catalogue(
     State(state): State<AppState>,
     auth: Auth,
@@ -390,15 +445,19 @@ pub async fn catalogue(
     let task_offset = offset(query.task_offset)?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
-    let repositories = sqlx::query_as::<_, RepoRow>(&format!(
-        "{REPO_SELECT} WHERE r.brain_id=$1 ORDER BY r.canonical_origin,r.id"
-    ))
-    .bind(brain)
-    .fetch_all(&mut *tx)
-    .await?
-    .into_iter()
-    .map(Into::into)
-    .collect();
+    let repositories = if query.include_repositories == Some(false) {
+        vec![]
+    } else {
+        sqlx::query_as::<_, RepoRow>(&format!(
+            "{REPO_SELECT} WHERE r.brain_id=$1 ORDER BY r.canonical_origin,r.id"
+        ))
+        .bind(brain)
+        .fetch_all(&mut *tx)
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect()
+    };
     let areas = groups(&mut tx, brain, "area").await?;
     let environments = groups(&mut tx, brain, "environment").await?;
     let workspaces: Vec<WorkspaceRegistration> = sqlx::query_as::<_, WorkspaceRow>(

@@ -2,6 +2,11 @@
 
 Status: accepted
 
+The 2026-10-05 [model catalogue amendment](brain-model-catalogue-and-selection.md)
+supersedes the installation-only pair restriction below with supported per-Brain
+selection, dated prices, account discovery and atomic embedding rebuilds. Historical
+installation selections, gateway authority and request lifecycle remain compatible.
+
 The [managed experience amendment](memory-managed-experience.md) governs the
 2026-09-28 managed setup, progressive disclosure and owner connector approval
 changes; earlier explicit APIs and stored policies remain compatible.

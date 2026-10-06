@@ -169,6 +169,28 @@ async fn recall_preserves_native_scope_manifests_time_and_erasure() {
     .await;
     assert!(has(&original, &event["source_version_id"]));
     assert_eq!(original["scope_id"], context["scope"]["id"]);
+    // Automatic routing retains native task scope when query embeddings are
+    // not permitted; it must still return the eligible lexical evidence.
+    let automatic = device(
+        &h,
+        "POST",
+        &format!("{base}/recall"),
+        &token,
+        json!({"strategy":"auto","semantic_request_id":Uuid::new_v4(),"query":"What is the scoped native evidence?",
+            "operation_id":context["id"],"selection":scope_a}),
+    )
+    .await;
+    assert!(has(&automatic, &event["source_version_id"]));
+    assert_eq!(automatic["scope_id"], original["scope_id"]);
+    assert_eq!(automatic["selection"], original["selection"]);
+    assert!(automatic["semantic"].is_null());
+    assert!(
+        automatic["coverage"]["reasons"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("automatic_model_policy_denied"))
+    );
+
     assert!(has(&device(&h,"POST",&format!("{base}/recall"),&token,
         json!({"query":"Scoped native evidence","operation_id":retrieval["id"],"selection":scope_a})).await,
         &event["source_version_id"]));

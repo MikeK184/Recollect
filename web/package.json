@@ -17,11 +17,18 @@
     "@mantine/hooks": "^8.3.0",
     "@tanstack/react-query": "^5.102.0",
     "@tanstack/react-router": "^1.170.0",
+    "@xyflow/react": "^12.12.0",
     "cytoscape": "3.34.3",
+    "lowlight": "3.3.0",
     "lucide-react": "^1.45.0",
+    "motion": "^14.0.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "smol-toml": "^1.9.0",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

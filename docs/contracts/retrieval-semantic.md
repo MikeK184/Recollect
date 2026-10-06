@@ -2,6 +2,19 @@
 
 Status: accepted
 
+Browser presentation follow-up, 2026-10-06: semantic readiness, counts and
+recorded failures remain available through optional diagnostics. Normal AI
+settings do not display a coverage alarm or ask a person to review/retry items.
+The bounded automatic replacements, pre-request block reconciliation and
+uncertain/permanent/exhausted idle outcomes below remain unchanged. Exact and
+lexical retrieval continue independently; no UI removal broadens paid retries,
+provider transmission, policy, generation or erasure authority.
+
+The 2026-10-05 [model selection amendment](brain-model-catalogue-and-selection.md)
+supersedes the fixed 3,072-dimensional storage and installation-pair assumptions
+below. It adds model/dimension-safe full-precision storage and an atomic explicit
+Save-and-rebuild generation while preserving scope, canonical input and erasure fences.
+
 ## Source
 
 The full product goal authorizes this original slice and its routine decisions.

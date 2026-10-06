@@ -1,0 +1,32 @@
+{
+  "connections": [
+    "The header-aligned inspector, selected row, compact toolbar and left-pane private-network callout now follow the final vision at all three desktop sizes.",
+    "Actual inventory contains one connection and two approved tools; the reference's extra rows and tool counts were not fabricated. Recorded historical success is separate from a current connectivity check.",
+    "The production inspector retains tabs and secondary metadata/runtime disclosures. Its inner Test status and Tool access sections sit slightly lower than the illustration; primary actions and tool card remain visible at the reference height."
+  ],
+  "add-connection": [
+    "The approximately 912px dialog now has the reference's method strip, format tabs, numbered editor, parsed feedback, horizontal authentication fields, optional name and fixed action footer.",
+    "The safe example uses a DOCS_TOKEN reference with an empty secret draft. Review stays disabled until required data is present; no connection was inspected or saved for these captures.",
+    "The actual credential destination is an installation-local development file and is described truthfully. URL, approved-connector and edit states retain their required controls; lower controls remain reachable at 1440×900."
+  ],
+  "connectors": [
+    "The compact card grid, 80px icon tile, large import illustration, filled import action and numbered Import/Review/Approve rail now match the final catalogue composition.",
+    "There is one real approved definition, with actual Approved/Disabled/All filters. The reference's six fictional definitions and Pending review count were not inserted.",
+    "The global library retains the last actually selected authorized Brain navigation. Catalogue authority remains installation-scoped; the selected Brain is neither guessed nor an additional global permission."
+  ],
+  "privacy": [
+    "Retention now leads the page; view and edit keep the same number/unit rows. The compact warning and Save/Cancel line, sage switches and section glyphs follow the approved image.",
+    "All four evidence retention classes and separate capture/storage flags remain visible in compact rows. The generated image simplifies these real policies; they have not been merged or removed to copy its sample content.",
+    "At 1586×992 the edited Capture, Evidence and Repository cards all fit. At 1440×900 lower sections are reached by ordinary page scrolling, with no horizontal clipping."
+  ],
+  "ai-permissions": [
+    "Provider and automatic-memory strips, five purpose rows, two-column allowed-content checks and separate Coverage/Models/More options cards now closely follow the final vision.",
+    "The captures use actual installed model names and current index counts rather than the illustration's sample numbers. Configured provider/model badges are not claims of a successful provider call.",
+    "Diagnostics stay closed on the main page and open explicitly. At 1586×992 all three rail cards fit; the full More options controls remain reachable at 1440×900."
+  ],
+  "agents": [
+    "The weighted owner/roster typography, host glyphs, rounded credential pills, concise observed dates and filled Connect agent action now follow the final image.",
+    "The setup card uses the supported Recollect connect-skill prompt for the selected Brain, rather than the image's illustrative CLI shorthand. Agent names and observed dates come from actual inventory.",
+    "The compact host strip, setup controls, full-width memory-check copy button and private-context link remain visible. Utility card bottoms now closely align with the reference, and lower controls are reachable at the shorter desktop height."
+  ]
+}

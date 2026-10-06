@@ -3,7 +3,43 @@ use serde_json::json;
 use std::collections::HashSet;
 use tokio::io::AsyncReadExt;
 
+mod equivalent_schema;
+
 const CATALOGUE_LOCK: i64 = 73241022;
+
+#[utoipa::path(get,path="/api/mcp/definitions",operation_id="listMcpDefinitions",responses((status=200,body=Vec<McpDefinitionSummary>)))]
+pub async fn list(
+    State(state): State<AppState>,
+    auth: Auth,
+) -> Result<Json<Vec<McpDefinitionSummary>>> {
+    auth.require_browser()?;
+    if !auth.user.installation_owner {
+        return Err(Error::forbidden());
+    }
+    let mut tx = auth.tx(&state.pool).await?;
+    let rows: Vec<DefinitionRow> = sqlx::query_as(
+        "SELECT manifest,enabled,updated_at FROM mcp_definitions ORDER BY manifest->>'name',key LIMIT 100"
+    ).fetch_all(&mut *tx).await?;
+    Ok(Json(rows.iter().map(DefinitionRow::summary).collect()))
+}
+
+#[utoipa::path(get,path="/api/mcp/definitions/{key}",operation_id="getGlobalMcpDefinition",params(("key"=String,Path)),responses((status=200,body=McpGlobalDefinition)))]
+pub async fn get_global(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path(key): Path<String>,
+) -> Result<Json<McpGlobalDefinition>> {
+    auth.require_browser()?;
+    if !auth.user.installation_owner {
+        return Err(Error::forbidden());
+    }
+    let mut tx = auth.tx(&state.pool).await?;
+    let row = load(&mut tx, &key).await?;
+    Ok(Json(McpGlobalDefinition {
+        summary: row.summary(),
+        manifest: row.manifest.0,
+    }))
+}
 
 #[utoipa::path(post,path="/api/mcp/definitions/inspect-http",operation_id="inspectHttpMcpDefinition",request_body=McpHttpInspection,responses((status=200,body=McpDefinitionManifest)))]
 pub async fn inspect_http(
@@ -21,9 +57,42 @@ pub async fn inspect_http(
         .try_acquire_owned()
         .map_err(|_| capacity())?;
     text(input.name.trim(), 120, false)?;
-    let tools = recollect_mcp_runtime::discovery::inspect_http(input.url.trim()).await
-        .map_err(|e| Error(StatusCode::BAD_GATEWAY, e.0,
-            "Could not inspect this anonymous MCP server. Check its URL and authentication requirements."))?;
+    let metadata = recollect_mcp_runtime::discovery::inspect_http_metadata_with_headers(
+        input.url.trim(),
+        &input.headers,
+    )
+    .await
+    .map_err(|e| {
+        Error(
+            StatusCode::BAD_GATEWAY,
+            e.0,
+            "Could not inspect this MCP server. Check its URL and authentication requirements.",
+        )
+    })?;
+    let secrets: Vec<String> = input
+        .headers
+        .values()
+        .flat_map(|value| {
+            [
+                value.clone(),
+                value.strip_prefix("Bearer ").unwrap_or(value).to_owned(),
+            ]
+        })
+        .collect();
+    let mut tools: Vec<McpToolDescriptor> =
+        serde_json::from_value(recollect_mcp_runtime::sanitize(
+            &serde_json::to_value(metadata.tools)
+                .map_err(|_| Error::invalid("Invalid tool metadata."))?,
+            &secrets,
+        ))
+        .map_err(|_| Error::invalid("Invalid tool metadata."))?;
+    for tool in &mut tools {
+        equivalent_schema::normalize(&mut tool.input_schema)?;
+        if let Some(schema) = &mut tool.output_schema {
+            equivalent_schema::normalize(schema)?;
+        }
+    }
+    let icon_png = super::connector_icons::inspect(input.url.trim(), &metadata.icon_sources).await;
     let manifest = McpDefinitionManifest {
         key: format!("http-{}", Uuid::new_v4()),
         name: input.name.trim().into(),
@@ -32,9 +101,14 @@ pub async fn inspect_http(
         command: None,
         arguments: vec![],
         placements: vec!["central".into()],
-        credential_aliases: vec![],
+        credential_aliases: if input.headers.is_empty() {
+            vec![]
+        } else {
+            vec!["authentication".into()]
+        },
         configuration_schema: json!({"type":"object", "properties":{}, "additionalProperties":false}),
         tools,
+        icon_png,
         receipt_policies: vec![],
     };
     validate_manifest(&manifest)?;
@@ -113,6 +187,7 @@ impl DefinitionRow {
             transport: self.manifest.transport.clone(),
             enabled: self.enabled,
             tool_count: self.manifest.tools.len(),
+            icon_png: self.manifest.icon_png.clone(),
             updated_at: self.updated_at,
         }
     }
@@ -242,6 +317,15 @@ pub(super) fn configuration_valid(def: &McpDefinitionManifest, value: &Value) ->
         && validator(&def.configuration_schema, true, 16384).is_ok_and(|v| v.is_valid(value))
 }
 pub fn validate_manifest(input: &McpDefinitionManifest) -> Result<()> {
+    if input
+        .icon_png
+        .as_ref()
+        .is_some_and(|icon| !super::connector_icons::valid_cached(icon))
+    {
+        return Err(Error::invalid(
+            "Use a bounded normalized cached PNG connector icon.",
+        ));
+    }
     if !identifier(&input.key, 64)
         || text(&input.name, 120, false).is_err()
         || text(&input.description, 2000, true).is_err()
@@ -300,7 +384,11 @@ pub fn validate_manifest(input: &McpDefinitionManifest) -> Result<()> {
     for tool in &input.tools {
         if !identifier(&tool.name, 128)
             || !names.insert(&tool.name)
-            || text(&tool.description, 2000, true).is_err()
+            || tool.description.chars().count() > 2000
+            || tool
+                .description
+                .chars()
+                .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
         {
             return Err(Error::invalid(
                 "Tool names must be unique bounded ASCII identifiers with bounded descriptions.",

@@ -14,7 +14,7 @@ import {
 // is deliberately not exercised beyond its landing route.
 
 const tierLinks: Record<(typeof brainTiers)[number], readonly string[]> = {
-  Ask: ["Ask"],
+  Brain: ["Dashboard", "Ask"],
   Knowledge: ["Memory", "Sources", "Graph", "Repositories"],
   Wiring: ["Agents", "Connections", "Settings"],
   Assurance: ["Activity"],
@@ -90,7 +90,12 @@ test("the sidebar renders four ordered tiers with visible group headings", async
   await signIn(page);
   const brain = await createBrain(page);
   await page.goto(`/brains/${brain}/memory`);
-  expect([...brainTiers]).toEqual(["Ask", "Knowledge", "Wiring", "Assurance"]);
+  expect([...brainTiers]).toEqual([
+    "Brain",
+    "Knowledge",
+    "Wiring",
+    "Assurance",
+  ]);
   await expect(brainNav(page).getByRole("group")).toHaveCount(4);
   expect(await brainNav(page).locator(".nav-label").allTextContents()).toEqual([
     ...brainTiers,
@@ -270,27 +275,27 @@ test("an unknown view value falls back to the documented default", async ({
   );
   // An unknown Brain section keeps its documented landing instead of a blank surface.
   await page.goto(`/brains/${brain}/not-a-view`);
-  await expect(page).toHaveURL(new RegExp(`/brains/${brain}/ask$`));
+  await expect(page).toHaveURL(new RegExp(`/brains/${brain}/dashboard$`));
   await expect(surface(page)).toHaveCount(0);
 });
 
-test("the Ask landing and the global destinations keep their current behavior", async ({
+test("the Dashboard landing and the global destinations resolve", async ({
   page,
 }) => {
   await signIn(page);
   const brain = await createBrain(page);
   await page.goto(`/brains/${brain}`);
-  await expect(page).toHaveURL(new RegExp(`/brains/${brain}/ask$`));
+  await expect(page).toHaveURL(new RegExp(`/brains/${brain}/dashboard$`));
   await expect(
-    page.getByRole("heading", { level: 1, name: /Ask your Brain/ }),
+    page.getByRole("heading", { level: 1, name: /Dashboard/ }),
   ).toBeVisible();
   await expect(surface(page)).toHaveCount(0);
   await expect(inspector(page)).toHaveCount(0);
   await expect(
-    brainNav(page).getByRole("link", { name: "Ask", exact: true }),
+    brainNav(page).getByRole("link", { name: "Dashboard", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await expect(page).toHaveTitle(/Ask · Recollect$/);
-  // Team, Brains and Devices stay global destinations outside the tiers.
+  await expect(page).toHaveTitle(/Dashboard · Recollect$/);
+  // Team, Brains and Agents stay global destinations outside the tiers.
   await page.goto("/");
   await expect(brainNav(page)).toHaveCount(0);
   const global = page.getByRole("navigation", {
@@ -304,10 +309,10 @@ test("the Ask landing and the global destinations keep their current behavior", 
       .evaluateAll((nodes) =>
         nodes.map((node) => (node as HTMLAnchorElement).getAttribute("href")),
       ),
-  ).toEqual(["/", "/team", "/devices"]);
+  ).toEqual(["/", "/agents", "/team"]);
   for (const [href, label] of [
     ["/team", "Team"],
-    ["/devices", "Devices"],
+    ["/agents", "Agents"],
   ]) {
     await global.locator(`a[href="${href}"]`).click();
     await expect(

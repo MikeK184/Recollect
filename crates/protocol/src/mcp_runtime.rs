@@ -271,6 +271,8 @@ pub struct McpInstanceUpdate {
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct McpInstance {
+    /// Matches the enabled connection and approved definition currently visible.
+    pub current_configuration: bool,
     pub id: Uuid,
     pub profile_id: Uuid,
     pub connection_id: Uuid,

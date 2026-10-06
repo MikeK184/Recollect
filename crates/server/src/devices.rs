@@ -50,9 +50,14 @@ pub async fn start(
             "Use a device name between 1 and 120 characters.",
         ));
     }
-    let host_kind = input.host_kind.as_deref().map(str::trim).filter(|v| !v.is_empty());
+    let host_kind = input
+        .host_kind
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty());
     if let Some(kind) = host_kind
-        && !matches!(kind, "codex" | "claude_code" | "opencode") {
+        && !matches!(kind, "codex" | "claude_code" | "opencode")
+    {
         return Err(Error::invalid("Unknown host kind."));
     }
     let integration = input
@@ -60,7 +65,9 @@ pub async fn start(
         .as_deref()
         .map(str::trim)
         .filter(|v| !v.is_empty());
-    if let Some(value) = integration && !matches!(value, "mcp" | "plugin") {
+    if let Some(value) = integration
+        && !matches!(value, "mcp" | "plugin")
+    {
         return Err(Error::invalid("Unknown integration."));
     }
     let mut tx = state.pool.begin().await?;
@@ -147,7 +154,9 @@ pub async fn approve(
         integration: Option<String>,
     }
     let row:Option<PairingRow>=sqlx::query_as("SELECT id,name,state,expires_at,host_kind,integration FROM device_pairings WHERE user_code=$1 AND expires_at>now() FOR UPDATE").bind(&code).fetch_optional(&mut *tx).await?;
-    let Some(pairing) = row else { return Err(gone()) };
+    let Some(pairing) = row else {
+        return Err(gone());
+    };
     let name = pairing.name.clone();
     let status = pairing.state.clone();
     let expires_at = pairing.expires_at;
@@ -220,7 +229,14 @@ pub async fn approve(
             Some(id)
         }
     } else {
-        team::audit(&mut tx, auth.user.id, pairing.id, "device.decline", "declined").await?;
+        team::audit(
+            &mut tx,
+            auth.user.id,
+            pairing.id,
+            "device.decline",
+            "declined",
+        )
+        .await?;
         None
     };
     sqlx::query("UPDATE device_pairings SET state=$2,device_id=$3 WHERE id=$1")
@@ -352,7 +368,7 @@ pub async fn cancel(
 #[utoipa::path(get,path="/api/devices",operation_id="listDevices",responses((status=200,body=Vec<Device>)))]
 pub async fn list(State(state): State<AppState>, auth: Auth) -> Result<Json<Vec<Device>>> {
     let mut tx = auth.tx(&state.pool).await?;
-    let rows:Vec<DbJson<Device>>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'name',name,'claimed',claimed,'revoked_at',revoked_at,'expires_at',expires_at,'last_used_at',last_used_at,'created_at',created_at) FROM devices WHERE account_id=$1 ORDER BY created_at DESC LIMIT 1000").bind(auth.user.id).fetch_all(&mut *tx).await?;
+    let rows:Vec<DbJson<Device>>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'name',name,'claimed',claimed,'revoked_at',revoked_at,'expires_at',expires_at,'last_used_at',last_used_at,'created_at',created_at,'host_kind',host_kind,'integration',integration) FROM devices WHERE account_id=$1 ORDER BY created_at DESC LIMIT 1000").bind(auth.user.id).fetch_all(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(rows.into_iter().map(|r| r.0).collect()))
 }
@@ -376,11 +392,12 @@ pub async fn brain_agents(
         integration: String,
         claimed: bool,
         active: bool,
-        created_at: DateTime<Utc>,
-        expires_at: DateTime<Utc>,
+        created_at: Option<DateTime<Utc>>,
+        expires_at: Option<DateTime<Utc>>,
         last_used_at: Option<DateTime<Utc>>,
         last_used_on_brain_at: Option<DateTime<Utc>>,
         user_name: String,
+        can_revoke: bool,
     }
     let visible = if include_hidden {
         "TRUE"
@@ -388,16 +405,16 @@ pub async fn brain_agents(
         "d.revoked_at IS NULL AND d.expires_at>now()"
     };
     let rows: Vec<Row> = sqlx::query_as(&format!(
-        "WITH brain_mcp AS (SELECT device_id,max(created_at) last_used FROM mcp_calls WHERE brain_id=$1 AND device_id IS NOT NULL GROUP BY device_id), brain_capture AS (SELECT b.device_id,max(e.received_at) last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE e.brain_id=$1 AND b.device_id IS NOT NULL GROUP BY b.device_id), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE(d.host_kind,h.host) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,GREATEST(m.last_used,c.last_used) last_used_on_brain_at,a.username user_name FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN brain_mcp m ON m.device_id=d.id LEFT JOIN brain_capture c ON c.device_id=d.id LEFT JOIN binding_host h ON h.device_id=d.id WHERE d.account_id=$2 AND ({visible}) ORDER BY active DESC,d.created_at DESC"
+        "SELECT d.id,d.name,coalesce(d.host_kind,(SELECT b.host FROM capture_bindings b JOIN capture_events e ON e.binding_id=b.id AND e.brain_id=b.brain_id WHERE b.brain_id=$1 AND b.device_id=d.id AND e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)>clock_timestamp() ORDER BY e.received_at DESC,e.id DESC LIMIT 1)) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,CASE WHEN d.account_id=$2 THEN d.created_at END created_at,CASE WHEN d.account_id=$2 THEN d.expires_at END expires_at,CASE WHEN d.account_id=$2 THEN d.last_used_at END last_used_at,u.last_used last_used_on_brain_at,a.username user_name,d.account_id=$2 can_revoke FROM recollect_brain_agent_usage($1) u JOIN devices d ON d.id=u.device_id JOIN accounts a ON a.id=d.account_id WHERE ({visible}) ORDER BY a.username,active DESC,d.name,d.id"
     ))
     .bind(brain)
     .bind(auth.user.id)
     .fetch_all(&mut *tx)
     .await?;
     let hidden_count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM devices WHERE account_id=$1 AND (revoked_at IS NOT NULL OR expires_at<=now())",
+        "SELECT count(*) FROM recollect_brain_agent_usage($1) u JOIN devices d ON d.id=u.device_id WHERE d.revoked_at IS NOT NULL OR d.expires_at<=now()",
     )
-    .bind(auth.user.id)
+    .bind(brain)
     .fetch_one(&mut *tx)
     .await?;
     tx.commit().await?;
@@ -405,6 +422,7 @@ pub async fn brain_agents(
     for row in rows {
         let agent = BrainAgent {
             device_id: row.id,
+            can_revoke: row.can_revoke,
             name: row.name,
             host_kind: row.host_kind,
             integration: row.integration,
@@ -434,12 +452,7 @@ pub async fn account_agents(
     auth: Auth,
 ) -> Result<Json<AccountAgentRoster>> {
     let mut tx = auth.tx(&state.pool).await?;
-    // The installation owner sees every account device; any other member sees
-    // only their own. Both see brain usage only for Brains they can access.
-    let owner: bool = sqlx::query_scalar("SELECT installation_owner FROM accounts WHERE id=$1")
-        .bind(auth.user.id)
-        .fetch_one(&mut *tx)
-        .await?;
+    // Workspace Agents is personal for every account, including owners.
     #[derive(sqlx::FromRow)]
     struct Row {
         id: Uuid,
@@ -455,17 +468,15 @@ pub async fn account_agents(
         brains: DbJson<Vec<AgentBrainUsage>>,
     }
     let rows: Vec<Row> = sqlx::query_as(
-        "WITH acc AS (SELECT oidc_issuer,oidc_groups,membership_until FROM accounts WHERE id=$1), accessible AS (SELECT b.id,b.name FROM brains b WHERE b.owner_id=$1 OR EXISTS(SELECT 1 FROM brain_grants d WHERE d.brain_id=b.id AND d.account_id=$1) OR EXISTS(SELECT 1 FROM brain_group_grants g JOIN acc a ON a.oidc_issuer=g.issuer WHERE g.brain_id=b.id AND g.group_name=ANY(a.oidc_groups) AND a.membership_until>now())), usage AS (SELECT device_id,brain_id,max(last_used) last_used FROM (SELECT device_id,brain_id,created_at last_used FROM mcp_calls WHERE device_id IS NOT NULL AND brain_id IN (SELECT id FROM accessible) UNION ALL SELECT b.device_id,e.brain_id,e.received_at last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE b.device_id IS NOT NULL AND e.brain_id IN (SELECT id FROM accessible)) u GROUP BY 1,2), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE(d.host_kind,h.host) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,a.username user_name,coalesce((SELECT jsonb_agg(jsonb_build_object('brain_id',u.brain_id,'name',ab2.name,'last_used_at',u.last_used) ORDER BY u.last_used DESC) FROM usage u JOIN accessible ab2 ON ab2.id=u.brain_id WHERE u.device_id=d.id),'[]'::jsonb) brains FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN binding_host h ON h.device_id=d.id WHERE ($2 OR d.account_id=$1) AND d.revoked_at IS NULL AND d.expires_at>now() ORDER BY active DESC,d.created_at DESC",
+        "WITH acc AS (SELECT oidc_issuer,oidc_groups,membership_until FROM accounts WHERE id=$1), accessible AS (SELECT b.id,b.name,b.icon_revision FROM brains b WHERE b.owner_id=$1 OR EXISTS(SELECT 1 FROM brain_grants d WHERE d.brain_id=b.id AND d.account_id=$1) OR EXISTS(SELECT 1 FROM brain_group_grants g JOIN acc a ON a.oidc_issuer=g.issuer WHERE g.brain_id=b.id AND g.group_name=ANY(a.oidc_groups) AND a.membership_until>now())), usage AS (SELECT device_id,brain_id,max(last_used) last_used FROM (SELECT device_id,brain_id,created_at last_used FROM mcp_calls WHERE device_id IS NOT NULL AND brain_id IN (SELECT id FROM accessible) UNION ALL SELECT b.device_id,e.brain_id,e.received_at last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE b.device_id IS NOT NULL AND e.brain_id IN (SELECT id FROM accessible) AND e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)>clock_timestamp()) u GROUP BY 1,2), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE(d.host_kind,h.host) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,a.username user_name,coalesce((SELECT jsonb_agg(jsonb_build_object('brain_id',u.brain_id,'name',ab2.name,'icon_revision',ab2.icon_revision,'last_used_at',u.last_used) ORDER BY u.last_used DESC) FROM usage u JOIN accessible ab2 ON ab2.id=u.brain_id WHERE u.device_id=d.id),'[]'::jsonb) brains FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN binding_host h ON h.device_id=d.id WHERE d.account_id=$1 AND d.revoked_at IS NULL AND d.expires_at>now() ORDER BY active DESC,d.created_at DESC",
     )
     .bind(auth.user.id)
-    .bind(owner)
     .fetch_all(&mut *tx)
     .await?;
     let hidden_count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM devices d WHERE ($2 OR d.account_id=$1) AND (d.revoked_at IS NOT NULL OR d.expires_at<=now())",
+        "SELECT count(*) FROM devices d WHERE d.account_id=$1 AND (d.revoked_at IS NOT NULL OR d.expires_at<=now())",
     )
     .bind(auth.user.id)
-    .bind(owner)
     .fetch_one(&mut *tx)
     .await?;
     tx.commit().await?;

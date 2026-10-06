@@ -1,4 +1,6 @@
 pub mod agent;
+mod connector_icons;
+pub mod credentials;
 pub mod definitions;
 mod grants;
 pub mod private;
@@ -176,6 +178,7 @@ impl ConnectionRow {
             revision: self.revision,
             availability: availability.into(),
             updated_at: self.updated_at,
+            last_successful_call_at: None,
         }
     }
 }
@@ -273,6 +276,14 @@ pub async fn catalogue(
             .bind(brain)
             .fetch_all(&mut *tx)
             .await?;
+    // Only successful calls the current actor may inspect, with the current
+    // connection configuration. This timestamp never asserts live connectivity.
+    let successful: Vec<(Uuid, DateTime<Utc>)> = sqlx::query_as(
+        "SELECT c.connection_id,max(c.completed_at) FROM mcp_calls c JOIN mcp_connections n ON n.id=c.connection_id AND n.revision=c.connection_revision JOIN mcp_definitions d ON d.key=n.definition_key AND d.updated_at=c.definition_revision WHERE c.brain_id=$1 AND c.state='succeeded' AND c.completed_at IS NOT NULL AND recollect_mcp_can(c.profile_id,'use') GROUP BY c.connection_id",
+    )
+    .bind(brain)
+    .fetch_all(&mut *tx)
+    .await?;
     let connections = connections
         .into_iter()
         .filter(|c| manager || profiles.iter().any(|p| p.connection_ids.contains(&c.id)))
@@ -280,7 +291,14 @@ pub async fn catalogue(
             definitions
                 .iter()
                 .find(|d| d.manifest.key == c.definition_key)
-                .map(|d| c.summary(d))
+                .map(|d| {
+                    let mut summary = c.summary(d);
+                    summary.last_successful_call_at = successful
+                        .iter()
+                        .find(|(id, _)| *id == c.id)
+                        .map(|(_, at)| *at);
+                    summary
+                })
         })
         .collect();
     let definitions = if role == "admin" {

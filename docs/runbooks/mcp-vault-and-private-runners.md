@@ -75,7 +75,9 @@ owner-only mode 0700 despite the 0600 setting; both satisfy the ownership bounda
 
 Point `RECOLLECT_MCP_CREDENTIALS_FILE` on the selected executor at a JSON file of
 references, with a binding for the connection UUID, approved alias and exact
-runner. No values are entered through Recollect's UI or model APIs. Example:
+runner. Vault/private bindings contain no UI-entered values; models cannot
+provision credentials. The separate central development-file owner workflow is
+documented in [MCP runtime](mcp-runtime.md#browser-managed-connector-setup). Example:
 
 ```json
 {

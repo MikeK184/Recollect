@@ -13,7 +13,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="page-heading">
+    <div className="page-heading rc-enter">
       <div>
         {eyebrow && <span className="eyebrow">{eyebrow}</span>}
         <Title order={1}>{title}</Title>

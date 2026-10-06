@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import "./features/feature-views.css";
 import {
@@ -23,18 +23,21 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
+import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
 import { EraseAction } from "./RetentionPanel";
+import { Markdown } from "./components/Markdown";
 import { useContentDeadline } from "./useContentDeadline";
+import { ChevronDown } from "lucide-react";
 
 type Settings = components["schemas"]["CaptureSettings"];
 type Event = components["schemas"]["CaptureEventView"];
 type Device = components["schemas"]["CaptureDeviceView"];
 const labels: Record<string, string> = {
-  prompt: "Prompt",
-  reply: "Reply",
+  prompt: "Questions",
+  reply: "Replies",
   tool_result: "Tool result",
-  lifecycle: "Lifecycle",
+  lifecycle: "Session events",
   codex: "Codex",
   claude_code: "Claude Code",
   opencode: "OpenCode",
@@ -45,6 +48,121 @@ const labels: Record<string, string> = {
 };
 const label = (value: string) => labels[value] ?? value.replaceAll("_", " ");
 const time = (value: string) => new Date(value).toLocaleString();
+function CompactCaptureTimeline({
+  items,
+  openEvidence,
+}: {
+  items: Event[];
+  openEvidence: (event: Event) => void;
+}) {
+  const days = new Map<string, Event[]>();
+  for (const item of items) {
+    const day = new Date(
+      item.event?.captured_at ?? item.receipt.received_at,
+    ).toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    days.set(day, [...(days.get(day) ?? []), item]);
+  }
+  return (
+    <div className="agent-capture-days">
+      {[...days].map(([day, events]) => (
+        <section className="agent-capture-day" key={day} aria-label={day}>
+          <h4>{day}</h4>
+          {events.map((item) => {
+            const captured =
+              item.event?.captured_at ?? item.receipt.received_at;
+            return (
+              <details
+                className="agent-capture-event"
+                key={item.receipt.event_id}
+                data-testid="agent-activity-event"
+              >
+                <summary>
+                  <strong>
+                    {item.event?.tool_name ||
+                      (item.event ? label(item.event.kind) : "Removed event")}
+                  </strong>
+                  <time dateTime={captured} title={time(captured)}>
+                    {new Date(captured).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  <span className="agent-event-outcome">
+                    {item.receipt.state === "accepted"
+                      ? "Captured"
+                      : label(item.receipt.state)}
+                  </span>
+                  <ChevronDown size={14} />
+                </summary>
+                <div className="agent-capture-event-details">
+                  {item.source_available &&
+                    item.receipt.source_id &&
+                    item.receipt.source_version_id && (
+                      <Button
+                        variant="light"
+                        size="compact-xs"
+                        onClick={() => openEvidence(item)}
+                      >
+                        Open evidence
+                      </Button>
+                    )}
+                  <p>
+                    {label(item.host)} {item.host_version} ·{" "}
+                    {item.event
+                      ? label(item.event.outcome)
+                      : "Event content removed"}
+                  </p>
+                  {item.processing && (
+                    <p>Processing: {label(item.processing)}</p>
+                  )}
+                  {item.learning && (
+                    <p>
+                      Learning: {label(item.learning.state)}
+                      {item.learning.state === "succeeded"
+                        ? ` · ${item.learning.accepted} accepted, ${item.learning.proposed} proposed`
+                        : ""}{" "}
+                      ·{" "}
+                      {time(
+                        item.learning.finished_at ??
+                          item.learning.job.updated_at,
+                      )}
+                    </p>
+                  )}
+                  <p>
+                    Scope: {item.selection.repository_ids?.length ?? 0}{" "}
+                    repositories · {item.selection.area_ids?.length ?? 0} areas
+                    {item.selection.environment_id
+                      ? " · selected environment"
+                      : ""}
+                  </p>
+                  {item.managed_call_id && (
+                    <p>Managed call {item.managed_call_id}</p>
+                  )}
+                  {!!item.event?.coverage.length && (
+                    <p>
+                      Coverage: {item.event.coverage.map(label).join(" · ")}
+                    </p>
+                  )}
+                  {item.receipt.expires_at && (
+                    <p>Content deadline: {time(item.receipt.expires_at)}</p>
+                  )}
+                  {!item.source_available && (
+                    <p>No retained source text available.</p>
+                  )}
+                  <p>Event {item.receipt.event_id}</p>
+                </div>
+              </details>
+            );
+          })}
+        </section>
+      ))}
+    </div>
+  );
+}
 const kinds = ["prompt", "reply", "tool_result", "lifecycle"].map((value) => ({
   value,
   label: label(value),
@@ -83,16 +201,21 @@ function Pages({
     </Group>
   ) : null;
 }
-function PolicyEditor({
+export function CapturePolicyEditor({
   brain,
   settings,
   close,
+  inline = false,
+  readOnly = false,
 }: {
   brain: string;
   settings: Settings;
   close: () => void;
+  inline?: boolean;
+  readOnly?: boolean;
 }) {
   const [draft, setDraft] = useState(structuredClone(settings.policy));
+  const [base] = useState(settings.change_id);
   const [tools, setTools] = useState(draft.excluded_tools.join("\n"));
   const [content, setContent] = useState(draft.excluded_content.join("\n"));
   const cache = useQueryClient();
@@ -105,7 +228,7 @@ function PolicyEditor({
   const save = useMutation({
     mutationFn: async () => {
       const body = {
-        base_change: settings.change_id,
+        base_change: base,
         policy: {
           ...draft,
           excluded_tools: lines(tools),
@@ -127,74 +250,157 @@ function PolicyEditor({
       close();
     },
   });
-  return (
-    <Modal opened onClose={close} title="Session capture policy" size="lg">
-      <Stack>
-        <Text size="sm">
-          Supported prompts, replies and tool results are captured automatically
-          under this policy. Model learning uses the separate model policy;
-          memories do not wait for individual approval.
-        </Text>
+  const form = (
+    <Stack className={inline ? "privacy-editor" : undefined}>
+      <div className="privacy-capture-enabled">
+        <span>Automatic session capture</span>
         <Switch
-          label="Enable automatic session capture"
-          checked={draft.enabled}
+          aria-label="Enable automatic session capture"
+          checked={readOnly ? settings.policy.enabled : draft.enabled}
+          disabled={readOnly}
           onChange={(e) =>
             setDraft({ ...draft, enabled: e.currentTarget.checked })
           }
         />
-        <MultiSelect
-          label="Captured events"
-          data={kinds}
-          value={draft.kinds}
-          onChange={(value) => setDraft({ ...draft, kinds: value })}
-        />
-        <Switch
-          label="Capture managed tool results"
-          description="Future permitted results from writers become evidence shared with this Brain's readers. Profile Use and model-provider permissions remain separate."
-          checked={draft.managed_tools ?? false}
-          onChange={(e) =>
-            setDraft({ ...draft, managed_tools: e.currentTarget.checked })
-          }
-        />
-        <NumberInput
-          label="Maximum text per event · KiB"
-          min={1}
-          max={64}
-          allowDecimal={false}
-          value={draft.max_event_bytes / 1024}
-          onChange={(value) =>
-            setDraft({
-              ...draft,
-              max_event_bytes: typeof value === "number" ? value * 1024 : 0,
-            })
-          }
-        />
-        <Textarea
-          label="Excluded tools"
-          description="One name or pattern per line; up to 20."
-          autosize
-          minRows={2}
-          value={tools}
-          onChange={(e) => setTools(e.currentTarget.value)}
-        />
-        <Textarea
-          label="Excluded content"
-          description="One literal phrase per line; matching events are omitted. Do not enter credentials."
-          autosize
-          minRows={2}
-          value={content}
-          onChange={(e) => setContent(e.currentTarget.value)}
-        />
-        <Text size="sm" c="dimmed">
-          Credential redaction and sensitive file exclusions always apply. Raw
-          session and tool content follow this Brain's retention policy,
-          initially 30 days.
-        </Text>
-        <Failure error={save.error} />
-        <Button loading={save.isPending} onClick={() => save.mutate()}>
-          Save capture policy
-        </Button>
-      </Stack>
+      </div>
+      {[
+        {
+          title: "Questions & replies",
+          description: "User questions and agent responses",
+          values: ["prompt", "reply"],
+        },
+        {
+          title: "Tool results",
+          description: "Outputs from tools",
+          values: ["tool_result"],
+        },
+        {
+          title: "Session events",
+          description: "Agent actions, tool calls and other events",
+          values: ["lifecycle"],
+        },
+      ].map((row) => (
+        <PolicyRow
+          key={row.title}
+          title={row.title}
+          description={row.description}
+        >
+          <div className="privacy-capture-kind-switches">
+            {row.values.map((value) => (
+              <Switch
+                key={value}
+                aria-label={
+                  "Capture " +
+                  (kinds.find((k) => k.value === value)?.label.toLowerCase() ??
+                    value)
+                }
+                checked={(readOnly ? settings.policy : draft).kinds.includes(
+                  value,
+                )}
+                disabled={readOnly}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    kinds: e.currentTarget.checked
+                      ? [...draft.kinds, value]
+                      : draft.kinds.filter((k) => k !== value),
+                  })
+                }
+              />
+            ))}
+          </div>
+        </PolicyRow>
+      ))}
+      <section className="privacy-capture-options" aria-label="Capture limits">
+        <PolicyRow title="Managed tool results">
+          <Switch
+            aria-label="Capture managed tool results"
+            checked={
+              (readOnly ? settings.policy : draft).managed_tools ?? false
+            }
+            disabled={readOnly}
+            onChange={(e) =>
+              setDraft({ ...draft, managed_tools: e.currentTarget.checked })
+            }
+          />
+        </PolicyRow>
+        <PolicyRow title="Maximum text per event" description="KiB">
+          <NumberInput
+            aria-label="Maximum text per event · KiB"
+            min={1}
+            max={64}
+            allowDecimal={false}
+            value={(readOnly ? settings.policy : draft).max_event_bytes / 1024}
+            readOnly={readOnly}
+            hideControls={readOnly}
+            onChange={(value) =>
+              setDraft({
+                ...draft,
+                max_event_bytes: typeof value === "number" ? value * 1024 : 0,
+              })
+            }
+          />
+        </PolicyRow>
+        {(!readOnly || settings.policy.excluded_tools.length > 0) && (
+          <PolicyRow
+            title="Excluded tools"
+            description="One name or pattern per line; up to 20."
+          >
+            {readOnly ? (
+              settings.policy.excluded_tools.join(" · ") || "None"
+            ) : (
+              <Textarea
+                aria-label="Excluded tools"
+                autosize
+                minRows={2}
+                value={tools}
+                onChange={(e) => setTools(e.currentTarget.value)}
+              />
+            )}
+          </PolicyRow>
+        )}
+        {(!readOnly || settings.policy.excluded_content.length > 0) && (
+          <PolicyRow
+            title="Excluded content"
+            description="Literal phrases. Do not enter credentials."
+          >
+            {readOnly ? (
+              settings.policy.excluded_content.join(" · ") || "None"
+            ) : (
+              <Textarea
+                aria-label="Excluded content"
+                autosize
+                minRows={2}
+                value={content}
+                onChange={(e) => setContent(e.currentTarget.value)}
+              />
+            )}
+          </PolicyRow>
+        )}
+      </section>
+      <Failure error={save.error} />
+      {!readOnly && (
+        <Group justify="flex-end">
+          <Button variant="default" disabled={save.isPending} onClick={close}>
+            Cancel
+          </Button>
+          <Button loading={save.isPending} onClick={() => save.mutate()}>
+            Save capture policy
+          </Button>
+        </Group>
+      )}
+    </Stack>
+  );
+  return inline ? (
+    form
+  ) : (
+    <Modal
+      opened
+      onClose={() => !save.isPending && close()}
+      title="Capture permissions"
+      size="lg"
+    >
+      {form}
     </Modal>
   );
 }
@@ -285,6 +491,26 @@ function CaptureDevice({ item }: { item: Device }) {
     </Card>
   );
 }
+function capturedResultText(content: string): string | null {
+  try {
+    const record = JSON.parse(content);
+    if (
+      record?.provenance !== "reported_tool_observation" ||
+      !Array.isArray(record.result?.content)
+    )
+      return null;
+    const text = record.result.content
+      .filter(
+        (part: { type?: string; text?: string }) =>
+          part?.type === "text" && typeof part.text === "string",
+      )
+      .map((part: { text: string }) => part.text)
+      .join("\n\n");
+    return text || null;
+  } catch {
+    return null;
+  }
+}
 export function CapturedSource({
   brain,
   source,
@@ -298,11 +524,11 @@ export function CapturedSource({
 }) {
   const evidence = useQuery({
     queryKey: ["capture-source", brain.id, source, version],
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       result(
         await client.GET(
           "/api/brains/{brain}/sources/{source}/versions/{version}",
-          { params: { path: { brain: brain.id, source, version } } },
+          { signal, params: { path: { brain: brain.id, source, version } } },
         ),
       ),
     refetchInterval: 4000,
@@ -310,6 +536,9 @@ export function CapturedSource({
     retry: false,
   });
   const expired = useContentDeadline(evidence.data?.version.expires_at);
+  const capturedText = evidence.data?.content
+    ? capturedResultText(evidence.data.content)
+    : null;
   return (
     <Modal opened onClose={close} title="Captured source evidence" size="lg">
       <Stack>
@@ -326,12 +555,15 @@ export function CapturedSource({
                 {label(evidence.data.version.retention_class ?? "raw_session")}
               </Text>
               {evidence.data.content != null && !expired ? (
-                <pre
-                  className="source-content"
-                  data-testid="capture-source-content"
-                >
-                  {evidence.data.content}
-                </pre>
+                <div data-testid="capture-source-content">
+                  <Markdown text={capturedText ?? evidence.data.content} />
+                  {capturedText && (
+                    <details className="feature-details">
+                      <summary>Full captured record</summary>
+                      <Code block>{evidence.data.content}</Code>
+                    </details>
+                  )}
+                </div>
               ) : (
                 <Alert color="gray">
                   This source content is unavailable or has been removed.
@@ -355,38 +587,84 @@ export function CapturedSource({
 export function CapturePanel({
   brain,
   section = "sessions",
-  simple = false,
+  deviceId,
   initialCoverage = false,
+  selectedSource,
+  selectedVersion,
+  onInspectorChange,
+  compactTimeline = false,
 }: {
   brain: Brain;
   section?: "sessions" | "settings";
   simple?: boolean;
+  deviceId?: string;
   initialCoverage?: boolean;
+  selectedSource?: string;
+  selectedVersion?: string;
+  onInspectorChange?: (open: boolean) => void;
+  compactTimeline?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [coverage, setCoverage] = useState(initialCoverage);
-  const [setup, setSetup] = useState(false);
   const [kind, setKind] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [deviceOffset, setDeviceOffset] = useState(0);
   const [viewing, setViewing] = useState<Event | null>(null);
+  const [linkedEvidence, setLinkedEvidence] = useState<{
+    source: string;
+    version: string;
+  } | null>(null);
+  useEffect(() => {
+    setLinkedEvidence(
+      selectedSource && selectedVersion
+        ? { source: selectedSource, version: selectedVersion }
+        : null,
+    );
+  }, [selectedSource, selectedVersion, brain.id]);
+  useEffect(() => {
+    onInspectorChange?.(!!(viewing || linkedEvidence || coverage || editing));
+    return () => onInspectorChange?.(false);
+  }, [viewing, linkedEvidence, coverage, editing, onInspectorChange]);
   const path = { brain: brain.id };
-  const managed = useQuery({
-    queryKey: ["capture-managed", brain.id],
-    enabled: section === "sessions" && coverage,
-    queryFn: async () =>
+  const policy = useQuery({
+    queryKey: ["capture-policy", brain.id],
+    retry: false,
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
       result(
-        await client.GET("/api/brains/{brain}/capture/managed", {
+        await client.GET("/api/brains/{brain}/capture/policy", {
+          signal,
           params: { path },
         }),
       ),
     refetchInterval: 4000,
   });
-  const policy = useQuery({
-    queryKey: ["capture-policy", brain.id],
-    queryFn: async () =>
+  const events = useQuery({
+    queryKey: ["capture-events", brain.id, deviceId, offset, kind],
+    enabled: section === "sessions",
+    retry: false,
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
       result(
-        await client.GET("/api/brains/{brain}/capture/policy", {
+        await client.GET("/api/brains/{brain}/capture/events", {
+          signal,
+          params: {
+            path,
+            query: { offset, device_id: deviceId, kind: kind ?? undefined },
+          },
+        }),
+      ),
+    refetchInterval: 4000,
+  });
+  const managed = useQuery({
+    queryKey: ["capture-managed", brain.id],
+    enabled: section === "sessions" && coverage && !deviceId,
+    retry: false,
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/capture/managed", {
+          signal,
           params: { path },
         }),
       ),
@@ -394,279 +672,250 @@ export function CapturePanel({
   });
   const devices = useQuery({
     queryKey: ["capture-devices", brain.id, deviceOffset],
-    enabled: section === "sessions" && coverage,
-    queryFn: async () =>
+    enabled: section === "sessions" && coverage && !deviceId,
+    retry: false,
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/capture/devices", {
+          signal,
           params: { path, query: { offset: deviceOffset } },
         }),
       ),
     refetchInterval: 4000,
   });
-  const events = useQuery({
-    queryKey: ["capture-events", brain.id, offset, kind],
-    enabled: section === "sessions",
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/capture/events", {
-          params: { path, query: { offset, ...(kind ? { kind } : {}) } },
-        }),
-      ),
-    refetchInterval: 4000,
-  });
+  useEffect(() => {
+    setOffset(0);
+    setViewing(null);
+  }, [brain.id, deviceId, kind]);
+  useEffect(() => {
+    if (policy.isError || events.isError) {
+      setViewing(null);
+      setLinkedEvidence(null);
+      setEditing(false);
+    }
+  }, [policy.isError, events.isError]);
+  useEffect(() => {
+    if (brain.role !== "admin" || brain.archived) setEditing(false);
+  }, [brain.role, brain.archived]);
+  const current = policy.isError ? undefined : policy.data?.policy;
   return (
     <section
-      className={section === "settings" ? "feature-setting" : "feature-view"}
-      aria-label="Session capture"
+      className={
+        section === "settings"
+          ? "feature-setting"
+          : compactTimeline
+            ? "agent-capture-timeline"
+            : "feature-view"
+      }
+      aria-label={
+        section === "settings" ? "Capture permissions" : "Captured activity"
+      }
     >
-      <Stack>
-        <Group justify="space-between">
-          <Title order={3}>
-            {section === "settings"
-              ? simple
-                ? "Connect agent capture"
-                : "Capture policy"
-              : "Captured sessions"}
-          </Title>
-          <Group>
-            {section === "settings" &&
-              brain.role !== "reader" &&
-              !brain.archived && (
-                <Button variant="light" onClick={() => setSetup(true)}>
-                  Connect capture
-                </Button>
-              )}
-            {section === "settings" &&
-              !simple &&
-              brain.role === "admin" &&
-              !brain.archived && (
-                <Button
-                  variant="light"
-                  disabled={!policy.data}
-                  onClick={() => setEditing(true)}
-                >
-                  Capture policy
-                </Button>
-              )}
-            {section === "sessions" && (
-              <>
-                <Button variant="default" onClick={() => setCoverage(true)}>
-                  Capture coverage
-                </Button>
-                <Button
-                  variant="subtle"
-                  component="a"
-                  href={`/brains/${brain.id}/settings?tab=capture`}
-                >
-                  Capture settings
-                </Button>
-              </>
-            )}
-          </Group>
-        </Group>
-        <Text size="sm">
-          Automatic evidence from supported agent hooks and enabled managed
-          tools. Learning and revision follow the model policy; expiry and
-          erasure follow the retention policy.
-        </Text>
-        <Failure
-          error={policy.error ?? devices.error ?? events.error ?? managed.error}
-        />
-        {simple && !policy.error && policy.data && (
-          <Text size="sm">
-            {policy.data.policy.enabled
-              ? "Supported prompts, replies and tool results are captured automatically once your agent is connected. Secrets are redacted before storage."
-              : "Enable autonomous memory once under AI & automation, then connect your agent here. No capture tuning is required."}
-          </Text>
-        )}
-        {!simple && !policy.error && policy.data ? (
-          <Group>
-            <Badge color={policy.data.policy.enabled ? "teal" : "gray"}>
-              {policy.data.policy.enabled
-                ? "Capture enabled"
-                : "Capture disabled"}
-            </Badge>
-            <Badge
-              color={
-                policy.data.policy.enabled && policy.data.policy.managed_tools
-                  ? "teal"
-                  : "gray"
-              }
-            >
-              Managed tools{" "}
-              {policy.data.policy.enabled && policy.data.policy.managed_tools
-                ? "enabled"
-                : "disabled"}
-            </Badge>
-            <Text size="sm">
-              {policy.data.policy.kinds.map(label).join(" · ")} · up to{" "}
-              {policy.data.policy.max_event_bytes / 1024} KiB per event
-            </Text>
-          </Group>
-        ) : (
-          policy.isPending && <Loader size="sm" />
-        )}
-        <Drawer
-          className="feature-drawer"
-          opened={coverage}
-          onClose={() => setCoverage(false)}
-          position="right"
-          title="Capture coverage"
-          size="lg"
+      <Stack gap="md">
+        <Group
+          justify="space-between"
+          className={compactTimeline ? "agent-activity-toolbar" : undefined}
         >
-          <Stack>
-            {!managed.error && managed.data && (
-              <Stack gap={2}>
-                <Text size="sm">
-                  Visible managed calls: {managed.data.pending} pending ·{" "}
-                  {managed.data.errors} retrying · {managed.data.published}{" "}
-                  published · {managed.data.filtered} without retained text ·{" "}
-                  {managed.data.skipped} skipped
-                </Text>
-                {!!managed.data.unknown && (
-                  <Text size="sm" c="dimmed">
-                    {managed.data.unknown} outcomes remain unknown; later
-                    receipts have separate records.
-                  </Text>
-                )}
-                {managed.data.last_publication && (
-                  <Text size="xs" c="dimmed">
-                    Last managed publication:{" "}
-                    {time(managed.data.last_publication)}
-                  </Text>
-                )}
-                {managed.data.oldest_pending && (
-                  <Text size="xs" c="dimmed">
-                    Oldest pending outcome: {time(managed.data.oldest_pending)}
-                  </Text>
-                )}
-              </Stack>
-            )}
-            {devices.data?.total === 0 && (
-              <Alert color="gray">
-                No coding host has registered session capture for this Brain
-                yet.
-              </Alert>
-            )}
-            {!devices.error &&
-              devices.data?.items.map((item) => (
-                <CaptureDevice key={item.device_id} item={item} />
-              ))}
-            {devices.data && (
-              <Pages
-                offset={deviceOffset}
-                total={devices.data.total}
-                change={setDeviceOffset}
-              />
-            )}
-          </Stack>
-        </Drawer>
-        {section === "settings" && !simple && (
-          <Text size="sm" c="dimmed">
-            Capture permission allows supported events to be recorded. Sending
-            those records to a model requires a separate AI policy. Expiry and
-            erasure are controlled in Retention &amp; privacy.
-          </Text>
-        )}
-        {section === "sessions" && (
-          <>
-            <Group justify="space-between">
-              <Title order={3}>Published activity</Title>
+          <Title order={3}>
+            {section === "settings" ? "Capture" : "Captured activity"}
+          </Title>
+          {section === "settings" ? (
+            brain.role === "admin" &&
+            !brain.archived && (
+              <Button
+                variant="default"
+                disabled={!current}
+                onClick={() => setEditing(true)}
+              >
+                Edit capture permissions
+              </Button>
+            )
+          ) : (
+            <Group>
+              {!deviceId && (
+                <Button variant="subtle" onClick={() => setCoverage(true)}>
+                  Capture diagnostics
+                </Button>
+              )}
               <Select
-                aria-label="Capture event kind"
-                placeholder="All event kinds"
+                aria-label="Activity kind"
+                placeholder="All captured events"
                 clearable
                 data={kinds}
                 value={kind}
-                onChange={(v) => {
-                  setKind(v);
-                  setOffset(0);
-                }}
+                onChange={setKind}
               />
             </Group>
+          )}
+        </Group>
+        <Failure error={policy.error ?? events.error} />
+        {section === "settings" &&
+          (policy.isPending ? (
+            <Loader size="sm" />
+          ) : (
+            current && (
+              <>
+                <Group>
+                  <Badge color={current.enabled ? "teal" : "gray"}>
+                    {current.enabled ? "Allowed" : "Off"}
+                  </Badge>
+                  <Text size="sm">
+                    {current.enabled
+                      ? current.kinds.map(label).join(" · ") ||
+                        "No event kinds allowed"
+                      : "New session capture is disabled."}
+                  </Text>
+                </Group>
+                <Text size="sm" c="dimmed">
+                  {current.excluded_tools.length} tool exclusions ·{" "}
+                  {current.excluded_content.length} content exclusions. Secret
+                  redaction always applies.
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Capture does not grant permission to send content to AI.
+                  Existing evidence follows its retention rules.
+                </Text>
+              </>
+            )
+          ))}
+        {section === "sessions" && (
+          <>
+            {!compactTimeline && (
+              <Text size="xs" c="dimmed">
+                Recorded capture events. Host coverage may be partial.
+              </Text>
+            )}
+            {compactTimeline &&
+              !events.isError &&
+              events.data?.items.some((item) =>
+                item.event?.coverage.includes("partial_host_coverage"),
+              ) && (
+                <p className="agent-capture-partial">Partial host coverage</p>
+              )}
             {events.isPending ? (
               <Loader size="sm" />
             ) : (
+              !events.isError &&
               events.data?.total === 0 && (
                 <Text size="sm" c="dimmed">
-                  No published events match this view. A configured hook does
-                  not prove delivery.
+                  No captured events in this view.
                 </Text>
               )
             )}
-            {!events.error &&
-              !policy.error &&
-              events.data?.items.map((item) => (
-                <Card withBorder padding="sm" key={item.receipt.event_id}>
-                  <Stack gap="xs">
-                    <Group justify="space-between">
-                      <Text fw={600}>
-                        {item.event ? label(item.event.kind) : "Removed event"}{" "}
-                        · {label(item.host)}
-                      </Text>
-                      <Badge
-                        color={
-                          item.receipt.state === "accepted" ? "teal" : "gray"
-                        }
-                      >
-                        {item.receipt.state}
-                      </Badge>
-                    </Group>
-                    <Text size="xs" c="dimmed">
-                      {item.event
-                        ? time(item.event.captured_at)
-                        : time(item.receipt.received_at)}{" "}
-                      · host {item.host_version}
-                    </Text>
-                    <Text size="sm">
-                      Scope:{" "}
-                      {!item.selection.repository_ids?.length &&
-                      !item.selection.area_ids?.length &&
-                      !item.selection.environment_id
-                        ? "Brain-wide"
-                        : `${item.selection.repository_ids?.length ?? 0} repositories · ${item.selection.area_ids?.length ?? 0} areas${item.selection.environment_id ? " · selected environment" : ""}`}
-                    </Text>
-                    {item.managed_call_id && (
-                      <Text size="xs">Managed call {item.managed_call_id}</Text>
-                    )}
-                    {item.event && (
-                      <Text size="sm">
-                        {label(item.event.host_event)} ·{" "}
-                        {label(item.event.outcome)}
-                        {item.event.tool_name
-                          ? ` · ${item.event.tool_name}`
-                          : ""}
-                      </Text>
-                    )}
-                    {!!item.event?.coverage.length && (
-                      <Text size="xs" c="dimmed">
-                        Coverage: {item.event.coverage.map(label).join(" · ")}
-                      </Text>
-                    )}
-                    {item.receipt.expires_at && (
-                      <Text size="xs">
-                        Content deadline: {time(item.receipt.expires_at)}
-                      </Text>
-                    )}
-                    {item.source_available &&
-                    item.receipt.source_id &&
-                    item.receipt.source_version_id ? (
-                      <Button
-                        variant="subtle"
-                        size="compact-sm"
-                        onClick={() => setViewing(item)}
-                      >
-                        View captured source
-                      </Button>
-                    ) : (
-                      <Text size="xs" c="dimmed">
-                        No retained source text
-                      </Text>
-                    )}
-                  </Stack>
-                </Card>
+            {!events.isError &&
+              !policy.isError &&
+              (compactTimeline ? (
+                <CompactCaptureTimeline
+                  items={events.data?.items ?? []}
+                  openEvidence={setViewing}
+                />
+              ) : (
+                events.data?.items.map((item) => (
+                  <Card withBorder padding="md" key={item.receipt.event_id}>
+                    <Stack gap="sm">
+                      <Group justify="space-between" align="start">
+                        <div>
+                          <Text fw={600} size="sm">
+                            {item.event?.tool_name ||
+                              (item.event
+                                ? label(item.event.kind)
+                                : "Removed event")}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {item.user_name} ·{" "}
+                            {item.agent_name ?? label(item.host)}
+                          </Text>
+                        </div>
+                        <Badge
+                          color={
+                            item.receipt.state === "accepted" ? "teal" : "gray"
+                          }
+                        >
+                          {item.receipt.state === "accepted"
+                            ? "Captured"
+                            : label(item.receipt.state)}
+                        </Badge>
+                      </Group>
+                      <Group justify="space-between">
+                        <Text size="xs" c="dimmed">
+                          {time(
+                            item.event?.captured_at ?? item.receipt.received_at,
+                          )}
+                          {item.event ? ` · ${label(item.event.outcome)}` : ""}
+                        </Text>
+                        {item.source_available &&
+                          item.receipt.source_id &&
+                          item.receipt.source_version_id && (
+                            <Button
+                              variant="subtle"
+                              size="compact-sm"
+                              onClick={() => setViewing(item)}
+                            >
+                              Open evidence
+                            </Button>
+                          )}
+                      </Group>
+                      {item.processing && (
+                        <Text size="xs" c="dimmed">
+                          Processing · {label(item.processing)}
+                          {item.learning
+                            ? ` · Last recorded learning ${label(item.learning.state)}${item.learning.state === "succeeded" ? ` · ${item.learning.accepted} accepted, ${item.learning.proposed} proposed` : ""}`
+                            : " · No learning outcome recorded"}
+                        </Text>
+                      )}
+                      <details className="feature-details">
+                        <summary>Technical details</summary>
+                        <Stack gap={4} mt="sm">
+                          <Text size="xs">
+                            {label(item.host)} {item.host_version} · event{" "}
+                            {item.receipt.event_id}
+                          </Text>
+                          <Text size="xs">
+                            Scope: {item.selection.repository_ids?.length ?? 0}{" "}
+                            repositories ·{" "}
+                            {item.selection.area_ids?.length ?? 0} areas
+                            {item.selection.environment_id
+                              ? " · selected environment"
+                              : ""}
+                          </Text>
+                          {item.managed_call_id && (
+                            <Text size="xs">
+                              Managed call {item.managed_call_id}
+                            </Text>
+                          )}
+                          {item.learning && (
+                            <Text size="xs">
+                              Learning state recorded{" "}
+                              {time(
+                                item.learning.finished_at ??
+                                  item.learning.job.updated_at,
+                              )}
+                            </Text>
+                          )}
+                          {!!item.event?.coverage.length && (
+                            <Text size="xs">
+                              Coverage:{" "}
+                              {item.event.coverage.map(label).join(" · ")}
+                            </Text>
+                          )}
+                          {item.receipt.expires_at && (
+                            <Text size="xs">
+                              Content deadline: {time(item.receipt.expires_at)}
+                            </Text>
+                          )}
+                          {!item.source_available && (
+                            <Text size="xs">
+                              No retained source text available.
+                            </Text>
+                          )}
+                        </Stack>
+                      </details>
+                    </Stack>
+                  </Card>
+                ))
               ))}
-            {events.data && (
+            {!events.isError && events.data && (
               <Pages
                 offset={offset}
                 total={events.data.total}
@@ -675,15 +924,60 @@ export function CapturePanel({
             )}
           </>
         )}
-        {editing && policy.data && !policy.error && (
-          <PolicyEditor
-            brain={brain.id}
-            settings={policy.data}
-            close={() => setEditing(false)}
+        <Drawer
+          className="feature-drawer"
+          opened={coverage && !deviceId}
+          onClose={() => setCoverage(false)}
+          position="right"
+          title="Capture diagnostics"
+          size="lg"
+        >
+          {coverage && !deviceId && (
+            <Stack>
+              <Failure error={managed.error ?? devices.error} />
+              {!managed.isError && managed.data && (
+                <Text size="sm">
+                  {managed.data.pending} pending · {managed.data.errors}{" "}
+                  retrying · {managed.data.published} published
+                  {managed.data.unknown
+                    ? ` · ${managed.data.unknown} outcomes unknown`
+                    : ""}
+                </Text>
+              )}
+              {!devices.isError &&
+                devices.data?.items.map((item) => (
+                  <CaptureDevice key={item.device_id} item={item} />
+                ))}
+              {!devices.isError && devices.data && (
+                <Pages
+                  offset={deviceOffset}
+                  total={devices.data.total}
+                  change={setDeviceOffset}
+                />
+              )}
+            </Stack>
+          )}
+        </Drawer>
+        {editing &&
+          brain.role === "admin" &&
+          !brain.archived &&
+          policy.data &&
+          !policy.isError && (
+            <CapturePolicyEditor
+              brain={brain.id}
+              settings={policy.data}
+              close={() => setEditing(false)}
+            />
+          )}
+        {linkedEvidence && !events.isError && !policy.isError && (
+          <CapturedSource
+            brain={brain}
+            source={linkedEvidence.source}
+            version={linkedEvidence.version}
+            close={() => setLinkedEvidence(null)}
           />
         )}
-        {setup && <Setup brain={brain.id} close={() => setSetup(false)} />}
-        {viewing && (
+        {viewing && !linkedEvidence && !events.isError && !policy.isError && (
           <CapturedSource
             brain={brain}
             source={viewing.receipt.source_id!}

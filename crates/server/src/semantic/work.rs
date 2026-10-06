@@ -50,7 +50,7 @@ async fn ready<'a>(
     let profile = profile(&mut tx, job.brain_id)
         .await?
         .ok_or_else(Error::missing)?;
-    if profile.id != batch.profile_id || !compatible(state, &profile) {
+    if profile.id != batch.profile_id || !compatible(&policy.policy, &profile) {
         return Err(model_policy::failure(
             "semantic_profile_mismatch",
             "The active semantic profile changed.",
@@ -115,7 +115,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             query: None,
             instructions: String::new(),
             prompt_label: REPRESENTATION.into(),
-            schema_label: "embedding-3072-1".into(),
+            schema_label: "embedding-float-1".into(),
             format: gateway::Format::Embedding,
             metadata_replay: false,
             expected_json: None,
@@ -136,6 +136,9 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         ));
     }
     let (mut tx, current, current_entries) = ready(state, job).await?;
+    let profile = profile(&mut tx, job.brain_id)
+        .await?
+        .ok_or_else(Error::missing)?;
     if current_entries != entries {
         return Err(model_policy::failure(
             "semantic_input_changed",
@@ -144,7 +147,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     }
     let usable: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM model_requests WHERE brain_id=$1 AND id=$2 AND state='succeeded' AND NOT suppressed AND policy_id=$3 AND model=$4 AND returned_model=$4 AND dimensions=$5)")
         .bind(job.brain_id).bind(response.request.id).bind(current.policy_id)
-        .bind(&state.config.models.embedding_model).bind(DIMENSIONS).fetch_one(&mut *tx).await?;
+        .bind(&profile.model).bind(profile.dimensions).fetch_one(&mut *tx).await?;
     if !usable {
         return Err(model_policy::failure(
             "model_result_not_retained",

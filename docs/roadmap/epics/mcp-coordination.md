@@ -1,6 +1,6 @@
 # MCP Coordination, Vault and Private Runners
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -74,6 +74,9 @@ universal catalogue of customer connectors is introduced.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `mcp-equivalent-http-schema-inspection` | shipped | contract-backed | pack | Bounded equivalent Draft 7 declaration conversion during HTTP inspection; strict manifest approval retained |
+| `mcp-copy-ready-agent-config` | in-progress | contract-backed | pack | Browser direct-token native config and visible account token management, preserving plugin OS storage |
+| `mcp-approved-connector-icons` | shipped | contract-backed | pack | Explicit discovery preserves safe optional connector icons with bounded local cache/fallback |
 | `mcp-plugin-session-memory` | shipped | adr-backed, contract-backed | pack | Complete native plugin capture/automatic recall with bundled runtime, OpenCode adapter and optional runner flag |
 | `mcp-direct-auth-repair` | shipped | contract-backed | pack | SWEG credential handoff repaired through Keychain; installed Codex 0.157.1 workspace read and deployed concrete setup instructions verified |
 | `mcp-direct-connections` | shipped | contract-backed | pack | Direct HTTP host setup and token, anonymous name/URL form; real Context7 metadata/protocol proof with useful documentation quota-blocked |
@@ -206,3 +209,22 @@ pack](../execution/archive/agents-surface-refinement.md) and
 [evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md) record
 the checks; the contract amendment lands in
 [plugin direct auth](../../contracts/mcp-plugin-direct-auth.md).
+
+## Browser feedback closeout — 2026-10-05
+
+Direct browser config and Access tokens are implemented; native configuration recognition and real HTTP MCP recall pass. The copy-ready pack stays active because the installed OpenCode background service prevented fresh native launch acceptance. Safe optional icon cache/render acceptance is complete.
+
+[Coordinated delivery, validation and limits](../../mappings/desktop-browser-management-2026-10-05.md). Version N/A; work uncommitted, no push or external release.
+
+## Connection inspection follow-up closeout — 2026-10-06
+
+- Planned: Address marked Connections metadata/loading/formatting and Exa Test concerns.
+- Shipped: Clear actual badges/read states, formatted descriptions and JSON, structured
+  call details and bounded equivalent schema inspection on the ready local stack.
+- Not shipped: Broad schema migration, automatic tool execution or new grants.
+- New blockers: None for this follow-up; existing native-host work stays separate.
+- Docs updated: Contracts, archived packs, indexes, handoff and [current evidence](../../mappings/mcp-inspection-readability-2026-10-06.md).
+- Validation: Pure/owned backend fixtures, build/lint/governance, actual CUA read/check/
+  expiry/width proof, preserved runtime invariants and independent source/pixel review.
+- Version: N/A.
+- Commit: Uncommitted.

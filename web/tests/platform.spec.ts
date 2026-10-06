@@ -66,8 +66,12 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
   ).toBeVisible();
   await page.goto(`/brains/${brain}/settings`);
   await page.getByRole("button", { name: "Edit Brain" }).click();
-  await form.getByLabel(/^Name/).fill("Platform knowledge");
-  await form.getByRole("button", { name: "Save changes" }).click();
+  const editor = page.getByRole("region", {
+    name: "Edit Brain",
+    exact: true,
+  });
+  await editor.getByLabel(/^Name/).fill("Platform knowledge");
+  await editor.getByRole("button", { name: "Save changes" }).click();
   await expect(
     page.getByLabel("Switch Brain", { exact: true }).locator("option:checked"),
   ).toHaveText("Platform knowledge");

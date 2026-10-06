@@ -85,6 +85,7 @@ testing those rules through their own paths.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `brain-model-catalogue-and-selection` | shipped | contract-backed | pack | Account model catalogue, dated prices, per-Brain supported model selection and isolated embedding rebuilds |
 | `memory-claims-and-time` | shipped | adr-backed, contract-backed | pack | Delivered evidence-linked proposals/decisions, independent states, temporal history, selective freshness and canonical eligibility with API/browser/SWEG proof |
 | `memory-review-and-corrections` | shipped | contract-backed | pack | Delivered actionable review/conflicts, rejected-value rules, correction, withdrawal/revalidation and replay with API/browser proof |
 | `memory-retention-and-erasure` | shipped | contract-backed | pack | Delivered class deadlines, exact excerpts, dependency erasure, native cleanup and durable restore replay with API/browser/runtime proof |
@@ -141,3 +142,9 @@ remains active for the separate desktop workflow and integrated acceptance scope
 ## Final desktop and tooling acceptance — 2026-10-01
 
 The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
+
+## Browser feedback closeout — 2026-10-05
+
+The supported account model catalogue, dated prices, per-Brain model selection and dimension-safe embedding generation/rebuild successor has completed isolated backend and current UI acceptance. Actual metadata availability was refreshed once; no paid model call or real Brain rebuild was performed for screenshots.
+
+[Coordinated delivery, validation and limits](../../mappings/desktop-browser-management-2026-10-05.md). Version N/A; work uncommitted, no push or external release.
