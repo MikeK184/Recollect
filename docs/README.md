@@ -2,6 +2,12 @@
 
 Start here before meaningful implementation, debugging, or architecture work.
 
+For product setup and operator guides, use the
+[public documentation website](https://mikek184.github.io/Recollect/docs/).
+Its [site contract](contracts/public-product-and-docs-site.md) and
+[maintenance guide](../site/README.md) govern publication. Repository records
+below remain canonical for development authority and lifecycle.
+
 The repo-local [doc router](../.agents/skills/recollect-doc-router/SKILL.md)
 finds the relevant authority and current evidence. The
 [doc maintainer](../.agents/skills/recollect-doc-maintainer/SKILL.md) handles
