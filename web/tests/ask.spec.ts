@@ -133,7 +133,7 @@ async function transport(page: Page, base: string) {
         summary: "Recorded configuration",
         statements: [
           {
-            text: "BROWSER_TEMPORARY_ANSWER: AmberDesktop declares port 8080.",
+            text: "BROWSER_TEMPORARY_ANSWER: AmberDesktop declares port 8080.\n\n```yaml\nport: 8080\n```\n\n| Setting | Value |\n| --- | --- |\n| Port | 8080 |",
             citation_ids: ["C1"],
           },
         ],
@@ -186,7 +186,7 @@ test("disabled answering offers useful canonical search without enabling transmi
 }) => {
   const f = await setup(page, false);
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(`/brains/${f.brain}`);
+  await page.goto(`/brains/${f.brain}/ask`);
   await expect(page).toHaveURL(new RegExp(`/brains/${f.brain}/ask$`));
   await expect(
     page.getByRole("button", { name: "Ask Brain", exact: true }),
@@ -201,16 +201,18 @@ test("disabled answering offers useful canonical search without enabling transmi
     page.getByRole("button", { name: "Ask Brain", exact: true }),
   ).toBeDisabled();
   await page
-    .getByRole("button", { name: "Search evidence", exact: true })
+    .getByRole("button", { name: "Find evidence", exact: true })
     .click();
   const search = page.getByRole("region", {
     name: "Recall memory",
     exact: true,
   });
-  await expect(search.getByLabel("Search memory", { exact: true })).toHaveValue(
-    "AmberDesktop",
-  );
-  await search.getByRole("button", { name: "Recall", exact: true }).click();
+  await expect(
+    search.getByLabel("Search evidence", { exact: true }),
+  ).toHaveValue("AmberDesktop");
+  await search
+    .getByRole("button", { name: "Find evidence", exact: true })
+    .click();
   await expect(search.getByTestId("recall-result").first()).toBeVisible();
   expect(
     (await command(page, `${f.base}/models/policy`)).current.policy.enabled,
@@ -220,6 +222,7 @@ test("disabled answering offers useful canonical search without enabling transmi
 
 test("temporary answers render literal questions, exact citations, independent follow-ups and reset", async ({
   page,
+  context,
 }) => {
   const f = await setup(page);
   const proof = await transport(page, f.base);
@@ -234,6 +237,17 @@ test("temporary answers render literal questions, exact citations, independent f
   await expect(page.locator(".answer-statement")).toContainText(
     "BROWSER_TEMPORARY_ANSWER: AmberDesktop declares port 8080.",
   );
+  const statement = page.locator(".answer-statement").first();
+  await expect(statement.getByRole("table")).toContainText("Port");
+  await expect(statement.getByRole("table")).toContainText("8080");
+  await expect(statement.getByLabel("yaml code")).toContainText("port: 8080");
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await statement
+    .getByRole("button", { name: "Copy code", exact: true })
+    .click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe("port: 8080\n");
   await expect(
     page.getByText("This declaration does not establish deployed behavior.", {
       exact: true,
@@ -247,6 +261,7 @@ test("temporary answers render literal questions, exact citations, independent f
     exact: true,
   });
   await expect(inspector).toContainText("AmberDesktop");
+  await page.screenshot({ path: "../.cache/ask-formatted-proof.png" });
   await inspector.getByRole("button", { name: /^Open source version/ }).click();
   const evidence = page.getByRole("dialog", {
     name: "Supporting evidence",
@@ -286,7 +301,7 @@ test("temporary answers render literal questions, exact citations, independent f
   expect(stored).not.toContain("BROWSER_TEMPORARY_ANSWER");
   expect(stored).not.toContain(question);
   await page
-    .getByRole("button", { name: "New conversation", exact: true })
+    .getByRole("button", { name: "Clear conversation", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Recorded configuration", exact: true }),
@@ -455,8 +470,9 @@ test("switching Brains cancels a pending answer and ignores its late payload", a
   await page
     .getByLabel("Switch Brain", { exact: true })
     .selectOption(second.id);
-  await expect(page).toHaveURL(new RegExp(`/brains/${second.id}/ask$`));
+  await expect(page).toHaveURL(new RegExp(`/brains/${second.id}/dashboard$`));
   release();
+  await page.goto(`/brains/${second.id}/ask`);
   await expect(
     page.getByRole("region", { name: "Autonomous memory setup" }),
   ).toBeVisible();

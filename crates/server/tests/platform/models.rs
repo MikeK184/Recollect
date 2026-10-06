@@ -5,6 +5,8 @@ mod answers;
 mod autonomous;
 #[path = "capture.rs"]
 mod capture;
+#[path = "models_catalogue.rs"]
+mod catalogue;
 #[path = "mcp_memory.rs"]
 mod mcp_memory;
 #[path = "procedures.rs"]
@@ -21,6 +23,7 @@ use std::sync::{
 
 pub(crate) struct Provider {
     pub(crate) calls: AtomicUsize,
+    catalogue_calls: AtomicUsize,
     pub(crate) delay: AtomicU64,
     mode: AtomicUsize,
     pub(crate) candidates: Mutex<Value>,
@@ -75,8 +78,11 @@ async fn wire(
         _ => (),
     }
     if body["encoding_format"] == "float" {
-        assert_eq!(body["model"], "text-embedding-3-large");
-        assert_eq!(body["dimensions"], 3072);
+        assert!(matches!(
+            body["model"].as_str(),
+            Some("text-embedding-3-large" | "text-embedding-3-small")
+        ));
+        let dimensions = body["dimensions"].as_u64().unwrap() as usize;
         let mut data: Vec<Value> = body["input"]
             .as_array()
             .unwrap()
@@ -85,7 +91,7 @@ async fn wire(
             .map(|(i, input)| {
                 let vector = if [5, 7].contains(&provider.mode.load(Ordering::SeqCst)) {
                     let text = input.as_str().unwrap();
-                    let mut vector = vec![0.0f64; 3072];
+                    let mut vector = vec![0.0f64; dimensions];
                     let (x, y) = if text.contains("NEAR_VECTOR") {
                         (3.0, 4.0)
                     } else if text.contains("DISTRACTOR_VECTOR") {
@@ -97,11 +103,11 @@ async fn wire(
                     vector[1] = y;
                     vector
                 } else if provider.mode.load(Ordering::SeqCst) == 9 {
-                    vec![0.0f64; 3072]
+                    vec![0.0f64; dimensions]
                 } else if provider.mode.load(Ordering::SeqCst) == 6 {
-                    vec![0.00123456789123456f64; 3072]
+                    vec![0.00123456789123456f64; dimensions]
                 } else {
-                    vec![0.001f64; 3072]
+                    vec![0.001f64; dimensions]
                 };
                 json!({"index":i,"embedding":vector})
             })
@@ -115,7 +121,7 @@ async fn wire(
         let returned = if provider.mode.load(Ordering::SeqCst) == 8 {
             "unapproved-embedding-model"
         } else {
-            "text-embedding-3-large"
+            body["model"].as_str().unwrap()
         };
         (
             StatusCode::OK,
@@ -124,9 +130,16 @@ async fn wire(
             ),
         )
     } else {
-        assert_eq!(body["model"], "gpt-5.6-luna");
+        assert!(matches!(
+            body["model"].as_str(),
+            Some("gpt-5.6-luna" | "gpt-4.1-mini" | "gpt-4.1")
+        ));
         assert_eq!(body["store"], false);
-        assert_eq!(body["reasoning"]["effort"], "none");
+        if body["model"] == "gpt-5.6-luna" {
+            assert_eq!(body["reasoning"]["effort"], "none");
+        } else {
+            assert!(body.get("reasoning").is_none());
+        }
         assert!(body.get("tools").is_none());
         let extracted = if body["text"]["format"]["name"] == "synthetic_connection" {
             json!({"service":"Amber","environment":"test"})
@@ -136,11 +149,34 @@ async fn wire(
         (
             StatusCode::OK,
             Json(
-                json!({"model":"gpt-5.6-luna","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":extracted.to_string()}]}],"usage":{"input_tokens":23,"output_tokens":17,"total_tokens":40}}),
+                json!({"model":body["model"],"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":extracted.to_string()}]}],"usage":{"input_tokens":23,"output_tokens":17,"total_tokens":40}}),
             ),
         )
     }
 }
+async fn catalogue_wire(State(provider): State<Arc<Provider>>) -> (StatusCode, Json<Value>) {
+    provider.catalogue_calls.fetch_add(1, Ordering::SeqCst);
+    match provider.mode.load(Ordering::SeqCst) {
+        1 => (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(json!({"error":"provider secret must never appear in output"})),
+        ),
+        11 => (StatusCode::OK, Json(json!({"data":"invalid"}))),
+        12 => (
+            StatusCode::OK,
+            Json(json!({"data":[],"oversized":"x".repeat(1_048_577)})),
+        ),
+        _ => (
+            StatusCode::OK,
+            Json(json!({"data":[
+                {"id":"gpt-5.6-luna"},{"id":"gpt-4.1-mini"},{"id":"gpt-4.1"},
+                {"id":"text-embedding-3-large"},{"id":"text-embedding-3-small"},
+                {"id":"gpt-4.1-nano"},{"id":"gpt-realtime"},{"id":"unknown-future-model"}
+            ]})),
+        ),
+    }
+}
+
 async fn setup() -> (
     Harness,
     Login,
@@ -167,6 +203,7 @@ pub(crate) async fn configure_provider(
 ) -> (Arc<Provider>, tokio::task::JoinHandle<()>) {
     let provider = Arc::new(Provider {
         calls: AtomicUsize::new(0),
+        catalogue_calls: AtomicUsize::new(0),
         delay: AtomicU64::new(0),
         mode: AtomicUsize::new(0),
         candidates: Mutex::new(json!({"claims":[candidate("Amber","port","8080",1)]})),
@@ -174,6 +211,7 @@ pub(crate) async fn configure_provider(
         entered: tokio::sync::Notify::new(),
     });
     let router = Router::new()
+        .route("/v1/models", axum::routing::get(catalogue_wire))
         .route("/v1/responses", post(wire))
         .route("/v1/embeddings", post(wire))
         .with_state(provider.clone());

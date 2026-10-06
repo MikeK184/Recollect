@@ -608,6 +608,8 @@ pub async fn list(
 #[derive(sqlx::FromRow)]
 struct ContributionRow {
     id: Uuid,
+    #[sqlx(default)]
+    actor_name: String,
     actor_id: Uuid,
     device_id: Uuid,
     operation_id: Uuid,
@@ -628,6 +630,7 @@ pub async fn detail(
     let offset = offset(&page)?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
+    db::lock_brain(&mut tx, brain, false).await?;
     let snapshot = snapshot(&mut tx, brain, id).await?;
     let total = sqlx::query_scalar(
         "SELECT count(*) FROM repository_contributions WHERE snapshot_id=$1 AND brain_id=$2",
@@ -636,12 +639,13 @@ pub async fn detail(
     .bind(brain)
     .fetch_one(&mut *tx)
     .await?;
-    let rows = sqlx::query_as::<_,ContributionRow>("SELECT * FROM repository_contributions WHERE snapshot_id=$1 AND brain_id=$2 ORDER BY accepted_at DESC,id LIMIT 20 OFFSET $3").bind(id).bind(brain).bind(offset).fetch_all(&mut *tx).await?;
+    let rows = sqlx::query_as::<_,ContributionRow>("SELECT c.*,a.username AS actor_name FROM repository_contributions c JOIN accounts a ON a.id=c.actor_id WHERE c.snapshot_id=$1 AND c.brain_id=$2 ORDER BY c.accepted_at DESC,c.id LIMIT 20 OFFSET $3").bind(id).bind(brain).bind(offset).fetch_all(&mut *tx).await?;
     let contributors = rows
         .into_iter()
         .map(|r| RepositoryContribution {
             id: r.id,
             actor_id: r.actor_id,
+            actor_name: r.actor_name,
             device_id: r.device_id,
             operation_id: r.operation_id,
             scope: r.scope.0,
@@ -652,8 +656,22 @@ pub async fn detail(
             accepted_at: r.accepted_at,
         })
         .collect();
+    let observed_at: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
+        .fetch_one(&mut *tx)
+        .await?;
+    let deadline: Option<DateTime<Utc>> = sqlx::query_scalar(
+        "SELECT recollect_retention_deadline(brain_id,'repository',created_at) FROM repository_snapshots WHERE brain_id=$1 AND id=$2")
+        .bind(brain).bind(id).fetch_one(&mut *tx).await?;
+    if deadline.is_some_and(|at| at <= observed_at) {
+        return Err(Error::missing());
+    }
+    let valid_until = deadline.map_or(observed_at + chrono::Duration::seconds(6), |at| {
+        at.min(observed_at + chrono::Duration::seconds(6))
+    });
     tx.commit().await?;
     Ok(Json(SnapshotDetail {
+        observed_at,
+        valid_until,
         snapshot,
         contributors,
         contributor_total: total,

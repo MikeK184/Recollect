@@ -33,6 +33,8 @@ mod mcp_runtime;
 pub use mcp_runtime::*;
 mod operations;
 pub use operations::*;
+mod pipeline;
+pub use pipeline::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct User {
@@ -56,6 +58,8 @@ pub struct SessionInfo {
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct Brain {
+    #[serde(default)]
+    pub icon_revision: Option<Uuid>,
     pub id: Uuid,
     pub owner_id: Uuid,
     pub name: String,
@@ -238,6 +242,10 @@ pub struct Device {
     pub expires_at: DateTime<Utc>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub integration: Option<String>,
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct PairingRequest {
@@ -250,13 +258,14 @@ pub struct PairingRequest {
 #[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct BrainAgent {
     pub device_id: Uuid,
+    pub can_revoke: bool,
     pub name: String,
     pub host_kind: Option<String>,
     pub integration: String,
     pub claimed: bool,
     pub active: bool,
-    pub created_at: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Utc>>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub last_used_on_brain_at: Option<DateTime<Utc>>,
 }
@@ -272,6 +281,7 @@ pub struct BrainAgentRoster {
 }
 #[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct AgentBrainUsage {
+    pub icon_revision: Option<Uuid>,
     pub brain_id: Uuid,
     pub name: String,
     pub last_used_at: DateTime<Utc>,

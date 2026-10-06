@@ -63,6 +63,8 @@ pub struct RepositorySnapshot {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct RepositoryContribution {
     pub id: Uuid,
+    #[serde(default)]
+    pub actor_name: String,
     pub actor_id: Uuid,
     pub device_id: Uuid,
     pub operation_id: Uuid,
@@ -87,6 +89,8 @@ pub struct SnapshotPage {
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SnapshotDetail {
+    pub observed_at: DateTime<Utc>,
+    pub valid_until: DateTime<Utc>,
     pub snapshot: RepositorySnapshot,
     pub contributors: Vec<RepositoryContribution>,
     pub contributor_total: i64,

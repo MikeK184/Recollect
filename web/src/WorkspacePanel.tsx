@@ -1,6 +1,7 @@
 import { iconSize } from "./design/tokens";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./features/feature-views.css";
+import "./features/guided-controls.css";
 import {
   Alert,
   Badge,
@@ -109,11 +110,17 @@ function Pages({
 export function WorkspacePanel({
   brain,
   section = "tasks",
+  checkoutOnly = false,
+  diagnosticsOnly = false,
+  onInspectorChange,
   selectedId,
   onSelectedIdChange,
 }: {
   brain: Brain;
   section?: "repositories" | "tasks";
+  checkoutOnly?: boolean;
+  diagnosticsOnly?: boolean;
+  onInspectorChange?: (open: boolean) => void;
   /** Optional shared selection bridge for the Knowledge surface's lineage
    * inspector. Other hosts (Agents) leave it unset. */
   selectedId?: string | null;
@@ -122,7 +129,11 @@ export function WorkspacePanel({
   const cache = useQueryClient();
   const [workspace, setWorkspace] = useState<string | null>(null);
   const [tab, setTab] = useState<string | null>(
-    section === "repositories" ? "repositories" : "tasks",
+    checkoutOnly
+      ? "checkouts"
+      : section === "repositories"
+        ? "repositories"
+        : "tasks",
   );
   const [publishing, setPublishing] = useState(false);
   const [checkoutOffset, setCheckoutOffset] = useState(0);
@@ -132,22 +143,47 @@ export function WorkspacePanel({
   const [alias, setAlias] = useState<Repository | null>(null);
   const [publication, setPublication] = useState<Repository | null>(null);
   const [handoff, setHandoff] = useState(false);
+  useEffect(() => {
+    onInspectorChange?.(
+      !!(selected || form || alias || publication || publishing || handoff),
+    );
+    return () => onInspectorChange?.(false);
+  }, [
+    selected,
+    form,
+    alias,
+    publication,
+    publishing,
+    handoff,
+    onInspectorChange,
+  ]);
   const catalogue = useQuery({
-    queryKey: ["workspace", brain.id, workspace, checkoutOffset, taskOffset],
-    queryFn: async () =>
+    queryKey: [
+      "workspace",
+      brain.id,
+      workspace,
+      checkoutOffset,
+      taskOffset,
+      checkoutOnly,
+    ],
+    queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/workspace", {
+          signal,
           params: {
             path: { brain: brain.id },
             query: {
               workspace_id: workspace ?? undefined,
               checkout_offset: checkoutOffset,
               task_offset: taskOffset,
+              include_repositories: checkoutOnly ? false : undefined,
             },
           },
         }),
       ),
     refetchInterval: 4000,
+    retry: false,
+    gcTime: 0,
   });
   const refresh = () => {
     for (const key of [
@@ -176,14 +212,14 @@ export function WorkspacePanel({
           <Text size="sm" c="dimmed">
             {section === "repositories"
               ? "Shared repository identities and published snapshots. Your local checkout paths remain private."
-              : "Your agent manages these working scopes automatically. Inspect or adjust your own context here when needed."}
+              : "Your agent manages these contexts automatically."}
           </Text>
         </div>
         {section === "repositories" ? (
           <Button variant="default" onClick={() => setPublishing(true)}>
             Publish from your host
           </Button>
-        ) : (
+        ) : !diagnosticsOnly ? (
           <Button
             variant="default"
             leftSection={<Plus size={iconSize.small} />}
@@ -192,14 +228,16 @@ export function WorkspacePanel({
           >
             New task scope
           </Button>
-        )}
+        ) : null}
       </div>
-      <Text size="xs" c="dimmed" mb="md">
-        {catalogue.dataUpdatedAt
-          ? `Catalogue checked ${new Date(catalogue.dataUpdatedAt).toLocaleTimeString()}`
-          : "Loading catalogue…"}
-        . Native workspace discovery runs on your connected devices.
-      </Text>
+      {!checkoutOnly && (
+        <Text size="xs" c="dimmed" mb="md">
+          {catalogue.dataUpdatedAt
+            ? `Catalogue checked ${new Date(catalogue.dataUpdatedAt).toLocaleTimeString()}`
+            : "Loading catalogue…"}
+          . Native workspace discovery runs on your connected devices.
+        </Text>
+      )}
       {handoff && (
         <Alert
           mb="lg"
@@ -216,63 +254,73 @@ export function WorkspacePanel({
       ) : (
         data && (
           <Tabs value={tab} onChange={setTab} keepMounted={false}>
-            <Tabs.List>
-              {section === "tasks" && (
-                <Tabs.Tab value="tasks">Your task scopes</Tabs.Tab>
-              )}
-              {section === "repositories" && (
-                <Tabs.Tab value="repositories">Published repositories</Tabs.Tab>
-              )}
-              <Tabs.Tab value="checkouts">Your checkouts</Tabs.Tab>
-            </Tabs.List>
+            {!checkoutOnly && (
+              <Tabs.List>
+                {section === "tasks" && (
+                  <Tabs.Tab value="tasks">Work contexts</Tabs.Tab>
+                )}
+                {section === "repositories" && (
+                  <Tabs.Tab value="repositories">
+                    Published repositories
+                  </Tabs.Tab>
+                )}
+                {diagnosticsOnly && <Tabs.Tab value="checkouts">Local folders</Tabs.Tab>}
+              </Tabs.List>
+            )}
             <Tabs.Panel value="tasks" pt="lg">
               <Stack gap="sm">
                 {data.tasks.length === 0 && (
                   <Text size="sm" c="dimmed">
-                    No task scopes yet. Connected agents create and maintain
-                    their own scopes. Manual setup is available when you need
-                    it.
+                    No recorded task scopes. Your connected agents manage them
+                    automatically.
                   </Text>
                 )}
                 {data.tasks.map((task) => (
-                  <Card
+                  <button
+                    type="button"
                     key={task.id}
-                    withBorder
-                    p="md"
-                    className="workspace-task-card"
+                    className="context-row"
                     data-testid="workspace-task"
+                    onClick={() => setSelected(task.id)}
                   >
-                    <Group justify="space-between">
-                      <Button
-                        variant="subtle"
-                        px={0}
-                        onClick={() => setSelected(task.id)}
-                      >
-                        {task.label}
-                      </Button>
-                      <Badge
-                        color={
-                          task.closed
-                            ? "gray"
-                            : task.scope_valid
-                              ? "teal"
-                              : "orange"
-                        }
-                      >
-                        {task.closed
-                          ? "Closed"
+                    <span className="control-icon">
+                      <GitBranch size={18} />
+                    </span>
+                    <span className="context-row-main">
+                      <strong>{task.label}</strong>
+                      <small>
+                        {task.parent_task_id ? "Child context · " : ""}
+                        {[
+                          task.scope.repositories.length
+                            ? task.scope.repositories
+                                .map((v) => v.name)
+                                .join(", ")
+                            : "",
+                          task.scope.areas.length
+                            ? task.scope.areas.map((v) => v.name).join(", ")
+                            : "",
+                          task.scope.environment?.name,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Whole Brain"}
+                      </small>
+                    </span>
+                    <Badge
+                      color={
+                        task.closed
+                          ? "gray"
                           : task.scope_valid
-                            ? "Active"
-                            : "Scope unavailable"}
-                      </Badge>
-                    </Group>
-                    {task.parent_task_id && (
-                      <Text size="xs" c="dimmed" mb="xs">
-                        Independent subagent task
-                      </Text>
-                    )}
-                    <ScopeView scope={task.scope} />
-                  </Card>
+                            ? "brand"
+                            : "orange"
+                      }
+                    >
+                      {task.closed
+                        ? "Closed"
+                        : task.scope_valid
+                          ? "Open"
+                          : "Scope unavailable"}
+                    </Badge>
+                  </button>
                 ))}
                 <Pages
                   offset={taskOffset}
@@ -384,8 +432,9 @@ export function WorkspacePanel({
             <Tabs.Panel value="checkouts" pt="lg">
               <Stack gap="md">
                 <Text size="sm" c="dimmed">
-                  These are your devices’ last reported checkout observations.
-                  Repository contents stay on those devices.
+                  Repositories hold shared identities and published evidence.
+                  These folders are private observations from your devices;
+                  their contents stay local.
                 </Text>
                 {data.workspaces.length === 0 ? (
                   <Stack gap="xs">
@@ -403,7 +452,7 @@ export function WorkspacePanel({
                 ) : (
                   <>
                     <Select
-                      label="Registered workspace"
+                      label="Reported workspace"
                       value={data.selected_workspace ?? null}
                       searchable
                       data={data.workspaces.map((w) => ({
@@ -440,12 +489,23 @@ export function WorkspacePanel({
                       </Text>
                     )}
                     {data.checkouts.map((c) => (
-                      <Card key={c.id} withBorder p="md">
-                        <Stack gap="xs">
-                          <Group justify="space-between">
-                            <Text className="workspace-path" size="sm" fw={500}>
-                              {c.observation.local_path}
-                            </Text>
+                      <details key={c.id} className="checkout-record">
+                        <summary className="context-row">
+                          <span className="control-icon">
+                            <FolderGit2 size={18} />
+                          </span>
+                          <span className="context-row-main">
+                            <strong>
+                              {c.observation.local_path
+                                .split(/[\\/]/)
+                                .filter(Boolean)
+                                .at(-1) || c.observation.local_path}
+                            </strong>
+                            <small>
+                              {c.observation.origin || "Origin not reported"}
+                            </small>
+                          </span>
+                          <span className="checkout-status">
                             <Badge
                               color={
                                 !c.present ||
@@ -458,11 +518,13 @@ export function WorkspacePanel({
                                 ? "Not seen"
                                 : c.observation.status.replaceAll("_", " ")}
                             </Badge>
-                          </Group>
-                          <Text size="xs">
-                            {c.observation.origin ||
-                              "Repository origin unavailable"}
-                          </Text>
+                            <small>Observed {timestamp(c.observed_at)}</small>
+                          </span>
+                        </summary>
+                        <Stack gap="xs" className="checkout-details">
+                          <Code block className="workspace-path">
+                            {c.observation.local_path}
+                          </Code>
                           <Text size="xs" c="dimmed">
                             {c.observation.branch || "No branch reported"} ·{" "}
                             {c.observation.head
@@ -475,11 +537,8 @@ export function WorkspacePanel({
                                 ? "Clean when observed"
                                 : "Working tree state unknown"}
                           </Text>
-                          <Text size="xs" c="dimmed">
-                            Observed {timestamp(c.observed_at)}
-                          </Text>
                         </Stack>
-                      </Card>
+                      </details>
                     ))}
                     <Pages
                       offset={checkoutOffset}
@@ -536,6 +595,7 @@ export function WorkspacePanel({
           onClose={() => setSelected(null)}
           onChanged={refresh}
           onEdit={(task) => setForm({ task })}
+          diagnosticsOnly={diagnosticsOnly}
           onFork={(parent) => setForm({ parent })}
         />
       )}
@@ -635,7 +695,7 @@ function TaskForm({
         task
           ? "Change task scope"
           : parent
-            ? "Start subagent task"
+            ? "Create child scope"
             : "Start task"
       }
       size="lg"
@@ -735,6 +795,7 @@ function TaskDialog({
   onChanged,
   onEdit,
   onFork,
+  diagnosticsOnly = false,
 }: {
   brain: Brain;
   id: string;
@@ -742,6 +803,7 @@ function TaskDialog({
   onChanged: () => void;
   onEdit: (task: Task) => void;
   onFork: (task: Task) => void;
+  diagnosticsOnly?: boolean;
 }) {
   const [scopeOffset, setScopeOffset] = useState(0);
   const [operationOffset, setOperationOffset] = useState(0);
@@ -808,7 +870,7 @@ function TaskDialog({
             <Group justify="space-between">
               <Title order={3}>{data.task.label}</Title>
               <Badge color={data.task.closed ? "gray" : "teal"}>
-                {data.task.closed ? "Closed" : "Active"}
+                {data.task.closed ? "Closed" : "Open"}
               </Badge>
             </Group>
             <Text size="xs" className="workspace-path" c="dimmed">
@@ -832,15 +894,17 @@ function TaskDialog({
             {!data.task.closed && !brain.archived && (
               <Group>
                 <Button variant="default" onClick={() => onEdit(data.task)}>
-                  Change scope
+                  Change selection
                 </Button>
-                <Button
-                  variant="light"
-                  leftSection={<GitBranch size={iconSize.small} />}
-                  onClick={() => onFork(data.task)}
-                >
-                  Start subagent
-                </Button>
+                {!diagnosticsOnly && (
+                  <Button
+                    variant="light"
+                    leftSection={<GitBranch size={iconSize.small} />}
+                    onClick={() => onFork(data.task)}
+                  >
+                    Create child scope
+                  </Button>
+                )}
                 <Button
                   variant="subtle"
                   color="gray"
@@ -876,7 +940,7 @@ function TaskDialog({
               </Alert>
             )}
             <Divider />
-            {!data.task.closed && !brain.archived && (
+            {!diagnosticsOnly && !data.task.closed && !brain.archived && (
               <>
                 <Select
                   label="Operation purpose"
@@ -1005,7 +1069,7 @@ function TaskDialog({
   );
 }
 
-function AliasDialog({
+export function AliasDialog({
   brain,
   repository,
   onClose,

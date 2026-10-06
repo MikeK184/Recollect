@@ -9,8 +9,8 @@ if ! command -v node >/dev/null || ! command -v npm >/dev/null; then
   printf '%s\n' 'CodeGraph setup requires Node.js and npm on PATH.' >&2
   exit 1
 fi
-if [[ ! -d "$RECOLLECT_ROOT/cognee/.git" && ! -f "$RECOLLECT_ROOT/cognee/.git" ]]; then
-  printf '%s\n' 'Expected the separate Cognee Git checkout at Recollect/cognee/.' >&2
+if [[ ! -d "$RECOLLECT_ROOT/references/cognee/.git" && ! -f "$RECOLLECT_ROOT/references/cognee/.git" ]]; then
+  printf '%s\n' 'Expected the separate Cognee Git checkout at Recollect/references/cognee/.' >&2
   exit 1
 fi
 

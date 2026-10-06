@@ -3,6 +3,9 @@ use chrono::{Duration, Utc};
 use recollect_protocol::*;
 use recollect_server::{autonomous, privacy_journal};
 
+#[path = "pipeline.rs"]
+mod pipeline;
+
 #[path = "capture_reconciliation.rs"]
 mod reconciliation;
 
@@ -640,6 +643,66 @@ async fn capture_admission_replay_original_scope_and_standing_learning() {
     assert_eq!(activity["total"], 1);
     assert_eq!(activity["items"][0]["selection"], selection);
     assert_eq!(activity["items"][0]["source_available"], true);
+    assert_eq!(activity["items"][0]["device_id"], device.to_string());
+    assert_eq!(activity["items"][0]["agent_name"], "Capture writer");
+    assert_eq!(activity["items"][0]["processing"], "ready");
+    assert_eq!(activity["items"][0]["learning"]["state"], "succeeded");
+    assert_eq!(
+        activity["items"][0]["learning"]["claim_ids"],
+        learned["items"][0]["claim_ids"]
+    );
+    // Put another device's events ahead of this device's single event. Filtering
+    // must precede both the count and the 20-row page, including for a peer reader.
+    let other_binding = binding(&h, &base, &other_token, selection.clone()).await;
+    let other_binding_id: Uuid = other_binding["id"].as_str().unwrap().parse().unwrap();
+    sqlx::query("INSERT INTO capture_events(id,brain_id,binding_id,native_key,metadata,admission_policy,retention_class,captured_at,received_at,expires_at,state) SELECT gen_random_uuid(),brain_id,$2,'page-proof-'||n,metadata,admission_policy,retention_class,captured_at,clock_timestamp(),expires_at,state FROM capture_events CROSS JOIN generate_series(1,21) n WHERE id=$1")
+        .bind(Uuid::parse_str(input["id"].as_str().unwrap()).unwrap())
+        .bind(other_binding_id).execute(&h.admin).await.unwrap();
+    let filtered = ok(
+        &h,
+        "GET",
+        &format!("{publish_url}?device_id={device}&kind=prompt"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(filtered["total"], 1);
+    assert_eq!(filtered["items"].as_array().unwrap().len(), 1);
+    assert_eq!(filtered["items"][0]["receipt"]["event_id"], input["id"]);
+    let other_device = other_binding["device_id"].as_str().unwrap();
+    let page = ok(
+        &h,
+        "GET",
+        &format!("{publish_url}?device_id={other_device}&offset=20"),
+        &writer,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(page["total"], 21);
+    assert_eq!(page["items"].as_array().unwrap().len(), 1);
+    assert_eq!(page["items"][0]["device_id"], other_device);
+    let missing = ok(
+        &h,
+        "GET",
+        &format!("{publish_url}?device_id={}", Uuid::new_v4()),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(missing["total"], 0);
+    let (_, stranger) = h.fixture_member().await;
+    assert_eq!(
+        h.call(
+            "GET",
+            &format!("{publish_url}?device_id={device}"),
+            Some(&stranger),
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+
     let mut policy = enabled["policy"].clone();
     policy["enabled"] = json!(false);
     policy["excluded_content"] = json!(["Amber"]);

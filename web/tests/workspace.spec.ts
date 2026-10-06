@@ -54,7 +54,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     await dialog
       .getByRole("button", { name: "Create Brain", exact: true })
       .click();
-    await page.waitForURL(/\/brains\/[0-9a-f-]{36}\/ask$/);
+    await page.waitForURL(/\/brains\/[0-9a-f-]{36}\/(?:ask|dashboard)$/);
     await expect(
       page.getByLabel("Switch Brain", { exact: true }),
     ).toBeVisible();
@@ -82,25 +82,25 @@ test("paired workspace refresh and task/subagent history preserve operation scop
         "Synthetic checkout metadata fixture\n",
       );
     }
-    await page.goto(`/brains/${brain}/sources`);
-    await page
-      .getByRole("button", { name: "Manage views", exact: true })
-      .click();
+    const csrf = (await (await page.request.get("/api/auth/me")).json())
+      .csrf_token;
+    const post = async (path: string, body: unknown) => {
+      const response = await page.request.post(path, {
+        data: body,
+        headers: { "x-csrf-token": csrf, "Idempotency-Key": randomUUID() },
+      });
+      expect(response.ok()).toBe(true);
+      return response.json();
+    };
     for (const [kind, name] of [
-      ["Area", "Vault"],
-      ["Environment", "Production"],
-    ]) {
-      await dialog
-        .getByRole("textbox", { name: "View kind", exact: true })
-        .click();
-      await page.getByRole("option", { name: kind, exact: true }).click();
-      await dialog.getByLabel(/^View name/).fill(name);
-      await dialog
-        .getByRole("button", { name: "Create view", exact: true })
-        .click();
-      await expect(dialog.getByText(name, { exact: true })).toBeVisible();
-    }
-    await page.keyboard.press("Escape");
+      ["area", "Vault"],
+      ["environment", "Production"],
+    ])
+      await post(`/api/brains/${brain}/evidence/groups`, {
+        kind,
+        name,
+        description: "Synthetic workspace regression",
+      });
     let output = "";
     let pairingError = "";
     companion = spawn(binary, ["pair", "Workspace proof companion"], {
@@ -194,66 +194,53 @@ test("paired workspace refresh and task/subagent history preserve operation scop
       "context",
     ]);
     await page.goto(`/brains/${brain}/agents?tab=contexts`);
-    await page
-      .getByRole("button", { name: "Native investigation", exact: true })
-      .click();
+    await expect(page).toHaveURL(new RegExp(`/brains/${brain}/agents$`));
     await expect(
-      dialog.getByText("example.test/Team/infra", { exact: false }),
-    ).toBeVisible();
-    await expect(dialog.getByTestId("operation-binding")).toHaveCount(1);
-    await dialog
-      .getByRole("button", { name: "Change scope", exact: true })
-      .click();
-    await dialog
-      .getByRole("textbox", { name: "Repositories", exact: true })
-      .click();
-    await dialog
-      .getByRole("textbox", { name: "Repositories", exact: true })
-      .fill("app");
-    await page
-      .getByRole("option", { name: "example.test/Team/app", exact: true })
-      .click();
-    await page.route("**/workspace/tasks/*/scope", (route) => route.abort(), {
-      times: 1,
-    });
-    await dialog
-      .getByRole("button", { name: "Save scope", exact: true })
-      .click();
-    await expect(
-      dialog.getByText("Request failed", { exact: true }),
-    ).toBeVisible();
-    await dialog
-      .getByRole("button", { name: "Save scope", exact: true })
-      .click();
-    await expect(
-      dialog.getByRole("heading", {
-        name: "Native investigation",
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
-      dialog.getByTestId("operation-binding").getByText(/Earlier scope/),
-    ).toBeVisible();
+      page.getByRole("dialog", { name: "Your private context" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Local folders" })).toHaveCount(
+      0,
+    );
+    await command([
+      "scope",
+      "change",
+      brain,
+      parent.task.id,
+      parent.task.scope.id,
+      "--repository",
+      infra,
+      "--repository",
+      app,
+      "--area",
+      area,
+      "--environment",
+      environment,
+    ]);
+    const staleScope = await run([
+      "scope",
+      "change",
+      brain,
+      parent.task.id,
+      parent.task.scope.id,
+      "--repository",
+      app,
+    ]);
+    expect(staleScope.ok).toBe(false);
     const current = await command(["scope", "inspect", brain, parent.task.id]);
     expect(current.task.scope.selection.repository_ids).toHaveLength(2);
     expect(current.operations[0].scope.id).toBe(original.scope.id);
     expect(current.operations[0].scope.selection.repository_ids).toEqual([
       infra,
     ]);
-    await dialog
-      .getByRole("button", { name: "Start subagent", exact: true })
-      .click();
-    await dialog.getByLabel(/^Task name/).fill("Terraform review");
-    await dialog
-      .getByRole("button", { name: "Start task", exact: true })
-      .click();
-    await expect(
-      dialog.getByRole("heading", { name: "Terraform review", exact: true }),
-    ).toBeVisible();
-    const inventory = await command(["workspace", "list", fixture]);
-    const child = inventory.tasks.find(
-      (task: { label: string }) => task.label === "Terraform review",
-    );
+    const child = (
+      await command([
+        "scope",
+        "fork",
+        brain,
+        parent.task.id,
+        "Terraform review",
+      ])
+    ).task;
     expect(child.parent_task_id).toBe(parent.task.id);
     const childOperation = await command([
       "scope",
@@ -275,9 +262,6 @@ test("paired workspace refresh and task/subagent history preserve operation scop
       "--environment",
       environment,
     ]);
-    await expect(
-      dialog.getByText("Repositories: example.test/Team/app", { exact: true }),
-    ).toBeVisible();
     const unchangedParent = await command([
       "scope",
       "inspect",
@@ -288,29 +272,27 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     const childHistory = await command(["scope", "inspect", brain, child.id]);
     expect(childHistory.operations[0].scope.id).toBe(childOperation.scope.id);
     expect(childHistory.task.scope.id).not.toBe(childOperation.scope.id);
-    await dialog
-      .getByRole("button", { name: "Bind operation", exact: true })
-      .click();
-    await expect(dialog.getByTestId("operation-binding")).toHaveCount(2);
-    await dialog
-      .getByTestId("operation-binding")
-      .filter({ hasText: "Earlier scope" })
-      .getByRole("button", { name: "Inspect scope" })
-      .click();
-    await expect(
-      dialog.getByText("Recorded scope", { exact: true }),
-    ).toBeVisible();
-    await page.screenshot({
-      path: "../.cache/ui/task-context.png",
-      animations: "disabled",
-    });
-    await dialog
-      .getByRole("button", { name: "Close task", exact: true })
-      .click();
-    await dialog
-      .getByRole("button", { name: "Confirm close", exact: true })
-      .click();
-    await expect(dialog.getByText("Closed", { exact: true })).toBeVisible();
+    const laterOperation = await command([
+      "scope",
+      "begin",
+      brain,
+      child.id,
+      "context",
+    ]);
+    const preservedHistory = await command([
+      "scope",
+      "inspect",
+      brain,
+      child.id,
+    ]);
+    expect(preservedHistory.operations).toHaveLength(2);
+    expect(
+      preservedHistory.operations.find(
+        (operation: { id: string }) => operation.id === childOperation.id,
+      ).scope.id,
+    ).toBe(childOperation.scope.id);
+    expect(laterOperation.scope.id).toBe(childHistory.task.scope.id);
+    await command(["scope", "close", brain, child.id]);
     const closed = await run(["scope", "begin", brain, child.id, "context"]);
     expect(closed.ok).toBe(false);
     expect(closed.stderr).toContain("This task is closed");
@@ -323,45 +305,25 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     ]);
     expect(sibling.task.scope.selection.repository_ids).toHaveLength(2);
     await command(["scope", "close", brain, sibling.task.id]);
-    await page.keyboard.press("Escape");
+    const aliased = await post(
+      `/api/brains/${brain}/workspace/repositories/${infra}/origins`,
+      { origin: "https://example.test/Moved/infra.git" },
+    );
+    expect(aliased.origins).toContain("example.test/Moved/infra");
     await page.goto(`/brains/${brain}/repositories`);
-    const card = page
-      .locator(".workspace-repository")
-      .filter({ hasText: "example.test/Team/infra" })
-      .locator("..");
-    await card.getByRole("button", { name: "Add origin", exact: true }).click();
-    await dialog
-      .getByLabel(/^Repository origin/)
-      .fill("https://example.test/Moved/infra.git");
-    await dialog
-      .getByRole("button", { name: "Attach origin", exact: true })
-      .click();
-    await card.getByText("1 more origin", { exact: true }).click();
     await expect(
-      page.getByText("Also known as example.test/Moved/infra", { exact: true }),
-    ).toBeVisible();
-    await page
-      .getByRole("tab", { name: "Your checkouts", exact: true })
-      .click();
-    await page
-      .getByRole("textbox", { name: "Registered workspace", exact: true })
-      .click();
-    await page
-      .getByRole("option", {
-        name: `${refreshed.refresh.workspace.root} · ${refreshed.refresh.workspace.device_id.slice(0, 8)}`,
-        exact: true,
-      })
-      .click();
-    await expect(page.getByText("Full refresh", { exact: true })).toBeVisible();
-    await page.locator(".workspace-panel").scrollIntoViewIfNeeded();
+      page.getByRole("button", { name: "Your checkouts", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("tab", { name: "Local folders", exact: true }),
+    ).toHaveCount(0);
+    const automaticInventory = await command(["workspace", "list", fixture]);
+    expect(automaticInventory.checkouts).toHaveLength(2);
+    expect(automaticInventory.selected_workspace).toBe(
+      refreshed.refresh.workspace.id,
+    );
     await page.screenshot({
-      path: "../.cache/ui/workspace-checkouts.png",
-      animations: "disabled",
-    });
-    await page.goto(`/brains/${brain}/agents?tab=contexts`);
-    await page.screenshot({
-      path: "../.cache/ui/workspace-tasks.png",
-      fullPage: true,
+      path: "../.cache/ui/workspace-automatic.png",
       animations: "disabled",
     });
     expect(errors).toEqual([]);

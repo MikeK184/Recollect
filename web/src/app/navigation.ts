@@ -1,5 +1,6 @@
 import {
   MessageSquare,
+  LayoutDashboard,
   NotebookText,
   Database,
   Network,
@@ -10,11 +11,12 @@ import {
   Settings2,
   Boxes,
   Users,
+  Compass,
 } from "lucide-react";
 
 // Ordered sidebar tiers. The order here is the rendered order and is contractual:
-// Ask, Knowledge, Wiring, Assurance. Tier labels are visible group headings.
-export const brainTiers = ["Ask", "Knowledge", "Wiring", "Assurance"] as const;
+// Four daily destinations, with management reached through one disclosure.
+export const brainTiers = ["Brain", "Manage"] as const;
 export type BrainTier = (typeof brainTiers)[number];
 
 // The Knowledge surface hosts exactly these sections; each remains a real route.
@@ -27,30 +29,83 @@ export const knowledgeSections = [
 export type KnowledgeSection = (typeof knowledgeSections)[number];
 
 export const brainNavigation = [
-  { section: "ask", label: "Ask", tier: "Ask", icon: MessageSquare },
+  {
+    section: "dashboard",
+    label: "Dashboard",
+    tier: "Brain",
+    icon: LayoutDashboard,
+    hidden: false,
+  },
+  {
+    section: "ask",
+    label: "Ask",
+    tier: "Brain",
+    icon: MessageSquare,
+    hidden: false,
+  },
   {
     section: "memory",
     label: "Memory",
-    tier: "Knowledge",
+    tier: "Brain",
     icon: NotebookText,
+    hidden: true,
   },
-  { section: "sources", label: "Sources", tier: "Knowledge", icon: Database },
-  { section: "graph", label: "Graph", tier: "Knowledge", icon: Network },
+  {
+    section: "sources",
+    label: "Sources",
+    tier: "Brain",
+    icon: Database,
+    hidden: true,
+  },
+  {
+    section: "graph",
+    label: "Graph",
+    tier: "Brain",
+    icon: Network,
+    hidden: false,
+  },
   {
     section: "repositories",
     label: "Repositories",
-    tier: "Knowledge",
+    tier: "Brain",
     icon: FolderGit2,
+    hidden: true,
   },
-  { section: "agents", label: "Agents", tier: "Wiring", icon: Bot },
+  {
+    section: "explore",
+    label: "Explore",
+    tier: "Brain",
+    icon: Compass,
+    hidden: false,
+  },
+  {
+    section: "agents",
+    label: "Agents",
+    tier: "Manage",
+    icon: Bot,
+    hidden: false,
+  },
   {
     section: "connections",
     label: "Connections",
-    tier: "Wiring",
+    tier: "Manage",
     icon: Unplug,
+    hidden: false,
   },
-  { section: "settings", label: "Settings", tier: "Wiring", icon: Settings2 },
-  { section: "activity", label: "Activity", tier: "Assurance", icon: History },
+  {
+    section: "settings",
+    label: "Settings",
+    tier: "Manage",
+    icon: Settings2,
+    hidden: false,
+  },
+  {
+    section: "activity",
+    label: "Activity",
+    tier: "Manage",
+    icon: History,
+    hidden: true,
+  },
 ] as const;
 export type BrainSection = (typeof brainNavigation)[number]["section"];
 // Devices is intentionally absent from global navigation: it remains a
@@ -59,7 +114,8 @@ export type BrainSection = (typeof brainNavigation)[number]["section"];
 // the account-level roster with cross-Brain usage.
 export const globalNavigation = [
   { to: "/", label: "Brains", icon: Boxes },
-  { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/agents", label: "My agents", icon: Bot, hidden: false },
+  { to: "/connectors", label: "Connectors", icon: Unplug },
   { to: "/team", label: "Team", icon: Users },
 ] as const;
 

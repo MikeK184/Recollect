@@ -250,6 +250,14 @@ pub struct WorkspaceCatalogue {
     pub task_offset: i64,
 }
 
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct RepositoryPage {
+    pub items: Vec<Repository>,
+    pub total: i64,
+    pub offset: i64,
+    pub next_offset: Option<i64>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{canonical_git_origin, canonical_origin as origin};

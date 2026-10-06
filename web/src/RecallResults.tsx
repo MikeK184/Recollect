@@ -11,6 +11,7 @@ import {
   Text,
 } from "@mantine/core";
 import type { components } from "./api-schema";
+import { Markdown } from "./components/Markdown";
 
 type Item = components["schemas"]["RecallItem"];
 type Answer = components["schemas"]["RecallResponse"];
@@ -171,79 +172,91 @@ function Match({
                 <Badge color="red">Current review rule applies</Badge>
               )}
             </Group>
-            <Text size="xs" c="dimmed">
-              Origin: {label(item.claim.origin)}
-              {item.claim.acceptance_policy
-                ? ` · Accepted by Brain policy ${item.claim.acceptance_policy}`
-                : item.claim.reviewer_id
-                  ? " · Review recorded by an authenticated account"
-                  : " · No recorded acceptance authority"}
-            </Text>
-            <Text size="xs">
-              Fact validity:{" "}
-              {item.claim.validity.kind === "unknown"
-                ? "Unknown; no interval inferred"
-                : item.claim.validity.kind === "point"
-                  ? `${item.claim.validity.from ? time(item.claim.validity.from) : "Unknown"} (${item.claim.validity.precision} point observation)`
-                  : `${item.claim.validity.from ? time(item.claim.validity.from) : "Unknown start"} → ${item.claim.validity.to ? time(item.claim.validity.to) + " (end excluded)" : "Unknown end"}`}
-              {item.claim.knowledge_until &&
-                ` · Knowledge replaced ${time(item.claim.knowledge_until)}`}
-            </Text>
+            <details className="evidence-result-details">
+              <summary>Record scope and history</summary>
+              <Text size="xs" c="dimmed">
+                Origin: {label(item.claim.origin)}
+                {item.claim.acceptance_policy
+                  ? ` · Accepted by Brain policy ${item.claim.acceptance_policy}`
+                  : item.claim.reviewer_id
+                    ? " · Review recorded by an authenticated account"
+                    : " · No recorded acceptance authority"}
+              </Text>
+              <Text size="xs">
+                Fact validity:{" "}
+                {item.claim.validity.kind === "unknown"
+                  ? "Unknown; no interval inferred"
+                  : item.claim.validity.kind === "point"
+                    ? `${item.claim.validity.from ? time(item.claim.validity.from) : "Unknown"} (${item.claim.validity.precision} point observation)`
+                    : `${item.claim.validity.from ? time(item.claim.validity.from) : "Unknown start"} → ${item.claim.validity.to ? time(item.claim.validity.to) + " (end excluded)" : "Unknown end"}`}
+                {item.claim.knowledge_until &&
+                  ` · Knowledge replaced ${time(item.claim.knowledge_until)}`}
+              </Text>
+              <RecallScope selection={item.selection} catalogue={catalogue} />
+            </details>
           </>
         )}
-        <RecallScope selection={item.selection} catalogue={catalogue} />
+        {!item.claim && (
+          <details className="evidence-result-details">
+            <summary>Recorded scope</summary>
+            <RecallScope selection={item.selection} catalogue={catalogue} />
+          </details>
+        )}
         {item.text && (
-          <pre className="source-content" data-testid="recall-fragment">
-            {item.text}
-          </pre>
+          <div className="recall-fragment" data-testid="recall-fragment">
+            <Markdown text={item.text} raw />
+          </div>
         )}
         {item.qualifications.length > 0 && (
           <Text size="xs" c="dimmed">
             {item.qualifications.map(label).join(" · ")}
           </Text>
         )}
-        <Text size="xs">
-          Recorded {time(item.recorded_at)} ·{" "}
-          {item.channels.map(label).join(" + ")}
-        </Text>
-        {item.semantic_similarity != null && (
-          <Text size="xs" c="dimmed">
-            Cosine similarity: {item.semantic_similarity.toFixed(3)} ·
-            similarity is not truth
+        <details className="evidence-result-details">
+          <summary>Provenance and retrieval</summary>
+          <Text size="xs">
+            Recorded {time(item.recorded_at)} ·{" "}
+            {item.channels.map(label).join(" + ")}
           </Text>
-        )}
-        {item.graph_match && (
-          <Stack gap={4} data-testid="recall-graph-witness">
-            <Text size="sm" fw={500}>
-              Discovered through {item.graph_match.edges.length} recorded
-              relationship{item.graph_match.edges.length === 1 ? "" : "s"} (
-              {label(item.graph_match.direction)})
-            </Text>
-            <Text size="sm" className="claim-wrap">
-              {item.graph_match.nodes.map((n) => n.label).join(" → ")}
-            </Text>
+          {item.semantic_similarity != null && (
             <Text size="xs" c="dimmed">
-              {item.graph_match.edges
-                .map((e) => `${label(e.family)}: ${label(e.relation)}`)
-                .join(" · ")}
-              . This explains discovery; the evidence below supports this
-              record.
+              Cosine similarity: {item.semantic_similarity.toFixed(3)} ·
+              similarity is not truth
             </Text>
-          </Stack>
-        )}
-        {item.provenance
-          .filter((p) => p.revision)
-          .map((p) => (
-            <Text size="xs" className="claim-wrap" key={`${p.kind}:${p.id}`}>
-              Repository:{" "}
-              {catalogue?.repositories.find((r) => r.id === p.repository_id)
-                ?.canonical_origin ?? p.repository_id}{" "}
-              · Commit: {p.revision}
-              {p.path
-                ? ` · ${p.path}${p.line_from ? `:${p.line_from}` : ""}`
-                : ""}
-            </Text>
-          ))}
+          )}
+          {item.graph_match && (
+            <Stack gap={4} data-testid="recall-graph-witness">
+              <Text size="sm" fw={500}>
+                Discovered through {item.graph_match.edges.length} recorded
+                relationship{item.graph_match.edges.length === 1 ? "" : "s"} (
+                {label(item.graph_match.direction)})
+              </Text>
+              <Text size="sm" className="claim-wrap">
+                {item.graph_match.nodes.map((n) => n.label).join(" → ")}
+              </Text>
+              <Text size="xs" c="dimmed">
+                {item.graph_match.edges
+                  .map((e) => `${label(e.family)}: ${label(e.relation)}`)
+                  .join(" · ")}
+                . This explains discovery; the evidence below supports this
+                record.
+              </Text>
+            </Stack>
+          )}
+          {item.provenance
+            .filter((p) => p.revision)
+            .map((p) => (
+              <Text size="xs" className="claim-wrap" key={`${p.kind}:${p.id}`}>
+                Repository:{" "}
+                {catalogue?.repositories.find((r) => r.id === p.repository_id)
+                  ?.canonical_origin ?? p.repository_id}{" "}
+                · Commit: {p.revision}
+                {p.path
+                  ? ` · ${p.path}${p.line_from ? `:${p.line_from}` : ""}`
+                  : ""}
+              </Text>
+            ))}
+        </details>
         <Group gap="xs">
           {item.kind === "claim" && (
             <Button size="xs" variant="light" onClick={() => onClaim(item.id)}>

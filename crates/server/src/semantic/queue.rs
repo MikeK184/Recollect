@@ -29,10 +29,10 @@ pub(super) async fn create_profile(
     actor: Uuid,
     policy: &ModelPolicyVersion,
 ) -> Result<SemanticProfile> {
-    if state.config.models.embedding_dimensions != DIMENSIONS {
+    if !model_policy::matches_installation(state, &policy.policy) {
         return Err(model_policy::failure(
             "semantic_profile_mismatch",
-            "Install the approved 3,072-dimension embedding model before rebuilding.",
+            "Choose supported embedding dimensions before rebuilding.",
         ));
     }
     let id = Uuid::new_v4();
@@ -40,7 +40,7 @@ pub(super) async fn create_profile(
         "INSERT INTO semantic_profiles(id,brain_id,provider,model,dimensions,representation,created_by,policy_id)
          VALUES($1,$2,'openai',$3,$4,$5,$6,$7) RETURNING to_jsonb(semantic_profiles)",
     )
-    .bind(id).bind(brain).bind(&state.config.models.embedding_model).bind(DIMENSIONS)
+    .bind(id).bind(brain).bind(&policy.policy.embedding_model).bind(policy.policy.embedding_dimensions)
     .bind(REPRESENTATION).bind(actor).bind(policy.change_id).fetch_one(&mut **tx).await?;
     sqlx::query("INSERT INTO semantic_heads(brain_id,profile_id) VALUES($1,$2) ON CONFLICT(brain_id) DO UPDATE SET profile_id=excluded.profile_id")
         .bind(brain).bind(id).execute(&mut **tx).await?;
@@ -48,14 +48,41 @@ pub(super) async fn create_profile(
     Ok(profile)
 }
 
-#[utoipa::path(get,path="/api/brains/{brain}/semantic",operation_id="semanticStatus",params(("brain"=Uuid,Path),("offset"=Option<i64>,Query)),responses((status=200,body=SemanticStatus)))]
+pub(crate) async fn rebuild(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    policy: &ModelPolicyVersion,
+) -> Result<SemanticProfile> {
+    // Clear old vectors and stop old work in the same transaction that moves the
+    // policy/profile head. In-flight network results still face publication fences.
+    sqlx::query("UPDATE semantic_batches SET state='removed',error_code='semantic_profile_changed',finished_at=clock_timestamp() WHERE brain_id=$1 AND state IN ('queued','running','blocked')")
+        .bind(brain).execute(&mut **tx).await?;
+    sqlx::query("UPDATE jobs SET state='cancelled',error_code='semantic_profile_changed',lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE brain_id=$1 AND kind='semantic.generate' AND state IN ('queued','running')")
+        .bind(brain).execute(&mut **tx).await?;
+    sqlx::query("UPDATE semantic_entries SET state='removed',embedding=NULL,error_code='semantic_profile_changed',updated_at=clock_timestamp() WHERE brain_id=$1 AND state<>'removed'")
+        .bind(brain).execute(&mut **tx).await?;
+    create_profile(state, tx, brain, actor, policy).await
+}
+
+#[derive(serde::Deserialize)]
+pub struct StatusPage {
+    offset: Option<i64>,
+    #[serde(default)]
+    summary: bool,
+}
+
+#[utoipa::path(get,path="/api/brains/{brain}/semantic",operation_id="semanticStatus",params(("brain"=Uuid,Path),("offset"=Option<i64>,Query),("summary"=Option<bool>,Query)),responses((status=200,body=SemanticStatus)))]
 pub async fn get(
     State(state): State<AppState>,
     auth: Auth,
     Path(brain): Path<Uuid>,
-    Query(page): Query<publication::Page>,
+    Query(page): Query<StatusPage>,
 ) -> Result<ResponseJson<SemanticStatus>> {
-    let offset = publication::offset(&page)?;
+    let offset = publication::offset(&publication::Page {
+        offset: page.offset,
+    })?;
     let mut tx = auth.tx(&state.pool).await?;
     db::lock_brain(&mut tx, brain, false).await?;
     db::require_role(&mut tx, brain, false).await?;
@@ -71,7 +98,14 @@ pub async fn get(
          FROM semantic_entries WHERE brain_id=$1 AND profile_id=$2",
     ).bind(brain).bind(profile_id).fetch_one(&mut *tx).await?;
     let allowed = model_policy::permits(&state, &p.policy, "embedding", &[]).is_ok();
+    let blocked_rebuild = profile
+        .as_ref()
+        .is_some_and(|profile| profile.policy_id == p.change_id)
+        && (!allowed || !p.policy.automatic_embedding);
     let mut coverage = Vec::new();
+    if blocked_rebuild {
+        coverage.push("semantic_rebuild_permission_blocked".into());
+    }
     if counts.pending + counts.queued + counts.running > 0 {
         coverage.push("semantic_work_pending".into());
     }
@@ -99,9 +133,14 @@ pub async fn get(
     {
         coverage.push("semantic_capacity_reached".into());
     }
-    let status = if !allowed {
+    let status = if blocked_rebuild {
+        "blocked"
+    } else if !allowed {
         "disabled"
-    } else if profile.as_ref().is_some_and(|p| !compatible(&state, p)) {
+    } else if profile
+        .as_ref()
+        .is_some_and(|profile| !compatible(&p.policy, profile))
+    {
         "profile_mismatch"
     } else if profile.is_none() {
         "missing"
@@ -116,18 +155,23 @@ pub async fn get(
     } else {
         "empty"
     };
-    let total_batches =
-        sqlx::query_scalar("SELECT count(*) FROM semantic_batches WHERE brain_id=$1")
-            .bind(brain)
-            .fetch_one(&mut *tx)
-            .await?;
-    let batches: Vec<Json<SemanticBatch>> = sqlx::query_scalar("SELECT to_jsonb(b)||jsonb_build_object('can_retry',
+    let (total_batches, batches) = if page.summary {
+        (0, vec![])
+    } else {
+        let total_batches =
+            sqlx::query_scalar("SELECT count(*) FROM semantic_batches WHERE brain_id=$1")
+                .bind(brain)
+                .fetch_one(&mut *tx)
+                .await?;
+        let batches: Vec<Json<SemanticBatch>> = sqlx::query_scalar("SELECT to_jsonb(b)||jsonb_build_object('can_retry',
         b.state IN ('blocked','failed','removed') AND b.profile_id=(SELECT profile_id FROM semantic_heads WHERE brain_id=$1)
         AND NOT EXISTS(SELECT 1 FROM semantic_batches child WHERE child.retry_of=b.id)
         AND EXISTS(SELECT 1 FROM semantic_batch_inputs i JOIN semantic_entries e ON e.brain_id=i.brain_id AND e.id=i.entry_id
           WHERE i.brain_id=$1 AND i.batch_id=b.id AND e.batch_id=b.id AND e.state IN ('blocked','failed')))
         FROM semantic_batches b WHERE brain_id=$1 ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
         .bind(brain).bind(offset).fetch_all(&mut *tx).await?;
+        (total_batches, batches)
+    };
     tx.commit().await?;
     Ok(ResponseJson(SemanticStatus {
         enabled: p.policy.automatic_embedding,
@@ -178,7 +222,7 @@ pub async fn reindex(
             "The index profile changed. Refresh before rebuilding.",
         ));
     }
-    let result = create_profile(&state, &mut tx, brain, auth.user.id, &p).await?;
+    let result = rebuild(&state, &mut tx, brain, auth.user.id, &p).await?;
     commands::finish(&mut tx, key.as_deref(), brain, &result).await?;
     tx.commit().await?;
     Ok(ResponseJson(result))
@@ -249,7 +293,7 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
         return Ok(0);
     }
     let profile = match profile(&mut tx, brain).await? {
-        Some(profile) if compatible(state, &profile) => profile,
+        Some(profile) if compatible(&p.policy, &profile) => profile,
         Some(_) => {
             tx.commit().await?;
             return Ok(0);
@@ -441,7 +485,7 @@ pub async fn retry(
     if !matches!(old.state.as_str(), "blocked" | "failed" | "removed")
         || has_child
         || head.id != old.profile_id
-        || !compatible(&state, &head)
+        || !compatible(&p.policy, &head)
     {
         return Err(model_policy::failure(
             "semantic_not_retryable",

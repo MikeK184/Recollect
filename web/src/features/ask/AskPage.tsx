@@ -43,6 +43,8 @@ import { ClaimDialog, EvidenceDialog } from "../../ClaimsPanel";
 import { recallEvidence, RecallScope } from "../../RecallResults";
 import { useContentDeadline } from "../../useContentDeadline";
 import { ManagedMemoryPanel } from "../settings/ManagedMemoryPanel";
+import { Markdown } from "../../components/Markdown";
+import { EvidenceNotes } from "../../components/EvidenceNotes";
 import "./ask.css";
 
 type Request = components["schemas"]["RecallRequest"];
@@ -56,8 +58,8 @@ type Turn = {
   response: Answer;
 };
 const tabs = [
-  { value: "ask", label: "Ask a question" },
-  { value: "search", label: "Search evidence" },
+  { value: "ask", label: "Answer" },
+  { value: "search", label: "Find evidence" },
 ] as const;
 const label = (s: string) => s.replaceAll("_", " ");
 const initialRequest = (): Request => ({
@@ -71,6 +73,7 @@ const initialRequest = (): Request => ({
   fact_at: null,
   mode: "investigation",
   channels: ["exact", "lexical"],
+  strategy: "auto",
   semantic_request_id: null,
   semantic_min_similarity: null,
   graph: null,
@@ -80,9 +83,9 @@ const initialRequest = (): Request => ({
 });
 const failureText: Record<string, string> = {
   answer_insufficient_support:
-    "There is not enough eligible evidence to answer this question. Try naming a specific subject or use Search evidence.",
+    "There is not enough eligible evidence to answer this question. Try naming a specific subject or use Find evidence.",
   model_policy_denied:
-    "This Brain’s model policy does not permit this answer. Search evidence remains available.",
+    "This Brain’s model policy does not permit this answer. Find evidence remains available.",
   model_credentials_missing:
     "The installed model has no available credential. An administrator can check the installation.",
   model_budget_exhausted:
@@ -99,35 +102,38 @@ const failureText: Record<string, string> = {
 
 export function AskPage() {
   const brain = useBrain();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [draft, setDraft] = useState("");
   const [tab, setTab] = useFeatureTab(
     tabs.map((t) => t.value),
     "ask",
   );
+  useEffect(() => setDraft(""), [brain.id]);
   return (
     <>
-      <PageHeader
-        title="Ask your Brain"
-        description="Answers grounded in your knowledge, with evidence you can follow."
-      />
-      <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
-        {tab === "search" ? (
-          <RecallPanel
-            key={brain.id}
-            brain={brain}
-            initialQuery={searchQuery}
-          />
-        ) : (
-          <AskConversation
-            key={brain.id}
-            brain={brain}
-            search={(query) => {
-              setSearchQuery(query ?? "");
-              setTab("search");
-            }}
-          />
-        )}
-      </FeatureTabs>
+      <PageHeader title="Ask" />
+      <div className="ask-intents">
+        <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
+          {tab === "search" ? (
+            <RecallPanel
+              key={brain.id}
+              brain={brain}
+              draft={draft}
+              setDraft={setDraft}
+            />
+          ) : (
+            <AskConversation
+              key={brain.id}
+              brain={brain}
+              question={draft}
+              setQuestion={setDraft}
+              search={(query) => {
+                setDraft(query ?? "");
+                setTab("search");
+              }}
+            />
+          )}
+        </FeatureTabs>
+      </div>
     </>
   );
 }
@@ -135,12 +141,15 @@ export function AskPage() {
 function AskConversation({
   brain,
   search,
+  question,
+  setQuestion,
 }: {
   brain: Brain;
   search: (query?: string) => void;
+  question: string;
+  setQuestion: (value: string) => void;
 }) {
   const cache = useQueryClient();
-  const [question, setQuestion] = useState("");
   const [request, setRequest] = useState<Request>(initialRequest);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -230,7 +239,7 @@ function AskConversation({
       params: { path: { brain: brain.id, id: running.id } },
     });
   }
-  function clear(message?: string) {
+  function clear(message?: string, keepDraft = false) {
     statusCheck.current += 1;
     stop();
     setTurns([]);
@@ -238,7 +247,7 @@ function AskConversation({
     setDetail(null);
     setReceipt(null);
     setError(null);
-    setQuestion("");
+    if (!keepDraft) setQuestion("");
     setNotice(message ?? null);
   }
   useEffect(() => {
@@ -319,6 +328,21 @@ function AskConversation({
       return;
     }
     const id = crypto.randomUUID();
+    const submittedRequest: Request = {
+      ...request,
+      ...(request.strategy === "auto"
+        ? {
+            query: "",
+            channels: ["exact", "lexical"],
+            graph: null,
+            semantic_min_similarity: null,
+          }
+        : {}),
+      semantic_request_id:
+        request.strategy === "auto" || request.channels?.includes("semantic")
+          ? id
+          : null,
+    };
     statusCheck.current += 1;
     const controller = new AbortController();
     active.current = { id, controller };
@@ -334,7 +358,11 @@ function AskConversation({
       const response = result(
         await client.POST("/api/brains/{brain}/answer-requests", {
           params: { path: { brain: brain.id } },
-          body: { request_id: id, question: text, recall: request },
+          body: {
+            request_id: id,
+            question: text,
+            recall: submittedRequest,
+          },
           signal: controller.signal,
         }),
       );
@@ -349,7 +377,7 @@ function AskConversation({
             ...prior.filter(
               (t) => t.response.memory_epoch === response.memory_epoch,
             ),
-            { id, question: text, request, response },
+            { id, question: text, request: submittedRequest, response },
           ].slice(-4),
         );
       } else {
@@ -401,11 +429,11 @@ function AskConversation({
           <Badge color="gray">
             {selectedCount ? `${selectedCount} scope filters` : "Entire Brain"}
           </Badge>
-          <Badge color="brand">
-            {request.mode === "investigation"
-              ? "Include uncertainties"
-              : label(request.mode ?? "investigation")}
-          </Badge>
+          {request.mode !== "investigation" && (
+            <Badge color="brand">
+              {label(request.mode ?? "investigation")}
+            </Badge>
+          )}
           {(request.knowledge_at || request.fact_at) && (
             <Badge color="yellow">Time filtered</Badge>
           )}
@@ -415,7 +443,7 @@ function AskConversation({
             leftSection={<SlidersHorizontal size={15} />}
             onClick={() => setFiltersOpen(true)}
           >
-            More filters
+            Refine
           </Button>
         </Group>
         <Button
@@ -428,21 +456,9 @@ function AskConversation({
           }}
           disabled={!turns.length && !pending && !question}
         >
-          New conversation
+          Clear conversation
         </Button>
       </Group>
-      {!policies.isPending && !allowed && !policies.isError && (
-        <Stack gap="sm">
-          <ManagedMemoryPanel brain={brain} compact />
-          <Button
-            variant="subtle"
-            w="fit-content"
-            onClick={() => search(question)}
-          >
-            Search evidence
-          </Button>
-        </Stack>
-      )}
       <ErrorState
         error={policies.error}
         retry={() => void policies.refetch()}
@@ -461,11 +477,7 @@ function AskConversation({
           {!turns.length && !pending && (
             <div className="ask-welcome">
               <Brand compact />
-              <Title order={2}>What would you like to remember?</Title>
-              <Text c="dimmed" ta="center" maw={460}>
-                Ask about decisions, systems, or past work. Every answer stays
-                connected to the evidence in {brain.name}.
-              </Text>
+              <Title order={2}>What would you like to know?</Title>
               <div className="question-suggestions">
                 {[
                   "What decisions have we made?",
@@ -551,7 +563,7 @@ function AskConversation({
                 mt="sm"
                 onClick={() => search(question)}
               >
-                Search evidence
+                Find evidence
               </Button>
             </Alert>
           )}
@@ -579,14 +591,18 @@ function AskConversation({
                 selected.citation.evidence.recorded_at,
               ).toLocaleString()}
             </Text>
-            <Text className="reading-text" size="sm" my="lg">
-              {selected.citation.evidence.text}
-            </Text>
-            {selected.citation.evidence.qualifications.map((q) => (
-              <Alert color="yellow" key={q} mb="sm">
-                {label(q)}
-              </Alert>
-            ))}
+            <div className="answer-evidence-content">
+              <Markdown
+                text={selected.citation.evidence.text}
+                className={
+                  selected.citation.evidence.kind === "claim"
+                    ? "markdown-preserve-lines"
+                    : ""
+                }
+                raw
+              />
+            </div>
+            <EvidenceNotes notes={selected.citation.evidence.qualifications} />
             <Stack gap="xs">
               {selected.citation.evidence.kind === "claim" && (
                 <Button
@@ -619,10 +635,6 @@ function AskConversation({
                 </Button>
               ))}
             </Stack>
-            <Text size="xs" c="dimmed" mt="lg">
-              A citation identifies the supporting record. Its qualifications
-              and recorded scope still apply.
-            </Text>
           </aside>
         )}
       </div>
@@ -659,25 +671,37 @@ function AskConversation({
           Ask Brain
         </Button>
       </form>
-      <Group justify="space-between" mt="xs">
+      <Group justify="space-between" mt="sm" className="ask-privacy">
         <Text size="xs" c="dimmed">
-          Uses stored knowledge. Does not run tools or save new memories.
+          Temporary · Each question stands alone
         </Text>
-        <Text size="xs" c="dimmed">
-          Temporary conversation · ⌘/Ctrl + Enter
-        </Text>
+        <details>
+          <summary>How Ask works</summary>
+          <Text size="xs" c="dimmed">
+            Uses stored evidence. Does not run tools or save memories. Previous
+            turns are not sent as context. ⌘/Ctrl + Enter to ask.
+          </Text>
+        </details>
       </Group>
-      <Text size="xs" c="dimmed" mt="xs">
-        Each question retrieves fresh evidence. Name the subject when asking a
-        follow-up.
-      </Text>
+      {!policies.isPending && !allowed && !policies.isError && (
+        <Stack gap="sm" mt="lg">
+          <Button
+            variant="subtle"
+            w="fit-content"
+            onClick={() => search(question)}
+          >
+            Find evidence
+          </Button>
+          <ManagedMemoryPanel brain={brain} compact />
+        </Stack>
+      )}
       <AskFilters
         brain={brain}
         opened={filtersOpen}
         close={() => setFiltersOpen(false)}
         request={request}
         change={(next) => {
-          clear();
+          clear(undefined, true);
           setRequest(next);
         }}
       />
@@ -748,24 +772,26 @@ function AnswerTurn({
         <div className="answer-text">
           <Title order={2}>{answer.summary}</Title>
           {answer.statements.map((statement, index) => (
-            <p className="answer-statement" key={index}>
-              {statement.text}
-              {statement.citation_ids.map((id) => {
-                const citation = turn.response.citations.find(
-                  (c) => c.id === id,
-                );
-                return citation ? (
-                  <button
-                    className="citation-marker"
-                    key={id}
-                    onClick={() => select(citation)}
-                    aria-label={`Open citation ${id}`}
-                  >
-                    {id.slice(1)}
-                  </button>
-                ) : null;
-              })}
-            </p>
+            <div className="answer-statement" key={index}>
+              <Markdown text={statement.text} />
+              <span className="statement-citations">
+                {statement.citation_ids.map((id) => {
+                  const citation = turn.response.citations.find(
+                    (c) => c.id === id,
+                  );
+                  return citation ? (
+                    <button
+                      className="citation-marker"
+                      key={id}
+                      onClick={() => select(citation)}
+                      aria-label={`Open citation ${id}`}
+                    >
+                      {id.slice(1)}
+                    </button>
+                  ) : null;
+                })}
+              </span>
+            </div>
           ))}
           {!answer.statements.length && (
             <Text c="dimmed" my="md">
@@ -773,23 +799,11 @@ function AnswerTurn({
               question.
             </Text>
           )}
-          {!!answer.limitations.length && (
-            <Alert color="yellow" mt="lg" title="Keep in mind">
-              <Stack gap="xs">
-                {answer.limitations.map((v, i) => (
-                  <Text size="sm" key={i}>
-                    {v}
-                  </Text>
-                ))}
-              </Stack>
-            </Alert>
-          )}
-          {turn.response.recall?.coverage.partial && (
-            <Alert color="yellow" mt="md" title="Partial evidence coverage">
-              {turn.response.recall.coverage.reasons.map(label).join(" · ") ||
-                "Some evidence was unavailable or did not fit this retrieval."}
-            </Alert>
-          )}
+          <EvidenceNotes
+            important={answer.limitations}
+            notes={turn.response.recall?.coverage.reasons ?? []}
+            partial={turn.response.recall?.coverage.partial}
+          />
           <div className="answer-citations">
             {turn.response.citations.map((c) => (
               <button key={c.id} onClick={() => select(c)}>
@@ -825,6 +839,26 @@ function AnswerTurn({
             {turn.response.recall && (
               <Stack gap="xs" mt="sm">
                 <RecallScope selection={turn.response.recall.selection} />
+                <Text size="xs">
+                  Matched by:{" "}
+                  {Array.from(
+                    new Set(
+                      turn.response.recall.context.items.flatMap(
+                        (item) => item.channels,
+                      ),
+                    ),
+                  )
+                    .map((channel) =>
+                      channel === "lexical"
+                        ? "text"
+                        : channel === "semantic"
+                          ? "meaning"
+                          : channel === "graph"
+                            ? "relationships"
+                            : channel,
+                    )
+                    .join(" + ") || "No eligible matches"}
+                </Text>
                 <Text size="xs">
                   Knowledge cutoff:{" "}
                   {new Date(turn.response.recall.knowledge_at).toLocaleString()}{" "}
@@ -925,12 +959,7 @@ function AskFilters({
     });
   const patch = (value: Partial<Request>) => change({ ...request, ...value });
   return (
-    <Drawer
-      opened={opened}
-      onClose={close}
-      title="Answer scope and evidence"
-      size={480}
-    >
+    <Drawer opened={opened} onClose={close} title="Refine evidence" size={480}>
       <Stack gap="lg">
         <Text size="sm" c="dimmed">
           These limits apply to retrieval and the answer. Changing them clears
@@ -1085,25 +1114,46 @@ function AskFilters({
             })
           }
         />
-        <Checkbox
-          label="Also search by meaning"
-          description="Uses the separately permitted embedding model and its budget."
-          checked={request.channels?.includes("semantic") ?? false}
-          onChange={(e) =>
-            patch({
-              channels: e.currentTarget.checked
-                ? ["exact", "lexical", "semantic"]
-                : ["exact", "lexical"],
-            })
+        <Select
+          label="Retrieval strategy"
+          value={request.strategy ?? "auto"}
+          allowDeselect={false}
+          data={[
+            { value: "auto", label: "Automatic" },
+            { value: "manual", label: "Choose methods" },
+          ]}
+          onChange={(value) =>
+            patch({ strategy: value === "manual" ? "manual" : "auto" })
           }
         />
-        <TextInput
-          label="Exact text search expression (optional)"
-          description="Leave empty to find the subjects named in your question."
-          value={request.query ?? ""}
-          maxLength={512}
-          onChange={(e) => patch({ query: e.currentTarget.value })}
-        />
+        {request.strategy === "manual" && (
+          <Checkbox
+            label="Also search by meaning"
+            description="Uses the separately permitted embedding model and its budget."
+            checked={request.channels?.includes("semantic") ?? false}
+            onChange={(e) =>
+              patch({
+                channels: e.currentTarget.checked
+                  ? ["exact", "lexical", "semantic"]
+                  : ["exact", "lexical"],
+              })
+            }
+          />
+        )}
+        <Text size="xs" c="dimmed">
+          Automatic retrieval uses permitted methods within this scope. Each
+          submission may use the approved embedding model; no request is sent
+          while editing.
+        </Text>
+        {request.strategy === "manual" && (
+          <TextInput
+            label="Exact text search expression (optional)"
+            description="Leave empty to find the subjects named in your question."
+            value={request.query ?? ""}
+            maxLength={512}
+            onChange={(e) => patch({ query: e.currentTarget.value })}
+          />
+        )}
 
         <Button variant="default" onClick={() => change(initialRequest())}>
           Reset filters

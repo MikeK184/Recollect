@@ -156,6 +156,17 @@ async fn collections_history_artifacts_scope_and_fenced_processing() {
         StatusCode::CONFLICT
     );
     let source_path = format!("{base}/sources/{source}");
+    let identity = h
+        .call("GET", &source_path, Some(&writer), Value::Null)
+        .await;
+    assert_eq!(identity.0, StatusCode::OK);
+    assert_eq!(identity.1["id"], source);
+    assert_eq!(
+        h.call("GET", &source_path, Some(&reader), Value::Null)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
     let old_path = format!("{source_path}/versions/{old}");
     assert_eq!(
         h.call("GET", &old_path, Some(&writer), Value::Null).await.1["content"],

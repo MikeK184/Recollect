@@ -2,14 +2,43 @@
 
 Status: accepted
 
+## Equivalent HTTP schema declarations — 2026-10-06
+
+The user's failing Exa server check establishes the need to accept equivalent
+legacy schema declarations during anonymous HTTP inspection. Discovery may
+convert a root Draft 7 declaration to 2020-12 only for a bounded audited subset
+whose assertion semantics are unchanged. Preserve all assertions, property names,
+annotations and descriptions. Reject unknown/dialect-dependent keywords, remote
+references/identifiers, nested dialect changes and tuple-array items; do not guess
+or silently remove constraints. The final candidate still passes the existing
+strict offline validator. Already-approved manifests are unchanged, and direct
+manifest import retains strict 2020-12 validation. The health check does not
+approve or persist the candidate, start tool execution or confer Use access.
+
+### Installation connector library — 2026-10-05
+
+The approved management concepts add owner-browser-only `GET /api/mcp/definitions`
+and `GET /api/mcp/definitions/{key}` for the global `/connectors` library. Reads
+return approved/disabled definition metadata and reviewed manifests; they never
+connect or execute. The existing owner approval POST remains the canonical import
+mutation. Imported host configs are inert drafts; commands are never installed or
+run by parsing/approval. A draft must review transport, fixed executable/arguments,
+placement, cached tools, configuration schema and credential aliases before approval.
+Only actual enabled/disabled states are presented; no fabricated marketplace or
+pending-review database state is introduced. Brain administrators continue to use
+the existing catalogue and configure only approved definitions. Their tool grants
+and runner authority are independent of installation approval.
+
 ## HTTP form setup (2026-09-28 clarification)
 
 The installation owner may enter a name and exact HTTP MCP URL and explicitly
 request anonymous metadata discovery. The server uses the shared SDK with no
 credential, redirect, proxy or tool call, bounded wire sizes, pagination, timeout
-and concurrency. Tool descriptions collapse whitespace and are clipped to the
-existing 2,000-character display limit; input/output schemas remain unchanged
-and must pass the existing offline validators. HTTPS and exact loopback HTTP follow the existing transport
+and concurrency. Tool descriptions preserve Markdown, newlines and tabs, remove
+other control characters and are clipped to the existing 2,000-character display
+limit; input/output schemas preserve assertions, with only the equivalent root
+declaration conversion above, and must pass the existing offline validators.
+HTTPS and exact loopback HTTP follow the existing transport
 target rules. Discovery returns a candidate manifest for the existing approval
 handler; remote metadata cannot execute commands or grant profile Use. Name/URL
 edits invalidate the preview. The form creates the connection through existing
@@ -55,7 +84,8 @@ Schemas use JSON Schema 2020-12 through the maintained validator with remote/fil
 resolution disabled. Only local fragment references are supported. Configuration
 and tool inputs require `type: object`; output schemas may describe other JSON
 types. Configuration rejects undeclared root properties. Validate schema syntax,
-schema/descriptor depth and byte bounds; do not fetch `$ref`, icons or descriptions.
+schema/descriptor depth and byte bounds; do not fetch `$ref` or descriptions.
+Optional icons follow only the explicit inspection boundary below.
 Resource-rebasing `$id` and model-parameter HTTP header mappings (`x-mcp-header`)
 are unsupported here and rejected instead of introducing an unapproved routing path.
 Tool names are unique, case-sensitive ASCII identifiers up to 128 characters.
@@ -172,6 +202,48 @@ no-use, empty/partial discovery and permission loss are visible. Polling every
 five seconds refreshes rights and closes inaccessible/configuration-stale editors;
 failed refresh hides stale sensitive detail. No mobile work is required.
 
+### Inline management and connector icons — 2026-10-05
+
+The user approved Connections-style tool-group cards with compact independent
+Use, Manage and Share icons beside each person/group name. Green means allowed;
+red means denied. Accessible names/tooltips identify both the power and state.
+Editing updates values in the existing card/connection inspector with stable
+identity, tabs and sections. Manage edits group configuration; Share edits grants.
+Effective account rights remain additive; removable direct/group grants are
+distinct from inherited administrative/group authority, exposed in a concise
+disclosure. The main account icon set always shows effective access; a Share
+editor labels separate Direct controls beside the same name, so an inherited
+allowed power never silently turns into a red denial. Pending people are marked
+as drafts, rendered only in active authorized editing, and discarded on Share
+loss/archive. Neither the design nor edit mode grants additional rights.
+
+Configuration and grant commands remain separate canonical transactions. A card
+Save applies a changed configuration first, then edited grants sequentially;
+it records each successful mutation. On partial failure the draft stays visible,
+the UI states which changes saved, and retry sends only unfinished mutations.
+An observed conflicting configuration revision blocks that configuration save
+while retaining its safe draft for explicit reload. Failed authorization refresh
+hides sensitive detail; current authority is rechecked on every mutation.
+
+Only explicit owner HTTP metadata inspection may cache optional server icons.
+The SDK's initialize metadata supplies up to three candidate images. Fetch only
+same-origin public HTTPS URLs relative to the explicitly inspected target;
+reject userinfo, query, fragments, redirects and all private/loopback/link-local,
+multicast, reserved or otherwise non-public addresses. Resolve and validate all
+DNS answers, pin the connection to those approved addresses, use no proxy,
+credentials or cookies, and enforce a total six-second icon budget. Data image
+candidates may be validated locally. Decode at most 256 KiB per candidate,
+512 × 512 pixels and 4 MiB allocation, accepting PNG/JPEG/WebP only; normalize
+to PNG with no source metadata. SVG/HTML and malformed/oversized raster are
+rejected. Cache one successful normalized PNG in the approved definition's
+existing manifest JSON and expose its bounded data URI in authorized summaries.
+Reads never fetch icons. Missing/rejected/failed icons use the generic icon and
+never fail successful tool metadata inspection or grant execution rights.
+
+Descriptions and schemas use the bundled safe Markdown/highlighting renderer.
+Remote HTML and embedded images remain inert; unknown/oversized languages remain
+readable exact text, and explicit Copy preserves the original code bytes.
+
 ## Acceptance
 
 Real PostgreSQL/non-owner RLS and API calls prove independent direct/group/admin
@@ -192,3 +264,11 @@ lifecycle and unknown completion belong to slice 23. Vault/private runner transp
 and rotation are slice 24; shared memory/workspace tools and host refresh are slice
 25; managed observation capture is slice 26. A universal connector marketplace,
 shell sandbox, automatic remote schema approval and mobile UI are outside this slice.
+
+### Observed connection result — 2026-10-04
+
+Catalogue summaries may report `last_successful_call_at` from completed succeeded
+calls with the connection and connector definition's current revisions, filtered by existing call visibility
+and current explicit Use rights. It is historical observation, not connectivity or
+current health. Missing authorized history is reported without claiming a connection
+has never worked. No tool is contacted by this read.

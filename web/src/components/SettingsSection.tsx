@@ -11,7 +11,7 @@ export function SettingsSection({
   children: ReactNode;
 }) {
   return (
-    <section className="settings-section">
+    <section className="settings-section rc-enter">
       <div className="settings-section-heading">
         <Title order={2}>{title}</Title>
         {description && (

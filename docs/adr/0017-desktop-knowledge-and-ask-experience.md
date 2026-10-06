@@ -2,6 +2,14 @@
 
 Status: accepted
 
+October 3 approved graph-led amendment: Dashboard is the Brain landing page;
+Dashboard, Ask, Graph and Explore are the daily destinations, with wiring under
+Manage. Graph offers bounded 2D, exact recorded contributions and an optional
+Entities finder. Ask supports formatted answers and natural evidence retrieval.
+The current
+[desktop knowledge contract](../contracts/desktop-knowledge-surface.md) governs
+these presentation changes and bounded repository browsing.
+
 The user's [2026-10-01 display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
 supersedes mandatory small-screen and keyboard-polish expectations. Prioritize
 normal laptops and larger desktop monitors, up to about 32 inches.
@@ -138,3 +146,31 @@ and the agent-connection-card placement in
 [managed experience](../contracts/memory-managed-experience.md#human-and-agent-experience).
 No domain contract, permission, retention rule or retrieval semantics is
 superseded.
+
+## Graph-led simplification — 2026-10-03
+
+The 3D renderer approval in this section is historical and superseded by the
+flat graph correction below; the navigation and retrieval decisions remain.
+
+The user approved implementation with Graph as a main destination and a practical
+3D view. The everyday sidebar is Dashboard, Ask, Graph and Explore. A secondary
+Manage group holds Agents, Connections and Settings. Activity history is reached
+from Dashboard. Explore groups learned memory, original sources and repositories
+without merging their identities. Existing URLs remain valid. Permanent memory
+kind tabs become optional filters.
+
+Graph offers lazy 3D and existing 2D over the same canonical bounded selection,
+plus an optional Entities finder. A separately labelled provenance perspective
+uses exact recent source/device joins and selected snapshot contributions; these
+observations never participate in canonical paths or imply runtime causality.
+Ask presents Answer/Find evidence intents with collapsed advanced controls, safe
+Markdown and consolidated evidence notes. The retrieval amendment defines an
+opt-in automatic strategy; existing explicit API defaults remain compatible.
+
+## Flat graph correction — 2026-10-03
+
+After seeing the live implementation, the user rejected 3D and requested a
+Graphify assessment. Graph remains a main destination with a flat 2D canvas.
+Use the existing library renderer and retain the exact evidence/contribution
+boundaries, inspection, focus, paths and bounded validity. No new extraction
+runtime or graph authority is introduced by this presentation correction.

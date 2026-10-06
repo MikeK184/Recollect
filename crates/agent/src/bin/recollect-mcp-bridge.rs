@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow, ensure};
-use recollect_agent::{Client, CredentialSlot, mcp_bridge};
+use recollect_agent::{Client, CredentialSlot, mcp_bridge, presentation};
 use std::path::PathBuf;
 
 fn configuration(
@@ -28,6 +28,9 @@ fn configuration(
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
+    // stdout is the MCP stdio protocol in serve mode; presentation appears
+    // only when a human terminal owns it.
+    presentation::banner_quiet();
     tracing_subscriber::fmt()
         .with_env_filter("off,recollect_mcp_runtime=warn")
         .with_writer(std::io::stderr)
@@ -137,5 +140,11 @@ async fn main() -> Result<()> {
             ));
         }
     };
-    mcp_bridge::serve(client, device, brain, root, capture).await
+    let status = presentation::status::start_quiet("MCP bridge");
+    let outcome = mcp_bridge::serve(client, device, brain, root, capture).await;
+    match &outcome {
+        Ok(()) => presentation::status::finish(status, true, ""),
+        Err(error) => presentation::status::finish(status, false, &error.to_string()),
+    }
+    outcome
 }

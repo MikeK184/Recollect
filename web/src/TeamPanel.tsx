@@ -7,7 +7,8 @@ import {
   Divider,
   Group,
   Loader,
-  Modal,
+  Drawer,
+  Tabs,
   Select,
   Stack,
   Text,
@@ -18,6 +19,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Users } from "lucide-react";
 import { client, result } from "./api";
+import "./features/workspace/control-panel.css";
 import { ErrorState } from "./components/AsyncState";
 
 export function TeamPanel() {
@@ -144,143 +146,165 @@ export function TeamPanel() {
           </Button>
         </Alert>
       )}
-      {team.isPending ? (
-        <Loader />
-      ) : (
-        !team.error && (
-          <Stack gap="sm">
-            {team.data?.accounts.map((account) => (
-              <Card withBorder key={account.id}>
-                <Group justify="space-between" wrap="wrap">
-                  <div>
-                    <Group gap="xs">
-                      <Text fw={600}>{account.username}</Text>
-                      <Badge color={account.enabled ? "teal" : "gray"}>
-                        {account.enabled ? "Enabled" : "Disabled"}
-                      </Badge>
-                    </Group>
-                    <Text size="xs" c="dimmed" mt={4}>
-                      {account.installation_owner
-                        ? "Installation owner"
-                        : account.auth_kind === "oidc"
-                          ? "Organization identity"
-                          : "Local account"}
-                    </Text>
-                  </div>
-                  {!account.installation_owner && (
-                    <Group gap="xs">
-                      <Button
-                        variant="default"
-                        size="xs"
-                        loading={
-                          action.isPending &&
-                          action.variables?.id === account.id
-                        }
-                        onClick={() =>
-                          action.mutate({
-                            id: account.id,
-                            kind: "status",
-                            enabled: !account.enabled,
-                          })
-                        }
-                      >
-                        {account.enabled ? "Disable" : "Enable"}
-                      </Button>
-                      {account.auth_kind === "local" && (
-                        <Button
-                          variant="light"
-                          size="xs"
-                          disabled={action.isPending}
-                          onClick={() =>
-                            action.mutate({ id: account.id, kind: "reset" })
-                          }
-                        >
-                          Reset sign-in
-                        </Button>
+      <Tabs defaultValue="accounts">
+        <Tabs.List mb="lg">
+          <Tabs.Tab value="accounts">Accounts</Tabs.Tab>
+          <Tabs.Tab value="invitations">Invitations</Tabs.Tab>
+          <Tabs.Tab value="activity">Account activity</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="accounts">
+          {team.isPending ? (
+            <Loader />
+          ) : (
+            !team.error && (
+              <Stack gap="sm">
+                {team.data?.accounts.map((account) => (
+                  <Card
+                    withBorder
+                    key={account.id}
+                    className="control-account-row"
+                  >
+                    <Group justify="space-between" wrap="wrap">
+                      <div>
+                        <Group gap="xs">
+                          <span className="control-initial">
+                            {account.username.slice(0, 2).toUpperCase()}
+                          </span>
+                          <Text fw={600}>{account.username}</Text>
+                          <Badge color={account.enabled ? "teal" : "gray"}>
+                            {account.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </Group>
+                        <Text size="xs" c="dimmed" mt={4}>
+                          {account.installation_owner
+                            ? "Installation owner"
+                            : account.auth_kind === "oidc"
+                              ? "Organization identity"
+                              : "Local account"}
+                        </Text>
+                      </div>
+                      {!account.installation_owner && (
+                        <Group gap="xs">
+                          <Button
+                            variant="default"
+                            size="xs"
+                            loading={
+                              action.isPending &&
+                              action.variables?.id === account.id
+                            }
+                            onClick={() =>
+                              action.mutate({
+                                id: account.id,
+                                kind: "status",
+                                enabled: !account.enabled,
+                              })
+                            }
+                          >
+                            {account.enabled ? "Disable" : "Enable"}
+                          </Button>
+                          {account.auth_kind === "local" && (
+                            <Button
+                              variant="light"
+                              size="xs"
+                              disabled={action.isPending}
+                              onClick={() =>
+                                action.mutate({ id: account.id, kind: "reset" })
+                              }
+                            >
+                              Reset sign-in
+                            </Button>
+                          )}
+                        </Group>
                       )}
                     </Group>
-                  )}
-                </Group>
-              </Card>
-            ))}
-          </Stack>
-        )
-      )}
-      <section>
-        <Title order={3} mb="md">
-          Invitations
-        </Title>
-        {team.data?.invitations.length === 0 ? (
-          <Text c="dimmed" size="sm">
-            No invitations yet.
-          </Text>
-        ) : (
-          <Stack gap="xs">
-            {team.data?.invitations.map((invite) => (
-              <Card key={invite.id} withBorder padding="md">
-                <Group justify="space-between">
-                  <div>
-                    <Text fw={500} size="sm">
-                      {invite.username}
+                  </Card>
+                ))}
+              </Stack>
+            )
+          )}
+        </Tabs.Panel>
+        <Tabs.Panel value="invitations">
+          <section>
+            <Title order={3} mb="md">
+              Invitations
+            </Title>
+            {team.data?.invitations.length === 0 ? (
+              <Text c="dimmed" size="sm">
+                No invitations yet.
+              </Text>
+            ) : (
+              <Stack gap="xs">
+                {team.data?.invitations.map((invite) => (
+                  <Card key={invite.id} withBorder padding="md">
+                    <Group justify="space-between">
+                      <div>
+                        <Text fw={500} size="sm">
+                          {invite.username}
+                        </Text>
+                        <Text c="dimmed" size="xs">
+                          Expires {new Date(invite.expires_at).toLocaleString()}
+                        </Text>
+                      </div>
+                      <Group>
+                        <Badge
+                          variant="light"
+                          color={invite.state === "pending" ? "teal" : "gray"}
+                        >
+                          {invite.state}
+                        </Badge>
+                        {invite.state === "pending" && (
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            color="red"
+                            disabled={action.isPending}
+                            onClick={() =>
+                              action.mutate({ id: invite.id, kind: "revoke" })
+                            }
+                          >
+                            Revoke invitation
+                          </Button>
+                        )}
+                      </Group>
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </section>
+        </Tabs.Panel>
+        <Tabs.Panel value="activity">
+          <section>
+            <Title order={3} mb="md">
+              Account activity
+            </Title>
+            {history.error ? (
+              <Alert color="red">{history.error.message}</Alert>
+            ) : (
+              <Card withBorder>
+                {history.data?.slice(0, 12).map((event) => (
+                  <Group key={event.id} justify="space-between" py="xs">
+                    <Text size="sm">
+                      {event.action.replaceAll(".", " ").replaceAll("_", " ")} ·{" "}
+                      {event.disposition.replaceAll("_", " ")}
                     </Text>
-                    <Text c="dimmed" size="xs">
-                      Expires {new Date(invite.expires_at).toLocaleString()}
+                    <Text size="xs" c="dimmed">
+                      {new Date(event.created_at).toLocaleString()}
                     </Text>
-                  </div>
-                  <Group>
-                    <Badge
-                      variant="light"
-                      color={invite.state === "pending" ? "teal" : "gray"}
-                    >
-                      {invite.state}
-                    </Badge>
-                    {invite.state === "pending" && (
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        color="red"
-                        disabled={action.isPending}
-                        onClick={() =>
-                          action.mutate({ id: invite.id, kind: "revoke" })
-                        }
-                      >
-                        Revoke invitation
-                      </Button>
-                    )}
                   </Group>
-                </Group>
+                ))}
               </Card>
-            ))}
-          </Stack>
-        )}
-      </section>
-      <section>
-        <Title order={3} mb="md">
-          Account activity
-        </Title>
-        {history.error ? (
-          <Alert color="red">{history.error.message}</Alert>
-        ) : (
-          <Card withBorder>
-            {history.data?.slice(0, 12).map((event) => (
-              <Group key={event.id} justify="space-between" py="xs">
-                <Text size="sm">
-                  {event.action.replaceAll(".", " ").replaceAll("_", " ")} ·{" "}
-                  {event.disposition.replaceAll("_", " ")}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {new Date(event.created_at).toLocaleString()}
-                </Text>
-              </Group>
-            ))}
-          </Card>
-        )}
-      </section>
-      <Modal
+            )}
+          </section>
+        </Tabs.Panel>
+      </Tabs>
+      <Drawer
         opened={opened}
         onClose={() => setOpened(false)}
         title="Add a teammate"
-        centered
+        position="right"
+        size="lg"
+        className="control-drawer"
       >
         <form
           onSubmit={(e) => {
@@ -328,12 +352,14 @@ export function TeamPanel() {
             </Button>
           </Stack>
         </form>
-      </Modal>
-      <Modal
+      </Drawer>
+      <Drawer
         opened={!!link}
         onClose={() => setLink("")}
         title="Your invitation is ready"
-        centered
+        position="right"
+        size="lg"
+        className="control-drawer"
       >
         <Stack>
           <Text size="sm">
@@ -353,7 +379,7 @@ export function TeamPanel() {
           </Text>
           <Button onClick={() => setLink("")}>Done</Button>
         </Stack>
-      </Modal>
+      </Drawer>
     </Stack>
   );
 }

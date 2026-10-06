@@ -40,13 +40,19 @@ export function usePrivateRunners(brain: string) {
 export function McpPrivateRunners({
   brain,
   canConfigure,
+  onInspectorChange,
 }: {
   brain: Brain;
   canConfigure: boolean;
+  onInspectorChange?: (open: boolean) => void;
 }) {
   const runners = usePrivateRunners(brain.id);
   const cache = useQueryClient();
   const [editing, setEditing] = useState<Runner | "new" | null>(null);
+  useEffect(() => {
+    onInspectorChange?.(!!editing);
+    return () => onInspectorChange?.(false);
+  }, [editing, onInspectorChange]);
   useEffect(() => {
     if (!canConfigure || brain.archived || runners.error) setEditing(null);
   }, [canConfigure, brain.archived, runners.error]);
@@ -70,19 +76,19 @@ export function McpPrivateRunners({
         )}
       </Group>
       <Text size="sm" c="dimmed">
-        A private runner is the place your Brain chooses for targets on a
-        network the central service cannot reach. Each registration binds this
-        Brain to one paired device, and that device decides which network can
-        reach the target. Registering or renaming a runner is metadata only: it
-        starts nothing and proves no connectivity.
+        Optional. Run this Brain's outbound tools from a paired device that can
+        reach a private network. Ordinary plugin memory and direct MCP access do
+        not need this.
       </Text>
-      <Text size="sm" c="dimmed">
-        Manage the device itself in{" "}
-        <Link to="/brains/$brainId/agents" params={{ brainId: brain.id }}>
-          this Brain&apos;s Agents list
-        </Link>
-        .
-      </Text>
+      <details className="feature-advanced">
+        <summary>How it works</summary>
+        <Text size="sm" mt="sm">
+          The plugin's optional execution runner serves these tool calls under
+          separate permissions. Registration selects the device; start the
+          runner there to connect it.
+        </Text>
+        <Link to="/agents">Manage your paired devices in My agents</Link>
+      </details>
       {runners.isPending && <Loader size="sm" />}
       {runners.error && (
         <Alert color="red">
@@ -147,9 +153,7 @@ export function McpPrivateRunners({
                   >{`recollect-plugin connect --url ${window.location.origin} --brain ${brain.id} --with-runner --runner-id ${runner.id}`}</Code>
                   <Text size="xs" c="dimmed">
                     Device: {runner.device_id} ·{" "}
-                    <Link to="/brains/$brainId/agents" params={{ brainId: brain.id }}>
-                      see it in this Brain&apos;s Agents list
-                    </Link>
+                    <Link to="/agents">manage your paired devices</Link>
                   </Text>
                 </details>
               </>

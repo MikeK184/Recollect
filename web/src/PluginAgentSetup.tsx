@@ -1,20 +1,16 @@
-import { useState, type ReactNode } from "react";
 import {
-  Alert,
   Button,
   Code,
   CopyButton,
-  Modal,
-  Select,
   Stack,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
+import { Copy, Check } from "lucide-react";
 import type { Brain } from "./api";
-
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-function Copy({ value, label }: { value: string; label: string }) {
+export function SetupCopy({ value, label }: { value: string; label: string }) {
   return (
     <CopyButton value={value}>
       {({ copied, copy }) => (
@@ -25,21 +21,15 @@ function Copy({ value, label }: { value: string; label: string }) {
     </CopyButton>
   );
 }
-
-export function PluginAgentSetup({
-  brain,
-  initialHost,
-  buttonLabel = "Connect coding agent",
-  advanced,
+export function PluginInstall({
+  host,
+  directory,
+  setDirectory,
 }: {
-  brain: Brain;
-  initialHost?: string;
-  buttonLabel?: string;
-  advanced: ReactNode;
+  host: string;
+  directory: string;
+  setDirectory: (value: string) => void;
 }) {
-  const [opened, setOpened] = useState(false);
-  const [host, setHost] = useState(initialHost ?? "codex");
-  const [directory, setDirectory] = useState("/path/to/recollect-plugin");
   const plugin = `${directory.replace(/\/$/, "")}/plugins/recollect-memory`;
   const install =
     host === "codex"
@@ -47,121 +37,126 @@ export function PluginAgentSetup({
       : host === "opencode"
         ? JSON.stringify({ plugins: [`${plugin}/opencode/index.mjs`] }, null, 2)
         : `claude plugin marketplace add ${quote(directory)}\nclaude plugin install recollect-memory@recollect`;
+  return (
+    <Stack gap="md">
+      <Title order={3}>Install the plugin</Title>
+      <Text size="sm">
+        Automatic recall and session capture. Keep the plugin package in a
+        permanent folder.
+      </Text>
+      <TextInput
+        label="Plugin package folder"
+        value={directory}
+        onChange={(e) => setDirectory(e.currentTarget.value)}
+      />
+      <Code block data-testid="agent-plugin-command">
+        {install}
+      </Code>
+      <SetupCopy
+        value={install}
+        label={
+          host === "opencode" ? "Copy plugin entry" : "Copy install commands"
+        }
+      />
+      {host === "opencode" && (
+        <Text size="xs" c="dimmed">
+          Merge into the plugins list in opencode.json; keep existing entries.
+        </Text>
+      )}
+      <details className="feature-advanced">
+        <summary>Replacing an existing Recollect setup</summary>
+        <Text size="sm" mt="sm">
+          Drain pending captures using the original setup, then remove the
+          previous first-party MCP entry before enabling the plugin. Verify the
+          new connection before retiring old setup files. Preserve other plugins
+          and credentials; do not run both capture paths for the same session.
+        </Text>
+      </details>
+    </Stack>
+  );
+}
+export function PluginConnect({
+  brain,
+  compact = false,
+}: {
+  brain: Brain;
+  compact?: boolean;
+}) {
   const connect = `Use the Recollect connect skill to connect to ${window.location.origin}, Brain ${brain.name} (${brain.id}). Use browser authorization and the OS credential store. Keep the optional execution runner disabled.`;
+  if (compact)
+    return (
+      <div className="agent-compact-connect">
+        <span>Connect to this Brain using your agent:</span>
+        <div>
+          <code>Use the Recollect connect skill for {brain.name}</code>
+          <CopyButton value={connect}>
+            {({ copied, copy }) => (
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                onClick={copy}
+                aria-label="Copy connection prompt"
+              >
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+              </Button>
+            )}
+          </CopyButton>
+        </div>
+        <details className="agent-prompt-details">
+          <summary>View connection prompt</summary>
+          <Code block>{connect}</Code>
+          <Text size="xs">
+            Restart your host, trust the plugin, then send this prompt. Approve
+            the connection in your browser. Credentials stay in the operating
+            system credential store.
+          </Text>
+        </details>
+      </div>
+    );
+  return (
+    <Stack gap="md">
+      <Title order={3}>Connect once</Title>
+      <Text size="sm">
+        Restart your host, trust the plugin, then send this prompt. Approve the
+        connection in your browser.
+      </Text>
+      <Code block>{connect}</Code>
+      <SetupCopy value={connect} label="Copy connection prompt" />
+      <Text size="xs" c="dimmed">
+        Your credential stays in the operating system credential store.
+      </Text>
+    </Stack>
+  );
+}
+
+export function PluginFinish({ brain }: { brain: Brain }) {
   const verify = `What relevant knowledge does Recollect already have for this workspace? Cite its sources and say if no relevant memory was available. Do not change any permissions.`;
   return (
-    <>
-      <Button
-        variant="light"
-        disabled={brain.archived}
-        onClick={() => setOpened(true)}
-      >
-        {buttonLabel}
-      </Button>
-      <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title="Connect a coding agent"
-        size="lg"
-      >
-        <Stack gap="lg">
-          <Stack gap="sm" data-testid="agent-setup-stage-1">
-            <Title order={4}>Step 1 · Install the Recollect plugin</Title>
-            <Text size="sm">
-              Use the Recollect plugin package for your computer. It includes
-              memory tools, automatic recall and session capture. Keep the
-              package in a permanent folder.
-            </Text>
-            <Select
-              label="Coding host"
-              value={host}
-              onChange={(value) => value && setHost(value)}
-              allowDeselect={false}
-              data={[
-                { value: "codex", label: "Codex" },
-                { value: "claude", label: "Claude Code" },
-                { value: "opencode", label: "OpenCode" },
-              ]}
-            />
-            <TextInput
-              label="Plugin package folder"
-              value={directory}
-              onChange={(event) => setDirectory(event.currentTarget.value)}
-            />
-            {host === "opencode" && (
-              <Text size="sm">
-                Add this entry to the plugins list in your opencode.json.
-                Preserve your existing entries.
-              </Text>
-            )}
-            <Code
-              block
-              style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-            >
-              {install}
-            </Code>
-            <Copy
-              value={install}
-              label={
-                host === "opencode"
-                  ? "Copy plugin entry"
-                  : "Copy install commands"
-              }
-            />
-          </Stack>
-          <Stack gap="sm" data-testid="agent-setup-stage-2">
-            <Title order={4}>Step 2 · Connect once</Title>
-            <Text size="sm">
-              Restart your coding host, trust the installed plugin when asked,
-              and send this prompt. Approve the connection in your browser. Your
-              credential stays in the operating system credential store.
-            </Text>
-            <Code block style={{ whiteSpace: "pre-wrap" }}>
-              {connect}
-            </Code>
-            <Copy value={connect} label="Copy connection prompt" />
-          </Stack>
-          <Stack gap="sm" data-testid="agent-setup-stage-3">
-            <Title order={4}>Step 3 · Start a normal session</Title>
-            <Text size="sm">
-              The plugin gives your agent relevant, cited memory before it
-              answers. Permitted session evidence uploads in the background.
-              Check Captured sessions for actual delivery and coverage gaps.
-            </Text>
-            <Copy value={verify} label="Copy verification prompt" />
-            <Text size="sm" c="dimmed">
-              An empty Brain may have no relevant memory yet. Installation alone
-              does not prove a successful memory read or upload.
-            </Text>
-          </Stack>
-          <Alert color="gray" title="Existing Recollect setup">
-            Drain pending captures with their original setup, then remove the
-            previous first-party MCP entry before enabling this plugin. Verify
-            the new connection before retiring the old setup files. Preserve
-            other plugins and credentials; do not run both capture paths for the
-            same session.
-          </Alert>
-          <details className="feature-advanced">
-            <summary>Optional execution runner</summary>
-            <Text size="sm">
-              Enable this only if Recollect should independently run approved
-              tools on this computer or its private network. Memory and ordinary
-              coding tools work without it. Ask the connect skill to include{" "}
-              <Code>--with-runner</Code>; an existing private registration can
-              also use <Code>--runner-id UUID</Code>. Reconnect without the flag
-              to disable it.
-            </Text>
-          </details>
-          <details className="feature-advanced">
-            <summary>Advanced · Direct MCP connection</summary>
-            <Text size="sm" mb="sm">
-              Use direct HTTP when you only want memory tools. Automatic session
-              capture and prompt recall are provided by the plugin.
-            </Text>
-            {advanced}
-          </details>
-        </Stack>
-      </Modal>
-    </>
+    <Stack gap="md">
+      <Title order={3}>Start a normal session</Title>
+      <Text size="sm">
+        The plugin recalls relevant memory and captures permitted evidence in
+        the background. Check recorded activity in {brain.name}.
+      </Text>
+      <SetupCopy value={verify} label="Copy verification prompt" />
+      <Text size="xs" c="dimmed">
+        The next view shows Brain activity. Installation alone does not prove a
+        read or upload from this agent. An empty Brain may have no relevant
+        memory yet.
+      </Text>
+      <details className="feature-advanced">
+        <summary>Optional tool execution</summary>
+        <Text size="sm" mt="sm">
+          The execution runner lets Recollect execute separately authorized
+          connected tools on this computer or its private network. Automatic
+          memory and your host’s ordinary coding tools do not require it. It
+          stays off by default.
+        </Text>
+        <Text size="sm" mt="sm">
+          To enable it explicitly, ask the connect skill to reconnect with{" "}
+          <code>--with-runner</code>. Tool access still requires its own grants.
+        </Text>
+      </details>
+    </Stack>
   );
 }

@@ -932,6 +932,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/mcp/connections/{id}/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["provisionMcpCredentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/mcp/definitions/{key}": {
         parameters: {
             query?: never;
@@ -1092,6 +1108,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/models/catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["modelCatalogue"];
+        put?: never;
+        post: operations["refreshModelCatalogue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/models/check": {
         parameters: {
             query?: never;
@@ -1148,6 +1180,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["modelUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["brainPipeline"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1444,6 +1492,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/sources/{source}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sourceIdentity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/sources/{source}/groups": {
         parameters: {
             query?: never;
@@ -1548,6 +1612,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["scopedOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/workspace/repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["repositoryCatalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/workspace/repositories/{repository}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["repositoryIdentity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1759,6 +1855,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["remove_group"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{id}/icon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBrainIcon"];
+        put: operations["putBrainIcon"];
+        post?: never;
+        delete: operations["removeBrainIcon"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1995,7 +2107,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["listMcpDefinitions"];
         put?: never;
         post: operations["approveMcpDefinition"];
         delete?: never;
@@ -2014,6 +2126,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["inspectHttpMcpDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mcp/definitions/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGlobalMcpDefinition"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2355,6 +2483,8 @@ export interface components {
         AgentBrainUsage: {
             /** Format: uuid */
             brain_id: string;
+            /** Format: uuid */
+            icon_revision?: string | null;
             /** Format: date-time */
             last_used_at: string;
             name: string;
@@ -2530,6 +2660,8 @@ export interface components {
             created_at: string;
             description: string;
             /** Format: uuid */
+            icon_revision?: string | null;
+            /** Format: uuid */
             id: string;
             name: string;
             /** Format: uuid */
@@ -2544,13 +2676,14 @@ export interface components {
         };
         BrainAgent: {
             active: boolean;
+            can_revoke: boolean;
             claimed: boolean;
             /** Format: date-time */
-            created_at: string;
+            created_at?: string | null;
             /** Format: uuid */
             device_id: string;
             /** Format: date-time */
-            expires_at: string;
+            expires_at?: string | null;
             host_kind?: string | null;
             integration: string;
             /** Format: date-time */
@@ -2773,16 +2906,22 @@ export interface components {
             total: number;
         };
         CaptureEventView: {
+            agent_name?: string | null;
+            /** Format: uuid */
+            device_id?: string | null;
             event?: null | components["schemas"]["CapturedHook"];
             host: string;
             host_version: string;
+            learning?: null | components["schemas"]["PipelineLearning"];
             /** Format: uuid */
             managed_call_id?: string | null;
             /** Format: uuid */
             operation_id?: string | null;
+            processing?: string | null;
             receipt: components["schemas"]["CaptureReceipt"];
             selection: components["schemas"]["ScopeSelection"];
             source_available: boolean;
+            user_name: string;
         };
         CaptureFence: {
             /** Format: uuid */
@@ -2840,6 +2979,24 @@ export interface components {
             tool_name?: string | null;
             tool_use_id?: string | null;
             turn_id?: string | null;
+        };
+        CatalogueModel: {
+            available?: boolean | null;
+            /** Format: double */
+            cached_input_usd_per_million?: number | null;
+            checked_on: string;
+            id: string;
+            /** Format: double */
+            input_usd_per_million?: number | null;
+            kind: string;
+            /** Format: int32 */
+            max_dimensions?: number | null;
+            /** Format: double */
+            output_usd_per_million?: number | null;
+            pricing_stale: boolean;
+            pricing_tier: string;
+            selectable: boolean;
+            source_url: string;
         };
         ChangeScope: {
             /** Format: uuid */
@@ -2969,6 +3126,11 @@ export interface components {
             operation_id?: string | null;
         };
         ClaimPage: {
+            /**
+             * Format: date-time
+             * @description Earliest canonical retention deadline for content in this bounded page.
+             */
+            expires_at?: string | null;
             items: components["schemas"]["ClaimView"][];
             /** Format: date-time */
             knowledge_at: string;
@@ -3069,8 +3231,10 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             expires_at: string;
+            host_kind?: string | null;
             /** Format: uuid */
             id: string;
+            integration?: string | null;
             /** Format: date-time */
             last_used_at?: string | null;
             name: string;
@@ -3396,6 +3560,8 @@ export interface components {
             /** Format: uuid */
             brain_id: string;
             coverage: components["schemas"]["RecallCoverage"];
+            /** Format: date-time */
+            expires_at?: string | null;
             generation: components["schemas"]["GraphGeneration"];
             inputs: components["schemas"]["GraphGeneration"][];
             link_issues: components["schemas"]["GraphLinkIssue"][];
@@ -3821,12 +3987,25 @@ export interface components {
             environment_id?: string | null;
             /** Format: uuid */
             id: string;
+            /** Format: date-time */
+            last_successful_call_at?: string | null;
             name: string;
             placement: string;
             /** Format: uuid */
             revision: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        McpCredentialProvision: {
+            /** Format: uuid */
+            base_revision: string;
+            environment?: {
+                [key: string]: string;
+            };
+            headers?: components["schemas"]["McpSecretHeader"][];
+        };
+        McpCredentialProvisioned: {
+            configured: boolean;
         };
         McpDefinitionDetail: {
             configuration_schema: unknown;
@@ -3842,6 +4021,8 @@ export interface components {
             configuration_schema: unknown;
             credential_aliases?: string[];
             description?: string;
+            /** @description Bounded, validated, metadata-free cached PNG; never a remote URL. */
+            icon_png?: string | null;
             key: string;
             name: string;
             placements: string[];
@@ -3852,6 +4033,7 @@ export interface components {
         McpDefinitionSummary: {
             description: string;
             enabled: boolean;
+            icon_png?: string | null;
             key: string;
             name: string;
             tool_count: number;
@@ -3936,6 +4118,10 @@ export interface components {
             timeout_seconds: number;
             tool_name: string;
         };
+        McpGlobalDefinition: {
+            manifest: components["schemas"]["McpDefinitionManifest"];
+            summary: components["schemas"]["McpDefinitionSummary"];
+        };
         McpGrant: {
             /** Format: uuid */
             account_id?: string | null;
@@ -3956,6 +4142,9 @@ export interface components {
             username?: string | null;
         };
         McpHttpInspection: {
+            headers?: {
+                [key: string]: string;
+            };
             name: string;
             url: string;
         };
@@ -3968,6 +4157,8 @@ export interface components {
             client_session_id: string;
             /** Format: uuid */
             connection_id: string;
+            /** @description Matches the enabled connection and approved definition currently visible. */
+            current_configuration: boolean;
             /** Format: uuid */
             device_id?: string | null;
             /** Format: uuid */
@@ -4186,6 +4377,11 @@ export interface components {
             instances: components["schemas"]["McpInstance"][];
             runners: components["schemas"]["McpRunnerStatus"][];
         };
+        McpSecretHeader: {
+            name: string;
+            prefix?: string;
+            value: string;
+        };
         McpSessionRelease: {
             /** Format: uuid */
             client_session_id: string;
@@ -4214,6 +4410,13 @@ export interface components {
             connection_id: string;
             name: string;
             reason: string;
+        };
+        ModelCatalogue: {
+            error_code?: string | null;
+            models: components["schemas"]["CatalogueModel"][];
+            /** Format: date-time */
+            observed_at?: string | null;
+            stale: boolean;
         };
         ModelCheckInput: {
             /** Format: uuid */
@@ -4261,6 +4464,7 @@ export interface components {
             /** Format: uuid */
             base_change: string;
             policy: components["schemas"]["ModelPolicy"];
+            rebuild_embeddings?: boolean;
         };
         ModelPolicyVersion: {
             /** Format: uuid */
@@ -4405,6 +4609,104 @@ export interface components {
             name: string;
             state: string;
             user_code: string;
+        };
+        /** @description A bounded, read-only projection of canonical processing records. */
+        PipelineFeed: {
+            /** Format: uuid */
+            brain_id: string;
+            graph?: null | components["schemas"]["PipelineGraph"];
+            has_more: boolean;
+            items: components["schemas"]["PipelineItem"][];
+            /** Format: date-time */
+            observed_at: string;
+            /** Format: date-time */
+            valid_until: string;
+        };
+        /** @description Graph work is Brain-wide; this deliberately has no source/run relationship. */
+        PipelineGraph: {
+            /** Format: int64 */
+            current_epoch: number;
+            /** Format: int64 */
+            edge_count: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            input_epoch: number;
+            /** Format: int64 */
+            node_count: number;
+            /** Format: date-time */
+            published_at?: string | null;
+            state: string;
+        };
+        PipelineItem: {
+            active: boolean;
+            /** Format: date-time */
+            activity_at: string;
+            /** Format: uuid */
+            actor_id: string;
+            agent_id?: string | null;
+            agent_name?: string | null;
+            /** Format: uuid */
+            binding_id?: string | null;
+            /** Format: uuid */
+            capture_id?: string | null;
+            contributor: string;
+            coverage: string[];
+            /** Format: uuid */
+            device_id?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            host?: string | null;
+            host_session_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            learning?: null | components["schemas"]["PipelineLearning"];
+            processing: string;
+            processing_job?: null | components["schemas"]["PipelineJob"];
+            /** Format: date-time */
+            received_at: string;
+            /** Format: uuid */
+            source_id?: string | null;
+            /** Format: uuid */
+            source_version_id?: string | null;
+            title: string;
+            tool_name?: string | null;
+        };
+        PipelineJob: {
+            error_code?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            lease_until?: string | null;
+            state: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PipelineLearning: {
+            /** Format: int32 */
+            accepted: number;
+            /** Format: int32 */
+            blocked: number;
+            claim_ids: string[];
+            /** Format: int32 */
+            conflicting: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            job: components["schemas"]["PipelineJob"];
+            /** Format: int32 */
+            proposed: number;
+            /** Format: int32 */
+            retired: number;
+            /** Format: int32 */
+            reused: number;
+            /** Format: int32 */
+            revised: number;
+            state: string;
         };
         PrivacyDeviceAck: {
             /** Format: int64 */
@@ -4662,6 +4964,8 @@ export interface components {
             semantic_request_id: string | null;
             /** @default true */
             source_diversity: boolean;
+            /** @default manual */
+            strategy: string;
         };
         RecallResponse: {
             algorithm: string;
@@ -4719,6 +5023,7 @@ export interface components {
             accepted_at: string;
             /** Format: uuid */
             actor_id: string;
+            actor_name?: string;
             branch?: string | null;
             /** Format: date-time */
             captured_at: string;
@@ -4772,6 +5077,15 @@ export interface components {
         };
         RepositoryOrigin: {
             origin: string;
+        };
+        RepositoryPage: {
+            items: components["schemas"]["Repository"][];
+            /** Format: int64 */
+            next_offset?: number | null;
+            /** Format: int64 */
+            offset: number;
+            /** Format: int64 */
+            total: number;
         };
         RepositoryPolicy: {
             allow_file_content: boolean;
@@ -5005,7 +5319,11 @@ export interface components {
             /** Format: int64 */
             contributor_total: number;
             contributors: components["schemas"]["RepositoryContribution"][];
+            /** Format: date-time */
+            observed_at: string;
             snapshot: components["schemas"]["RepositorySnapshot"];
+            /** Format: date-time */
+            valid_until: string;
         };
         SnapshotPage: {
             items: components["schemas"]["RepositorySnapshot"][];
@@ -5744,6 +6062,7 @@ export interface operations {
             query?: {
                 offset?: number;
                 binding_id?: string;
+                device_id?: string;
                 kind?: string;
             };
             header?: never;
@@ -7029,6 +7348,32 @@ export interface operations {
             };
         };
     };
+    provisionMcpCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpCredentialProvision"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpCredentialProvisioned"];
+                };
+            };
+        };
+    };
     mcpDefinition: {
         parameters: {
             query?: never;
@@ -7316,6 +7661,48 @@ export interface operations {
             };
         };
     };
+    modelCatalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelCatalogue"];
+                };
+            };
+        };
+    };
+    refreshModelCatalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelCatalogue"];
+                };
+            };
+        };
+    };
     checkModels: {
         parameters: {
             query?: never;
@@ -7429,6 +7816,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelUsage"];
+                };
+            };
+        };
+    };
+    brainPipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineFeed"];
                 };
             };
         };
@@ -7912,6 +8320,7 @@ export interface operations {
         parameters: {
             query?: {
                 offset?: number;
+                summary?: boolean;
             };
             header?: never;
             path: {
@@ -7994,6 +8403,28 @@ export interface operations {
                 "application/json": components["schemas"]["SourceInput"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummary"];
+                };
+            };
+        };
+    };
+    sourceIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -8134,6 +8565,7 @@ export interface operations {
                 workspace_id?: string;
                 checkout_offset?: number;
                 task_offset?: number;
+                include_repositories?: boolean;
             };
             header?: never;
             path: {
@@ -8196,6 +8628,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationBinding"];
+                };
+            };
+        };
+    };
+    repositoryCatalogue: {
+        parameters: {
+            query?: {
+                q?: string;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryPage"];
+                };
+            };
+        };
+    };
+    repositoryIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                repository: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Repository"];
                 };
             };
         };
@@ -8582,6 +9060,121 @@ export interface operations {
             };
         };
     };
+    getBrainIcon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    putBrainIcon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/png": string;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Brain"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    removeBrainIcon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Brain"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     listBrainJobs: {
         parameters: {
             query?: never;
@@ -8890,6 +9483,25 @@ export interface operations {
             };
         };
     };
+    listMcpDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpDefinitionSummary"][];
+                };
+            };
+        };
+    };
     approveMcpDefinition: {
         parameters: {
             query?: never;
@@ -8932,6 +9544,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["McpDefinitionManifest"];
+                };
+            };
+        };
+    };
+    getGlobalMcpDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpGlobalDefinition"];
                 };
             };
         };

@@ -257,6 +257,7 @@ pub async fn bind(
 pub struct CaptureQuery {
     pub offset: Option<i64>,
     pub binding_id: Option<Uuid>,
+    pub device_id: Option<Uuid>,
     pub kind: Option<String>,
 }
 #[utoipa::path(post,path="/api/brains/{brain}/capture/devices",operation_id="reportCaptureDevice",params(("brain"=Uuid,Path)),request_body=CaptureDeviceReport,responses((status=204)))]
@@ -372,12 +373,25 @@ struct EventRow {
     operation_id: Option<Uuid>,
     managed_call_id: Option<Uuid>,
     selection: SqlJson<ScopeSelection>,
+    device_id: Option<Uuid>,
+    agent_name: Option<String>,
+    user_name: String,
+    processing: Option<String>,
+    learning: Option<SqlJson<recollect_protocol::PipelineLearning>>,
 }
 const EVENT_SELECT: &str = "SELECT e.id,e.binding_id,e.native_key,e.metadata,e.admission_policy,e.source_id,e.source_version_id,
  CASE WHEN e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)<=clock_timestamp() THEN 'expired' ELSE e.state END AS state,
  CASE WHEN e.state='accepted' THEN recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at) ELSE e.expires_at END AS expires_at,
- e.received_at,v.artifact_id,v.byte_length,b.host,b.host_version,b.operation_id,b.managed_call_id,b.selection
- FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id LEFT JOIN source_versions v ON v.id=e.source_version_id";
+ e.received_at,v.artifact_id,v.byte_length,b.host,b.host_version,b.operation_id,b.managed_call_id,b.selection,
+ b.device_id,d.name AS agent_name,a.username AS user_name,
+ CASE WHEN v.privacy_state='active' THEN v.processing END processing,
+ CASE WHEN l.id IS NOT NULL AND v.privacy_state='active' THEN jsonb_build_object('id',l.id,'state',l.state,
+ 'created_at',l.created_at,'finished_at',l.finished_at,'accepted',l.accepted,'proposed',l.proposed,'blocked',l.blocked,
+ 'conflicting',l.conflicting,'reused',l.reused,'revised',l.revised,'retired',l.retired,'claim_ids',l.claim_ids,
+ 'job',jsonb_build_object('id',lj.id,'state',lj.state,'updated_at',lj.updated_at,'lease_until',lj.lease_until,'error_code',lj.error_code)) END learning
+ FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id JOIN accounts a ON a.id=b.actor_id LEFT JOIN devices d ON d.id=b.device_id LEFT JOIN source_versions v ON v.id=e.source_version_id
+ LEFT JOIN LATERAL (SELECT * FROM learning_runs WHERE brain_id=e.brain_id AND source_version_id=v.id AND state<>'removed' ORDER BY (state IN ('queued','running')) DESC,coalesce(finished_at,created_at) DESC,id DESC LIMIT 1) l ON true
+ LEFT JOIN jobs lj ON lj.id=l.job_id AND lj.brain_id=e.brain_id";
 impl EventRow {
     fn receipt(&self) -> CaptureReceipt {
         CaptureReceipt {
@@ -603,7 +617,7 @@ pub async fn publish(
     tx.commit().await?;
     Ok(Json(response))
 }
-#[utoipa::path(get,path="/api/brains/{brain}/capture/events",operation_id="captureEvents",params(("brain"=Uuid,Path),("offset"=Option<i64>,Query),("binding_id"=Option<Uuid>,Query),("kind"=Option<String>,Query)),responses((status=200,body=CaptureEventPage)))]
+#[utoipa::path(get,path="/api/brains/{brain}/capture/events",operation_id="captureEvents",params(("brain"=Uuid,Path),("offset"=Option<i64>,Query),("binding_id"=Option<Uuid>,Query),("device_id"=Option<Uuid>,Query),("kind"=Option<String>,Query)),responses((status=200,body=CaptureEventPage)))]
 pub async fn events(
     State(state): State<AppState>,
     auth: Auth,
@@ -622,21 +636,23 @@ pub async fn events(
     }
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
-    let filter = "e.brain_id=$1 AND ($2::uuid IS NULL OR e.binding_id=$2) AND ($3::text IS NULL OR e.metadata->>'kind'=$3)";
+    let filter = "e.brain_id=$1 AND ($2::uuid IS NULL OR e.binding_id=$2) AND ($3::text IS NULL OR e.metadata->>'kind'=$3) AND ($4::uuid IS NULL OR b.device_id=$4)";
     let total = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM capture_events e WHERE {filter}"
+        "SELECT count(*) FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE {filter}"
     ))
     .bind(brain)
     .bind(query.binding_id)
     .bind(&query.kind)
+    .bind(query.device_id)
     .fetch_one(&mut *tx)
     .await?;
     let rows: Vec<EventRow> = sqlx::query_as(&format!(
-        "{EVENT_SELECT} WHERE {filter} ORDER BY e.received_at DESC,e.id DESC LIMIT 20 OFFSET $4"
+        "{EVENT_SELECT} WHERE {filter} ORDER BY e.received_at DESC,e.id DESC LIMIT 20 OFFSET $5"
     ))
     .bind(brain)
     .bind(query.binding_id)
     .bind(query.kind)
+    .bind(query.device_id)
     .bind(offset)
     .fetch_all(&mut *tx)
     .await?;
@@ -653,6 +669,19 @@ pub async fn events(
             .await
                 == "retained";
         items.push(CaptureEventView {
+            processing: if row.state == "accepted" {
+                row.processing.clone()
+            } else {
+                None
+            },
+            learning: if row.state == "accepted" {
+                row.learning.as_ref().map(|v| v.0.clone())
+            } else {
+                None
+            },
+            device_id: row.device_id,
+            agent_name: row.agent_name.clone(),
+            user_name: row.user_name.clone(),
             receipt: row.receipt(),
             host: row.host,
             host_version: row.host_version,

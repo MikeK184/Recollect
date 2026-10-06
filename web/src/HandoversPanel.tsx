@@ -14,6 +14,8 @@ import {
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
+import { SkeletonRows } from "./components/Skeleton";
+import { staggerStyle } from "./components/Motion";
 import type { components } from "./api-schema";
 import { ContributionPicker, combineContributions } from "./MemoryForms";
 import { ClaimDialog } from "./ClaimsPanel";
@@ -166,7 +168,7 @@ export function HandoversPanel({ brain }: { brain: Brain }) {
   });
   const error = runs.error ?? retry.error ?? cancel.error;
   return (
-    <Card withBorder p="lg" mt="xl" className="feature-setting">
+    <Card withBorder p="lg" mt="xl" className="feature-setting rc-enter">
       <Stack>
         <Group justify="space-between">
           <Title order={3}>Generated handovers</Title>
@@ -190,13 +192,13 @@ export function HandoversPanel({ brain }: { brain: Brain }) {
             {error.message}
           </Alert>
         )}
-        {runs.isPending && <Loader />}
+        {runs.isPending && <SkeletonRows label="Loading handovers…" rows={3} />}
         {runs.data?.total === 0 && (
           <Text c="dimmed">No generated handovers yet.</Text>
         )}
         {!runs.error &&
-          runs.data?.items.map((run) => (
-            <Card withBorder key={run.id}>
+          runs.data?.items.map((run, index) => (
+            <Card withBorder key={run.id} className="rc-enter" style={staggerStyle(index)}>
               <Stack gap="sm">
                 <Group justify="space-between">
                   <Text fw={600}>{run.title || "Handover attempt"}</Text>

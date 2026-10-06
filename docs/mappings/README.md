@@ -11,6 +11,30 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Readable Connections and equivalent Exa inspection, 2026-10-06](mcp-inspection-readability-2026-10-06.md)
+
+- [General, bounded Privacy and limited demo scenario, 2026-10-06](settings-demo-scenario-2026-10-06.md)
+
+- [Unified Privacy form and current recovery-field audit, 2026-10-06](desktop-unified-privacy-form-2026-10-06.md)
+
+- [Seven visible management follow-ups and automatic recovery audit, 2026-10-06](desktop-visible-management-settings-2026-10-06.md)
+
+- [Ten-point browser management delivery and native-host limits, 2026-10-05](desktop-browser-management-2026-10-05.md)
+
+- [Brain model catalogue interfaces, 2026-10-05](brain-model-catalogue-interfaces-2026-10-05.md)
+
+- [Management vision fidelity correction, 2026-10-05](desktop-management-vision-fidelity-2026-10-05.md)
+
+- [Six approved management concepts and independent runtime comparison, 2026-10-05](desktop-management-concepts-2026-10-05.md)
+
+- [Actionable Brain management and inline privacy, 2026-10-04](desktop-actionable-management-2026-10-04.md)
+- [Ambient TV and final desktop polish acceptance, 2026-10-04](desktop-visual-closeout-2026-10-04.md)
+
+- [Brain chooser, icons and personal Agents, 2026-10-03](desktop-brain-identity-2026-10-03.md)
+- [Flat desktop control panel and observed processing, 2026-10-03](desktop-live-control-panel-2026-10-03.md)
+
+- [Desktop light palette restoration, 2026-10-03](desktop-light-palette-2026-10-03.md)
+
 - [Agent surface, Ask chat and desktop chrome refinements, 2026-10-03](agents-ask-chrome-refinements-2026-10-03.md)
 - [Per-Brain agent roster and external-MCP-through-Brain proof, 2026-10-02](brain-agent-roster-2026-10-02.md)
 - [Final desktop deployment and host acceptance, 2026-10-01](desktop-final-acceptance-2026-10-01.md)

@@ -1,10 +1,30 @@
-import { useState } from "react";
+import {
+  Check,
+  Minus,
+  ShieldCheck,
+  MessageSquare,
+  Search,
+  Sparkles,
+  RefreshCw,
+  BookOpen,
+  List,
+  Database,
+  History,
+  FileText,
+  ChevronRight,
+  Pencil,
+} from "lucide-react";
+import { HostIcon } from "./components/HostIcon";
+import { SemanticPanel } from "./SemanticPanel";
+import { useEffect, useState } from "react";
 import "./features/feature-views.css";
+import "./features/settings/ai-settings.css";
 import {
   Alert,
   Badge,
   Button,
   Card,
+  Checkbox,
   Divider,
   Group,
   Loader,
@@ -23,13 +43,28 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
 import { ClaimDialog } from "./ClaimsPanel";
-import { SemanticPanel } from "./SemanticPanel";
 
 type Policy = components["schemas"]["ModelPolicy"];
 type Settings = components["schemas"]["ModelSettings"];
 type Run = components["schemas"]["LearningRun"];
 type Selection = components["schemas"]["ScopeSelection"];
-const label = (s: string) => s.replaceAll("_", " ");
+const label = (s: string) =>
+  (
+    ({
+      extraction: "Source learning",
+      synthesis: "Memory maintenance",
+      embedding: "Semantic search",
+      reranking: "Result ordering",
+      answering: "Ask answers",
+      document: "Documents",
+      raw_session: "Captured sessions",
+      tool_output: "Tool results",
+      support_excerpt: "Supporting excerpts",
+      repository: "Repository text",
+      claim: "Memory",
+      query: "Questions",
+    }) as Record<string, string>
+  )[s] ?? s.replaceAll("_", " ");
 const time = (s: string) => new Date(s).toLocaleString();
 const classes = [
   "document",
@@ -154,11 +189,11 @@ function PolicyEditor({
     },
   ];
   return (
-    <Modal opened onClose={onClose} title="Model policy" size="lg">
+    <Modal opened onClose={onClose} title="AI permissions" size="lg">
       <Stack>
         <Text size="sm">
-          Choose what this Brain may send to OpenAI. Capturing a source does not
-          grant permission to transmit it.
+          Choose what this Brain may send to the installed provider. Capture
+          permission is separate.
         </Text>
         <Switch
           label="Allow model transmission"
@@ -172,37 +207,9 @@ function PolicyEditor({
             })
           }
         />
-        <TextInput label="Text model" value={draft.text_model} readOnly />
-        <TextInput
-          label="Embedding model"
-          value={draft.embedding_model}
-          readOnly
-        />
-        <Text size="sm">
-          {draft.embedding_dimensions.toLocaleString()} embedding dimensions ·{" "}
-          {settings.installed.endpoint}
-        </Text>
-        {(draft.text_model !== settings.installed.text_model ||
-          draft.embedding_model !== settings.installed.embedding_model ||
-          draft.embedding_dimensions !==
-            settings.installed.embedding_dimensions) && (
-          <Button
-            variant="light"
-            onClick={() =>
-              patch({
-                provider: settings.installed.provider,
-                text_model: settings.installed.text_model,
-                embedding_model: settings.installed.embedding_model,
-                embedding_dimensions: settings.installed.embedding_dimensions,
-              })
-            }
-          >
-            Use installed models
-          </Button>
-        )}
         <MultiSelect
           searchable
-          label="Allowed model purposes"
+          label="Permitted processing"
           data={[
             ...choices(["extraction", "synthesis", "embedding", "reranking"]),
             { value: "answering", label: "Answering — evidence-backed Ask" },
@@ -222,7 +229,7 @@ function PolicyEditor({
         />
         <MultiSelect
           searchable
-          label="Allowed content classes"
+          label="Allowed content"
           data={choices(classes)}
           value={draft.content_classes}
           onChange={(content_classes) => patch({ content_classes })}
@@ -232,153 +239,163 @@ function PolicyEditor({
           fixed synthetic connection check. Answering is a separate permission
           and does not run tools or save conversations.
         </Text>
-        {limits.map((field) => (
-          <NumberInput
-            key={field.key}
-            label={field.name}
-            value={draft[field.key]}
-            min={field.min}
-            max={field.max}
-            allowDecimal={false}
-            onChange={(value) => patch({ [field.key]: Number(value) })}
-          />
-        ))}
-        <Switch
-          label="Build semantic search automatically"
-          checked={draft.automatic_embedding ?? false}
-          disabled={!draft.enabled || !draft.purposes.includes("embedding")}
-          onChange={(e) =>
-            patch({ automatic_embedding: e.currentTarget.checked })
-          }
-        />
-        <Text size="sm">
-          Index existing and newly eligible content using the approved embedding
-          model and content classes. Processing runs in the background without
-          per-record review.
-        </Text>
-        <Switch
-          label="Maintain memory autonomously"
-          checked={draft.autonomous_memory}
-          onChange={(e) => {
-            const autonomous_memory = e.currentTarget.checked;
-            patch({
-              autonomous_memory,
-              ...(autonomous_memory
-                ? {
-                    purposes: [
-                      ...new Set([
-                        ...draft.purposes,
-                        "extraction",
-                        "synthesis",
-                      ]),
-                    ],
-                    content_classes: [
-                      ...new Set([...draft.content_classes, "claim", "query"]),
-                    ],
-                  }
-                : {}),
-            });
-          }}
-        />
-        <Text size="sm">
-          Automatically learn permitted sources, reconcile changes and refresh
-          generated handovers. Supported results are accepted by policy;
-          uncertain evidence stays labeled. Human review is optional.
-        </Text>
-        <Switch
-          label="Learn from newly processed sources automatically"
-          checked={draft.automatic_learning}
-          disabled={
-            draft.autonomous_memory ||
-            !draft.enabled ||
-            !draft.purposes.includes("extraction")
-          }
-          onChange={(e) =>
-            patch({ automatic_learning: e.currentTarget.checked })
-          }
-        />
-        <Divider label="Automatic acceptance" />
-        <Switch
-          label="Accept permitted literal configuration facts"
-          checked={!!draft.acceptance}
-          onChange={(e) =>
-            patch({
-              acceptance: e.currentTarget.checked
-                ? {
-                    name: "literal-config",
-                    source_classes: ["document"],
-                    collection_ids: [],
-                    properties: [],
-                  }
-                : null,
-            })
-          }
-        />
-        {draft.acceptance && (
-          <>
-            <Text size="sm">
-              Only exact declarations such as Amber.port = 8080 can qualify. In
-              explicit mode, other interpretations remain proposals. Acceptance
-              records this policy and does not create a human reviewer.
-            </Text>
+        <details className="feature-advanced">
+          <summary>Resource limits and automatic processing</summary>
+          <Stack mt="md">
+            {" "}
+            <TextInput label="Text model" value={draft.text_model} readOnly />
             <TextInput
-              label="Acceptance rule name"
-              value={draft.acceptance.name}
+              label="Embedding model"
+              value={draft.embedding_model}
+              readOnly
+            />
+            <Text size="sm">
+              {draft.embedding_dimensions.toLocaleString()} embedding dimensions
+              · {settings.installed.endpoint}
+            </Text>
+            {limits.map((field) => (
+              <NumberInput
+                key={field.key}
+                label={field.name}
+                value={draft[field.key]}
+                min={field.min}
+                max={field.max}
+                allowDecimal={false}
+                onChange={(value) => patch({ [field.key]: Number(value) })}
+              />
+            ))}
+            <Switch
+              label="Build semantic search automatically"
+              checked={draft.automatic_embedding ?? false}
+              disabled={!draft.enabled || !draft.purposes.includes("embedding")}
               onChange={(e) =>
-                patch({
-                  acceptance: {
-                    ...draft.acceptance!,
-                    name: e.currentTarget.value,
-                  },
-                })
+                patch({ automatic_embedding: e.currentTarget.checked })
               }
             />
-            <TextInput
-              label="Allowed literal properties"
-              description="Comma-separated property names, for example port, protocol"
-              value={properties}
+            <Text size="sm">
+              Index existing and newly eligible content using the approved
+              embedding model and content classes. Processing runs in the
+              background without per-record review.
+            </Text>
+            <Switch
+              label="Maintain memory autonomously"
+              checked={draft.autonomous_memory}
               onChange={(e) => {
-                setProperties(e.currentTarget.value);
-                patch({
-                  acceptance: {
-                    ...draft.acceptance!,
-                    properties: e.currentTarget.value
-                      .split(",")
-                      .map((v) => v.trim())
-                      .filter(Boolean),
-                  },
-                });
+                const autonomous_memory = e.currentTarget.checked;
+                patch({ autonomous_memory });
               }}
             />
-            <MultiSelect
-              searchable
-              label="Literal source classes"
-              data={choices(sourceClasses)}
-              value={draft.acceptance.source_classes}
-              onChange={(source_classes) =>
-                patch({ acceptance: { ...draft.acceptance!, source_classes } })
-              }
-            />
-            <MultiSelect
-              searchable
-              label="Literal source collections"
-              description="Empty means all collections in this Brain."
-              data={
-                groups.data?.groups
-                  .filter((g) => g.kind === "collection")
-                  .map((g) => ({ value: g.id, label: g.name })) ?? []
-              }
-              value={draft.acceptance.collection_ids}
-              onChange={(collection_ids) =>
-                patch({ acceptance: { ...draft.acceptance!, collection_ids } })
-              }
-            />
-            <Failure error={groups.error} />
-          </>
-        )}
+            <Text size="sm">
+              Automatically learn permitted sources, reconcile changes and
+              refresh generated handovers. Supported results are accepted by
+              policy; uncertain evidence stays labeled. Human review is
+              optional.
+            </Text>
+            {!draft.autonomous_memory && (
+              <>
+                <Switch
+                  label="Learn from newly processed sources automatically"
+                  checked={draft.automatic_learning}
+                  disabled={
+                    draft.autonomous_memory ||
+                    !draft.enabled ||
+                    !draft.purposes.includes("extraction")
+                  }
+                  onChange={(e) =>
+                    patch({ automatic_learning: e.currentTarget.checked })
+                  }
+                />
+                <Divider label="Automatic acceptance" />
+                <Switch
+                  label="Accept permitted literal configuration facts"
+                  checked={!!draft.acceptance}
+                  onChange={(e) =>
+                    patch({
+                      acceptance: e.currentTarget.checked
+                        ? {
+                            name: "literal-config",
+                            source_classes: ["document"],
+                            collection_ids: [],
+                            properties: [],
+                          }
+                        : null,
+                    })
+                  }
+                />
+                {draft.acceptance && (
+                  <>
+                    <Text size="sm">
+                      Only exact declarations such as Amber.port = 8080 can
+                      qualify. In explicit mode, other interpretations remain
+                      proposals. Acceptance records this policy and does not
+                      create a human reviewer.
+                    </Text>
+                    <TextInput
+                      label="Acceptance rule name"
+                      value={draft.acceptance.name}
+                      onChange={(e) =>
+                        patch({
+                          acceptance: {
+                            ...draft.acceptance!,
+                            name: e.currentTarget.value,
+                          },
+                        })
+                      }
+                    />
+                    <TextInput
+                      label="Allowed literal properties"
+                      description="Comma-separated property names, for example port, protocol"
+                      value={properties}
+                      onChange={(e) => {
+                        setProperties(e.currentTarget.value);
+                        patch({
+                          acceptance: {
+                            ...draft.acceptance!,
+                            properties: e.currentTarget.value
+                              .split(",")
+                              .map((v) => v.trim())
+                              .filter(Boolean),
+                          },
+                        });
+                      }}
+                    />
+                    <MultiSelect
+                      searchable
+                      label="Literal source classes"
+                      data={choices(sourceClasses)}
+                      value={draft.acceptance.source_classes}
+                      onChange={(source_classes) =>
+                        patch({
+                          acceptance: { ...draft.acceptance!, source_classes },
+                        })
+                      }
+                    />
+                    <MultiSelect
+                      searchable
+                      label="Literal source collections"
+                      description="Empty means all collections in this Brain."
+                      data={
+                        groups.data?.groups
+                          .filter((g) => g.kind === "collection")
+                          .map((g) => ({ value: g.id, label: g.name })) ?? []
+                      }
+                      value={draft.acceptance.collection_ids}
+                      onChange={(collection_ids) =>
+                        patch({
+                          acceptance: { ...draft.acceptance!, collection_ids },
+                        })
+                      }
+                    />
+                    <Failure error={groups.error} />
+                  </>
+                )}
+              </>
+            )}
+          </Stack>
+        </details>
         <Failure error={save.error} />
         <Button loading={save.isPending} onClick={() => save.mutate()}>
-          Save model policy
+          Save AI permissions
         </Button>
       </Stack>
     </Modal>
@@ -539,8 +556,10 @@ function LearningEditor({
       <Stack>
         <Text size="sm">
           Extract supported claims from this exact retained version using the
-          Brain's model policy. Empty applicability means the whole Brain. Model
-          output starts as proposed unless a permitted literal rule applies.
+          Brain's model policy. Empty applicability means the whole Brain.
+          Supported results are accepted under autonomous policy; uncertainty
+          remains labeled. Legacy explicit mode uses its configured acceptance
+          rules.
         </Text>
         <MultiSelect
           searchable
@@ -759,10 +778,15 @@ export function ModelsPanel({
   section?: "settings" | "activity";
 }) {
   const [editing, setEditing] = useState(false);
+  const [advancedEditing, setAdvancedEditing] = useState(false);
+  const [draft, setDraft] = useState<Policy | null>(null);
+  const [base, setBase] = useState<string | null>(null);
   const [history, setHistory] = useState(false);
+  const [diagnostics, setDiagnostics] = useState(false);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const cache = useQueryClient();
+  const command = useIdempotency();
   const settings = useQuery({
     queryKey: ["models-policy", brain.id],
     enabled: section === "settings",
@@ -785,6 +809,57 @@ export function ModelsPanel({
       ),
     refetchInterval: 3000,
   });
+  const modelCatalogue = useQuery({
+    queryKey: ["model-catalogue", brain.id],
+    enabled: section === "settings",
+    queryFn: async () =>
+      result(
+        await client.GET("/api/brains/{brain}/models/catalogue", {
+          params: { path: { brain: brain.id } },
+        }),
+      ),
+    retry: false,
+  });
+  const refreshModels = useMutation({
+    mutationFn: async () =>
+      result(
+        await client.POST("/api/brains/{brain}/models/catalogue", {
+          params: { path: { brain: brain.id } },
+        }),
+      ),
+    onSuccess: (data) =>
+      cache.setQueryData(["model-catalogue", brain.id], data),
+  });
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!draft || !base || !settings.data || settings.isError)
+        throw new Error("Reload AI permissions before saving.");
+      const previous = settings.data.current.policy;
+      const body = {
+        base_change: base,
+        policy: draft,
+        rebuild_embeddings:
+          previous.embedding_model !== draft.embedding_model ||
+          previous.embedding_dimensions !== draft.embedding_dimensions,
+      };
+      return result(
+        await client.PUT("/api/brains/{brain}/models/policy", {
+          params: { path: { brain: brain.id } },
+          body,
+          headers: { "Idempotency-Key": command.forInput(body) },
+        }),
+      );
+    },
+    onSuccess: async () => {
+      command.reset();
+      setDraft(null);
+      setBase(null);
+      setEditing(false);
+      await cache.invalidateQueries({
+        predicate: (q) => q.queryKey.includes(brain.id),
+      });
+    },
+  });
   const catalogue = useQuery({
     queryKey: ["workspace", brain.id],
     enabled: !!selected,
@@ -806,105 +881,555 @@ export function ModelsPanel({
     onSettled: () =>
       cache.invalidateQueries({ queryKey: ["models-usage", brain.id] }),
   });
-  const policy = settings.error ? undefined : settings.data?.current.policy;
+  useEffect(() => {
+    setEditing(false);
+    setAdvancedEditing(false);
+    setDraft(null);
+    setBase(null);
+    setHistory(false);
+    setDiagnostics(false);
+    setSelected(null);
+    setOffset(0);
+  }, [brain.id]);
+  useEffect(() => {
+    if (brain.role !== "admin" || brain.archived || settings.isError) {
+      setEditing(false);
+      setDraft(null);
+      setBase(null);
+      setAdvancedEditing(false);
+      setHistory(false);
+      setDiagnostics(false);
+    }
+  }, [brain.role, brain.archived, settings.isError]);
+  const policy = settings.error
+    ? undefined
+    : (draft ?? settings.data?.current.policy);
   const installed = settings.error ? undefined : settings.data?.installed;
+  const editable =
+    editing && brain.role === "admin" && !brain.archived && !save.isPending;
+  const updateDraft = (patch: Partial<Policy>) => {
+    save.reset();
+    setDraft((value) => (value ? { ...value, ...patch } : value));
+  };
+  const togglePurpose = (purpose: string, allowed: boolean) => {
+    if (!policy) return;
+    const purposes = allowed
+      ? [...policy.purposes, purpose]
+      : policy.purposes.filter((v) => v !== purpose);
+    updateDraft({
+      purposes,
+      ...(!purposes.includes("extraction")
+        ? { automatic_learning: false }
+        : {}),
+      ...(!purposes.includes("embedding")
+        ? { automatic_embedding: false }
+        : {}),
+      ...(!["extraction", "synthesis"].every((v) => purposes.includes(v))
+        ? { autonomous_memory: false }
+        : {}),
+    });
+  };
+  const changedEmbedding =
+    !!draft &&
+    !!settings.data &&
+    (draft.embedding_model !== settings.data.current.policy.embedding_model ||
+      draft.embedding_dimensions !==
+        settings.data.current.policy.embedding_dimensions);
+  const modelChoices = (kind: string, selected: string) => {
+    const rows =
+      modelCatalogue.data?.models.filter(
+        (m) => m.kind === kind && (m.available || m.id === selected),
+      ) ?? [];
+    const options = rows.map((m) => ({
+      value: m.id,
+      label: m.id,
+      disabled: !m.selectable && m.id !== selected,
+    }));
+    if (!options.some((m) => m.value === selected))
+      options.unshift({ value: selected, label: selected, disabled: false });
+    return options;
+  };
+  const price = (id: string) => {
+    const entry = modelCatalogue.data?.models.find((m) => m.id === id);
+    if (!entry)
+      return <p className="management-muted ai-model-price">Price unknown</p>;
+    const amount = (value: number | null | undefined) =>
+      value == null ? "Unknown" : `$${value.toFixed(2)}`;
+    return (
+      <p className="management-muted ai-model-price">
+        {amount(entry.input_usd_per_million)} input
+        {entry.kind === "text"
+          ? ` · ${amount(entry.cached_input_usd_per_million)} cached · ${amount(entry.output_usd_per_million)} output`
+          : ""}{" "}
+        / 1M tokens
+        <a
+          href={entry.source_url}
+          target="_blank"
+          rel="noreferrer"
+          title="Standard short-context rates; batch, regional and long-context pricing can differ."
+        >
+          Standard · {entry.checked_on}
+          {entry.pricing_stale ? " · stale" : ""}
+        </a>
+      </p>
+    );
+  };
   return (
-    <section className="feature-setting" id="models">
+    <section
+      className={
+        section === "settings" ? "models-management" : "feature-setting"
+      }
+      id="models"
+    >
       <Stack>
         {section === "settings" && (
           <>
-            <Group justify="space-between">
-              <Title order={3}>AI &amp; automation</Title>
-              <Group>
-                <Button variant="subtle" onClick={() => setHistory(true)}>
-                  Policy history
-                </Button>
-                {brain.role === "admin" && (
-                  <Button
-                    variant="default"
-                    disabled={!settings.data}
-                    onClick={() => setEditing(true)}
-                  >
-                    Edit model policy
-                  </Button>
-                )}
-              </Group>
-            </Group>
-            <Failure error={settings.error ?? usage.error ?? check.error} />
-            {settings.isPending && <Loader />}
-            {installed && (
-              <>
-                <Text>
-                  {installed.text_model} · {installed.embedding_model} ·{" "}
-                  {installed.embedding_dimensions.toLocaleString()} dimensions
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {installed.credentials_present
-                    ? "Provider credential present."
-                    : "Provider credential missing."}{" "}
-                  Connection results below are based on actual calls.
-                </Text>
-              </>
+            <Failure error={settings.error} />
+            {settings.isPending && <Loader size="sm" />}
+            {policy && installed && (
+              <div className="management-split">
+                <div className="management-side">
+                  <section className="management-surface">
+                    <div className="management-section-heading">
+                      <div>
+                        <h2 className="management-title ai-policy-title">
+                          AI permissions
+                        </h2>
+                        <p className="management-muted">
+                          Choose what this Brain may send to your installed AI
+                          provider.
+                        </p>
+                      </div>
+                      {brain.role === "admin" && !editing && (
+                        <Button
+                          variant="default"
+                          leftSection={<Pencil size={17} />}
+                          disabled={brain.archived}
+                          onClick={() => {
+                            if (settings.data) {
+                              setDraft(
+                                structuredClone(settings.data.current.policy),
+                              );
+                              setBase(settings.data.current.change_id);
+                              setEditing(true);
+                              save.reset();
+                              if (
+                                !modelCatalogue.data ||
+                                modelCatalogue.data.stale ||
+                                !modelCatalogue.data.observed_at ||
+                                Date.now() -
+                                  Date.parse(modelCatalogue.data.observed_at) >=
+                                  300_000
+                              )
+                                refreshModels.mutate();
+                            }
+                          }}
+                        >
+                          Edit AI permissions
+                        </Button>
+                      )}
+                      {editing && (
+                        <Group gap="xs" className="ai-inline-actions">
+                          <Button
+                            variant="default"
+                            disabled={save.isPending}
+                            onClick={() => {
+                              setDraft(null);
+                              setBase(null);
+                              setEditing(false);
+                              save.reset();
+                              command.reset();
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            loading={save.isPending}
+                            onClick={() => save.mutate()}
+                          >
+                            {changedEmbedding
+                              ? "Save and rebuild"
+                              : "Save AI permissions"}
+                          </Button>
+                        </Group>
+                      )}
+                    </div>
+                    <Failure error={save.error} />
+                    <div className="ai-installed-provider">
+                      <strong>Installed provider</strong>
+                      <span className="ai-provider-identity">
+                        <HostIcon host={installed.provider} size={26} />
+                        <span>
+                          {installed.provider === "openai"
+                            ? "OpenAI"
+                            : installed.provider}
+                        </span>
+                      </span>
+                      <Switch
+                        label="Allow AI processing"
+                        checked={policy.enabled}
+                        disabled={!editable}
+                        onChange={(event) =>
+                          updateDraft({
+                            enabled: event.currentTarget.checked,
+                            ...(!event.currentTarget.checked
+                              ? {
+                                  automatic_learning: false,
+                                  automatic_embedding: false,
+                                }
+                              : {}),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="ai-automatic-memory">
+                      <RefreshCw size={37} />
+                      <div>
+                        <strong>Automatic memory</strong>
+                        <p className="management-muted">
+                          Learning and maintenance follow this Brain’s standing
+                          policy.
+                        </p>
+                      </div>
+                      <Switch
+                        label="Automatic memory"
+                        checked={policy.autonomous_memory && policy.enabled}
+                        disabled={
+                          !editable ||
+                          !policy.enabled ||
+                          !["extraction", "synthesis"].every((p) =>
+                            policy.purposes.includes(p),
+                          ) ||
+                          !policy.content_classes.includes("claim")
+                        }
+                        onChange={(event) =>
+                          updateDraft({
+                            autonomous_memory: event.currentTarget.checked,
+                            automatic_learning: event.currentTarget.checked,
+                          })
+                        }
+                      />
+                    </div>
+                    <h3 className="ai-processing-title">Allowed processing</h3>
+                    {[
+                      {
+                        purpose: "answering",
+                        title: "Answer questions",
+                        description:
+                          "Use this Brain’s evidence to answer with citations.",
+                        icon: MessageSquare,
+                      },
+                      {
+                        purpose: "embedding",
+                        title: "Find related knowledge",
+                        description:
+                          "Index approved content for semantic search.",
+                        icon: Search,
+                      },
+                      {
+                        purpose: "extraction",
+                        title: "Learn from sources",
+                        description:
+                          "Extract evidence-backed memory into this Brain.",
+                        icon: BookOpen,
+                      },
+                      {
+                        purpose: "reranking",
+                        title: "Order search results",
+                        description:
+                          "Use the provider to rank and order retrieved results.",
+                        icon: List,
+                      },
+                      {
+                        purpose: "synthesis",
+                        title: "Maintain memory",
+                        description:
+                          "Summarize, organize and maintain this Brain’s memory.",
+                        icon: Database,
+                      },
+                    ].map((row) => (
+                      <div key={row.purpose} className="management-row">
+                        <row.icon size={20} />
+                        <div className="management-row-main">
+                          <strong>{row.title}</strong>
+                          <p className="management-muted">{row.description}</p>
+                        </div>
+                        <Checkbox
+                          label={
+                            policy.purposes.includes(row.purpose)
+                              ? "Allowed"
+                              : "Disallowed"
+                          }
+                          aria-label={row.title}
+                          checked={policy.purposes.includes(row.purpose)}
+                          disabled={!editable}
+                          onChange={(event) =>
+                            togglePurpose(
+                              row.purpose,
+                              event.currentTarget.checked,
+                            )
+                          }
+                        />
+                      </div>
+                    ))}
+                    <div className="management-content-policy">
+                      <h3 className="management-title">Allowed content</h3>
+                      <div className="management-chips">
+                        {[
+                          "claim",
+                          "repository",
+                          "document",
+                          "support_excerpt",
+                          "query",
+                          "tool_output",
+                          "raw_session",
+                        ].map((value) => {
+                          const allowed =
+                            policy.enabled &&
+                            policy.content_classes.includes(value);
+                          return (
+                            <label
+                              key={value}
+                              className={
+                                "management-chip" + (allowed ? "" : " denied")
+                              }
+                            >
+                              <Checkbox
+                                aria-label={`Allow ${label(value)}`}
+                                checked={policy.content_classes.includes(value)}
+                                disabled={!editable}
+                                onChange={(event) =>
+                                  updateDraft({
+                                    content_classes: event.currentTarget.checked
+                                      ? [...policy.content_classes, value]
+                                      : policy.content_classes.filter(
+                                          (v) => v !== value,
+                                        ),
+                                    ...(value === "claim" &&
+                                    !event.currentTarget.checked
+                                      ? { autonomous_memory: false }
+                                      : {}),
+                                  })
+                                }
+                              />
+                              {label(value)}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <section
+                      className="ai-policy-detail"
+                      aria-label="Automatic processing"
+                    >
+                      <h3 className="ai-processing-title">
+                        Automatic processing
+                      </h3>
+                      <Group mt="sm">
+                        <Checkbox
+                          label="Automatic source learning"
+                          checked={policy.automatic_learning}
+                          disabled={
+                            !editable ||
+                            !policy.enabled ||
+                            !policy.purposes.includes("extraction")
+                          }
+                          onChange={(event) =>
+                            updateDraft({
+                              automatic_learning: event.currentTarget.checked,
+                            })
+                          }
+                        />
+                        <Checkbox
+                          label="Automatic search indexing"
+                          checked={policy.automatic_embedding}
+                          disabled={
+                            !editable ||
+                            !policy.enabled ||
+                            !policy.purposes.includes("embedding")
+                          }
+                          onChange={(event) =>
+                            updateDraft({
+                              automatic_embedding: event.currentTarget.checked,
+                            })
+                          }
+                        />
+                      </Group>
+                    </section>
+                  </section>
+                </div>
+                <div className="management-side">
+                  <section className="management-surface ai-installed-models">
+                    <h3 className="management-title">Selected models</h3>
+                    <Select
+                      label="Text model"
+                      value={policy.text_model}
+                      data={modelChoices("text", policy.text_model)}
+                      disabled={!editable}
+                      allowDeselect={false}
+                      onChange={(value) =>
+                        value && updateDraft({ text_model: value })
+                      }
+                    />
+                    {price(policy.text_model)}
+                    <Select
+                      label="Embedding model"
+                      value={policy.embedding_model}
+                      data={modelChoices("embedding", policy.embedding_model)}
+                      disabled={!editable}
+                      allowDeselect={false}
+                      onChange={(value) =>
+                        value &&
+                        updateDraft({
+                          embedding_model: value,
+                          embedding_dimensions:
+                            modelCatalogue.data?.models.find(
+                              (m) => m.id === value,
+                            )?.max_dimensions ?? policy.embedding_dimensions,
+                        })
+                      }
+                    />
+                    {price(policy.embedding_model)}
+                    <Select
+                      label="Embedding dimensions"
+                      value={String(policy.embedding_dimensions)}
+                      disabled={!editable}
+                      allowDeselect={false}
+                      data={[
+                        ...new Set([
+                          256,
+                          512,
+                          1024,
+                          1536,
+                          3072,
+                          policy.embedding_dimensions,
+                        ]),
+                      ]
+                        .filter(
+                          (n) =>
+                            n <=
+                            (modelCatalogue.data?.models.find(
+                              (m) => m.id === policy.embedding_model,
+                            )?.max_dimensions ?? policy.embedding_dimensions),
+                        )
+                        .sort((a, b) => a - b)
+                        .map((n) => ({
+                          value: String(n),
+                          label: n.toLocaleString(),
+                        }))}
+                      onChange={(value) =>
+                        value &&
+                        updateDraft({ embedding_dimensions: Number(value) })
+                      }
+                    />
+                    {brain.role === "admin" && !brain.archived && (
+                      <Button
+                        mt="sm"
+                        size="compact-sm"
+                        variant="subtle"
+                        loading={refreshModels.isPending}
+                        onClick={() => refreshModels.mutate()}
+                      >
+                        Refresh available models
+                      </Button>
+                    )}
+                    <Failure
+                      error={modelCatalogue.error ?? refreshModels.error}
+                    />
+                    {modelCatalogue.data?.error_code && (
+                      <Text size="xs" c="red">
+                        Model list unavailable. Current selection is retained.
+                      </Text>
+                    )}
+                    <p className="management-muted ai-catalogue-state">
+                      {modelCatalogue.data?.observed_at
+                        ? `Availability checked ${time(modelCatalogue.data.observed_at)}${modelCatalogue.data.stale ? " · stale" : ""}`
+                        : "Refresh to load models available to this account."}
+                    </p>
+                    {changedEmbedding && (
+                      <Alert color="yellow" mt="sm">
+                        Saving rebuilds search embeddings and may incur provider
+                        usage. Exact and text search stay available.
+                        {!policy.enabled ||
+                        !policy.automatic_embedding ||
+                        !policy.purposes.includes("embedding")
+                          ? " Rebuilding waits until embedding permissions are enabled."
+                          : ""}
+                      </Alert>
+                    )}
+                  </section>
+                  <section className="management-surface ai-more-options">
+                    <h3 className="management-title">More options</h3>
+                    <button onClick={() => setDiagnostics(true)}>
+                      <FileText size={22} />
+                      <span>Diagnostics</span>
+                      <ChevronRight size={18} />
+                    </button>
+                    {brain.role === "admin" && (
+                      <button onClick={() => setHistory(true)}>
+                        <History size={22} />
+                        <span>Policy history</span>
+                        <ChevronRight size={18} />
+                      </button>
+                    )}
+                    {brain.role === "admin" && !brain.archived && !editing && (
+                      <button onClick={() => setAdvancedEditing(true)}>
+                        <ShieldCheck size={22} />
+                        <span>Advanced policy</span>
+                        <ChevronRight size={18} />
+                      </button>
+                    )}
+                    <button onClick={() => setDiagnostics(true)}>
+                      <Database size={22} />
+                      <span>Recent batches</span>
+                      <ChevronRight size={18} />
+                    </button>
+                  </section>
+                </div>
+              </div>
             )}
-            {policy && (
-              <>
-                <Badge w="fit-content" color={policy.enabled ? "teal" : "gray"}>
-                  {policy.enabled
-                    ? "Transmission enabled"
-                    : "Transmission disabled"}
-                </Badge>
-                <Text size="sm">
-                  Allowed purposes:{" "}
-                  {policy.purposes.map(label).join(", ") || "none"}. Allowed
-                  content:{" "}
-                  {policy.content_classes.map(label).join(", ") || "none"}.
-                </Text>
-                <Text size="sm">
-                  {policy.autonomous_memory
-                    ? "Autonomous memory is configured: source catch-up, evidence-based revisions and handover refresh. Human review is optional."
-                    : policy.automatic_learning
-                      ? "Automatic source learning is enabled."
-                      : "Learning starts when requested."}{" "}
-                  {!policy.autonomous_memory && (
-                    <>
-                      Acceptance rule:{" "}
-                      {policy.acceptance?.name ?? "explicit proposals"}.
-                    </>
+            <Modal
+              opened={diagnostics && !settings.error}
+              onClose={() => setDiagnostics(false)}
+              title="Models & search diagnostics"
+              size="xl"
+            >
+              <Stack>
+                {installed && (
+                  <Text size="sm">
+                    {policy?.text_model} · {policy?.embedding_model} ·{" "}
+                    {policy?.embedding_dimensions.toLocaleString()} dimensions
+                  </Text>
+                )}
+                <Group>
+                  <Button variant="default" onClick={() => setHistory(true)}>
+                    Policy history
+                  </Button>
+                  {brain.role === "admin" && !brain.archived && (
+                    <Button
+                      variant="default"
+                      loading={check.isPending}
+                      disabled={!policy?.enabled}
+                      onClick={() => check.mutate(crypto.randomUUID())}
+                    >
+                      Check selected models
+                    </Button>
                   )}
+                </Group>
+                <Text size="xs" c="dimmed">
+                  A check sends fixed synthetic text to the provider and may
+                  incur usage. It does not change permissions.
                 </Text>
-              </>
-            )}
-            {brain.role === "admin" && !brain.archived && (
-              <Group>
-                <Button
-                  variant="light"
-                  loading={check.isPending}
-                  disabled={!policy?.enabled}
-                  onClick={() => check.mutate(crypto.randomUUID())}
-                >
-                  Check selected models
-                </Button>
-                {check.isError && check.variables && (
-                  <Button
-                    variant="subtle"
-                    disabled={check.isPending}
-                    onClick={() => check.mutate(check.variables!)}
-                  >
-                    Repeat last connection check
-                  </Button>
+                <Failure error={check.error} />
+                {check.data && (
+                  <Alert color="brand">
+                    Both selected models responded successfully to the requested
+                    check.
+                  </Alert>
                 )}
-              </Group>
-            )}
-            {check.data && (
-              <Alert color="teal">
-                Both selected models responded successfully. Embeddings have{" "}
-                {check.data.requests
-                  .find((r) => r.purpose === "embedding")
-                  ?.dimensions?.toLocaleString()}{" "}
-                dimensions. Only fixed synthetic text was sent.
-              </Alert>
-            )}
-            <SemanticPanel brain={brain} />
+                {diagnostics && <SemanticPanel brain={brain} />}
+              </Stack>
+            </Modal>
           </>
         )}
         {section === "activity" && (
@@ -980,13 +1505,17 @@ export function ModelsPanel({
             />
           </>
         )}
-        {editing && settings.data && !settings.error && (
-          <PolicyEditor
-            brain={brain.id}
-            settings={settings.data}
-            onClose={() => setEditing(false)}
-          />
-        )}
+        {advancedEditing &&
+          brain.role === "admin" &&
+          !brain.archived &&
+          settings.data &&
+          !settings.error && (
+            <PolicyEditor
+              brain={brain.id}
+              settings={settings.data}
+              onClose={() => setAdvancedEditing(false)}
+            />
+          )}
         {history && (
           <PolicyHistory brain={brain.id} onClose={() => setHistory(false)} />
         )}

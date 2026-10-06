@@ -8,6 +8,7 @@ import {
   ChartNoAxesCombined,
   Info,
   List,
+  MoreHorizontal,
 } from "lucide-react";
 import { EmptyState } from "./components/AsyncState";
 import "./features/feature-views.css";
@@ -22,6 +23,7 @@ import {
   Group,
   Loader,
   MultiSelect,
+  Menu,
   NumberInput,
   Select,
   SimpleGrid,
@@ -37,6 +39,7 @@ import { ClaimDialog, EvidenceDialog } from "./ClaimsPanel";
 import { useIdempotency } from "./useIdempotency";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { GraphExplorer } from "./GraphExplorer";
+import { useContentDeadline } from "./useContentDeadline";
 
 type Scope = components["schemas"]["GraphSelection"];
 type Node = components["schemas"]["GraphNode"];
@@ -118,6 +121,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     "filters" | "path" | "insights" | "status" | "entities" | null
   >(null);
   const initialRead = useRef<string | null>(null);
+  const [entityOffset, setEntityOffset] = useState(0);
   const [offset, setOffset] = useState(0);
   const [snapshotOffset, setSnapshotOffset] = useState(0);
   const [manifestOffset, setManifestOffset] = useState(0);
@@ -146,6 +150,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     void cache.cancelQueries({ queryKey: ["graph-read", brain.id] });
     void cache.cancelQueries({ queryKey: ["graph-path", brain.id] });
     void cache.cancelQueries({ queryKey: ["graph-explore", brain.id] });
+    void cache.cancelQueries({ queryKey: ["graph-entities", brain.id] });
   }
   function change(next: Scope) {
     clear();
@@ -198,6 +203,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           void cache.cancelQueries({ queryKey: ["graph-read", brain.id] });
           void cache.cancelQueries({ queryKey: ["graph-path", brain.id] });
           void cache.cancelQueries({ queryKey: ["graph-explore", brain.id] });
+          void cache.cancelQueries({ queryKey: ["graph-entities", brain.id] });
         }
       }),
     [brain.id, cache],
@@ -213,15 +219,11 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       ),
   });
   useEffect(() => {
-    setSubmitted(null);
-    setPathSubmitted(null);
-    setDetail(null);
+    clear();
   }, [status.data?.memory_epoch, status.data?.link_epoch]);
   useEffect(() => {
     if (status.error) {
-      setSubmitted(null);
-      setPathSubmitted(null);
-      setDetail(null);
+      clear();
     }
   }, [status.error]);
   const catalogue = useQuery({
@@ -294,6 +296,36 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         }),
       ),
   });
+  const entities = useQuery({
+    queryKey: [
+      "graph-entities",
+      brain.id,
+      submitted,
+      entityOffset,
+      status.data?.memory_epoch,
+      status.data?.link_epoch,
+    ],
+    enabled:
+      drawer === "entities" &&
+      !!submitted &&
+      !!read.data &&
+      !read.isError &&
+      !status.isError,
+    gcTime: 0,
+    retry: false,
+    refetchInterval: drawer === "entities" ? 3000 : false,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.POST("/api/brains/{brain}/graph/view", {
+          params: { path: { brain: brain.id } },
+          body: { scope: submitted!.scope, offset: entityOffset },
+          signal,
+        }),
+      ),
+  });
+  const entitiesExpired = useContentDeadline(entities.data?.expires_at);
+  const readExpired = useContentDeadline(read.data?.expires_at);
+  useEffect(() => setEntityOffset(0), [scopeKey]);
   const path = useQuery({
     queryKey: ["graph-path", brain.id, pathSubmitted],
     enabled: false,
@@ -506,7 +538,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   }
   const availableGroups = groups.data?.groups ?? [];
   const readable =
-    submitted && read.data && !read.error && !status.error
+    submitted && read.data && !read.error && !status.error && !readExpired
       ? read.data
       : undefined;
   const needsSelection = missingExactSelection(scope);
@@ -538,36 +570,44 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         >
           Filters
         </Button>
-        <Button
-          variant="subtle"
-          leftSection={<Route size={iconSize.small} />}
-          onClick={() => setDrawer("path")}
-          disabled={!readable}
-        >
-          Find path
-        </Button>
-        <Button
-          variant="subtle"
-          leftSection={<ChartNoAxesCombined size={iconSize.small} />}
-          onClick={() => setDrawer("insights")}
-        >
-          Insights
-        </Button>
-        <Button
-          variant="subtle"
-          leftSection={<Info size={iconSize.small} />}
-          onClick={() => setDrawer("status")}
-        >
-          Graph status
-        </Button>
-        <Button
-          variant="subtle"
-          ml="auto"
-          leftSection={<List size={iconSize.small} />}
-          onClick={() => setDrawer("entities")}
-        >
-          Browse eligible entity pages
-        </Button>
+        <Menu position="bottom-end" withinPortal>
+          <Menu.Target>
+            <Button
+              variant="subtle"
+              ml="auto"
+              leftSection={<MoreHorizontal size={iconSize.small} />}
+            >
+              Graph tools
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<Route size={iconSize.small} />}
+              onClick={() => setDrawer("path")}
+              disabled={!readable}
+            >
+              Find path
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<ChartNoAxesCombined size={iconSize.small} />}
+              onClick={() => setDrawer("insights")}
+            >
+              Insights
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<Info size={iconSize.small} />}
+              onClick={() => setDrawer("status")}
+            >
+              Graph status
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<List size={iconSize.small} />}
+              onClick={() => setDrawer("entities")}
+            >
+              Entities
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
       </div>
       <div className="feature-scope graph-chrome" data-graph-chrome="">
         <Badge variant="light" color="gray">
@@ -1019,38 +1059,57 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         opened={drawer === "entities"}
         onClose={() => setDrawer(null)}
         position="right"
-        title="Eligible entities"
+        title="Entities"
         size="lg"
       >
-        {readable && (
-          <Stack>
-            <Title order={4}>Eligible entities</Title>
-            <SimpleGrid cols={{ base: 1, md: 2 }}>
-              {readable.nodes.map((n) => node(n, true))}
-            </SimpleGrid>
-            {readable.total_nodes > 100 && (
-              <Group>
-                <Button
-                  disabled={!readable.offset}
-                  onClick={() => load(readable!.offset - 100)}
-                >
-                  Previous entities
-                </Button>
-                <Text size="sm">
-                  {readable.offset + 1}–
-                  {Math.min(readable.offset + 100, readable.total_nodes)} of{" "}
-                  {readable.total_nodes}
-                </Text>
-                <Button
-                  disabled={readable.offset + 100 >= readable.total_nodes}
-                  onClick={() => load(readable!.offset + 100)}
-                >
-                  More entities
-                </Button>
-              </Group>
-            )}
-          </Stack>
+        {entities.isError && <Failure error={entities.error} />}
+        {readable && entities.isPending && <Loader size="sm" />}
+        {(!readable || entitiesExpired) && (
+          <Text size="sm" c="dimmed">
+            Reload the graph to inspect current eligible entities.
+          </Text>
         )}
+        {readable &&
+          !entitiesExpired &&
+          !entities.isError &&
+          entities.data &&
+          entities.data.memory_epoch === status.data?.memory_epoch && (
+            <Stack>
+              <Text size="xs" c="dimmed">
+                All eligible entities in the selected scope. Paging does not
+                replace the displayed canvas.
+              </Text>
+              <SimpleGrid cols={{ base: 1, md: 2 }}>
+                {entities.data.nodes.map((n) => node(n, true))}
+              </SimpleGrid>
+              {entities.data.total_nodes > 100 && (
+                <Group>
+                  <Button
+                    disabled={!entities.data.offset}
+                    onClick={() => setEntityOffset(entities.data!.offset - 100)}
+                  >
+                    Previous entities
+                  </Button>
+                  <Text size="sm">
+                    {entities.data.offset + 1}–
+                    {Math.min(
+                      entities.data.offset + 100,
+                      entities.data.total_nodes,
+                    )}{" "}
+                    of {entities.data.total_nodes}
+                  </Text>
+                  <Button
+                    disabled={
+                      entities.data.offset + 100 >= entities.data.total_nodes
+                    }
+                    onClick={() => setEntityOffset(entities.data!.offset + 100)}
+                  >
+                    More entities
+                  </Button>
+                </Group>
+              )}
+            </Stack>
+          )}
       </Drawer>
       <Drawer
         className="feature-drawer"

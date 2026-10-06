@@ -145,8 +145,8 @@ test("browser approves a native companion, persists its OS credential and revoke
     const duplicate = await run(["pair", "Duplicate"]);
     expect(duplicate.ok).toBe(false);
     expect(duplicate.stderr).toContain("already paired");
-    await page.getByRole("link", { name: "Devices", exact: true }).click();
-    await expect(card.getByText("Active", { exact: true })).toBeVisible();
+    await page.goto("/agents?access=true");
+    await expect(card.getByText("Credential enabled", { exact: true })).toBeVisible();
     await page.screenshot({
       path: "../.cache/ui/devices.png",
       fullPage: true,

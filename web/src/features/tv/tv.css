@@ -1,0 +1,295 @@
+/* Ambient "memory TV": a fullscreen light-paper projection of the Brain's
+   recent memories for a second monitor or demo wall. It portals to <body> so
+   the app chrome never clips it; transitions use the shared ambient duration
+   and emphasized easing from the motion tokens. */
+.tv-root {
+  --tv-interval: 8000ms; /* mirrors INTERVAL_MS in MemoryTv.tsx */
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  background: var(--rc-terminal);
+  color: var(--rc-ink);
+  overflow: hidden;
+  font-family: var(--rc-font-ui);
+}
+
+/* Subtle category-accent radial glow behind the content; shifts with kind. */
+.tv-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 55% 45% at 50% 42%,
+    var(--tv-glow-color, transparent) 0%,
+    transparent 72%
+  );
+}
+.tv-glow[data-kind="claim"] {
+  --tv-glow-color: var(--rc-cat-claim-tint);
+}
+.tv-glow[data-kind="decision"] {
+  --tv-glow-color: var(--rc-cat-decision-tint);
+}
+.tv-glow[data-kind="procedure"] {
+  --tv-glow-color: var(--rc-cat-procedure-tint);
+}
+.tv-glow[data-kind="handover"] {
+  --tv-glow-color: var(--rc-cat-handover-tint);
+}
+
+.tv-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 96px 8vw 128px;
+}
+/* Enter and exit items stack in the same grid cell during the transition. */
+.tv-item {
+  grid-area: 1 / 1;
+  max-width: 64ch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+  max-height: 100%;
+  overflow: auto;
+}
+.tv-qualification {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--rc-secondary);
+}
+.tv-qualification strong {
+  display: block;
+  color: var(--rc-ink);
+}
+.tv-qualification[data-attention="true"] {
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--rc-cat-decision-tint);
+}
+
+@keyframes tv-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes tv-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+.tv-item-enter {
+  animation: tv-in var(--rc-motion-ambient) var(--rc-ease-emphasized) both;
+}
+.tv-item-exit {
+  pointer-events: none;
+  animation: tv-out var(--rc-motion-ambient) var(--rc-ease-emphasized) both;
+}
+
+.tv-title {
+  margin: 0;
+  font-family: var(--rc-font-display);
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  line-height: 1.12;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  max-width: 26ch;
+}
+.tv-body {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--rc-secondary);
+  max-width: 60ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tv-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  color: var(--rc-muted);
+}
+.tv-source-chip {
+  max-width: 34ch;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--rc-sidebar);
+  color: var(--rc-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Small corner marks, dimmed so the memory stays the focus. */
+.tv-corner {
+  position: absolute;
+  font-size: 0.75rem;
+  color: var(--rc-muted);
+}
+.tv-top-left {
+  top: 28px;
+  left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tv-top-left img {
+  opacity: 0.65;
+}
+.tv-brain-name {
+  color: var(--rc-secondary);
+  font-weight: 600;
+}
+.tv-bottom-right,
+.tv-bottom-left {
+  bottom: 28px;
+  font-family: var(--rc-font-mono);
+}
+.tv-bottom-right {
+  right: 32px;
+}
+.tv-bottom-left {
+  left: 32px;
+}
+
+/* Loading: a quietly breathing wordmark on the light canvas. */
+@keyframes tv-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.tv-wordmark {
+  font-family: var(--rc-font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--rc-ink);
+}
+.tv-pulse {
+  animation: tv-breathe var(--rc-motion-ambient) var(--rc-ease-standard)
+    infinite;
+}
+
+/* Centered quiet states (loading copy, empty, error). */
+.tv-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  padding: 32px;
+}
+.tv-empty-title {
+  margin: 0;
+  font-family: var(--rc-font-display);
+  font-size: 2.25rem;
+  line-height: 1.2;
+  font-weight: 500;
+  color: var(--rc-secondary);
+}
+.tv-empty-copy {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--rc-muted);
+  line-height: 1.6;
+}
+.tv-error-line {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--rc-secondary);
+  line-height: 1.6;
+}
+
+/* Thin progress hairline at the very bottom: time until the next item. It
+   restarts per item via a React key on the wrapper. */
+.tv-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--rc-border);
+  overflow: hidden;
+}
+.tv-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--rc-accent);
+  animation: tv-progress var(--tv-interval) linear both;
+}
+@keyframes tv-progress {
+  to {
+    width: 100%;
+  }
+}
+
+/* Reduced motion: crossfade only, no scale or rise, same cadence. The
+   app-wide reduced-motion rule zeroes animation durations, so restore a short
+   fade for the item swap and drop the decorative hairline. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes tv-in-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes tv-out-fade {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  .tv-item-enter {
+    animation-name: tv-in-fade;
+  }
+  .tv-item-exit {
+    animation-name: tv-out-fade;
+  }
+  .tv-item-enter,
+  .tv-item-exit {
+    animation-duration: var(--rc-motion-slow) !important;
+  }
+  .tv-pulse {
+    animation: none;
+    opacity: 0.7;
+  }
+  .tv-progress {
+    display: none;
+  }
+}
+
+.tv-title {
+  overflow-wrap: anywhere;
+}

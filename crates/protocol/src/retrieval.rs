@@ -14,6 +14,7 @@ pub struct RecallReference {
 #[serde(default, deny_unknown_fields)]
 pub struct RecallRequest {
     pub query: String,
+    pub strategy: String,
     pub exact: Option<RecallReference>,
     pub operation_id: Option<Uuid>,
     pub selection: ScopeSelection,
@@ -34,6 +35,7 @@ impl Default for RecallRequest {
     fn default() -> Self {
         Self {
             query: String::new(),
+            strategy: "manual".into(),
             exact: None,
             operation_id: None,
             selection: ScopeSelection::default(),

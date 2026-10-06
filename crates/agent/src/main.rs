@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow, bail};
-use recollect_agent::{Client, CredentialSlot};
+use recollect_agent::{Client, CredentialSlot, presentation};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -34,6 +34,11 @@ async fn main() -> Result<()> {
         }
         return Ok(());
     }
+    // The capture hook is a hot machine path that must print nothing, and the
+    // helper commands above exec into binaries that present themselves. Every
+    // other command gets the banner only in a human terminal: many subcommands
+    // answer with JSON on stdout that automation parses directly.
+    presentation::banner_quiet();
     if command == "capture" && remaining.first().is_some_and(|s| s == "status") {
         if remaining.len() != 2 {
             bail!("{}", recollect_agent::capture_cli::USAGE);
@@ -138,7 +143,18 @@ async fn main() -> Result<()> {
             )?
         ),
         "capture" => {
-            let report = recollect_agent::capture_cli::run(&client, &device, &remaining).await?;
+            let status = presentation::status::start("Capture run");
+            let report = match recollect_agent::capture_cli::run(&client, &device, &remaining).await
+            {
+                Ok(report) => {
+                    presentation::status::finish(status, true, "");
+                    report
+                }
+                Err(error) => {
+                    presentation::status::finish(status, false, &error.to_string());
+                    return Err(error);
+                }
+            };
             println!("{}", serde_json::to_string_pretty(&report)?);
             if let Some(code) = report["exit_code"].as_i64().filter(|code| *code != 0) {
                 std::process::exit(i32::try_from(code).unwrap_or(1));

@@ -34,6 +34,7 @@ record the evidence and reconcile the governing document.
 | `adr/` | Architecture decisions and their status/history |
 | `contracts/` | Testable behavior, interfaces, and boundaries |
 | `mappings/` | Dated external and local evidence; never implementation authority |
+| [research/](research/README.md) | Retained studies and design proposals; not implementation authority |
 | `roadmap/epics/` | Capability ownership, dependencies, and slice maps |
 | `roadmap/execution/active/` | Planned, in-progress, and blocked slice specifications |
 | `roadmap/execution/archive/` | Shipped slices with reconciled closeout evidence |

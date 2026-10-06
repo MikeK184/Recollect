@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   Group,
-  Loader,
   Progress,
   Stack,
   Text,
@@ -12,6 +11,9 @@ import {
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result } from "./api";
+import { SkeletonRows } from "./components/Skeleton";
+import { StatusDot } from "./components/StatusDot";
+import { staggerStyle } from "./components/Motion";
 
 const stateLabels: Record<string, string> = {
   current: "Up to date",
@@ -137,16 +139,17 @@ export function JobsPanel({
         </Alert>
       )}
       {jobs.isPending ? (
-        <Loader size="sm" />
+        <SkeletonRows label="Loading processing…" rows={3} />
       ) : jobs.error || processing.error ? null : !jobs.data?.length ? (
         <Text c="dimmed" size="sm">
           No background work yet.
         </Text>
       ) : (
         <Stack gap="md">
-          {jobs.data.map((job) => (
+          {jobs.data.map((job, index) => (
             <div
-              className={`job-row${job.id === selectedJob ? " activity-selected" : ""}`}
+              className={`job-row rc-enter${job.id === selectedJob ? " activity-selected" : ""}`}
+              style={staggerStyle(index)}
               key={job.id}
               ref={job.id === selectedJob ? focused : undefined}
               data-testid={job.id === selectedJob ? "selected-job" : undefined}
@@ -165,10 +168,15 @@ export function JobsPanel({
                             ? "Process repository snapshot"
                             : job.kind}
                 </Text>
-                <Text size="xs" c="dimmed">
-                  {stateLabels[job.state]} · Attempt {job.attempts} of{" "}
-                  {job.max_attempts}
-                </Text>
+                <Group gap={6}>
+                  {["queued", "running"].includes(job.state) && (
+                    <StatusDot tone="accent" live size={7} label="Processing" />
+                  )}
+                  <Text size="xs" c="dimmed">
+                    {stateLabels[job.state]} · Attempt {job.attempts} of{" "}
+                    {job.max_attempts}
+                  </Text>
+                </Group>
                 {job.state === "running" && (
                   <Progress
                     aria-label="Job progress"

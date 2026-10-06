@@ -47,19 +47,22 @@ test("new Brain has managed defaults, compact navigation and simple agent setup"
     .getByRole("dialog")
     .getByRole("button", { name: "Create Brain", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/brains\/[^/]+\/ask/);
+  await expect(page).toHaveURL(/\/brains\/[^/]+\/dashboard/);
   const brain = new URL(page.url()).pathname.split("/")[2];
   const data = await command(page, `/api/brains/${brain}/automation`);
   expect(data.models.current.policy.automatic_embedding).toBe(true);
   expect(data.capture.policy.enabled).toBe(true);
   const nav = page.getByRole("navigation", { name: "Brain navigation" });
-  await expect(nav.getByRole("link")).toHaveCount(9);
+  await expect(
+    nav.getByRole("link", { name: "Graph", exact: true }),
+  ).toBeVisible();
+  await openDetails(nav, "Manage");
   await expect(
     nav.getByRole("link", { name: "Settings", exact: true }),
   ).toBeVisible();
   await page.goto(`/brains/${brain}/settings?tab=ai`);
   await expect(
-    page.getByRole("heading", { name: "Autonomous memory", exact: true }),
+    page.getByRole("heading", { name: "AI permissions", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Edit model policy", exact: true }),
@@ -69,45 +72,77 @@ test("new Brain has managed defaults, compact navigation and simple agent setup"
     path: "../.cache/ui/managed-settings.png",
     fullPage: true,
   });
+  await page
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "AI permissions", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("Automatic memory", { exact: true }),
+  ).toBeChecked();
+  await expect(
+    page.getByLabel("Accept permitted literal configuration facts", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.getByLabel("Automatic memory", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(
+    page.getByLabel("Automatic memory", { exact: true }),
+  ).toBeChecked();
+  expect(
+    (await command(page, `/api/brains/${brain}/automation`)).models.current
+      .policy.autonomous_memory,
+  ).toBe(true);
   await page.goto(`/brains/${brain}/settings?tab=privacy`);
   await expect(
     page.getByRole("button", { name: "Edit retention", exact: true }),
   ).toHaveCount(0);
   await page.goto(`/brains/${brain}/agents`);
   await page
-    .getByRole("button", { name: "Connect coding agent", exact: true })
+    .getByRole("button", { name: "Connect agent", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
     name: "Connect a coding agent",
     exact: true,
   });
-  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    `/api/brains/${brain}/mcp/agent`,
-  );
-  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    /bearer_token_env_var|http_headers_helper/,
-  );
-  await expect(dialog.getByText(/recollect-agent pair/)).not.toBeVisible();
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(dialog.getByTestId("agent-plugin-command")).toBeVisible();
   await expect(
     dialog.getByLabel("Session integration", { exact: true }),
   ).toHaveCount(0);
-  await page.screenshot({
+  await dialog.screenshot({
     path: "../.cache/ui/managed-agent-setup.png",
-    fullPage: true,
+    animations: "disabled",
   });
 });
 
-test("existing Brain has one Ask activation action and a plain note contribution", async ({
+test("existing Brain can edit inline permissions and contribute a plain note", async ({
   page,
 }) => {
   await signIn(page);
   const brain = await command(page, "/api/brains", {
     name: "Existing managed setup fixture",
+    managed_memory: false,
   });
   const base = `/api/brains/${brain.id}`;
-  await page.goto(`/brains/${brain.id}/ask`);
+  await page.goto(`/brains/${brain.id}/settings?tab=ai`);
+  await expect(
+    page.getByText("Optional recommended defaults", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: "Apply recommended permissions and limits",
+      exact: true,
+    }),
+  ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Enable autonomous memory", exact: true })
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await page.getByLabel("Allow AI processing", { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Save AI permissions", exact: true })
     .click();
   await expect
     .poll(
@@ -133,7 +168,9 @@ test("existing Brain has one Ask activation action and a plain note contribution
     "PUT",
   );
   await page.goto(`/brains/${brain.id}/ask?tab=search`);
-  await expect(page.getByLabel("Search memory", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("Search evidence", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByLabel("Recall mode", { exact: true }).first(),
   ).not.toBeVisible();
@@ -169,20 +206,17 @@ test("empty connector catalogue has a working owner registration path", async ({
   const brain = await command(page, "/api/brains", {
     name: "Connector setup fixture",
   });
-  await page.goto(`/brains/${brain.id}/connections?tab=connections`);
-  // This suite owns its database and does not pre-import the CLI fixture.
+  await page.goto("/connectors");
   await page
-    .getByRole("button", { name: "Add connection", exact: true })
+    .getByRole("button", { name: "Add connector", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Add an MCP connector",
+    name: "Add a connector",
     exact: true,
   });
-  await expect(dialog).toBeVisible();
-  await dialog.getByText("Import manifest", { exact: true }).click();
-  await openDetails(dialog, "Paste or inspect connector JSON");
+  await dialog.getByText("Paste config", { exact: true }).click();
   await dialog
-    .getByLabel("Connector JSON", { exact: true })
+    .getByRole("textbox", { name: "MCP configuration", exact: true })
     .fill(
       readFileSync(
         "../crates/server/tests/fixtures/mcp-catalogue.json",
@@ -190,16 +224,35 @@ test("empty connector catalogue has a working owner registration path", async ({
       ),
     );
   await dialog
-    .getByRole("button", { name: "Register connector", exact: true })
+    .getByRole("button", { name: "Parse configuration", exact: true })
     .click();
-  await expect(dialog).toHaveCount(0);
+  await dialog
+    .getByRole("button", { name: "Review connector", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Approve connector", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  await page.goto(`/brains/${brain.id}/connections`);
   await page
-    .getByRole("button", { name: "Use registered connector", exact: true })
+    .getByRole("button", { name: "Add connection", exact: true })
+    .click();
+  const setup = page.getByRole("dialog", {
+    name: "Add connection",
+    exact: true,
+  });
+  await setup.getByText("Approved connector", { exact: true }).click();
+  await setup
+    .getByRole("button", { name: "Choose connector", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Add MCP connection", exact: true }),
+    page
+      .getByRole("dialog", { name: "Add connection", exact: true })
+      .getByLabel(/^Approved connector/),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("tab", { name: "Tool groups", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tool groups and their three grants", exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Tool access", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Create tool group", exact: true }),
+  ).toBeVisible();
 });

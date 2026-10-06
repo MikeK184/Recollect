@@ -3,6 +3,8 @@ use recollect_protocol::McpDefinitionManifest;
 use recollect_server::mcp::definitions;
 #[path = "mcp/host_tools.rs"]
 mod host_tools;
+#[path = "mcp/inspection.rs"]
+mod inspection;
 #[path = "mcp/plugin_session.rs"]
 mod plugin_session;
 #[path = "mcp/runtime.rs"]
@@ -1180,3 +1182,160 @@ async fn mcp_concurrent_creation_stale_edits_capacity_and_atomic_audit() {
 
 #[path = "mcp/plugin_hosts.rs"]
 mod plugin_hosts;
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn mcp_management_credentials_owner_revision_files_and_library() {
+    use recollect_mcp_runtime::credentials::CredentialResolver;
+    use std::os::unix::fs::PermissionsExt;
+    let (h, owner, brain, connection, profile) = setup().await;
+    let id: Uuid = connection["summary"]["id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let base = format!("/api/brains/{brain}/mcp");
+    let path = format!("{base}/connections/{id}/credentials");
+    let secret = "synthetic-management-value-one";
+    let input = json!({"base_revision":connection["summary"]["revision"],"environment":{"CONNECTOR_API_KEY":secret}});
+    let (member, login) = h.fixture_member().await;
+    reader(&h, &owner, brain, member).await;
+    for route in [
+        "/api/mcp/definitions".to_string(),
+        "/api/mcp/definitions/fixture".to_string(),
+    ] {
+        assert_eq!(
+            h.call("GET", &route, Some(&login), Value::Null).await.0,
+            StatusCode::FORBIDDEN
+        );
+    }
+    assert_eq!(
+        h.call("POST", &path, Some(&login), input.clone()).await.0,
+        StatusCode::FORBIDDEN
+    );
+    let list = ok(&h, &owner, "GET", "/api/mcp/definitions", Value::Null).await;
+    assert_eq!(list[0]["key"], "fixture");
+    let definition = ok(
+        &h,
+        &owner,
+        "GET",
+        "/api/mcp/definitions/fixture",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(definition["manifest"]["command"], "/usr/bin/false");
+    let mut stale = input.clone();
+    stale["base_revision"] = json!(Uuid::new_v4());
+    assert_eq!(
+        h.call("POST", &path, Some(&owner), stale).await.0,
+        StatusCode::CONFLICT
+    );
+    let mut invalid = input.clone();
+    invalid["environment"] = json!({"PATH":secret});
+    assert_eq!(
+        h.call("POST", &path, Some(&owner), invalid).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        ok(&h, &owner, "POST", &path, input.clone()).await,
+        json!({"configured":true})
+    );
+    let bindings = recollect_server::mcp::credentials::binding_path(&h.state.config);
+    let first = std::fs::read_to_string(&bindings).unwrap();
+    assert!(!first.contains(secret));
+    let value: Value = serde_json::from_str(&first).unwrap();
+    let private = value["bindings"][0]["environment"]["CONNECTOR_API_KEY"]["path"]
+        .as_str()
+        .unwrap();
+    assert_eq!(
+        std::fs::metadata(private).unwrap().permissions().mode() & 0o777,
+        0o600
+    );
+    assert_eq!(
+        std::fs::metadata(&bindings).unwrap().permissions().mode() & 0o777,
+        0o600
+    );
+    let resolver = CredentialResolver::new(Some(bindings.clone()));
+    let one = resolver
+        .resolve(id, Some("fixture-read"), "central")
+        .await
+        .unwrap();
+    assert_eq!(
+        one.sanitize(&json!({"reflected":secret}))["reflected"],
+        "[redacted]"
+    );
+    let mut rotate = input.clone();
+    rotate["environment"]["CONNECTOR_API_KEY"] = json!("synthetic-management-value-two");
+    ok(&h, &owner, "POST", &path, rotate).await;
+    assert_eq!(
+        std::fs::read_to_string(&bindings).unwrap(),
+        first,
+        "rotation preserves reference keys"
+    );
+    let two = resolver
+        .resolve(id, Some("fixture-read"), "central")
+        .await
+        .unwrap();
+    assert_ne!(one.generation, two.generation);
+    let detail = ok(
+        &h,
+        &owner,
+        "GET",
+        &format!("{base}/connections/{id}"),
+        Value::Null,
+    )
+    .await;
+    assert!(!detail.to_string().contains("synthetic-management-value"));
+    let audit:Value=sqlx::query_scalar("SELECT coalesce(jsonb_agg(to_jsonb(a)),'[]'::jsonb) FROM mutation_audit a WHERE target_id=$1").bind(id).fetch_one(&h.admin).await.unwrap();
+    assert!(!audit.to_string().contains("synthetic-management-value"));
+    assert_eq!(profile["profile"]["rights"]["use_profile"], false);
+    let semantic = ok(
+        &h,
+        &owner,
+        "GET",
+        &format!("/api/brains/{brain}/semantic?summary=true"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(semantic["batches"], json!([]));
+    assert_eq!(semantic["total_batches"], 0);
+    std::fs::set_permissions(private, std::fs::Permissions::from_mode(0o644)).unwrap();
+    assert!(
+        resolver
+            .resolve(id, Some("fixture-read"), "central")
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        h.call("POST", &path, Some(&owner), input.clone()).await.0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    std::fs::set_permissions(private, std::fs::Permissions::from_mode(0o600)).unwrap();
+    std::fs::remove_file(private).unwrap();
+    std::os::unix::fs::symlink(&h.state.config.credential_file, private).unwrap();
+    assert!(
+        resolver
+            .resolve(id, Some("fixture-read"), "central")
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        h.call("POST", &path, Some(&owner), input.clone()).await.0,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    ok(
+        &h,
+        &owner,
+        "PATCH",
+        &format!("/api/brains/{brain}"),
+        json!({"archived":true}),
+    )
+    .await;
+    assert_eq!(
+        h.call("POST", &path, Some(&owner), input).await.0,
+        StatusCode::CONFLICT
+    );
+    std::fs::remove_file(private).unwrap();
+    std::fs::remove_file(bindings).unwrap();
+    h.finish().await;
+}

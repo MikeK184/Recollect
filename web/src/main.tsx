@@ -14,10 +14,11 @@ import {
 } from "@tanstack/react-router";
 import "@mantine/core/styles.css";
 import "./styles.css";
+import "./features/brain-pages.css";
+import "./features/management.css";
 import "./design/typography.css";
 import { App } from "./App";
 import { BrainLayout } from "./app/BrainLayout";
-import { KnowledgeSurface } from "./features/knowledge/KnowledgeSurface";
 import { validateBrainSearch } from "./app/useBrainSearch";
 import { theme, cssVariablesResolver } from "./design/theme";
 
@@ -45,8 +46,16 @@ const brainIndex = createRoute({
   getParentRoute: () => brain,
   path: "/",
   beforeLoad: ({ params }) => {
-    throw redirect({ to: "/brains/$brainId/ask", params, search: {} });
+    throw redirect({ to: "/brains/$brainId/dashboard", params, search: {} });
   },
+});
+const dashboard = createRoute({
+  getParentRoute: () => brain,
+  path: "dashboard",
+  component: lazyRouteComponent(
+    () => import("./features/activity/DashboardPage"),
+    "DashboardPage",
+  ),
 });
 const ask = createRoute({
   getParentRoute: () => brain,
@@ -62,7 +71,18 @@ const ask = createRoute({
 const knowledge = createRoute({
   getParentRoute: () => brain,
   id: "knowledge",
-  component: KnowledgeSurface,
+  component: lazyRouteComponent(
+    () => import("./features/knowledge/KnowledgeSurface"),
+    "KnowledgeSurface",
+  ),
+});
+const explore = createRoute({
+  getParentRoute: () => knowledge,
+  path: "explore",
+  component: lazyRouteComponent(
+    () => import("./features/knowledge/ExplorePage"),
+    "ExplorePage",
+  ),
 });
 const memory = createRoute({
   getParentRoute: () => knowledge,
@@ -128,12 +148,22 @@ const settings = createRoute({
     "SettingsPage",
   ),
 });
+// The ambient "memory TV" is deliberately absent from the navigation map; it
+// is reachable only via the Activity surface's explicit toggle or direct URL.
+const tv = createRoute({
+  getParentRoute: () => brain,
+  path: "tv",
+  component: lazyRouteComponent(
+    () => import("./features/tv/MemoryTv"),
+    "MemoryTv",
+  ),
+});
 const unknownSection = createRoute({
   getParentRoute: () => brain,
   path: "$",
   beforeLoad: ({ params }) => {
     throw redirect({
-      to: "/brains/$brainId/ask",
+      to: "/brains/$brainId/dashboard",
       params: { brainId: params.brainId },
       search: {},
     });
@@ -147,9 +177,27 @@ const team = createRoute({
     "TeamPage",
   ),
 });
+const connectors = createRoute({
+  getParentRoute: () => root,
+  path: "/connectors",
+  component: lazyRouteComponent(
+    () => import("./features/connections/ConnectorsPage"),
+    "ConnectorsPage",
+  ),
+});
+const agentSearch = (
+  search: Record<string, unknown>,
+): { access?: boolean; code?: string } => ({
+  access: search.access === true || search.access === "true" ? true : undefined,
+  code:
+    typeof search.code === "string" && /^[a-f0-9]{8}$/i.test(search.code)
+      ? search.code
+      : undefined,
+});
 const globalAgents = createRoute({
   getParentRoute: () => root,
   path: "/agents",
+  validateSearch: agentSearch,
   component: lazyRouteComponent(
     () => import("./features/workspace/GlobalPages"),
     "AgentsGlobalPage",
@@ -158,28 +206,32 @@ const globalAgents = createRoute({
 const devices = createRoute({
   getParentRoute: () => root,
   path: "/devices",
-  component: lazyRouteComponent(() => import("./DevicesPanel"), "DevicesPanel"),
-  validateSearch: (search: Record<string, unknown>): { code?: string } => ({
-    code:
-      typeof search.code === "string" && /^[a-f0-9]{8}$/i.test(search.code)
-        ? search.code
-        : undefined,
-  }),
+  validateSearch: agentSearch,
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/agents",
+      search: { access: true, code: search.code },
+      replace: true,
+    });
+  },
 });
 const router = createRouter({
   routeTree: root.addChildren([
     home,
     brain.addChildren([
       brainIndex,
+      dashboard,
       ask,
-      knowledge.addChildren([memory, sources, graph, repositories]),
+      knowledge.addChildren([explore, memory, sources, graph, repositories]),
       agents,
       connections,
       activity,
       settings,
+      tv,
       unknownSection,
     ]),
     team,
+    connectors,
     globalAgents,
     devices,
   ]),

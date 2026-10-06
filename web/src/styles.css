@@ -143,6 +143,81 @@ textarea {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+/* Terminal card: a device-screen surface for agent and tool output. The
+   traffic-light dots are fixed brand colors set inline by the component. */
+.terminal-card {
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--rc-terminal);
+}
+.terminal-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--rc-terminalBar);
+  border-bottom: 1px solid var(--rc-border);
+}
+.terminal-dots {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.terminal-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.terminal-card-title {
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  color: var(--rc-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.terminal-chip {
+  margin-left: auto;
+  font-family: var(--rc-font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.terminal-chip-ok {
+  color: var(--rc-cat-graphNode);
+  background: var(--rc-cat-graphNode-tint);
+}
+.terminal-chip-error {
+  color: var(--rc-danger);
+  background: var(--rc-dangerSoft);
+}
+.terminal-chip-pending {
+  color: var(--rc-amber);
+  background: var(--rc-attention);
+}
+.terminal-chip-muted {
+  color: var(--rc-muted);
+  background: var(--rc-sidebar);
+}
+.terminal-card-body {
+  margin: 0;
+  padding: 14px 16px;
+  max-height: 420px;
+  overflow: auto;
+  font-family: var(--rc-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--rc-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.terminal-card-empty {
+  color: var(--rc-muted);
+  font-style: italic;
+}
 .brand {
   display: flex;
   align-items: center;
@@ -250,6 +325,19 @@ textarea {
 .global-nav {
   margin-top: 20px;
 }
+.nav-management > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+}
+.nav-management > summary::-webkit-details-marker {
+  display: none;
+}
+.nav-management[open] > summary svg {
+  transform: rotate(180deg);
+}
 .nav-item {
   display: flex;
   align-items: center;
@@ -261,6 +349,9 @@ textarea {
   font-size: 0.875rem;
   text-decoration: none;
   color: var(--rc-secondary);
+  transition:
+    background-color var(--rc-motion-fast) var(--rc-ease-standard),
+    color var(--rc-motion-fast) var(--rc-ease-standard);
 }
 .nav-item small {
   margin-left: auto;
@@ -275,6 +366,10 @@ textarea {
   color: var(--rc-accent);
   font-weight: 700;
   box-shadow: inset 2px 0 var(--rc-accent);
+}
+.sidebar-utilities {
+  margin-top: auto;
+  flex: none;
 }
 .sidebar-bottom {
   display: flex;
@@ -366,17 +461,7 @@ textarea {
 .breadcrumb strong {
   font-weight: 500;
 }
-.status-dot {
-  width: 6px;
-  height: 6px;
-  display: inline-block;
-  border-radius: 50%;
-  background: var(--rc-field);
-  flex-shrink: 0;
-}
-.status-dot.healthy {
-  background: var(--rc-accent);
-}
+
 .content {
   padding: 32px;
   max-width: 1760px;
@@ -452,10 +537,13 @@ textarea {
 }
 .brain-card {
   height: 100%;
-  transition: border-color 150ms;
+  transition:
+    border-color var(--rc-motion-fast) var(--rc-ease-standard),
+    transform var(--rc-motion-fast) var(--rc-ease-standard);
 }
 .brain-card:hover {
   border-color: var(--rc-accent);
+  transform: translateY(-2px);
 }
 .brain-symbol {
   width: 44px;
@@ -581,6 +669,7 @@ textarea {
   background: transparent;
   color: var(--rc-ink);
   cursor: pointer;
+  transition: background-color var(--rc-motion-fast) var(--rc-ease-standard);
 }
 .source-row:hover {
   background: var(--rc-selection);
@@ -763,6 +852,92 @@ textarea {
 .onboarding-grid p {
   min-height: 64px;
 }
+/* Motion system. Durations, easings and the stagger step are shared motion
+   tokens; entrances use the emphasized decelerate curve, state changes use the
+   standard curve. prefers-reduced-motion collapses all of this to instant. */
+@keyframes rc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rc-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+@keyframes rc-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.rc-enter {
+  animation: rc-rise var(--rc-motion-base) var(--rc-ease-emphasized) both;
+}
+.rc-page-enter {
+  animation: rc-rise var(--rc-motion-base) var(--rc-ease-emphasized) both;
+}
+/* Pulsing status dot for processing/live indicators. The ring is a pseudo
+   element so the dot itself stays a stable, non-color-meaning-free mark. */
+.rc-pulse-dot {
+  position: relative;
+  display: inline-block;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.rc-pulse-dot.live::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: rc-pulse-ring var(--rc-motion-ambient) var(--rc-ease-standard)
+    infinite;
+}
+/* Skeleton loader block: a shimmering raised surface standing in for content. */
+.rc-skeleton {
+  display: block;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--rc-sidebar) 25%,
+    color-mix(in srgb, var(--rc-sidebar), var(--rc-ink) 8%) 37%,
+    var(--rc-sidebar) 63%
+  );
+  background-size: 400% 100%;
+  animation: rc-shimmer var(--rc-motion-ambient) var(--rc-ease-standard)
+    infinite;
+}
+.rc-skeleton-rows {
+  display: grid;
+  gap: 14px;
+  padding: 20px 16px;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  background: var(--rc-surface);
+}
 @media (min-width: 1600px) {
   .content {
     padding: 40px;
@@ -881,6 +1056,10 @@ textarea {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0s !important;
+    transition-delay: 0s !important;
     animation-duration: 0s !important;
+    /* Zeroed delays keep fill-mode "both" from holding content at its hidden
+       entrance state; everything appears instantly and fully. */
+    animation-delay: 0s !important;
   }
 }

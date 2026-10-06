@@ -23,27 +23,28 @@ test("desktop coding-agent guidance binds the Brain and explains direct credenti
   const brain = new URL(page.url()).pathname.split("/")[2]!;
   await page.goto(`/brains/${brain}/agents`);
   await page
-    .getByRole("button", { name: "Connect coding agent", exact: true })
+    .getByRole("button", { name: "Connect agent", exact: true })
     .click();
   dialog = page.getByRole("dialog");
   await expect(dialog.getByText(/recollect-agent pair/)).not.toBeVisible();
-  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    `/api/brains/${brain}/mcp/agent`,
-  );
   await expect(
-    dialog.getByLabel("Store your access token", { exact: true }),
+    dialog.getByRole("heading", { name: "Choose your coding host" }),
   ).toBeVisible();
   await dialog.getByLabel("Coding host", { exact: true }).click();
   await page.getByRole("option", { name: "Claude Code", exact: true }).click();
-  await expect(dialog.getByTestId("agent-setup-command")).toContainText(
-    '"Authorization": "Bearer ${RECOLLECT_MCP_TOKEN}"',
+  await dialog.getByRole("button", { name: /^Direct MCP/ }).click();
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(dialog.getByLabel("Token name", { exact: true })).toHaveValue(
+    "Claude Code MCP · Coding host connection",
   );
-  await expect(dialog.getByTestId("agent-credential-command")).toContainText(
-    "export RECOLLECT_MCP_TOKEN",
-  );
+  await expect(dialog.getByText(/Expires after 30 days/)).toBeVisible();
   await expect(
-    dialog.getByLabel("Store your access token", { exact: true }),
+    dialog.getByRole("link", { name: "Access tokens", exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByLabel("Credential storage", { exact: true }),
   ).toHaveCount(0);
+  await expect(dialog.getByTestId("agent-credential-command")).toHaveCount(0);
   await expect(
     dialog.getByLabel("Session integration", { exact: true }),
   ).toHaveCount(0);

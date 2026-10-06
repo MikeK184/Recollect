@@ -94,6 +94,10 @@ async fn mcp_runtime_durable_dispatch_fences_replay_cancel_and_expiry() {
     assert_eq!(plan.call_id.to_string(), id);
     assert!(checked(runner.claim(&h.state).await).plan.is_none());
     let owned = instance(&h, &runner, &plan).await;
+    let runtime_path = format!("/api/brains/{brain}/mcp/runtime");
+    let runtime = ok(&h, &owner, "GET", &runtime_path, Value::Null).await;
+    assert_eq!(runtime["instances"][0]["current_configuration"], true);
+
     let start = McpStart {
         attempt: attempt(&plan),
         instance_id: owned,
@@ -126,6 +130,16 @@ async fn mcp_runtime_durable_dispatch_fences_replay_cancel_and_expiry() {
     assert!(runner.complete(&h.state, &wrong).await.is_err());
     let final_result = ok(&h, &owner, "GET", &path, Value::Null).await;
     assert_eq!(final_result["state"], "succeeded");
+    let catalogue_path = format!("/api/brains/{brain}/mcp");
+    let catalogue = ok(&h, &owner, "GET", &catalogue_path, Value::Null).await;
+    assert_eq!(
+        catalogue["connections"][0]["last_successful_call_at"],
+        final_result["completed_at"]
+    );
+    allow_owner(&h, &owner, brain, &profile, false).await;
+    assert!(ok(&h, &owner, "GET", &catalogue_path, Value::Null).await["connections"][0]["last_successful_call_at"].is_null(), "Manage rights alone do not disclose Use history");
+    allow_owner(&h, &owner, brain, &profile, true).await;
+
     assert_eq!(final_result["result"], completed.result.unwrap());
     assert_eq!(
         ok(&h, &owner, "POST", &base, input.clone()).await["id"],
@@ -164,6 +178,50 @@ async fn mcp_runtime_durable_dispatch_fences_replay_cancel_and_expiry() {
         "cancelled"
     );
     assert!(checked(runner.claim(&h.state).await).plan.is_none());
+
+    let mut edit = connection_body(None);
+    edit["name"] = json!("Reconfigured fixture");
+    edit["base_revision"] = connection["summary"]["revision"].clone();
+    ok(
+        &h,
+        &owner,
+        "PUT",
+        &format!(
+            "/api/brains/{brain}/mcp/connections/{}",
+            connection["summary"]["id"].as_str().unwrap()
+        ),
+        edit,
+    )
+    .await;
+    assert!(ok(&h, &owner, "GET", &catalogue_path, Value::Null).await["connections"][0]["last_successful_call_at"].is_null(), "A successful old configuration is not a current configuration result");
+    assert_eq!(
+        ok(&h, &owner, "GET", &runtime_path, Value::Null).await["instances"][0]["current_configuration"],
+        false,
+        "A previous session does not describe the current configuration"
+    );
+    // Restore only the test fixture revision to isolate definition invalidation.
+    sqlx::query("UPDATE mcp_connections SET revision=$2 WHERE id=$1")
+        .bind(plan.connection_id)
+        .bind(plan.connection_revision)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    assert!(!ok(&h, &owner, "GET", &catalogue_path, Value::Null).await["connections"][0]["last_successful_call_at"].is_null());
+    assert_eq!(
+        ok(&h, &owner, "GET", &runtime_path, Value::Null).await["instances"][0]["current_configuration"],
+        true
+    );
+    let mut replacement = manifest();
+    replacement.description = "Changed approved definition".into();
+    definitions::import_manifest(&h.admin, replacement)
+        .await
+        .unwrap();
+    assert!(ok(&h, &owner, "GET", &catalogue_path, Value::Null).await["connections"][0]["last_successful_call_at"].is_null(), "A replaced connector definition invalidates the observed result");
+    assert_eq!(
+        ok(&h, &owner, "GET", &runtime_path, Value::Null).await["instances"][0]["current_configuration"],
+        false,
+        "A replaced definition also invalidates the session observation"
+    );
     h.finish().await;
 }
 

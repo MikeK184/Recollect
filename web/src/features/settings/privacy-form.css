@@ -1,0 +1,88 @@
+.settings-management-page:has(.privacy-form) {
+  max-width: 1120px;
+  margin-inline: auto;
+}
+.privacy-form {
+  max-width: 1120px;
+  padding: 20px 24px;
+  border: 1px solid var(--rc-border);
+  border-radius: 8px;
+  background: var(--rc-surface);
+}
+.privacy-form-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  margin-bottom: 16px;
+}
+.privacy-form-header h2 {
+  margin: 0;
+  font-family: var(--rc-font-display);
+  font-size: 24px;
+  line-height: 1.2;
+}
+.privacy-form-actions { margin-left: auto; }
+.privacy-form-section + .privacy-form-section { margin-top: 18px; }
+.privacy-form-section h3 {
+  margin: 0 0 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rc-border);
+  font-family: var(--rc-font-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.privacy-form .privacy-policy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: center;
+  gap: 20px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rc-border) 65%, transparent);
+}
+.privacy-form-section > .privacy-policy-row:last-child,
+.privacy-form-section > div:last-child > .privacy-policy-row { border-bottom: 0; }
+.privacy-form .privacy-policy-row:focus-within {
+  background: var(--rc-selection);
+  box-shadow: inset 2px 0 var(--rc-accent);
+}
+.privacy-form .privacy-policy-row strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.privacy-form .privacy-policy-value {
+  font-size: 13px;
+  color: var(--rc-secondary);
+  text-align: right;
+}
+.privacy-form .privacy-policy-value .mantine-Switch-root {
+  display: flex;
+  justify-content: flex-end;
+  width: max-content;
+  margin-left: auto;
+}
+.privacy-form .privacy-policy-value .mantine-Switch-track[data-disabled] { opacity: 1; }
+.privacy-form .mantine-Switch-root:has(input:checked) .mantine-Switch-track {
+  background: var(--rc-accent);
+  border-color: var(--rc-accent);
+}
+.privacy-form .mantine-Switch-thumb { background: var(--rc-surface); }
+.privacy-form .mantine-Switch-body { position: relative; }
+.privacy-form .mantine-Switch-input { inset: 0; width: 100%; z-index: 1; }
+.privacy-form .mantine-Switch-track { pointer-events: none; }
+.privacy-form .privacy-policy-value .mantine-NumberInput-root {
+  width: 160px;
+  margin-left: auto;
+}
+.privacy-form .privacy-form-unit { font-size: 12px; color: var(--rc-muted); }
+.privacy-form-switches { display: flex; justify-content: flex-end; gap: 12px; }
+.privacy-form-switches .mantine-Switch-root { margin-left: 0; }
+.privacy-form-switches .mantine-Switch-label { padding-left: 6px; font-size: 12px; }
+.privacy-form .vision-segment { width: 100%; }
+.privacy-form-warning { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--rc-secondary); margin-bottom: 12px; }
+@media (max-width: 720px) {
+  .privacy-form { padding: 16px; }
+  .privacy-form-header { flex-wrap: wrap; }
+  .privacy-form .privacy-policy-row { grid-template-columns: minmax(0, 1fr) 180px; gap: 12px; }
+}

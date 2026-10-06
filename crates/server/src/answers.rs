@@ -28,7 +28,7 @@ pub(crate) fn stale() -> Error {
 
 /// This is lexical normalization, not a model-generated expansion. Explicit
 /// advanced queries retain the canonical recall syntax unchanged.
-fn question_query(question: &str) -> String {
+pub(crate) fn question_query(question: &str) -> String {
     const STOP: &[&str] = &[
         "a", "an", "and", "are", "as", "at", "be", "by", "can", "could", "did", "do", "does",
         "for", "from", "has", "have", "how", "i", "in", "is", "it", "me", "of", "on", "or",
@@ -81,18 +81,23 @@ fn validate(input: &mut AnswerRequest) -> Result<()> {
         ));
     }
     if input.recall.query.trim().is_empty() {
-        input.recall.query = question_query(&input.question);
+        input.recall.query = if input.recall.strategy == "auto" {
+            input.question.clone()
+        } else {
+            question_query(&input.question)
+        };
     }
     if input.recall.query.is_empty() && input.recall.exact.is_none() {
         return Err(Error::invalid(
             "Name the subject in a self-contained question so Recollect can find supporting evidence.",
         ));
     }
-    if input
-        .recall
-        .channels
-        .iter()
-        .any(|channel| channel == "semantic")
+    if input.recall.strategy == "auto"
+        || input
+            .recall
+            .channels
+            .iter()
+            .any(|channel| channel == "semantic")
     {
         // Unique per purpose in the gateway. A duplicate answer ID never
         // repeats either the query embedding or the answer attempt.

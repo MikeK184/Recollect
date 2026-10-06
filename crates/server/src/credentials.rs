@@ -31,13 +31,32 @@ pub async fn matches(path: &str, id: Uuid, password: &str) -> Result<bool> {
     .map_err(|_| unavailable())?
 }
 pub async fn store(path: &str, id: Uuid, password: &str) -> Result<()> {
-    let (path, password) = (path.to_owned(), password.to_owned());
+    store_many(path, vec![(id, password.to_owned())]).await
+}
+
+pub async fn store_many(path: &str, additions: Vec<(Uuid, String)>) -> Result<()> {
+    store_values(path, additions, false).await
+}
+pub async fn store_private_many(path: &str, additions: Vec<(Uuid, String)>) -> Result<()> {
+    store_values(path, additions, true).await
+}
+async fn store_values(path: &str, additions: Vec<(Uuid, String)>, private: bool) -> Result<()> {
+    let path = path.to_owned();
     let _guard = LOCK.lock().await;
     tokio::task::spawn_blocking(move || {
         use std::os::unix::fs::OpenOptionsExt;
         let path = Path::new(&path);
-        let mut values = read(path, true)?;
-        values.insert(id, password);
+        let mut values = if private {
+            recollect_mcp_runtime::credentials::read_local_values(path, true)
+                .map_err(|_| unavailable())?
+        } else {
+            read(path, true)?
+        };
+        values.extend(additions);
+        let bytes = serde_json::to_vec(&values).map_err(|_| unavailable())?;
+        if bytes.len() > 8 * 1024 * 1024 {
+            return Err(unavailable());
+        }
         let parent = path
             .parent()
             .filter(|p| !p.as_os_str().is_empty())
@@ -51,8 +70,7 @@ pub async fn store(path: &str, id: Uuid, password: &str) -> Result<()> {
                 .mode(0o600)
                 .open(&temp)
                 .map_err(|_| unavailable())?;
-            file.write_all(&serde_json::to_vec(&values).map_err(|_| unavailable())?)
-                .map_err(|_| unavailable())?;
+            file.write_all(&bytes).map_err(|_| unavailable())?;
             file.sync_all().map_err(|_| unavailable())?;
             std::fs::rename(&temp, path).map_err(|_| unavailable())?;
             std::fs::File::open(parent)

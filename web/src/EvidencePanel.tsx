@@ -1,13 +1,17 @@
+import { useStableRows } from "./components/useStableRows";
 import { FilterBar } from "./components/FilterBar";
 import { ScopeSummary } from "./components/ScopeSummary";
 import { DetailInspector } from "./components/DetailInspector";
 import { ActionMenu } from "./components/ActionMenu";
 import { iconSize } from "./design/tokens";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useBrainSearch } from "./app/useBrainSearch";
 import { useDebouncedValue } from "@mantine/hooks";
 import { EmptyState } from "./components/AsyncState";
+import { SkeletonRows } from "./components/Skeleton";
+import { staggerStyle } from "./components/Motion";
+import { StatusDot } from "./components/StatusDot";
 import { StatusBadge } from "./components/StatusBadge";
 import { useContentDeadline } from "./useContentDeadline";
 import "./features/feature-views.css";
@@ -49,8 +53,12 @@ import {
 } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
+import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
-import { useKnowledgeSelection } from "./features/knowledge/selection";
+import {
+  useKnowledgeSelection,
+  useLineageOverlay,
+} from "./features/knowledge/selection";
 
 type Source = components["schemas"]["SourceSummary"];
 type View = components["schemas"]["EvidenceGroup"];
@@ -196,6 +204,12 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
     setOffset(0);
   };
   const groups = catalogue.data?.groups ?? [];
+  const stable = useStableRows(
+    catalogue.isError ? undefined : catalogue.data?.sources,
+    JSON.stringify([brain.id, filters, query, offset]),
+    !!selectedSourceId,
+    (row) => row.id,
+  );
   if (catalogue.error)
     return (
       <Card withBorder p="xl">
@@ -214,7 +228,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
     );
   return (
     <section
-      className="feature-view evidence-panel"
+      className="feature-view evidence-panel rc-enter"
       aria-label="Knowledge sources"
     >
       <Stack gap="lg">
@@ -248,7 +262,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
               disabled={catalogue.isPending}
               onClick={() => setManage(true)}
             >
-              Manage views
+              Organize
             </Button>
           )}
           {writable && (
@@ -325,7 +339,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           </ScopeSummary>
         )}
         {catalogue.isPending ? (
-          <Loader />
+          <SkeletonRows label="Loading sources…" rows={6} />
         ) : !catalogue.data?.sources.length ? (
           <EmptyState
             icon={FolderOpen}
@@ -342,10 +356,16 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           />
         ) : (
           <div className="feature-list">
-            {catalogue.data.sources.map((source) => (
+            {stable.pending > 0 && (
+              <Button variant="light" size="xs" m="sm" onClick={stable.reveal}>
+                {stable.pending} new sources · Show updates
+              </Button>
+            )}
+            {stable.rows.map((source, index) => (
               <button
                 key={source.id}
-                className="source-row source-record source-record-dense"
+                className={`source-row source-record source-record-dense rc-enter ${selectedSourceId === source.id ? "is-selected" : ""}`}
+                style={staggerStyle(index)}
                 onClick={() => setSelected(source)}
               >
                 {/* Dense row: one identifier line (title plus kind) and one
@@ -368,6 +388,11 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
                   </Badge>
                 </span>
                 <span className="source-record-line">
+                  {["queued", "running"].includes(
+                    source.version.processing,
+                  ) && (
+                    <StatusDot tone="accent" live size={7} label="Processing" />
+                  )}
                   <StatusBadge
                     state={
                       source.version.processing === "ready" &&
@@ -389,8 +414,9 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
                     {stateLabel(source.version)}
                   </StatusBadge>
                   <Text size="xs" c="dimmed">
-                    Updated{" "}
-                    {new Date(source.version.recorded_at).toLocaleDateString()}
+                    {source.version.contributor} · {source.version_count}{" "}
+                    version{source.version_count === 1 ? "" : "s"} ·{" "}
+                    {new Date(source.version.recorded_at).toLocaleString()}
                   </Text>
                 </span>
               </button>
@@ -480,31 +506,6 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
             <Loader />
           )}
         </Drawer>
-      )}
-      {selectedSourceId && route.detail === "record" && (
-        <SourceViewer
-          key={selectedSourceId}
-          brain={brain.id}
-          sourceId={selectedSourceId}
-          source={catalogue.data?.sources.find(
-            (source) => source.id === selectedSourceId,
-          )}
-          selectedVersion={route.version}
-          onVersionChange={(version) => patchRoute({ version })}
-          views={groups}
-          writable={writable}
-          admin={brain.role === "admin"}
-          close={() => setSelected(null)}
-          refresh={refresh}
-          edit={(content) => {
-            const source = catalogue.data?.sources.find(
-              (source) => source.id === selectedSourceId,
-            );
-            if (!source) return;
-            setEditing({ source, content });
-            setSelected(null);
-          }}
-        />
       )}
     </section>
   );
@@ -1013,6 +1014,102 @@ function SourceEditor({
   );
 }
 
+export function SourceInspector({
+  brain,
+  id,
+  version,
+  derived,
+}: {
+  brain: Brain;
+  id: string;
+  version?: string;
+  derived: (version: string) => ReactNode;
+}) {
+  const cache = useQueryClient();
+  const [, patch] = useBrainSearch();
+  const [editing, setEditing] = useState<Content | null>(null);
+  useLineageOverlay(!!editing);
+  const identity = useQuery({
+    queryKey: ["source-identity", brain.id, id],
+    gcTime: 0,
+    refetchInterval: 4000,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/sources/{source}", {
+          params: { path: { brain: brain.id, source: id } },
+          signal,
+        }),
+      ),
+  });
+  const catalogue = useQuery({
+    queryKey: ["source-inspector-groups", brain.id],
+    gcTime: 0,
+    queryFn: async ({ signal }) =>
+      result(
+        await client.GET("/api/brains/{brain}/evidence", {
+          params: { path: { brain: brain.id } },
+          signal,
+        }),
+      ),
+  });
+  if (identity.isError)
+    return (
+      <Alert color="red">
+        {identity.error.message}
+        <Button variant="subtle" onClick={() => void identity.refetch()}>
+          Retry source
+        </Button>
+      </Alert>
+    );
+  if (!identity.data) return <Loader size="sm" />;
+  const source = identity.data;
+  const refresh = () => {
+    for (const key of [
+      "source-identity",
+      "source-history",
+      "source-content",
+      "evidence",
+      "lineage-neighbourhood",
+    ])
+      void cache.invalidateQueries({ queryKey: [key, brain.id] });
+  };
+  return (
+    <>
+      <SourceViewer
+        brain={brain.id}
+        sourceId={id}
+        source={source}
+        selectedVersion={version}
+        onVersionChange={(version) => patch({ source: id, version })}
+        views={catalogue.isError ? [] : (catalogue.data?.groups ?? [])}
+        writable={brain.role !== "reader" && !brain.archived}
+        admin={brain.role === "admin"}
+        close={() => patch({ source: null, version: null, detail: null })}
+        refresh={refresh}
+        edit={setEditing}
+        embedded
+        derived={derived}
+      />
+      {editing && (
+        <SourceEditor
+          brain={brain.id}
+          opened
+          close={() => setEditing(null)}
+          allowContent={catalogue.data?.policy.allow_document_content ?? false}
+          views={catalogue.data?.groups ?? []}
+          initialGroups={source.group_ids}
+          edit={{ source, content: editing }}
+          saved={() => {
+            setEditing(null);
+            patch({ version: null });
+            refresh();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 function SourceViewer({
   brain,
   source,
@@ -1025,7 +1122,11 @@ function SourceViewer({
   close,
   refresh,
   edit,
+  embedded = false,
+  derived,
 }: {
+  embedded?: boolean;
+  derived?: (version: string) => ReactNode;
   brain: string;
   source?: Source;
   sourceId: string;
@@ -1111,7 +1212,283 @@ function SourceViewer({
           "This source reached its retention deadline. Refresh to inspect its remaining metadata.",
         )
       : null);
-  return (
+  const body = (
+    <Stack>
+      {error ? (
+        <Alert color="red">
+          {error.message}
+          <Button
+            variant="subtle"
+            onClick={() => {
+              void evidence.refetch();
+              void history.refetch();
+            }}
+          >
+            Try again
+          </Button>
+        </Alert>
+      ) : evidence.isPending ? (
+        <Loader />
+      ) : (
+        data && (
+          <>
+            <Group justify="space-between" align="flex-start">
+              <div>
+                <Title order={2}>{data.version.title}</Title>
+                <Text size="xs" c="dimmed" mt="xs">
+                  Contributed by {data.version.contributor} · recorded{" "}
+                  {timestamp(data.version.recorded_at)}
+                </Text>
+              </div>
+              <Badge
+                color={
+                  data.version.availability === "retained" ? "teal" : "gray"
+                }
+              >
+                {stateLabel(data.version)}
+              </Badge>
+            </Group>
+            <Text size="sm" c="dimmed">
+              Retention:{" "}
+              {(data.version.retention_class ?? "document").replaceAll(
+                "_",
+                " ",
+              )}{" "}
+              ·{" "}
+              {data.version.expires_at
+                ? "expires " + timestamp(data.version.expires_at)
+                : "until erased"}
+            </Text>
+            {data.version.excerpt && (
+              <Text size="xs" c="dimmed">
+                Supporting excerpt from source lines{" "}
+                {data.version.excerpt.first_line}–
+                {data.version.excerpt.last_line}, captured{" "}
+                {timestamp(data.version.excerpt.captured_at)}.
+              </Text>
+            )}
+            <Text size="sm" c="dimmed">
+              Observed{" "}
+              {data.version.observed_at
+                ? timestamp(data.version.observed_at)
+                : "at an unknown time"}
+            </Text>
+            {data.version.source_uri && (
+              <Text size="sm" style={{ overflowWrap: "anywhere" }}>
+                Source reference: {data.version.source_uri}
+              </Text>
+            )}
+            <details className="feature-details">
+              <summary>Version history</summary>
+              <Select
+                label="Evidence version"
+                data={[
+                  ...(data &&
+                  !history.data?.versions.some((v) => v.id === version)
+                    ? [data.version]
+                    : []),
+                  ...(history.data?.versions ?? []),
+                ].map((v) => ({
+                  value: v.id,
+                  label: `${v.id === currentVersion ? "Current · " : "Earlier · "}${timestamp(v.recorded_at)} · ${v.contributor}`,
+                }))}
+                value={version}
+                onChange={(v) => v && onVersionChange(v)}
+              />
+              {(offset > 0 || (history.data?.total ?? 0) > 20) && (
+                <Group>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    disabled={offset === 0}
+                    onClick={() => setOffset(Math.max(0, offset - 20))}
+                  >
+                    Newer history
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    disabled={offset + 20 >= (history.data?.total ?? 0)}
+                    onClick={() => setOffset(offset + 20)}
+                  >
+                    Older history
+                  </Button>
+                </Group>
+              )}
+            </details>
+            {version !== currentVersion && (
+              <Alert color="yellow">
+                You are viewing an earlier source version. Current knowledge may
+                refer to newer evidence.
+              </Alert>
+            )}
+            {data.content != null ? (
+              <>
+                <pre
+                  className={`source-content${embedded ? " source-inspector-content" : ""}`}
+                  data-testid="source-content"
+                >
+                  {data.content}
+                </pre>
+                <Text size="xs" c="dimmed">
+                  {data.version.byte_length.toLocaleString()} retained bytes ·{" "}
+                  {data.spans.length} processed support spans
+                </Text>
+              </>
+            ) : (
+              <Alert
+                color="yellow"
+                title={
+                  data.version.availability === "reference_only"
+                    ? "Reference without retained text"
+                    : "Source text is unavailable"
+                }
+              >
+                {data.version.availability === "reference_only"
+                  ? "Recollect keeps this reference but has not verified that the external source is available."
+                  : ["expired", "erased"].includes(
+                        data.version.privacy_state ?? "active",
+                      )
+                    ? "This content was " +
+                      data.version.privacy_state +
+                      ". Retention changes cannot restore removed content."
+                    : "The recorded artifact could not be read. Restore it or import a new version; existing metadata does not recreate missing evidence."}
+              </Alert>
+            )}
+            {derived?.(version)}
+            {writable && source && (
+              <Group>
+                <Button
+                  size="sm"
+                  variant="default"
+                  disabled={
+                    version !== currentVersion ||
+                    data.version.privacy_state === "erased" ||
+                    data.version.retention_class === "support_excerpt"
+                  }
+                  onClick={() => edit(data)}
+                >
+                  Edit source
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => {
+                    setGroups(source.group_ids);
+                    setOrganizing(!organizing);
+                  }}
+                >
+                  Organize source
+                </Button>
+              </Group>
+            )}
+            <Link
+              to="/brains/$brainId/graph"
+              params={{ brainId: brain }}
+              search={{
+                kind: "knowledge",
+                center: `source_version:${version}`,
+                direction: "incoming",
+                hops: 1,
+              }}
+            >
+              Explore memory linked to this version
+            </Link>
+            <Text size="xs" c="dimmed">
+              Shows recorded eligible incoming evidence relationships; it does
+              not imply every derived memory is currently eligible.
+            </Text>
+            {!source && (
+              <Text size="xs" c="dimmed">
+                This exact version was opened directly. Edit its title or
+                grouping from its row in Sources.
+              </Text>
+            )}
+            <ActionMenu label="More source actions">
+              <Stack gap="md">
+                <Text size="sm" c="dimmed">
+                  Reprocessing, explicit learning, supporting excerpts and
+                  removal use the same Brain policy and permissions.
+                </Text>
+                <EraseAction
+                  brain={brain}
+                  permitted={admin}
+                  target={{ kind: "source", id: sourceId }}
+                  name={data.version.title}
+                />
+
+                {writable &&
+                  data.version.privacy_state === "active" &&
+                  data.content != null && (
+                    <ExcerptAction
+                      brain={brain}
+                      source={sourceId}
+                      version={data.version.id}
+                      title={data.version.title}
+                    />
+                  )}
+
+                <LearningAction
+                  brain={brain}
+                  version={version}
+                  writable={
+                    writable &&
+                    (data.version.privacy_state ?? "active") === "active"
+                  }
+                />
+
+                {writable &&
+                  data.version.retained &&
+                  version === currentVersion && (
+                    <Button
+                      size="sm"
+                      variant="subtle"
+                      leftSection={<RefreshCw size={iconSize.small} />}
+                      loading={process.isPending}
+                      onClick={() => process.mutate()}
+                    >
+                      Reprocess source
+                    </Button>
+                  )}
+              </Stack>
+            </ActionMenu>
+            {process.error && (
+              <Alert color="red">{process.error.message}</Alert>
+            )}
+            {organizing && (
+              <Card withBorder>
+                <Stack>
+                  <MultiSelect
+                    label="Source views"
+                    data={groupOptions(views)}
+                    searchable
+                    value={groups}
+                    onChange={setGroups}
+                  />
+                  <Text size="xs" c="dimmed">
+                    Removing an association keeps the source, history and other
+                    views.
+                  </Text>
+                  {organize.error && (
+                    <Alert color="red">{organize.error.message}</Alert>
+                  )}
+                  <Button
+                    onClick={() => organize.mutate()}
+                    loading={organize.isPending}
+                  >
+                    Save associations
+                  </Button>
+                </Stack>
+              </Card>
+            )}
+          </>
+        )
+      )}
+    </Stack>
+  );
+  return embedded ? (
+    body
+  ) : (
     <DetailInspector
       className="feature-drawer"
       opened
@@ -1120,273 +1497,24 @@ function SourceViewer({
       position="right"
       size="min(42rem, 90vw)"
     >
-      <Stack>
-        {error ? (
-          <Alert color="red">
-            {error.message}
-            <Button
-              variant="subtle"
-              onClick={() => {
-                void evidence.refetch();
-                void history.refetch();
-              }}
-            >
-              Try again
-            </Button>
-          </Alert>
-        ) : evidence.isPending ? (
-          <Loader />
-        ) : (
-          data && (
-            <>
-              <Group justify="space-between" align="flex-start">
-                <div>
-                  <Title order={2}>{data.version.title}</Title>
-                  <Text size="xs" c="dimmed" mt="xs">
-                    Contributed by {data.version.contributor} · recorded{" "}
-                    {timestamp(data.version.recorded_at)}
-                  </Text>
-                </div>
-                <Badge
-                  color={
-                    data.version.availability === "retained" ? "teal" : "gray"
-                  }
-                >
-                  {stateLabel(data.version)}
-                </Badge>
-              </Group>
-              <Text size="sm" c="dimmed">
-                Retention:{" "}
-                {(data.version.retention_class ?? "document").replaceAll(
-                  "_",
-                  " ",
-                )}{" "}
-                ·{" "}
-                {data.version.expires_at
-                  ? "expires " + timestamp(data.version.expires_at)
-                  : "until erased"}
-              </Text>
-              {data.version.excerpt && (
-                <Text size="xs" c="dimmed">
-                  Supporting excerpt from source lines{" "}
-                  {data.version.excerpt.first_line}–
-                  {data.version.excerpt.last_line}, captured{" "}
-                  {timestamp(data.version.excerpt.captured_at)}.
-                </Text>
-              )}
-              <Text size="sm" c="dimmed">
-                Observed{" "}
-                {data.version.observed_at
-                  ? timestamp(data.version.observed_at)
-                  : "at an unknown time"}
-              </Text>
-              {data.version.source_uri && (
-                <Text size="sm" style={{ overflowWrap: "anywhere" }}>
-                  Source reference: {data.version.source_uri}
-                </Text>
-              )}
-              <details className="feature-details">
-                <summary>Version history</summary>
-                <Select
-                  label="Evidence version"
-                  data={(history.data?.versions ?? []).map((v) => ({
-                    value: v.id,
-                    label: `${v.id === currentVersion ? "Current · " : "Earlier · "}${timestamp(v.recorded_at)} · ${v.contributor}`,
-                  }))}
-                  value={version}
-                  onChange={(v) => v && onVersionChange(v)}
-                />
-                {(offset > 0 || (history.data?.total ?? 0) > 20) && (
-                  <Group>
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      disabled={offset === 0}
-                      onClick={() => setOffset(Math.max(0, offset - 20))}
-                    >
-                      Newer history
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      disabled={offset + 20 >= (history.data?.total ?? 0)}
-                      onClick={() => setOffset(offset + 20)}
-                    >
-                      Older history
-                    </Button>
-                  </Group>
-                )}
-              </details>
-              {version !== currentVersion && (
-                <Alert color="yellow">
-                  You are viewing an earlier source version. Current knowledge
-                  may refer to newer evidence.
-                </Alert>
-              )}
-              {data.content != null ? (
-                <>
-                  <pre className="source-content" data-testid="source-content">
-                    {data.content}
-                  </pre>
-                  <Text size="xs" c="dimmed">
-                    {data.version.byte_length.toLocaleString()} retained bytes ·{" "}
-                    {data.spans.length} processed support spans
-                  </Text>
-                </>
-              ) : (
-                <Alert
-                  color="yellow"
-                  title={
-                    data.version.availability === "reference_only"
-                      ? "Reference without retained text"
-                      : "Source text is unavailable"
-                  }
-                >
-                  {data.version.availability === "reference_only"
-                    ? "Recollect keeps this reference but has not verified that the external source is available."
-                    : ["expired", "erased"].includes(
-                          data.version.privacy_state ?? "active",
-                        )
-                      ? "This content was " +
-                        data.version.privacy_state +
-                        ". Retention changes cannot restore removed content."
-                      : "The recorded artifact could not be read. Restore it or import a new version; existing metadata does not recreate missing evidence."}
-                </Alert>
-              )}
-              {writable && source && (
-                <Group>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    disabled={
-                      version !== currentVersion ||
-                      data.version.privacy_state === "erased" ||
-                      data.version.retention_class === "support_excerpt"
-                    }
-                    onClick={() => edit(data)}
-                  >
-                    Edit source
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => {
-                      setGroups(source.group_ids);
-                      setOrganizing(!organizing);
-                    }}
-                  >
-                    Organize source
-                  </Button>
-                </Group>
-              )}
-              <Link
-                to="/brains/$brainId/graph"
-                params={{ brainId: brain }}
-                search={{
-                  kind: "knowledge",
-                  center: `source_version:${version}`,
-                  direction: "incoming",
-                  hops: 1,
-                }}
-              >
-                Explore memory linked to this version
-              </Link>
-              <Text size="xs" c="dimmed">
-                Shows recorded eligible incoming evidence relationships; it does
-                not imply every derived memory is currently eligible.
-              </Text>
-              {!source && (
-                <Text size="xs" c="dimmed">
-                  This exact version was opened directly. Edit its title or
-                  grouping from its row in Sources.
-                </Text>
-              )}
-              <ActionMenu label="More source actions">
-                <Stack gap="md">
-                  <Text size="sm" c="dimmed">
-                    Reprocessing, explicit learning, supporting excerpts and
-                    removal use the same Brain policy and permissions.
-                  </Text>
-                  <EraseAction
-                    brain={brain}
-                    permitted={admin}
-                    target={{ kind: "source", id: sourceId }}
-                    name={data.version.title}
-                  />
-
-                  {writable &&
-                    data.version.privacy_state === "active" &&
-                    data.content != null && (
-                      <ExcerptAction
-                        brain={brain}
-                        source={sourceId}
-                        version={data.version.id}
-                        title={data.version.title}
-                      />
-                    )}
-
-                  <LearningAction
-                    brain={brain}
-                    version={version}
-                    writable={
-                      writable &&
-                      (data.version.privacy_state ?? "active") === "active"
-                    }
-                  />
-
-                  {writable &&
-                    data.version.retained &&
-                    version === currentVersion && (
-                      <Button
-                        size="sm"
-                        variant="subtle"
-                        leftSection={<RefreshCw size={iconSize.small} />}
-                        loading={process.isPending}
-                        onClick={() => process.mutate()}
-                      >
-                        Reprocess source
-                      </Button>
-                    )}
-                </Stack>
-              </ActionMenu>
-              {process.error && (
-                <Alert color="red">{process.error.message}</Alert>
-              )}
-              {organizing && (
-                <Card withBorder>
-                  <Stack>
-                    <MultiSelect
-                      label="Source views"
-                      data={groupOptions(views)}
-                      searchable
-                      value={groups}
-                      onChange={setGroups}
-                    />
-                    <Text size="xs" c="dimmed">
-                      Removing an association keeps the source, history and
-                      other views.
-                    </Text>
-                    {organize.error && (
-                      <Alert color="red">{organize.error.message}</Alert>
-                    )}
-                    <Button
-                      onClick={() => organize.mutate()}
-                      loading={organize.isPending}
-                    >
-                      Save associations
-                    </Button>
-                  </Stack>
-                </Card>
-              )}
-            </>
-          )
-        )}
-      </Stack>
+      {body}
     </DetailInspector>
   );
 }
 
-export function SourcesStoragePolicy({ brain }: { brain: Brain }) {
+export function SourcesStoragePolicy({
+  brain,
+  inline = false,
+  readOnly = false,
+  close,
+}: {
+  brain: Brain;
+  inline?: boolean;
+  readOnly?: boolean;
+  close?: () => void;
+}) {
+  const [draft, setDraft] = useState<boolean | null>(null);
+  const [baseline, setBaseline] = useState<boolean | null>(null);
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ["evidence", brain.id, "storage-policy"],
@@ -1399,45 +1527,105 @@ export function SourcesStoragePolicy({ brain }: { brain: Brain }) {
       ),
     refetchInterval: 4000,
   });
+  useEffect(() => {
+    if (
+      inline &&
+      baseline === null &&
+      query.data?.policy.allow_document_content !== undefined
+    )
+      setBaseline(query.data?.policy.allow_document_content!);
+  }, [inline, baseline, query.data?.policy.allow_document_content]);
+  const changed =
+    inline &&
+    baseline !== null &&
+    query.data?.policy.allow_document_content !== undefined &&
+    query.data?.policy.allow_document_content !== baseline;
   const save = useMutation({
-    mutationFn: async (allow_document_content: boolean) =>
-      result(
+    mutationFn: async (allow_document_content: boolean) => {
+      if (changed || query.error)
+        throw new Error(
+          "Storage policy changed. Cancel and reopen before saving.",
+        );
+      return result(
         await client.PUT("/api/brains/{brain}/evidence/policy", {
           params: { path: { brain: brain.id } },
           body: { allow_document_content },
         }),
-      ),
-    onSuccess: () =>
-      cache.invalidateQueries({ queryKey: ["evidence", brain.id] }),
+      );
+    },
+    onSuccess: async () => {
+      await cache.invalidateQueries({ queryKey: ["evidence", brain.id] });
+      close?.();
+    },
   });
   return (
-    <section className="feature-setting">
+    <section className={inline ? "privacy-editor" : "feature-setting"}>
       <Stack gap="md">
-        <Title order={3}>Document storage</Title>
-        <Text size="sm" c="dimmed">
-          Choose whether new explicit imports may retain text. Existing evidence
-          follows its own retention policy.
-        </Text>
+        {changed && (
+          <Alert color="yellow">
+            Storage policy changed elsewhere. Cancel and reopen to edit the
+            current policy.
+          </Alert>
+        )}
+        {!inline && <Title order={3}>Document storage</Title>}
         {query.error ? (
           <Alert color="red">{query.error.message}</Alert>
         ) : query.isPending ? (
           <Loader size="sm" />
         ) : (
-          <Switch
-            label="Allow document content retention"
-            description="When off, new imports keep references only. Existing evidence is preserved."
-            checked={
-              save.isPending
-                ? save.variables
-                : (query.data?.policy.allow_document_content ?? false)
-            }
-            disabled={
-              brain.role !== "admin" || brain.archived || save.isPending
-            }
-            onChange={(event) => save.mutate(event.currentTarget.checked)}
-          />
+          <PolicyRow
+            title="Allow document content retention"
+            description="Applies to new content; existing evidence is preserved."
+          >
+            {readOnly ? (
+              query.data?.policy?.allow_document_content ? (
+                "Retain content"
+              ) : (
+                "References only"
+              )
+            ) : (
+              <Switch
+                aria-label="Allow document content retention"
+
+                checked={
+                  inline
+                    ? (draft ??
+                      baseline ??
+                      query.data?.policy.allow_document_content ??
+                      false)
+                    : save.isPending
+                      ? save.variables
+                      : (query.data?.policy.allow_document_content ?? false)
+                }
+                disabled={
+                  brain.role !== "admin" || brain.archived || save.isPending
+                }
+                onChange={(event) =>
+                  inline
+                    ? setDraft(event.currentTarget.checked)
+                    : save.mutate(event.currentTarget.checked)
+                }
+              />
+            )}
+          </PolicyRow>
         )}
         {save.error && <Alert color="red">{save.error.message}</Alert>}
+        {inline && !readOnly && !query.error && query.data && (
+          <Group justify="flex-end">
+            <Button variant="default" disabled={save.isPending} onClick={close}>
+              Cancel
+            </Button>
+            <Button
+              disabled={changed || brain.role !== "admin" || brain.archived}
+              loading={save.isPending}
+              onClick={() =>
+                save.mutate(draft ?? query.data!.policy.allow_document_content)
+              }
+            >
+              Save document storage
+            </Button>
+          </Group>
+        )}
       </Stack>
     </section>
   );

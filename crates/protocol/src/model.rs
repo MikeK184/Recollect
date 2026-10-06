@@ -60,6 +60,30 @@ pub struct ModelSettings {
 pub struct ModelPolicyUpdate {
     pub base_change: Uuid,
     pub policy: ModelPolicy,
+    #[serde(default)]
+    pub rebuild_embeddings: bool,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct CatalogueModel {
+    pub id: String,
+    pub kind: String,
+    pub available: Option<bool>,
+    pub selectable: bool,
+    pub max_dimensions: Option<i32>,
+    pub input_usd_per_million: Option<f64>,
+    pub cached_input_usd_per_million: Option<f64>,
+    pub output_usd_per_million: Option<f64>,
+    pub pricing_tier: String,
+    pub checked_on: String,
+    pub source_url: String,
+    pub pricing_stale: bool,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct ModelCatalogue {
+    pub models: Vec<CatalogueModel>,
+    pub observed_at: Option<DateTime<Utc>>,
+    pub stale: bool,
+    pub error_code: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct ModelRequest {

@@ -144,6 +144,18 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "031_devices_host_kind",
         include_str!("../migrations/031_devices_host_kind.sql"),
     ),
+    (
+        "032_brain_icons",
+        include_str!("../migrations/032_brain_icons.sql"),
+    ),
+    (
+        "033_brain_agent_usage",
+        include_str!("../migrations/033_brain_agent_usage.sql"),
+    ),
+    (
+        "034_brain_model_selection",
+        include_str!("../migrations/034_brain_model_selection.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

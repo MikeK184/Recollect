@@ -71,16 +71,23 @@ pub(super) async fn prepare(
     let profile = index::profile(tx, context.brain).await?;
     if profile
         .as_ref()
-        .is_some_and(|p| !index::compatible(state, p))
+        .is_some_and(|profile| !index::compatible(&p.policy, profile))
     {
         return Err(model_policy::failure(
             "semantic_profile_mismatch",
             "Semantic recall requires a compatible profile. Reindex with the approved model.",
         ));
     }
+    // Admission needs identities only. Keep canonical text and full vectors out
+    // of this materialized count so a large fresh projection can be refused
+    // within the unchanged read deadline before any provider request.
+    let identities = SCOPED.replace(
+        "m.*,e.embedding,e.truncated",
+        "m.kind,m.revision_id,m.chunk_id",
+    );
     let count = if let Some(profile) = &profile {
         let sql = format!(
-            "{}{SCOPED} SELECT count(*)::bigint FROM (SELECT 1 FROM semantic_scoped LIMIT 5001) bounded",
+            "{}{identities} SELECT count(*)::bigint FROM (SELECT 1 FROM semantic_scoped LIMIT 5001) bounded",
             include_str!("../retrieval_candidates.sql")
         );
         let (count,): (i64,) = scoped(&sql, context, profile.id)
@@ -103,7 +110,7 @@ pub(super) async fn prepare(
     // rows without a vector remain visible as missing/partial index coverage.
     if let Some(profile) = &profile {
         let sql = format!(
-            "{}{SCOPED} SELECT EXISTS(SELECT 1 FROM matched m WHERE m.status_eligible AND NOT EXISTS(SELECT 1 FROM semantic_scoped s WHERE s.kind=m.kind AND s.revision_id=m.revision_id AND coalesce(s.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)=coalesce(m.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)))",
+            "{}{identities} SELECT EXISTS(SELECT 1 FROM matched m WHERE m.status_eligible AND NOT EXISTS(SELECT 1 FROM semantic_scoped s WHERE s.kind=m.kind AND s.revision_id=m.revision_id AND coalesce(s.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)=coalesce(m.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)))",
             include_str!("../retrieval_candidates.sql")
         );
         let (missing,): (bool,) = scoped(&sql, context, profile.id)
@@ -129,6 +136,7 @@ pub(super) async fn embed(
     auth: &Auth,
     brain: Uuid,
     input: &RecallRequest,
+    query: &str,
     admission: &mut Admission,
     answer: Option<&crate::answers::Guard<'_>>,
 ) -> Result<Vec<f32>> {
@@ -141,10 +149,10 @@ pub(super) async fn embed(
         operation: input.semantic_request_id.ok_or_else(Error::missing)?,
         purpose: "embedding".into(),
         inputs: vec![],
-        query: Some(input.query.clone()),
+        query: Some(query.into()),
         instructions: String::new(),
         prompt_label: "semantic-query-1".into(),
-        schema_label: "embedding-3072-1".into(),
+        schema_label: "embedding-float-1".into(),
         format: gateway::Format::Embedding,
         metadata_replay: false,
         expected_json: None,
@@ -189,7 +197,7 @@ pub(super) async fn recheck(
     if profile.as_ref().map(|p| p.id) != admission.status.profile.as_ref().map(|p| p.id)
         || profile
             .as_ref()
-            .is_some_and(|p| !index::compatible(state, p))
+            .is_some_and(|profile| !index::compatible(&p.policy, profile))
     {
         return Err(model_policy::failure(
             "semantic_profile_changed",

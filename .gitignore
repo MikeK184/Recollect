@@ -1,5 +1,4 @@
-/cognee/
-/agent-memory-atlas/
+/references/
 .DS_Store
 __pycache__/
 *.pyc

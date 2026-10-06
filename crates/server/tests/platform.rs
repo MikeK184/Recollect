@@ -26,6 +26,8 @@ struct Login {
 mod agents;
 #[path = "platform/brain_admission.rs"]
 mod brain_admission;
+#[path = "platform/brain_icons.rs"]
+mod brain_icons;
 #[path = "platform/managed.rs"]
 mod managed;
 
@@ -2133,9 +2135,7 @@ impl Harness {
         if let Some(value) = integration {
             body["integration"] = json!(value);
         }
-        let (_, start, _) = self
-            .call("POST", "/api/devices/pairings", None, body)
-            .await;
+        let (_, start, _) = self.call("POST", "/api/devices/pairings", None, body).await;
         assert_eq!(
             self.call(
                 "POST",
@@ -2155,7 +2155,7 @@ impl Harness {
                 "POST",
                 "/api/devices/pairings/poll",
                 None,
-                json!({"device_code":start["device_code"]})
+                json!({"device_code":start["device_code"]}),
             )
             .await;
         let token = poll["token"].as_str().unwrap().to_owned();
@@ -2189,7 +2189,7 @@ async fn device_pairing_delivery_revocation_and_worker_authority() {
             "POST",
             "/api/devices/pairings",
             None,
-            json!({"name":"First laptop"}),
+            json!({"name":"First laptop","host_kind":"codex","integration":"mcp"}),
         )
         .await;
     let public = start["user_code"].as_str().unwrap();
@@ -2378,11 +2378,20 @@ async fn device_pairing_delivery_revocation_and_worker_authority() {
             .1,
         json!([])
     );
-    let listed = h
+    let listed_records = h
         .call("GET", "/api/devices", Some(&owner), Value::Null)
         .await
-        .1
-        .to_string();
+        .1;
+    let first_record = listed_records
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|record| record["id"] == first.to_string())
+        .unwrap();
+    assert_eq!(first_record["host_kind"], "codex");
+    assert_eq!(first_record["integration"], "mcp");
+    assert!(first_record.get("token").is_none());
+    let listed = listed_records.to_string();
     assert!(!listed.contains(&token));
     sqlx::query("UPDATE jobs SET state='cancelled' WHERE device_id IS NULL")
         .execute(&h.admin)

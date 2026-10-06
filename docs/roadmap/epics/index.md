@@ -8,13 +8,35 @@
 | [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
-| [memory-lifecycle.md](memory-lifecycle.md) | complete | Memory/correction/retention and real-provider autonomous settings acceptance passed |
+| [memory-lifecycle.md](memory-lifecycle.md) | complete | Supported model catalogue, dated prices and dimension-safe rebuild successor locally validated; prior memory acceptance retained |
 | [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Chat-style Ask landing and thread shipped 2026-10-03 over the unchanged model-grounded answer flow |
 | [graph-intelligence.md](graph-intelligence.md) | complete | Graph/path/analytics browser acceptance, bounded measurements and laptop/desktop visuals passed |
-| [mcp-coordination.md](mcp-coordination.md) | complete | Used-on-Brain per-Brain roster, global `/agents` page and the `GET /api/agents` account read shipped 2026-10-03 |
+| [mcp-coordination.md](mcp-coordination.md) | active | Equivalent HTTP schema inspection, direct config and icons delivered; fresh native-host token acceptance remains open after OpenCode service startup timeout |
 | [operational-readiness.md](operational-readiness.md) | active | Assurance band hidden on healthy Brains and knowledge tab-strip removal shipped 2026-10-03; separate LongMemEval benchmark remains blocked on protocol and cost approval |
+| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Five Connections follow-ups locally verified and independently accepted; packs archived |
 
 ## Active frontier
+
+The selected [General/inline environments and bounded Privacy follow-up](../../mappings/settings-demo-scenario-2026-10-06.md)
+is delivered and independently accepted. Reader/demo UI and canonical access
+denials are proven; one anonymous Exa connection succeeded with an actual agent.
+DeepWiki/Microsoft initialization incompatibilities are recorded separately.
+These slices do not reopen native-token host acceptance or establish backup scheduling.
+
+The latest [single Privacy form correction](../../mappings/desktop-unified-privacy-form-2026-10-06.md)
+is delivered and archived after independent source/pixel acceptance. Shared
+actions preserve the four canonical commands and acknowledged partial saves.
+Activity-detail expiry and recovery archive windows are implemented; a running
+backup schedule was not established by this UI work.
+
+The [October 6 follow-up](../../mappings/desktop-visible-management-settings-2026-10-06.md)
+is delivered and archived with independent source/pixel acceptance. Normal AI
+settings no longer require coverage review; existing bounded recovery or safe
+idle behavior remains. This did not reopen unrelated native-token host acceptance.
+
+The approved browser feedback is implemented and locally validated. Five packs
+are archived; fresh native-host acceptance remains in the active direct-token
+pack after an installed OpenCode service timeout. [Current proof and limits](../../mappings/desktop-browser-management-2026-10-05.md).
 
 The complete [plugin integration replacement](../execution/archive/mcp-plugin-session-memory.md), approved October 1, is shipped as of October 2. [Current evidence](../../mappings/plugin-session-memory-2026-10-01.md) proves ordinary Codex/Claude/OpenCode sessions, automatic capture/learning/recall, optional runner execution, native packaging and preserved local deployment.
 
@@ -35,6 +57,21 @@ packs are [agents-surface-refinement](../execution/archive/agents-surface-refine
 [ask-chat-conversation](../execution/archive/ask-chat-conversation.md) and
 [desktop-chrome-declutter](../execution/archive/desktop-chrome-declutter.md),
 with [live evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md).
+
+The user's 2026-10-03 direction is delivered in the completed
+[desktop visual experience epic](desktop-visual-experience.md): the original light cream/ink/sage,
+animated, desktop-first UI in the cmem.ai visual language — motion foundation,
+live pipeline visualization of capture/learning/memory flow, terminal-style
+agent output surfaces (web cards plus animated plugin CLI) and an ambient
+memory TV. The [claude-mem study](../../research/claude-mem-study-2026-10-03.md)
+grounds the visual/mechanics reference; its product ideas are recorded as a
+deferred backlog, not slices. [October 4 closeout](../../mappings/desktop-visual-closeout-2026-10-04.md) accepts ambient TV and final polish; the subsequent [actionable management acceptance](../../mappings/desktop-actionable-management-2026-10-04.md) is also complete.
+
+The [October 5 management fidelity correction](../../mappings/desktop-management-vision-fidelity-2026-10-05.md)
+supersedes the rejected concept implementation's visual acceptance. All six
+layouts, edit fields and icons were corrected by a UI agent and independently
+accepted from final reference-size and desktop captures; functional proof and
+the before/vision/after artifact are recorded separately.
 
 The final backend and UI are deployed on the existing local installation. The
 four Knowledge/deletion/connection/assurance slices, resumed Ask-primary,

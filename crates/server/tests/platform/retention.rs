@@ -856,6 +856,11 @@ async fn retention_deadlines_excerpt_independence_and_policy_authority() {
         proposal(&version, "Raw supported service", "alpha"),
     )
     .await;
+    let page = ok(&h, "GET", &format!("{base}/claims"), &owner, Value::Null).await;
+    assert_eq!(
+        page["expires_at"], raw["version"]["expires_at"],
+        "Claim pages advertise their active support's canonical deadline"
+    );
     let excerpt_claim = ok(
         &h,
         "POST",
@@ -979,6 +984,11 @@ async fn retention_deadlines_excerpt_independence_and_policy_authority() {
     .await;
     assert_eq!(evidence["evidence"]["availability"], "expired");
     assert!(evidence["text"].is_null());
+    let page = ok(&h, "GET", &format!("{base}/claims"), &owner, Value::Null).await;
+    assert!(
+        page["expires_at"].is_null(),
+        "Sanitized support does not expire otherwise retained claim content"
+    );
     let retained = ok(
         &h,
         "GET",
@@ -1069,6 +1079,18 @@ async fn retention_deadlines_excerpt_independence_and_policy_authority() {
     assert_eq!(
         expired["evidence"]["availability"], "expired",
         "Extending a policy cannot revive removed text"
+    );
+    let page = ok(&h, "GET", &format!("{base}/claims"), &owner, Value::Null).await;
+    let deadline = page["expires_at"]
+        .as_str()
+        .unwrap()
+        .parse::<chrono::DateTime<chrono::Utc>>()
+        .unwrap();
+    let canonical: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT min(recollect_retention_deadline(brain_id,'claim',recorded_at)) FROM claim_revisions WHERE brain_id=$1")
+        .bind(brain_id).fetch_one(&h.admin).await.unwrap();
+    assert_eq!(
+        deadline, canonical,
+        "The claim policy owns the advertised page deadline"
     );
     sqlx::query(
         "UPDATE claim_revisions SET recorded_at=clock_timestamp()-interval '2 days' WHERE id=$1",

@@ -14,6 +14,35 @@ use rmcp::{
 use std::{collections::HashSet, sync::Arc, time::Duration};
 
 pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
+    inspect_http_with_headers(target, &std::collections::BTreeMap::new()).await
+}
+
+pub async fn inspect_http_with_headers(
+    target: &str,
+    headers: &std::collections::BTreeMap<String, String>,
+) -> Result<Vec<McpToolDescriptor>> {
+    Ok(inspect_http_metadata_with_headers(target, headers)
+        .await?
+        .tools)
+}
+
+pub struct HttpMetadata {
+    pub tools: Vec<McpToolDescriptor>,
+    pub icon_sources: Vec<String>,
+}
+
+fn description(value: &str) -> String {
+    value
+        .chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\r' | '\t'))
+        .take(2000)
+        .collect()
+}
+
+pub async fn inspect_http_metadata_with_headers(
+    target: &str,
+    headers: &std::collections::BTreeMap<String, String>,
+) -> Result<HttpMetadata> {
     let url = reqwest::Url::parse(target).map_err(|_| RuntimeError("provider_target_invalid"))?;
     if target.len() > 2048
         || !(url.scheme() == "https"
@@ -28,7 +57,28 @@ pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
         return Err(RuntimeError("provider_target_invalid"));
     }
     tokio::time::timeout(Duration::from_secs(25), async {
+        if headers.len() > 32 {
+            return Err(RuntimeError("credential_destination_invalid"));
+        }
+        let mut selected = http::HeaderMap::new();
+        for (name, value) in headers {
+            let name = name.to_ascii_lowercase();
+            if !crate::credentials::header_destination(&name)
+                || value.len() < 4
+                || value.len() > 16384
+            {
+                return Err(RuntimeError("credential_destination_invalid"));
+            }
+            let name = http::HeaderName::from_bytes(name.as_bytes())
+                .map_err(|_| RuntimeError("credential_destination_invalid"))?;
+            let value = http::HeaderValue::from_str(value)
+                .map_err(|_| RuntimeError("credential_value_invalid"))?;
+            if selected.insert(name, value).is_some() {
+                return Err(RuntimeError("credential_destination_invalid"));
+            }
+        }
         let http = reqwest::Client::builder()
+            .default_headers(selected)
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
@@ -53,6 +103,16 @@ pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
             .await
             .map_err(|_| RuntimeError("provider_initialization_failed"))?;
         let result = async {
+            let icon_sources = service
+                .peer_info()
+                .and_then(|info| info.server_info.clone())
+                .and_then(|info| info.icons)
+                .unwrap_or_default()
+                .into_iter()
+                .take(3)
+                .filter(|icon| icon.src.len() <= 360_000)
+                .map(|icon| icon.src)
+                .collect();
             let mut tools = Vec::new();
             let mut names = HashSet::new();
             let mut cursors = HashSet::new();
@@ -70,17 +130,7 @@ pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
                     }
                     tools.push(McpToolDescriptor {
                         name: tool.name.to_string(),
-                        description: tool
-                            .description
-                            .as_deref()
-                            .unwrap_or("")
-                            .split_whitespace()
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                            .chars()
-                            .filter(|c| !c.is_control())
-                            .take(2000)
-                            .collect(),
+                        description: description(tool.description.as_deref().unwrap_or("")),
                         input_schema: serde_json::Value::Object((*tool.input_schema).clone()),
                         output_schema: tool
                             .output_schema
@@ -92,7 +142,12 @@ pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
                 }
                 cursor = page.next_cursor;
                 match &cursor {
-                    None => return Ok(tools),
+                    None => {
+                        return Ok(HttpMetadata {
+                            tools,
+                            icon_sources,
+                        });
+                    }
                     Some(s) if s.len() <= 1024 && cursors.insert(s.clone()) => {}
                     _ => return Err(RuntimeError("provider_catalogue_invalid")),
                 }
@@ -105,4 +160,15 @@ pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
     })
     .await
     .map_err(|_| RuntimeError("provider_startup_timeout"))?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::description;
+    #[test]
+    fn descriptions_preserve_markdown_and_bound_hostile_controls() {
+        let source = "# Title\n\n- one\n- two\n\n```json\n{\"a\":1}\n```\n\tend\0\u{1b}";
+        assert_eq!(description(source), source.replace(['\0', '\u{1b}'], ""));
+        assert_eq!(description(&"ü".repeat(2001)).chars().count(), 2000);
+    }
 }

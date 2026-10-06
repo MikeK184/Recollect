@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 #[derive(sqlx::FromRow)]
 struct BrainRow {
+    icon_revision: Option<Uuid>,
     id: Uuid,
     owner_id: Uuid,
     name: String,
@@ -28,6 +29,7 @@ struct BrainRow {
 impl From<BrainRow> for Brain {
     fn from(r: BrainRow) -> Self {
         Self {
+            icon_revision: r.icon_revision,
             id: r.id,
             owner_id: r.owner_id,
             name: r.name,
@@ -61,7 +63,7 @@ fn description(value: String) -> Result<String> {
 pub async fn list(State(state): State<AppState>, auth: Auth) -> Result<Json<Vec<Brain>>> {
     let mut tx = auth.tx(&state.pool).await?;
     let rows = sqlx::query_as::<_, BrainRow>(
-        "SELECT *, recollect_role(id) AS role FROM brains ORDER BY archived, lower(name), id",
+        "SELECT id,owner_id,name,description,archived,icon_revision,created_at,updated_at, recollect_role(id) AS role FROM brains ORDER BY archived, lower(name), id",
     )
     .fetch_all(&mut *tx)
     .await?;
@@ -108,7 +110,7 @@ pub async fn create(
         crate::automation::apply(&state, &mut tx, id, auth.user.id).await?;
     }
     let row = sqlx::query_as::<_, BrainRow>(
-        "SELECT *,recollect_role(id) AS role FROM brains WHERE id=$1",
+        "SELECT id,owner_id,name,description,archived,icon_revision,created_at,updated_at,recollect_role(id) AS role FROM brains WHERE id=$1",
     )
     .bind(id)
     .fetch_one(&mut *tx)
@@ -127,7 +129,7 @@ pub async fn get(
 ) -> Result<Json<Brain>> {
     let mut tx = auth.tx(&state.pool).await?;
     let row = sqlx::query_as::<_, BrainRow>(
-        "SELECT *,recollect_role(id) AS role FROM brains WHERE id=$1",
+        "SELECT id,owner_id,name,description,archived,icon_revision,created_at,updated_at,recollect_role(id) AS role FROM brains WHERE id=$1",
     )
     .bind(id)
     .fetch_optional(&mut *tx)

@@ -1,0 +1,111 @@
+.mcp-call-inspection .mantine-Modal-body {
+  padding: 0 24px 24px;
+}
+.mcp-call-summary,
+.mcp-call-section {
+  border: 1px solid var(--rc-border);
+  border-radius: 7px;
+  padding: 18px 20px;
+  background: var(--rc-surface);
+  min-width: 0;
+}
+.mcp-call-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.mcp-call-heading h2 {
+  margin: 0;
+  font-family: var(--rc-font-mono);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.mcp-call-heading p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--rc-muted);
+}
+.mcp-call-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+  margin: 18px 0 0;
+}
+.mcp-call-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rc-border);
+  min-width: 0;
+}
+.mcp-call-facts dt,
+.mcp-call-identifiers dt {
+  font-size: 12px;
+  color: var(--rc-muted);
+  flex: 0 0 auto;
+}
+.mcp-call-facts dd {
+  margin: 0;
+  font-size: 13px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.mcp-call-technical > summary {
+  color: var(--rc-accent);
+  font-size: 13px;
+  cursor: pointer;
+}
+.mcp-call-summary > .mcp-call-technical {
+  border-top: 1px solid var(--rc-border);
+  padding-top: 12px;
+  margin-top: 8px;
+}
+.mcp-call-identifiers {
+  margin: 12px 0 0;
+}
+.mcp-call-identifiers > div {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 12px;
+  margin: 8px 0;
+}
+.mcp-call-identifiers dd {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.mcp-call-section h3 {
+  margin: 0 0 14px;
+  font-family: var(--rc-font-display);
+  font-size: 20px;
+}
+.mcp-call-output-state {
+  position: relative;
+}
+.mcp-call-output-state p {
+  margin: 0;
+  color: var(--rc-muted);
+  font-size: 13px;
+}
+.mcp-call-state-label {
+  position: absolute;
+  right: 20px;
+  top: 18px;
+  background: var(--rc-selection);
+  color: var(--rc-secondary);
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+.mcp-call-section [aria-label="Managed observations"] > p:first-child {
+  font-family: var(--rc-font-display);
+  font-size: 20px;
+}
+@media (max-width: 720px) {
+  .mcp-call-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

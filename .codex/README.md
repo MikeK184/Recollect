@@ -72,8 +72,8 @@ from Recollect, then:
 No home configuration or session restart is required;
 the launcher is available directly through the shell.
 
-Recollect's root index explicitly includes the ignored `cognee/` checkout and
-leaves its source/Git state untouched. The runtime, caches, and index stay
+Recollect's root index explicitly includes the ignored `references/cognee/`
+checkout and leaves its source/Git state untouched. The runtime, caches, and index stay
 local and ignored; source manifests and settings remain reviewable. Refresh
 with `sync` after source changes. See the
 [runbook](../docs/runbooks/codegraph.md) and

@@ -73,12 +73,15 @@ async function recordCopies(page: Page) {
 const rowText = (page: Page, testId: string) =>
   page.getByTestId(testId).allInnerTexts();
 
-/** Mantine renders both an input and a listbox per Select, so address the
- * input by role rather than by its accessible name alone. */
 async function pickView(page: Page, label: RegExp) {
-  const input = page.getByRole("textbox", { name: "Brain view" });
-  await input.click();
-  await page.getByRole("option", { name: label }).click();
+  const name = label.source.includes("Archived")
+    ? "Archived"
+    : label.source.includes("Shared")
+      ? "Shared"
+      : label.source.includes("Owned")
+        ? "Owned"
+        : "Active";
+  await page.getByText(name, { exact: true }).click();
 }
 
 test("device list orders active records first and collapses revoked or expired history", async ({
@@ -145,7 +148,7 @@ test("device list orders active records first and collapses revoked or expired h
     "Approved desktop",
   ]);
   await expect(
-    page.getByRole("heading", { name: "No devices paired yet" }),
+    page.getByRole("heading", { name: "No access tokens yet" }),
   ).toHaveCount(0);
   await expect(page.getByText(/records? are collapsed/)).toBeVisible();
 
@@ -172,8 +175,8 @@ test("device list orders active records first and collapses revoked or expired h
   ]);
   // Every state reads as text beside its mark, so no distinction is color-only.
   for (const [name, status] of [
-    ["Development laptop", "Active"],
-    ["Approved desktop", "Waiting for companion"],
+    ["Development laptop", "Credential enabled"],
+    ["Approved desktop", "Waiting for host"],
     ["Lapsed laptop", "Expired"],
     ["Retired workstation", "Revoked"],
   ]) {
@@ -203,19 +206,19 @@ test("device list orders active records first and collapses revoked or expired h
   fixture = records.slice(0, 2);
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "No device is connected right now" }),
+    page.getByRole("heading", { name: "No enabled device credentials" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "No devices paired yet" }),
+    page.getByRole("heading", { name: "No access tokens yet" }),
   ).toHaveCount(0);
   await expect(page.getByText(/records? are collapsed/)).toBeVisible();
   fixture = [];
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "No devices paired yet" }),
+    page.getByRole("heading", { name: "No access tokens yet" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "No device is connected right now" }),
+    page.getByRole("heading", { name: "No enabled device credentials" }),
   ).toHaveCount(0);
   await expect(page.getByText(/records? are collapsed/)).toHaveCount(0);
 });
@@ -269,7 +272,7 @@ test("brain list keeps archived history behind its filter and separates the thre
     page
       .getByTestId("brain-card")
       .filter({ has: page.getByText(retired.name, { exact: true }) })
-      .getByText("Archived", { exact: true }),
+      .getByText(/^Archived · .* access$/),
   ).toBeVisible();
 
   // A search with no matches is neither an empty Brain nor a filtered-empty view.

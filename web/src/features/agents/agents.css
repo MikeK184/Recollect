@@ -1,0 +1,252 @@
+.agents-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.agents-layout.inspecting {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+}
+.agents-main {
+  min-width: 0;
+}
+.agents-management-page .agents-header-actions {
+  gap: 12px;
+  align-items: center;
+}
+.agents-management-page .agents-header-actions > .rc-button {
+  height: 36px;
+  min-width: 0;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.agents-management-page .agents-header-actions > a {
+  gap: 7px;
+  font-size: 13px;
+}
+.agents-management-page .agent-roster-group {
+  padding: 18px 20px 0;
+}
+.agents-management-page .agent-roster-heading {
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.agents-management-page .agent-owner-avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+.agents-management-page .agent-roster-heading strong {
+  font-size: 22px;
+}
+.agents-management-page .agent-roster-heading small {
+  font-size: 12px;
+}
+.agents-management-page .agent-roster-row {
+  grid-template-columns: 40px minmax(180px, 1fr) 150px 110px 28px;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 0;
+}
+.agents-management-page .agent-host-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 7px;
+}
+.agents-management-page .agent-host-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.agents-management-page .agent-roster-row .agent-name {
+  font-size: 20px;
+}
+.agents-management-page .agent-roster-row .mantine-Text-root {
+  font-size: 12px;
+}
+.agents-management-page .agent-roster-row time {
+  font-size: 12px;
+}
+.agents-management-page .agent-access-badge {
+  height: 28px;
+  font-size: 10px;
+  padding: 0 10px;
+}
+.agents-management-page .agent-access-dot {
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+}
+.agents-management-page .agents-utilities .management-surface {
+  padding: 20px;
+}
+.agents-management-page .agents-utilities .management-title {
+  font-size: 23px;
+}
+.agents-management-page .agent-host-tabs .mantine-SegmentedControl-label {
+  font-size: 12px;
+}
+.agents-management-page .agent-memory-utility .mantine-Text-root {
+  font-size: 13px;
+}
+.agent-activity-inspector {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+  padding: 22px;
+}
+.agent-inspector-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.agent-inspector-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+.agent-inspector-name {
+  flex: 1;
+  min-width: 0;
+}
+.agent-inspector-name h2 {
+  font-family: var(--rc-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.agent-inspector-name small,
+.agent-inspector-status small {
+  color: var(--rc-muted);
+  font-size: 12px;
+}
+.agent-inspector-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 15px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--rc-border);
+}
+.agents-layout.inspecting .agent-roster-row {
+  grid-template-columns: 40px minmax(0, 1fr) 28px;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px 6px;
+}
+.agents-layout.inspecting .agent-roster-row.selected {
+  background: var(--rc-selection);
+  border-radius: 6px;
+  box-shadow: inset 3px 0 var(--rc-accent);
+}
+.agents-layout.inspecting .agent-roster-row .agent-host-icon {
+  width: 40px;
+  height: 40px;
+}
+.agents-layout.inspecting .agent-roster-row > .agent-access-badge,
+.agents-layout.inspecting .agent-roster-row > time {
+  display: none;
+}
+.agents-layout.inspecting .agent-roster-row > .mantine-Stack-root {
+  min-width: 0 !important;
+}
+.agents-layout.inspecting .agent-roster-row .agent-name {
+  font-size: 19px;
+}
+.agents-layout.inspecting .agent-roster-row .mantine-Text-root {
+  font-size: 12px;
+}
+.agents-layout.inspecting .agents-utilities {
+  grid-template-columns: minmax(0, 1fr);
+}
+.agent-capture-timeline {
+  margin-top: 16px;
+}
+.agent-capture-timeline .agent-activity-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+.agent-activity-toolbar h3 {
+  font-family: var(--rc-font-display);
+  font-size: 20px;
+  margin: 0;
+}
+.agent-activity-toolbar .mantine-Select-root {
+  max-width: 178px;
+}
+.agent-capture-day h4 {
+  margin: 12px 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--rc-muted);
+}
+.agent-capture-event {
+  border-left: 1px solid var(--rc-border);
+  padding-left: 16px;
+  margin-left: 5px;
+}
+.agent-capture-event summary {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  align-items: center;
+  padding: 11px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.agent-capture-event summary::-webkit-details-marker {
+  display: none;
+}
+.agent-capture-event summary::before {
+  content: "";
+  position: absolute;
+  left: -21px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rc-accent);
+  box-shadow: 0 0 0 3px var(--rc-surface);
+}
+.agent-capture-event summary strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.agent-capture-event summary time {
+  font-size: 11px;
+  color: var(--rc-muted);
+}
+.agent-capture-event summary .agent-event-outcome {
+  grid-column: 1;
+  font-size: 11px;
+  color: var(--rc-accent);
+}
+.agent-capture-event summary svg {
+  grid-column: 2;
+  grid-row: 2;
+  color: var(--rc-muted);
+}
+.agent-capture-event[open] summary svg {
+  transform: rotate(180deg);
+}
+.agent-capture-event-details {
+  display: grid;
+  gap: 7px;
+  padding: 2px 0 14px;
+  font-size: 11px;
+  color: var(--rc-muted);
+  overflow-wrap: anywhere;
+}
+.agent-capture-event-details p {
+  margin: 0;
+}
+.agent-capture-partial {
+  color: var(--rc-muted);
+  font-size: 11px;
+  margin: 0;
+}

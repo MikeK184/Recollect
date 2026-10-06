@@ -1,33 +1,22 @@
 import { useState } from "react";
 import {
   Button,
-  Card,
   CopyButton,
-  Divider,
-  Group,
-  Select,
+  SegmentedControl,
   Text,
   TextInput,
-  Title,
 } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  Boxes,
-  Check,
-  Copy,
-  Layers3,
-  Plus,
-  Search,
-  Shield,
-} from "lucide-react";
+import { ArrowRight, Boxes, Check, Copy, Plus, Search } from "lucide-react";
 import { client, result } from "../../api";
 import { useWorkspace } from "../../app/context";
 import { BrainForm } from "../../components/BrainForm";
 import { PageHeader } from "../../components/PageHeader";
-import { StatusBadge } from "../../components/StatusBadge";
 import { DeletionNotice } from "../settings/DeletionNotice";
+import { BrainIcon } from "../../components/BrainIcon";
+import { motion, useReducedMotion } from "motion/react";
+import "../workspace/control-panel.css";
 import {
   EmptyState,
   ErrorState,
@@ -77,8 +66,10 @@ export function BrainsPage() {
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<string>("active");
+  const reduced = useReducedMotion();
   const query = useQuery({
     queryKey: ["brains"],
+    refetchInterval: 5000,
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/brains", { signal })),
   });
@@ -153,8 +144,6 @@ export function BrainsPage() {
       <DeletionNotice />
       <PageHeader
         title="Your Brains"
-        eyebrow="A place for what you know"
-        description="Knowledge, decisions, and the evidence that connects them."
         actions={
           <Button
             leftSection={<Plus size={18} />}
@@ -164,7 +153,7 @@ export function BrainsPage() {
           </Button>
         }
       />
-      <div className="filter-bar brain-filter-bar">
+      <div className="filter-bar brain-filter-bar control-brain-filters">
         <TextInput
           aria-label="Search Brains"
           placeholder="Find a Brain…"
@@ -172,12 +161,21 @@ export function BrainsPage() {
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
         />
-        <Select
+        <SegmentedControl
           aria-label="Brain view"
           value={selected.value}
-          onChange={(v) => setView(v ?? "active")}
-          allowDeselect={false}
-          data={views.map(({ value, label }) => ({ value, label }))}
+          onChange={setView}
+          data={views.map(({ value }) => ({
+            value,
+            label:
+              value === "mine"
+                ? "Owned"
+                : value === "shared"
+                  ? "Shared"
+                  : value === "archived"
+                    ? "Archived"
+                    : "Active",
+          }))}
         />
         <Text size="xs" c="dimmed" ml="auto">
           {visible.length} {visible.length === 1 ? "Brain" : "Brains"} · Only
@@ -199,48 +197,41 @@ export function BrainsPage() {
           action={empty.action}
         />
       ) : (
-        <div className="brain-grid">
+        <div className="brain-grid control-brain-grid">
           {ordered.map((brain) => (
-            <div className="brain-cell" key={brain.id} data-testid="brain-card">
+            <motion.div
+              layout={!reduced}
+              transition={{ duration: reduced ? 0 : 0.25 }}
+              className="brain-cell control-brain-cell"
+              key={brain.id}
+              data-testid="brain-card"
+            >
               <Link
-                to="/brains/$brainId/ask"
+                to="/brains/$brainId/dashboard"
                 params={{ brainId: brain.id }}
                 search={{}}
-                className="brain-link"
+                className="control-brain-select"
+                aria-label={`Open ${brain.name}`}
               >
-                <Card withBorder padding="lg" className="brain-card">
-                  <Group justify="space-between">
-                    <div className="brain-symbol">
-                      <Layers3 size={24} />
-                    </div>
-                    <StatusBadge
-                      state={brain.archived ? "neutral" : "positive"}
-                    >
-                      {brain.archived ? "Archived" : "Active"}
-                    </StatusBadge>
-                  </Group>
-                  <Title
-                    order={3}
-                    mt="lg"
-                    data-testid="brain-row-name"
-                    style={{ overflowWrap: "anywhere" }}
-                  >
-                    {brain.name}
-                  </Title>
-                  <Text c="dimmed" size="sm" mt="xs" lineClamp={3} mih={60}>
+                <BrainIcon
+                  id={brain.id}
+                  revision={brain.icon_revision}
+                  size={44}
+                />
+                <span>
+                  <strong data-testid="brain-row-name">{brain.name}</strong>
+                  <span className="control-brain-description">
                     {brain.description || "A space for knowledge and context."}
-                  </Text>
-                  <Divider mt="lg" mb="md" />
-                  <Group justify="space-between">
-                    <Group gap={6}>
-                      <Shield size={14} />
-                      <Text size="xs" c="dimmed">
-                        {brain.owner_id === user.user.id ? "Owner" : brain.role}
-                      </Text>
-                    </Group>
-                    <ArrowRight size={18} />
-                  </Group>
-                </Card>
+                  </span>
+                  <span className="control-access">
+                    {brain.archived ? "Archived · " : ""}
+                    {brain.owner_id === user.user.id
+                      ? "Owner"
+                      : brain.role}{" "}
+                    access
+                  </span>
+                </span>
+                <ArrowRight className="brain-card-arrow" size={17} />
               </Link>
               {/* The Brain id is a machine identifier: it stays out of the row
                   and is offered as a copyable field instead. */}
@@ -261,7 +252,7 @@ export function BrainsPage() {
                   )}
                 </CopyButton>
               </details>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -272,7 +263,7 @@ export function BrainsPage() {
           setCreating(false);
           void cache.invalidateQueries({ queryKey: ["brains"] });
           void navigate({
-            to: "/brains/$brainId/ask",
+            to: "/brains/$brainId/dashboard",
             params: { brainId: brain.id },
             search: {},
           });

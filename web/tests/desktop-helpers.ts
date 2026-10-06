@@ -31,7 +31,12 @@ export async function openGraphDrawer(
     await page.keyboard.press("Escape");
     await page.waitForTimeout(180);
   }
-  await page.getByRole("button", { name: button, exact: true }).click();
+  if (["Find path", "Insights", "Graph status", "Entities"].includes(button)) {
+    await page
+      .getByRole("button", { name: "Graph tools", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: button, exact: true }).click();
+  } else await page.getByRole("button", { name: button, exact: true }).click();
   await expect(drawer).toBeVisible();
   return drawer;
 }

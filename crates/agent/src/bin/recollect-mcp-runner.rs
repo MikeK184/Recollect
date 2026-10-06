@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow, bail};
-use recollect_agent::{Client, CredentialSlot};
+use recollect_agent::{Client, CredentialSlot, presentation};
 use recollect_mcp_runtime::CancellationToken;
 use std::path::PathBuf;
 
@@ -9,6 +9,7 @@ async fn main() -> Result<()> {
     if args.first().is_some_and(|arg| arg == "mcp-supervise") {
         return Ok(recollect_mcp_runtime::supervisor::run().await?);
     }
+    presentation::banner();
     // Only our static operational codes are logged. Ignore ambient logging
     // filters, which must not enable raw SDK/HTTP credential diagnostics.
     tracing_subscriber::fmt()
@@ -44,16 +45,22 @@ async fn main() -> Result<()> {
         })?;
     client.whoami(&device).await?;
     let stop = CancellationToken::new();
+    let status = presentation::status::start("MCP runner");
     let running =
         recollect_agent::mcp::run_selected(client, device, directory, stop.clone(), private_runner);
     tokio::pin!(running);
-    tokio::select! {
-        result = &mut running => result?,
+    let outcome = tokio::select! {
+        result = &mut running => result,
         _ = tokio::signal::ctrl_c() => {
             stop.cancel();
             eprintln!("Draining active MCP calls before shutdown.");
-            running.await?;
+            running.await
         },
+    };
+    match &outcome {
+        Ok(()) => presentation::status::finish(status, true, ""),
+        Err(error) => presentation::status::finish(status, false, &error.to_string()),
     }
+    outcome?;
     Ok(())
 }

@@ -5,6 +5,24 @@ Status: accepted
 October 1 amendment: [ADR 0018](0018-plugin-managed-agent-memory.md) supersedes the separately operated companion/capture-only plugin boundary. Automatic capture and recalled context now belong to the plugin; existing auth, sanitization, scope and privacy guarantees remain.
 Date: 2026-09-29
 
+### Browser copy-ready configuration amendment — 2026-10-05
+
+The user approved direct-token browser setup without a required environment
+export or Keychain step. The explicit Direct MCP flow may hold a newly issued
+token in component memory and copy a native host configuration with its literal
+Authorization header to the clipboard. The visible configuration is masked by
+default; revealing or copying the credential requires an explicit action.
+Closing, navigating away or changing Brain clears this transient copy. Nothing
+writes it to browser storage, URLs, logs, examples, source or checked-in files.
+The user saves copied configuration in their private, untracked host file.
+
+This exception applies only to browser-created Direct MCP setup. Native plugins
+keep their OS-store credential handling and static/CLI rendering remains
+secret-free. Every new browser issuance has a distinct labelled name, so
+same-name pairing reconciliation cannot replace a working agent credential.
+Access tokens is the visible own-account credential list, including unused and
+historical credentials; its metadata never returns the bearer value.
+
 ## Decision
 
 A user on a MacBook or customer VDI connects Codex, Claude Code, or OpenCode
@@ -39,10 +57,10 @@ calls and credential renewal, never implies remote cancellation, and never
 invalidates already-issued credentials without an explicit supported
 mechanism.
 
-Token secrets live in the host's own secret handling (Codex
+Outside the browser copy-ready exception above, token secrets live in the host's own secret handling (Codex
 `bearer_token_env_var`/`http_headers_helper`, Claude `${VAR}` header
 expansion, OpenCode `{env:VAR}` header expansion) or the OS store. Secrets
-never enter plugin files, generated settings, URLs, logs, or proof output.
+never enter plugin files, CLI-generated settings, URLs, logs, or proof output.
 
 ## Why
 

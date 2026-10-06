@@ -20,6 +20,47 @@ Context7 `/openai/codex`, `/anthropics/claude-code`, and
 
 ## Contract
 
+### Browser copy-ready Direct MCP setup — 2026-10-05
+
+The user explicitly approved complete native configuration without a required
+environment export. Browser Direct MCP setup uses the existing pairing sequence
+and a distinct name for each issuance. The user can edit its display label;
+a generated suffix remains part of the issued name so another working
+credential is never rotated by same-name reconciliation. The 30-day expiry and
+20-active-credential limit remain. A token acts as its account across its
+accessible Brains; the copied endpoint selects a Brain without restricting
+the credential to it.
+
+Only while the setup component is mounted may the new bearer value remain in
+memory. The config display is masked by default and a reveal is explicit.
+Copy configuration sends the exact native configuration, with the literal
+header, to the clipboard only on click. No token enters browser persistence,
+URLs, analytics, logs, retained preview/highlighting payloads, source, examples
+or test output. Closing or leaving the flow clears its state and the mutation
+cache. Save the copied content only in private, untracked host configuration;
+the product does not write a host file. Static plugin templates, CLI rendering
+and native plugin OS-store handling remain secret-free and unchanged.
+
+The browser shapes are Codex `[mcp_servers.recollect]` with `url` and an
+`http_headers` Authorization map, Claude `mcpServers.recollect` with `type:
+http`, `url` and `headers`, and OpenCode v2 `mcp.servers.recollect` with `type:
+remote`, `url`, `oauth: false` and `headers`. Each header value is the literal
+`Bearer` prefix and the newly created credential. Native JSON serialization
+and TOML string escaping preserve endpoint and header bytes; no shell command
+is generated with a credential. Codex current source and Context7, Claude's
+official MCP docs, and OpenCode's official v2 docs verified these interfaces
+on 2026-10-05; OpenCode v2 explicitly nests servers under `mcp.servers`.
+
+An Access tokens entry from Brain Agents and My agents opens the existing
+own-account credential list, even when a token has never used a Brain. Show
+name, reported host/integration, status, creation, expiry and last use with
+history/revocation controls. Unknown host stays unknown. `/api/devices`
+may add nullable `host_kind` and `integration` metadata from the existing
+record but never exposes the bearer. Revocation still affects that credential
+across Brains. After closing, the secret cannot be shown again; creating a
+replacement is a new issuance. Configuration remains `configured_only` until
+a real authenticated memory-read check succeeds.
+
 ### Token transport and fixed destination
 
 `POST /api/brains/{brain}/mcp/agent` serves rmcp Streamable HTTP with legacy
@@ -102,9 +143,9 @@ renewal per existing semantics. Repeat revocation is harmless.
 
 ### Host configuration shapes
 
-All rendered configuration is secret-free and `configured_only`: it proves
+CLI and static rendered configuration is secret-free and `configured_only`: it proves
 nothing until a live tool call succeeds. The literal token never appears in
-plugin files, generated settings, URLs, commands, history, logs, or proof
+plugin files, these CLI-generated settings, URLs, commands, history, logs, or proof
 output. Only the variable name `RECOLLECT_MCP_TOKEN` appears. The Brain UUID
 and absolute service origin are ordinary configuration, not secrets.
 

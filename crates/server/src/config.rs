@@ -46,6 +46,10 @@ impl ModelConfig {
             (1..=3072).contains(&value.embedding_dimensions),
             "Embedding dimensions must be 1–3,072"
         );
+        ensure!(
+            value.embedding_model != "text-embedding-3-small" || value.embedding_dimensions <= 1536,
+            "text-embedding-3-small supports at most 1,536 dimensions"
+        );
         for name in [&value.text_model, &value.embedding_model] {
             ensure!(
                 !name.is_empty()

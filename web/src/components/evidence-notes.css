@@ -1,0 +1,38 @@
+.evidence-notes {
+  margin-block: 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--rc-border);
+  border-left: 3px solid var(--rc-amber);
+  border-radius: 6px;
+  background: var(--rc-surface);
+  color: var(--rc-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.evidence-notes-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--rc-ink);
+  font-size: 0.75rem;
+}
+.evidence-notes-heading span {
+  margin-left: auto;
+  color: var(--rc-muted);
+  font-size: 0.6875rem;
+}
+.evidence-notes p {
+  margin: 7px 0 0;
+}
+.evidence-notes details {
+  margin-top: 8px;
+}
+.evidence-notes summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--rc-accent);
+}
+.evidence-notes ul {
+  padding-left: 20px;
+  margin-bottom: 0;
+}

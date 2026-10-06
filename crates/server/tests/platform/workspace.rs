@@ -551,5 +551,88 @@ async fn workspace_catalogue_private_paths_and_concurrent_immutable_task_scopes(
         .0,
         StatusCode::CONFLICT
     );
+    // The library pages canonical repositories without exposing private checkouts.
+    let owner_id: Uuid = sqlx::query_scalar("SELECT id FROM accounts WHERE installation_owner")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    let mut tx = db::actor_tx(&h.state.pool, owner_id)
+        .await
+        .ok()
+        .expect("owner transaction");
+    sqlx::query("INSERT INTO repositories(id,brain_id,canonical_origin,created_by) SELECT gen_random_uuid(),$1,format('fixture.test/library-%s',lpad(i::text,4,'0')),$2 FROM generate_series(1,120) i")
+        .bind(brain.parse::<Uuid>().unwrap()).bind(owner_id).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    let page_url = format!("{workspace}/repositories");
+    let first = h.call("GET", &page_url, Some(&reader), Value::Null).await;
+    assert_eq!(first.0, StatusCode::OK);
+    assert_eq!(first.1["items"].as_array().unwrap().len(), 50);
+    assert_eq!(first.1["total"], 122);
+    assert_eq!(first.1["next_offset"], 50);
+    assert!(!first.1.to_string().contains("/fixture/customer"));
+    let last = h
+        .call(
+            "GET",
+            &format!("{page_url}?offset=100"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await
+        .1;
+    assert_eq!(last["items"].as_array().unwrap().len(), 22);
+    assert!(last["next_offset"].is_null());
+    let match_page = h
+        .call(
+            "GET",
+            &format!("{page_url}?q=library-0120"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await
+        .1;
+    assert_eq!(match_page["total"], 1);
+    let exact = format!(
+        "{page_url}/{}",
+        match_page["items"][0]["id"].as_str().unwrap()
+    );
+    assert_eq!(
+        h.call("GET", &exact, Some(&reader), Value::Null).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        h.call("GET", &exact, Some(&writer), Value::Null).await.0,
+        StatusCode::NOT_FOUND
+    );
+    let alias = h
+        .call(
+            "GET",
+            &format!("{page_url}?q=Moved"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await
+        .1;
+    assert_eq!(alias["total"], 1);
+    assert_eq!(
+        h.call(
+            "GET",
+            &format!("{page_url}?offset=-1"),
+            Some(&owner),
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let compact = h
+        .call(
+            "GET",
+            &format!("{workspace}?include_repositories=false"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await
+        .1;
+    assert!(compact["repositories"].as_array().unwrap().is_empty());
     h.finish().await;
 }
