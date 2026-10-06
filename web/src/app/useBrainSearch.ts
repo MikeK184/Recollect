@@ -9,6 +9,8 @@ export type BrainSearch = {
   detail?: "record";
   job?: string;
   call?: string;
+  connection?: string;
+  profile?: string;
   erasure?: string;
   device?: string;
   source?: string;
@@ -36,6 +38,8 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ids = [
   "job",
   "call",
+  "connection",
+  "profile",
   "erasure",
   "device",
   "source",

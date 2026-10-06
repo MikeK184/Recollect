@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="650" viewBox="0 0 1100 650" role="img" aria-labelledby="title description">
+  <title id="title">Environment scope and tool-group permissions</title>
+  <desc id="description">A Brain-wide connection can be restricted to an environment by a tool group. The caller needs Brain access, explicit Use and a matching environment. Placement selects the executor independently.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 9 5 1 9" fill="none" stroke="#3d6b59" stroke-width="1.5"/></marker>
+    <g id="computer" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8M12 17v5"/></g>
+    <g id="brain" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 4a4 4 0 0 0-6 5 5 5 0 0 0 1 9 4 4 0 0 0 7 2V4a3 3 0 0 0-2-2M15 4a4 4 0 0 1 6 5 5 5 0 0 1-1 9 4 4 0 0 1-7 2V4a3 3 0 0 1 2-2M4 10h3M17 10h3M7 16h4M13 16h4"/></g>
+    <g id="cube" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 2 10 5.5v9L12 22 2 16.5v-9ZM2 7.5 12 13l10-5.5M12 13v9M7 4.75l10 5.5"/></g>
+    <g id="server" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 7h.01M6 18h.01M11 7h7M11 18h7"/></g>
+  </defs>
+  <rect width="1100" height="650" rx="18" fill="#f7f4ec"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#101b2a">
+<text x="36" y="55" font-size="35" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Scope decides when. Placement decides where.</text>
+<text x="36" y="90" font-size="20" fill="#59666e" font-weight="400" text-anchor="start">An environment labels the work context; it does not select a machine.</text>
+<rect x="36" y="133" width="320" height="180" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="390" y="133" width="320" height="180" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="744" y="133" width="320" height="180" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="56" y="165" font-size="23" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">1  Connection</text>
+<text x="56" y="204" font-size="22" fill="#101b2a" font-weight="400" text-anchor="start">Exa web search</text>
+<rect x="56" y="224" width="115" height="30" rx="6" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="68" y="245" font-size="17" fill="#3d6b59" font-weight="400" text-anchor="start">Brain-wide</text>
+<text x="56" y="285" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Eligible across this Brain</text>
+<text x="410" y="165" font-size="23" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">2  Tool group</text>
+<text x="410" y="204" font-size="22" fill="#101b2a" font-weight="400" text-anchor="start">Research tools</text>
+<rect x="410" y="224" width="142" height="30" rx="6" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="422" y="245" font-size="17" fill="#3d6b59" font-weight="400" text-anchor="start">Development</text>
+<text x="410" y="285" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Includes the Exa connection</text>
+<text x="764" y="165" font-size="23" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">3  Caller</text>
+<text x="764" y="204" font-size="22" fill="#101b2a" font-weight="400" text-anchor="start">Team member / agent</text>
+<rect x="764" y="224" width="108" height="30" rx="6" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="776" y="245" font-size="17" fill="#3d6b59" font-weight="400" text-anchor="start">Use ✓</text>
+<text x="764" y="285" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Brain access + explicit Use</text>
+<rect x="36" y="337" width="1028" height="143" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="56" y="372" font-size="23" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Selected work context</text>
+<rect x="56" y="395" width="142" height="30" rx="6" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="68" y="416" font-size="17" fill="#3d6b59" font-weight="400" text-anchor="start">Development</text>
+<text x="223" y="417" font-size="20" fill="#3d6b59" font-weight="700" text-anchor="start">Available through Research tools</text>
+<rect x="56" y="438" width="142" height="30" rx="6" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="68" y="459" font-size="17" fill="#101b2a" font-weight="400" text-anchor="start">Production</text>
+<text x="223" y="460" font-size="20" fill="#59666e" font-weight="400" text-anchor="start">Unavailable through this group</text>
+<path d="M628 360L628 458" fill="none" stroke="#d7d0c2" stroke-width="2"/>
+<text x="650" y="381" font-size="19" fill="#59666e" font-weight="400" text-anchor="start">Runs on</text>
+<rect x="650" y="394" width="184" height="30" rx="6" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="662" y="415" font-size="17" fill="#101b2a" font-weight="400" text-anchor="start">Recollect service</text>
+<text x="650" y="456" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Placement is configured separately.</text>
+<rect x="36" y="505" width="1028" height="110" rx="12" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="58" y="537" font-size="21" fill="#3d6b59" font-weight="700" text-anchor="start">The group narrows availability; it cannot widen a connection’s scope.</text>
+<text x="58" y="568" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">An environment-bound connection needs a group and operation in that same environment.</text>
+<text x="58" y="596" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Use, Manage and Share are independent. No matching Use grant means no execution.</text>
+</g>
+</svg>

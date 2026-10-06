@@ -142,6 +142,8 @@ pub struct McpConnectionSummary {
     pub description: String,
     pub definition_key: String,
     pub placement: String,
+    #[serde(default)]
+    pub private_runner_id: Option<Uuid>,
     pub environment_id: Option<Uuid>,
     pub enabled: bool,
     pub revision: Uuid,

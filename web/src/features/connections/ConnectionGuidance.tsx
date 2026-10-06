@@ -38,7 +38,7 @@ export function WhereItRuns({ brainId }: { brainId: string }) {
       key: "private",
       icon: Network,
       name: "Private-network runner",
-      body: "A runner registered for this Brain on one paired device. Use it for targets on a network the service cannot reach. Register it on the Runners tab; a registration is metadata, not proof of a live connection.",
+      body: "A runner registered for this Brain on one paired device. Use it for targets on a network the service cannot reach. Register it on the Private Runners tab; a registration is metadata, not proof of a live connection.",
     },
   ];
   return (

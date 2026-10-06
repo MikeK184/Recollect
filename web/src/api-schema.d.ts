@@ -3992,6 +3992,8 @@ export interface components {
             name: string;
             placement: string;
             /** Format: uuid */
+            private_runner_id?: string | null;
+            /** Format: uuid */
             revision: string;
             /** Format: date-time */
             updated_at: string;

@@ -11,6 +11,20 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [README agent, environment and private-runner workflows, 2026-10-06](readme-runner-workflows-2026-10-06.md)
+
+- [Private Runner relationship cards and independent acceptance, 2026-10-06](private-runner-relationships-2026-10-06.md)
+
+- [Private Runners spacing and relationship-display proposal, 2026-10-06](private-runners-spacing-2026-10-06.md)
+
+- [Real Ubuntu private filesystem runner and independent MCP caller, 2026-10-06](private-runner-ubuntu-proof-2026-10-06.md)
+
+- [Compact inline Private Runners delivery, 2026-10-06](desktop-inline-private-runners-2026-10-06.md)
+
+- [Private Runners name and inline view/Add/Edit concepts, 2026-10-06](private-runners-concepts-2026-10-06.md)
+
+- [Compact Tool access and independent running UI acceptance, 2026-10-06](desktop-compact-tool-access-2026-10-06.md)
+
 - [Readable Connections and equivalent Exa inspection, 2026-10-06](mcp-inspection-readability-2026-10-06.md)
 
 - [General, bounded Privacy and limited demo scenario, 2026-10-06](settings-demo-scenario-2026-10-06.md)

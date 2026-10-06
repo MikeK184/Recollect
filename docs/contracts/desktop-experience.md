@@ -2,6 +2,75 @@
 
 Status: accepted
 
+## Private Runner relationship cards — 2026-10-06
+
+Implement the user-approved `view-v2.png` concept in
+`output/imagegen/2026-10-06-private-runners-relationships/`: a compact count/Add
+toolbar, paired device under the runner name, separate status/Enabled/Edit,
+assigned connection rows with actual scope and approved tool chips, linked Tool
+groups and a slim paired-devices/setup footer. Existing inline Add/Edit remains;
+the connection section stays visible while editing an existing registration.
+Use the shared bounded left alignment. The mockup's Enabled toggle becomes the
+existing draft toggle in Edit; read mode retains its status without immediate writes.
+
+Expose only a canonical private runner UUID on already-authorized catalogue
+connection summaries, preserving connection/profile filtering and admin-only
+configuration reads. Administrators read approved definitions; other users use
+existing Use-gated cached discovery with exact group environment and all bounded
+pages. Labels/counts describe visible assignments/approved metadata, not execution
+permission or live tools. Reader-empty must say no connections visible to them.
+Share metadata reads by definition or profile/revision/environment so rows in
+the same group do not repeat the full discovery traversal.
+Preserve loading, empty, error/retry, denied, disabled/archive and revocation
+states; failed refresh hides stale relationships/tools. A missing binding from an
+older server must not be shown as zero assigned connections. UUID-only links
+open the exact connection Tools inspector or tool-group card. Never execute a
+tool, start a runner, load credentials or fetch admin detail to render these cards.
+Independent UI review compares actual read/Edit at laptop and wide sizes with
+the approved image. Preserve original revision, pending and save/retry guards.
+
+## Private runner cards and inline editing — 2026-10-06
+
+The user's spacing follow-up aligns the page heading, tabs and runner cards to
+the same left edge as Connections/Tool access. Retain the 1200px content cap
+without centering the route, and a consistent gap below the tabs. The relationship
+card approval above supersedes the earlier proposal-only state; do not infer
+permissions or machine location from runner registration.
+
+The Connections tab is labeled **Private Runners**, retaining `tab=runners`
+and existing registration/permission behavior. Implement the approved compact
+light-theme `view.png` and `inline-v2.png` concepts under
+`output/imagegen/2026-10-06-private-runners/`: bounded cards, compact name and
+device/status badges, inline Add/Edit, Enabled and stable Cancel/Save actions.
+Device selection is available only during creation, using the administrator's
+own active paired devices; existing binding is locked. Device names come only
+from the current user's device inventory, with a UUID fallback for other hosts.
+Registration alone must not imply connectivity. Copy setup command is explicit
+and never starts a runner. Keep readers read-only, archived Brains locked, failed
+reads gated and original-revision conflicts visible without rebasing drafts.
+Creation requires a nonempty name and eligible selected device. Pending saves
+freeze fields and actions; failures retain drafts and command-idempotent retry.
+
+## Compact tool-access cards — 2026-10-06
+
+Implement the user-approved tighter concept in
+`output/imagegen/2026-10-06-tool-access-compact/tool-access-v2.png`: bounded
+cards, a compact environment filter, a compact title/Enabled header with
+separate environment and MCP-count badges beneath the title,
+optional description editor and thin MCP/People column separation. Retain the
+existing MCP picker and canonical configuration/grant save flow. Read-mode
+cards use the same compact scale without duplicated headings or access footers.
+The environment editor replaces its badge in that same metadata row; it must
+not move into the right-hand Enabled/action area when editing.
+
+Each person has one adjacent Use/Manage/Share icon set, with green allowed and
+red denied states. Inherited powers stay green and locked; the small source
+chip opens concise provenance and direct-grant editing only on demand. Draft
+effective rights include pending direct and group edits without changing the
+server's additive authority. Existing Share/Manage, archive, stale revision,
+failed refresh and partial-save fences remain. Compare the actual running UI
+with the approved image through an independent reviewer and prove Save/Cancel.
+
 ## Connection readability follow-up — 2026-10-06
 
 The user retains the Connections layout and asks for compact badges showing
@@ -169,7 +238,7 @@ Reuse the existing brand assets and real authorized data.
 Global navigation remains available inside a Brain: Brains, My agents and
 installation-owner Connectors at `/connectors`, followed by the Brain selector
 and existing Brain navigation. Team remains reachable through account controls;
-operator diagnostics uses the persistent top-right icon. Connections uses Connections/Tool access/Runners
+operator diagnostics uses the persistent top-right icon. Connections uses Connections/Tool access/Private Runners
 tabs, compact rows and one selected inspector with Overview/Tools/Activity.
 Configuration and past successful calls remain distinct from present health.
 
@@ -376,7 +445,7 @@ same system.
 | Graph | Canvas first, compact kind/scope toolbar, filters/insights/status drawers and canonical inspector. Provide keyboard/list selection and textual paths. Default bounded knowledge overview uses current Brain-only investigation selection when no explicit selection exists; it invokes the existing read endpoint once, without model/rebuild/analytics. Explicit historical/repository/manifest selections are never guessed or reset. Missing exact inputs ask for selection. Existing bounds and oversize refusal remain. |
 | Repositories | Published repositories, snapshots, files/facts/coverage/contributors/insights/receipt; Environments tab owns exact revision manifests/history. Browser publishing opens accurate native instructions. Own checkout paths remain account/device-private. Committed, desired and observed revisions stay distinct. |
 | Agents | Sole home for connecting a coding tool that acts as the signed-in user: supported host onboarding and real memory-read check, published sessions/capture coverage and advanced own task/scope controls. A per-Brain agent roster above the setup tabs shows agents across users that have been observed on this accessible Brain, grouped by user ("mike — N agents"); each row is one connection of exactly two kinds — Recollect plugin or direct MCP access token — with host kind, credential state, last used on this Brain, and an own-credential-only revoke action labeled as removing the keycard from all Brains; revoked/expired rows hide behind an explicit toggle. A link opens the global Agents page for the complete account list with per-Brain usage. Setup is not an active connection. Capture policy has one editor in Settings. Browser metadata retry and native discovery are distinct. Other accounts' tasks remain private even from Brain admins. |
-| Connections | Outbound Brain-managed MCP only; no agent-connection setup path. Connections/Profiles/Runners; approved connector → target/environment → credential reference → runner → review → explicit test wizard. Independent Use/Manage/Share grants remain. Test may have effects and never implicitly retries uncertain work. No arbitrary executable installation. |
+| Connections | Outbound Brain-managed MCP only; no agent-connection setup path. Connections/Tool access/Private Runners; approved connector → target/environment → credential reference → runner → review → explicit test wizard. Independent Use/Manage/Share grants remain. Test may have effects and never implicitly retries uncertain work. No arbitrary executable installation. |
 | Activity | Exception-first drill-down behind the standing assurance band, which renders only while something needs attention — a blocker, pending read, failed feed, archived Brain, disabled autonomous memory, or an empty first session — and stays hidden on a healthy Brain. Timeline/Processing/Tool calls/Model usage compose existing bounded authorized feeds, with canonical detail links. No fabricated counts or total causal ordering. Admin audit, profile outputs and private contexts retain independent authorization. |
 | Agents (global) | Roster at `/agents`: every user, including installation owners, sees only their own agents. Group compact rows by accessible Brain with observed use; omit empty Brain groups. Show name, host/integration and last use there; entry point from every per-Brain roster. Pairing approval and complete own-account credentials/history live in the Agents Manage access drawer. `/devices` remains a compatibility redirect, preserving pairing codes. |
 | Settings | General/Access/AI & automation/Capture/Retention & privacy, with rare repair/history actions secondary. General owns archive/reopen and irreversible Brain deletion through the preview and confirmation flow in [brain deletion](platform-brain-deletion.md), kept visibly distinct from archive. Installed provider/model identity read-only; permission, content classes, purposes and quotas editable by actual authorized roles. Capture, model transmission, answering and retention remain separate decisions. |

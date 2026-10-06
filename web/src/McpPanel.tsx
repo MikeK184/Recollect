@@ -116,6 +116,8 @@ export function McpPanel({
   section = "connections",
   onSectionChange,
   initialCall,
+  initialConnection,
+  initialProfile,
   onManageRunners,
   onInspectorChange,
 }: {
@@ -124,15 +126,21 @@ export function McpPanel({
   section?: "connections" | "profiles" | "runners" | "activity";
   onSectionChange?: (section: string | null) => void;
   initialCall?: string;
+  initialConnection?: string;
+  initialProfile?: string;
   onManageRunners?: () => void;
   onInspectorChange?: (open: boolean) => void;
 }) {
   const cache = useQueryClient();
   const account = useWorkspace();
   const [testing, setTesting] = useState<string | null>(null);
-  const [inspectedId, setInspectedId] = useState<string | null>(null);
+  const [inspectedId, setInspectedId] = useState<string | null>(
+    initialConnection ?? null,
+  );
   const [inspectorDismissed, setInspectorDismissed] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<string | null>("overview");
+  const [inspectorTab, setInspectorTab] = useState<string | null>(
+    initialConnection ? "tools" : "overview",
+  );
   const [connectionSearch, setConnectionSearch] = useState("");
   const [importedDraft, setImportedDraft] = useState<ServerDraft | undefined>();
   const [connection, setConnection] = useState<string | null>(null);
@@ -322,13 +330,21 @@ export function McpPanel({
       ? data?.connections.find((item) => item.id === connection)
       : inspectorDismissed
         ? undefined
-        : (matchingConnections.find((c) => c.id === inspectedId) ??
-          matchingConnections[0]);
+        : inspectedId
+          ? matchingConnections.find((c) => c.id === inspectedId)
+          : matchingConnections[0];
   useEffect(() => {
-    setInspectedId(null);
+    setInspectedId(initialConnection ?? null);
     setInspectorDismissed(false);
-    setInspectorTab("overview");
-  }, [brain.id]);
+    setInspectorTab(initialConnection ? "tools" : "overview");
+  }, [brain.id, initialConnection]);
+  const profileIds = data?.profiles.map((p) => p.id).join(",");
+  useEffect(() => {
+    if (section === "profiles" && initialProfile)
+      document
+        .getElementById(`tool-group-${initialProfile}`)
+        ?.scrollIntoView({ block: "center" });
+  }, [brain.id, section, initialProfile, profileIds]);
   const inspectedDetail = useQuery({
     queryKey: ["mcp", brain.id, "connection", inspected?.id],
     enabled:
@@ -398,7 +414,7 @@ export function McpPanel({
       : "Brain-wide";
   return (
     <section
-      className="feature-view mcp-management-view"
+      className={`feature-view mcp-management-view${section === "profiles" ? " mcp-tool-access-view" : ""}`}
       aria-label="MCP connections and tool groups"
     >
       <Stack gap="md">
@@ -564,6 +580,13 @@ export function McpPanel({
                     No connections match these filters.
                   </Text>
                 )}
+                {initialConnection &&
+                  !data.connections.some((c) => c.id === initialConnection) && (
+                    <Text size="sm" c="dimmed" role="status">
+                      This connection is unavailable or no longer visible to
+                      you.
+                    </Text>
+                  )}
                 <div
                   className={
                     "connections-layout" + (!inspected ? " no-selection" : "")
@@ -1174,6 +1197,13 @@ export function McpPanel({
             )}
             {section === "profiles" && (
               <div className="mcp-tool-groups">
+                {initialProfile &&
+                  !data.profiles.some((p) => p.id === initialProfile) && (
+                    <Text size="sm" c="dimmed" role="status">
+                      This tool group is unavailable or no longer visible to
+                      you.
+                    </Text>
+                  )}
                 {profile === "new" && (
                   <McpProfileCard
                     brain={brain}

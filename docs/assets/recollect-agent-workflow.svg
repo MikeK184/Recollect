@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="550" viewBox="0 0 1100 550" role="img" aria-labelledby="title description">
+  <title id="title">Coding agents, memory and MCP tools</title>
+  <desc id="description">Codex, Claude Code or OpenCode connects through the native plugin or direct MCP. Recollect recalls and learns Brain knowledge under policy. Separately authorized tools run centrally, locally or on a private runner.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 9 5 1 9" fill="none" stroke="#3d6b59" stroke-width="1.5"/></marker>
+    <g id="computer" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8M12 17v5"/></g>
+    <g id="brain" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 4a4 4 0 0 0-6 5 5 5 0 0 0 1 9 4 4 0 0 0 7 2V4a3 3 0 0 0-2-2M15 4a4 4 0 0 1 6 5 5 5 0 0 1-1 9 4 4 0 0 1-7 2V4a3 3 0 0 1 2-2M4 10h3M17 10h3M7 16h4M13 16h4"/></g>
+    <g id="cube" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 2 10 5.5v9L12 22 2 16.5v-9ZM2 7.5 12 13l10-5.5M12 13v9M7 4.75l10 5.5"/></g>
+    <g id="server" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="2" y="3" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 7h.01M6 18h.01M11 7h7M11 18h7"/></g>
+  </defs>
+  <rect width="1100" height="550" rx="18" fill="#f7f4ec"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#101b2a">
+<text x="36" y="55" font-size="35" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">One Brain. Continuity across coding sessions.</text>
+<text x="36" y="90" font-size="20" fill="#59666e" font-weight="400" text-anchor="start">Coding agents share knowledge and use separately authorized MCP tools.</text>
+<rect x="36" y="135" width="274" height="280" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="391" y="135" width="334" height="280" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="806" y="135" width="258" height="280" rx="12" fill="#fffdf8" stroke="#d7d0c2"/>
+<rect x="56" y="157" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#computer" x="65" y="166" color="#fffdf8"/>
+<text x="112" y="185" font-size="20" fill="#101b2a" font-weight="700" text-anchor="start">Your coding agent</text>
+<text x="56" y="226" font-size="20" fill="#101b2a" font-weight="400" text-anchor="start">Codex · Claude Code</text>
+<text x="56" y="253" font-size="20" fill="#101b2a" font-weight="400" text-anchor="start">OpenCode</text>
+<rect x="56" y="279" width="90" height="30" rx="6" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="68" y="300" font-size="17" fill="#3d6b59" font-weight="400" text-anchor="start">Plugin</text>
+<text x="56" y="331" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Hooks, capture and recall</text>
+<rect x="56" y="353" width="123" height="30" rx="6" fill="#fffdf8" stroke="#d7d0c2"/>
+<text x="68" y="374" font-size="17" fill="#101b2a" font-weight="400" text-anchor="start">Direct MCP</text>
+<text x="190" y="374" font-size="17" fill="#59666e" font-weight="400" text-anchor="start">Token</text>
+<rect x="411" y="157" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#brain" x="420" y="166" color="#fffdf8"/>
+<text x="467" y="185" font-size="25" fill="#101b2a" font-weight="700" text-anchor="start" font-family="Georgia, Times New Roman, serif">Recollect Brain</text>
+<text x="411" y="232" font-size="22" fill="#3d6b59" font-weight="700" text-anchor="start">Evidence → learn → recall</text>
+<text x="411" y="263" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Sources, sessions and revisions</text>
+<path d="M411 282H705" fill="none" stroke="#d7d0c2" stroke-width="2"/>
+<text x="411" y="316" font-size="22" fill="#101b2a" font-weight="700" text-anchor="start">Tool access</text>
+<text x="411" y="348" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">User + tool group + environment</text>
+<text x="411" y="381" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Use grant checked before dispatch</text>
+<rect x="826" y="157" width="42" height="42" rx="9" fill="#101b2a" stroke="#101b2a"/>
+<use href="#cube" x="835" y="166" color="#fffdf8"/>
+<text x="882" y="185" font-size="22" fill="#101b2a" font-weight="700" text-anchor="start">Approved MCPs</text>
+<text x="826" y="232" font-size="19" fill="#59666e" font-weight="400" text-anchor="start">Run on:</text>
+<text x="826" y="270" font-size="21" fill="#101b2a" font-weight="400" text-anchor="start">Recollect service</text>
+<text x="826" y="310" font-size="21" fill="#101b2a" font-weight="400" text-anchor="start">Caller’s device</text>
+<text x="826" y="350" font-size="21" fill="#101b2a" font-weight="400" text-anchor="start">Private runner</text>
+<text x="826" y="384" font-size="18" fill="#3d6b59" font-weight="400" text-anchor="start">Execution is opt-in</text>
+<path d="M320 218H380" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="350" y="197" font-size="17" fill="#59666e" font-weight="400" text-anchor="middle">MCP</text>
+<path d="M735 315H796" fill="none" stroke="#3d6b59" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="765" y="293" font-size="17" fill="#59666e" font-weight="400" text-anchor="middle">Call</text>
+<rect x="36" y="443" width="1028" height="70" rx="12" fill="#e8f0e9" stroke="#d7d0c2"/>
+<text x="58" y="473" font-size="22" fill="#3d6b59" font-weight="700" text-anchor="start">Memory follows Brain policy. Tools need an independent Use grant.</text>
+<text x="58" y="499" font-size="18" fill="#59666e" font-weight="400" text-anchor="start">Direct MCP alone does not install the host’s automatic session-capture hooks.</text>
+</g>
+</svg>

@@ -778,7 +778,7 @@ function ConnectionForm({
                       privateRunners.data?.length === 0 && (
                         <Alert color="yellow">
                           This Brain has no private runner. Register one for a
-                          paired device on the Runners tab first; until then
+                          paired device on the Private Runners tab first; until then
                           this target has nothing that can reach it.
                         </Alert>
                       )}
