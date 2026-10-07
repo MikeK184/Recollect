@@ -32,6 +32,15 @@ pub fn timestamp(value: DateTime<Utc>) -> Result<()> {
     Ok(())
 }
 pub fn validate(content: &mut ClaimContent) -> Result<()> {
+    if content
+        .context_role
+        .as_deref()
+        .is_some_and(|r| !matches!(r, "decision" | "convention" | "constraint"))
+    {
+        return Err(Error::invalid(
+            "Choose decision, convention or constraint for a stable context role.",
+        ));
+    }
     content.subject = content.subject.trim().into();
     content.predicate = content.predicate.trim().into();
     content.value = content.value.trim().into();

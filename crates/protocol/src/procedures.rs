@@ -45,6 +45,16 @@ pub struct HandoverInput {
     pub operation_id: Option<Uuid>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct HandoverSupport {
+    pub state: String,
+    pub disposition: Option<String>,
+    pub reason: Option<String>,
+    pub assessment_request_id: Option<Uuid>,
+    pub request_state: Option<String>,
+    pub request_error_code: Option<String>,
+    pub verifier_version: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct HandoverRun {
     pub id: Uuid,
     pub brain_id: Uuid,
@@ -59,6 +69,8 @@ pub struct HandoverRun {
     pub state: String,
     pub error_code: Option<String>,
     pub request_id: Option<Uuid>,
+    #[serde(default)]
+    pub support: Option<HandoverSupport>,
     pub claim_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     #[serde(default)]

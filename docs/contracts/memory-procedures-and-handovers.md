@@ -89,19 +89,28 @@ exact evidence; devices require an active write operation with that scope. Brows
 writers may use explicit derived scope. Reads require Brain read access; archived
 Brains allow reads but deny new generation/writes.
 
-The model lane uses the installed gateway under enabled `synthesis` and `claim`
+The synthesis call uses the installed gateway under enabled `synthesis` and `claim`
 permissions, plus `query` for the supplied title. Shared input/output, daily-token,
 concurrency, timeout and body limits apply. No source/file bodies or tools are added.
 A fixed strict schema permits only summary and the three text lists; model output
 cannot select contributors, scope, review or execution. The worker checks current
 source revisions, canonical eligibility, policy, access, operation and lease before
 transmission and publication. Changed input or authority discards the response.
-The result passes canonical validation, rule/conflict checks, audit and refresh
-in the same transaction as publication.
+The result is frozen as a typed draft and independently assessed under the
+[source-support contract](memory-source-support-verification.md), with `extraction`,
+`claim` and original evidence-class permissions. This separate support call receives
+exact permitted original source windows and contributor applicability, not tools.
+Only a supported draft passes canonical validation, rule/conflict checks, audit and
+refresh in the same transaction as publication. Saved draft/verdict recovery never
+repeats a completed synthesis; unsupported refreshes preserve the previous head.
 
 `GET /handovers` pages 20 attempts with safe status, input/result identities, model
 request, timestamps and failure code. States are queued, running, succeeded, failed,
-cancelled or removed. Existing job controls cancel work; generic job retry cannot
+cancelled or removed. Bounded support inspection adds stage state, disposition,
+reason, verifier version and the separate assessment receipt/state/error. Logical
+expiry or erasure hides the reason and disposition before cleanup. Failed malformed
+assessments expose their safe receipt without inventing a semantic verdict.
+Existing job controls cancel work; generic job retry cannot
 repeat model generation. `POST /handovers/{run}/retry` creates a new explicit attempt
 from still-current inputs and current policy, using a fresh device operation when
 supplied. Idempotency replays the original command; ambiguous completed model calls

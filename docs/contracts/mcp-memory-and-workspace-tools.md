@@ -178,3 +178,17 @@ host-global memory destination, human-review impersonation, generic filesystem
 reader, automatic executable skills, direct external-source writeback, mobile or
 customer deployment. Model context already sent to an external host cannot be
 remotely erased; new requests always enforce current memory policy.
+
+## Supported evidence workflow — 2026-10-07
+
+The native catalogue exposes `source.list`, `source.import` and `source.inspect`
+through the existing canonical evidence handlers. Imports require a bound write
+operation and command idempotency key. The server records the operation's exact
+scope with the source version; derived memory and recall retain that scope.
+Inspection requires a bound read operation and rejects incompatible scope.
+Legacy browser imports remain compatible and Brain-wide. Later versions inherit
+an existing import scope unless an authorized bound operation supplies one.
+Agents read user-authorized files through their host and submit retained text
+through the tool. They never infer Recollect repository paths, API routes or
+credential locations to save or inspect memory. Missing capabilities produce an
+explicit tool error, not instructions to investigate Recollect internals.

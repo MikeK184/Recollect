@@ -148,8 +148,13 @@ export function AgentsRoster({
                     {agent.name}
                   </Button>
                   <Text size="md" c="dimmed">
-                    {hostLabel(agent.host_kind) ?? "Coding host"} ·{" "}
-                    {integrationLabel(agent.integration)}
+                    {(agent.observed_hosts?.length
+                      ? agent.observed_hosts
+                          .map(hostLabel)
+                          .filter(Boolean)
+                          .join(" · ")
+                      : hostLabel(agent.host_kind)) ?? "Coding host"}{" "}
+                    · {integrationLabel(agent.integration)}
                     {!agent.active && " · revoked or expired"}
                   </Text>
                 </Stack>

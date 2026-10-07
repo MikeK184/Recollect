@@ -18,11 +18,16 @@ use uuid::Uuid;
 
 #[derive(Deserialize, Default)]
 pub struct CatalogueQuery {
+    pub operation_id: Option<Uuid>,
     pub q: Option<String>,
     pub collection: Option<Uuid>,
     pub area: Option<Uuid>,
     pub environment: Option<Uuid>,
     pub offset: Option<i64>,
+}
+#[derive(Deserialize, Default)]
+pub struct ContentQuery {
+    pub operation_id: Option<Uuid>,
 }
 #[derive(Deserialize, Default)]
 pub struct PageQuery {
@@ -303,7 +308,7 @@ async fn changed(
     Ok(())
 }
 
-#[utoipa::path(get,path="/api/brains/{brain}/evidence",operation_id="evidenceCatalogue",params(("brain"=Uuid,Path),("collection"=Option<Uuid>,Query),("area"=Option<Uuid>,Query),("environment"=Option<Uuid>,Query),("q"=Option<String>,Query),("offset"=Option<i64>,Query)),responses((status=200,body=EvidenceCatalogue)))]
+#[utoipa::path(get,path="/api/brains/{brain}/evidence",operation_id="evidenceCatalogue",params(("brain"=Uuid,Path),("collection"=Option<Uuid>,Query),("area"=Option<Uuid>,Query),("environment"=Option<Uuid>,Query),("q"=Option<String>,Query),("offset"=Option<i64>,Query),("operation_id"=Option<Uuid>,Query)),responses((status=200,body=EvidenceCatalogue)))]
 pub async fn catalogue(
     State(state): State<AppState>,
     auth: Auth,
@@ -328,12 +333,15 @@ pub async fn catalogue(
             filters.push(id);
         }
     }
-    let condition = "s.brain_id=$1 AND NOT EXISTS(SELECT 1 FROM unnest($2::uuid[]) f WHERE NOT EXISTS(SELECT 1 FROM evidence_memberships m WHERE m.source_id=s.id AND m.group_id=f)) AND ($3='' OR (recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active' AND position(lower($3) in lower(v.title))>0))";
+    let selection = read_selection(&mut tx, &auth, brain, query.operation_id).await?;
+    let condition = "($5::jsonb IS NULL OR recollect_recall_scope(coalesce((SELECT a.selection FROM automatic_support_excerpts a WHERE a.version_id=v.id AND a.brain_id=v.brain_id),(SELECT i.selection FROM source_import_scopes i WHERE i.version_id=v.id),(SELECT b.selection FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE e.source_id=s.id AND e.brain_id=s.brain_id LIMIT 1),'{}'::jsonb),$5)) AND s.brain_id=$1 AND NOT EXISTS(SELECT 1 FROM unnest($2::uuid[]) f WHERE NOT EXISTS(SELECT 1 FROM evidence_memberships m WHERE m.source_id=s.id AND m.group_id=f)) AND ($3='' OR (recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active' AND position(lower($3) in lower(v.title))>0))";
     let total: i64 =
-        sqlx::query_scalar(&format!("SELECT count(*) FROM sources s JOIN source_versions v ON v.id=s.current_version AND v.brain_id=s.brain_id WHERE {condition}"))
+        sqlx::query_scalar(&format!("SELECT count(*) FROM sources s JOIN source_versions v ON v.id=s.current_version AND v.brain_id=s.brain_id WHERE {condition} AND $4::bigint>=0"))
             .bind(brain)
             .bind(&filters)
             .bind(&search)
+            .bind(offset)
+            .bind(&selection)
             .fetch_one(&mut *tx)
             .await?;
     let rows: Vec<SourceRow> = sqlx::query_as(&format!(
@@ -344,6 +352,7 @@ pub async fn catalogue(
     .bind(&filters)
     .bind(&search)
     .bind(offset)
+    .bind(&selection)
     .fetch_all(&mut *tx)
     .await?;
     let mut sources = Vec::with_capacity(rows.len());
@@ -639,6 +648,24 @@ async fn save_version(
         state,
         &serde_json::to_value(&input).expect("source serialization"),
     )?;
+    let import_scope = if let Some(operation) = input.operation_id {
+        let bound = crate::workspace::bound_operation(&mut tx, brain, operation).await?;
+        if bound.actor_id != auth.user.id
+            || bound.device_id != auth.device_id
+            || !bound.scope_valid
+            || bound.kind != "write"
+        {
+            return Err(Error::forbidden());
+        }
+        Some((
+            Some(operation),
+            serde_json::to_value(bound.scope.selection).expect("selection"),
+        ))
+    } else if let Some(id) = existing {
+        sqlx::query_as::<_,(Option<Uuid>,serde_json::Value)>("SELECT i.operation_id,i.selection FROM source_import_scopes i JOIN sources s ON s.current_version=i.version_id WHERE s.brain_id=$1 AND s.id=$2").bind(brain).bind(id).fetch_optional(&mut *tx).await?
+    } else {
+        None
+    };
     let retention_class = if let Some(id) = existing {
         let (class,current_state):(String,String)=sqlx::query_as("SELECT s.retention_class,v.privacy_state FROM sources s JOIN source_versions v ON v.id=s.current_version WHERE s.brain_id=$1 AND s.id=$2").bind(brain).bind(id).fetch_optional(&mut *tx).await?.ok_or_else(Error::missing)?;
         if current_state == "erased" {
@@ -740,8 +767,11 @@ async fn save_version(
     let version = Uuid::new_v4();
     let artifact = input.content.as_ref().map(|_| Uuid::new_v4());
     let bytes = input.content.as_ref().map_or(0, |v| v.len()) as i32;
-    sqlx::query("INSERT INTO source_versions(id,source_id,brain_id,title,media_type,source_uri,observed_at,artifact_id,byte_length,created_by,processing,retention_class) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)")
-        .bind(version).bind(source).bind(brain).bind(&input.title).bind(&input.media_type).bind(&input.source_uri).bind(input.observed_at).bind(artifact).bind(bytes).bind(auth.user.id).bind(if artifact.is_some(){"queued"}else{"reference_only"}).bind(retention_class).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO source_versions(id,source_id,brain_id,title,media_type,source_uri,observed_at,artifact_id,byte_length,created_by,processing,retention_class,device_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)")
+        .bind(version).bind(source).bind(brain).bind(&input.title).bind(&input.media_type).bind(&input.source_uri).bind(input.observed_at).bind(artifact).bind(bytes).bind(auth.user.id).bind(if artifact.is_some(){"queued"}else{"reference_only"}).bind(retention_class).bind(auth.device_id).execute(&mut *tx).await?;
+    if let Some((operation, selection)) = import_scope {
+        sqlx::query("INSERT INTO source_import_scopes(version_id,brain_id,operation_id,selection) VALUES($1,$2,$3,$4)").bind(version).bind(brain).bind(operation).bind(selection).execute(&mut *tx).await?;
+    }
     sqlx::query(
         "UPDATE sources SET current_version=$3,updated_at=now() WHERE brain_id=$1 AND id=$2",
     )
@@ -1078,15 +1108,27 @@ struct SpanRow {
     line_start: i32,
     line_end: i32,
 }
-#[utoipa::path(get,path="/api/brains/{brain}/sources/{source}/versions/{version}",operation_id="sourceContent",params(("brain"=Uuid,Path),("source"=Uuid,Path),("version"=Uuid,Path)),responses((status=200,body=SourceContent)))]
+#[utoipa::path(get,path="/api/brains/{brain}/sources/{source}/versions/{version}",operation_id="sourceContent",params(("brain"=Uuid,Path),("source"=Uuid,Path),("version"=Uuid,Path),("operation_id"=Option<Uuid>,Query)),responses((status=200,body=SourceContent)))]
 pub async fn content(
     State(state): State<AppState>,
     auth: Auth,
     Path((brain, source, version)): Path<(Uuid, Uuid, Uuid)>,
+    Query(query): Query<ContentQuery>,
 ) -> Result<Json<SourceContent>> {
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
     let row = version_row(&mut tx, brain, source, version).await?;
+    if let Some(selection) = read_selection(&mut tx, &auth, brain, query.operation_id).await? {
+        let scope = crate::capture::source_selection(&mut tx, brain, version).await?;
+        let allowed: bool = sqlx::query_scalar("SELECT recollect_recall_scope($1,$2)")
+            .bind(serde_json::to_value(scope).expect("scope"))
+            .bind(selection)
+            .fetch_one(&mut *tx)
+            .await?;
+        if !allowed {
+            return Err(Error::missing());
+        }
+    }
     let mut info = row.dto(&state.config.artifact_dir).await;
     let mut content = if let Some(artifact) =
         row.artifact_id.filter(|_| info.privacy_state == "active")
@@ -1233,4 +1275,26 @@ pub async fn project(
         .execute(&mut **tx)
         .await?;
     Ok(status)
+}
+
+async fn read_selection(
+    tx: &mut Transaction<'_, Postgres>,
+    auth: &Auth,
+    brain: Uuid,
+    operation: Option<Uuid>,
+) -> Result<Option<serde_json::Value>> {
+    let Some(id) = operation else {
+        return Ok(None);
+    };
+    let bound = crate::workspace::bound_operation(tx, brain, id).await?;
+    if bound.actor_id != auth.user.id
+        || bound.device_id != auth.device_id
+        || !bound.scope_valid
+        || !matches!(bound.kind.as_str(), "context" | "retrieval")
+    {
+        return Err(Error::forbidden());
+    }
+    Ok(Some(
+        serde_json::to_value(bound.scope.selection).expect("selection"),
+    ))
 }

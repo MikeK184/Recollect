@@ -62,8 +62,16 @@ host bridge is integrated.
 
 ## Slice Map
 
+The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+authorizes a canonical scoped project brief alongside query recall within existing
+plugin limits. The [accepted contract](../../contracts/retrieval-scoped-project-brief.md)
+and archived pack govern deterministic selection, authenticated continuation and
+shared eligibility/invalidation. [Native proof and independent review](../../mappings/memory-source-support-staging-2026-10-07.md)
+complete local acceptance; the installed host binary is not upgraded by this work.
+
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `retrieval-scoped-project-brief` | shipped | contract-backed | pack | Current supported compact context and authenticated continuation |
 | `retrieval-exact-and-lexical` | shipped | contract-backed | pack | Delivered canonical exact/text candidates, correction-aware bounded context, immutable scope, temporal/manifest filters and browser/native consumers with database/runtime proof |
 | `retrieval-semantic` | shipped | contract-backed | pack | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
 | `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |

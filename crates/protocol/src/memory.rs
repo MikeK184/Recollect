@@ -29,6 +29,8 @@ pub struct ClaimContent {
     pub value: String,
     #[serde(default)]
     pub rationale: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_role: Option<String>,
     pub selection: ScopeSelection,
     pub manifest_revision_id: Option<Uuid>,
     pub validity: FactValidity,

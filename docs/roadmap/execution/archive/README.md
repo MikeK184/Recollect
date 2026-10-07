@@ -5,6 +5,14 @@ local capability does not establish a deployed or published service.
 
 | Pack | Status |
 | --- | --- |
+| [memory-support-evaluation-baseline.md](memory-support-evaluation-baseline.md) | shipped |
+| [memory-source-support-verification.md](memory-source-support-verification.md) | shipped |
+| [memory-automatic-session-digests.md](memory-automatic-session-digests.md) | shipped |
+| [retrieval-scoped-project-brief.md](retrieval-scoped-project-brief.md) | shipped |
+| [memory-cross-session-reconciliation.md](memory-cross-session-reconciliation.md) | shipped |
+| [desktop-dashboard-refresh-stability.md](desktop-dashboard-refresh-stability.md) | shipped |
+| [desktop-input-errors-and-page-recovery.md](desktop-input-errors-and-page-recovery.md) | shipped |
+| [mcp-plugin-workflow-repair.md](mcp-plugin-workflow-repair.md) | shipped |
 | [repository-product-docs-site.md](repository-product-docs-site.md) | shipped |
 | [desktop-private-runner-relationships.md](desktop-private-runner-relationships.md) | shipped |
 | [mcp-ubuntu-private-runner-proof.md](mcp-ubuntu-private-runner-proof.md) | shipped |

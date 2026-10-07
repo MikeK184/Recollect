@@ -14,6 +14,7 @@ WITH known_snapshots AS (
   SELECT 'claim_revision',r.id,NULL,r.id,NULL,NULL,'claim',r.recorded_at
   FROM claims c JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
   WHERE c.brain_id=$1 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
+    AND recollect_memory_supported(r.brain_id,r.id)
     AND r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active'
     AND r.revision#>>'{content,freshness}'<>'superseded'
     AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)

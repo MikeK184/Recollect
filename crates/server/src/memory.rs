@@ -51,6 +51,24 @@ pub(crate) async fn validate_evidence(
     brain: Uuid,
     content: &ClaimContent,
 ) -> Result<()> {
+    validate_supports(state, tx, brain, content).await?;
+    crate::procedures::validate_dependencies(state, tx, brain, content).await
+}
+pub(crate) async fn validate_evidence_for_audit(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    content: &ClaimContent,
+) -> Result<()> {
+    validate_supports(state, tx, brain, content).await?;
+    crate::procedures::validate_audit_dependencies(state, tx, brain, content).await
+}
+async fn validate_supports(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    content: &ClaimContent,
+) -> Result<()> {
     if !workspace::selection_valid(tx, brain, &content.selection).await? {
         return Err(Error::missing());
     }
@@ -109,7 +127,6 @@ pub(crate) async fn validate_evidence(
             }
         }
     }
-    crate::procedures::validate_dependencies(state, tx, brain, content).await?;
     Ok(())
 }
 #[utoipa::path(post,path="/api/brains/{brain}/claims",operation_id="createClaim",params(("brain"=Uuid,Path)),request_body=ClaimInput,responses((status=200,body=ClaimRevision)))]
@@ -410,6 +427,14 @@ pub(crate) async fn base_view(
             fact_time: policy::fact_match(&r.content.validity, fact_at),
         },
     );
+    if !crate::memory_support_audit::eligible(tx, brain, r.id).await? {
+        eligibility.investigation = false;
+        eligibility.strict_accepted = false;
+        eligibility.strict_operational = false;
+        eligibility
+            .reasons
+            .push("source_support_not_current".into());
+    }
     eligibility.rule_ids = crate::memory_rules::matching(tx, &r, false)
         .await?
         .into_iter()
@@ -504,6 +529,11 @@ pub async fn list(
         AND ($7='' OR (recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
           AND position(lower($7) in lower(concat_ws(' ',r.revision#>>'{{content,subject}}',r.revision#>>'{{content,predicate}}',r.revision#>>'{{content,value}}',r.revision#>>'{{content,rationale}}')))>0))"
     );
+    let filtered = if query.mode.as_deref() == Some("history") {
+        filtered
+    } else {
+        format!("{filtered} AND recollect_memory_supported(r.brain_id,r.id)")
+    };
     let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) {filtered}"))
         .bind(brain)
         .bind(at)
@@ -571,7 +601,7 @@ pub async fn list(
         .collect();
     let expires_at = sqlx::query_scalar(
         "WITH deadlines AS (
-          SELECT recollect_retention_deadline(brain_id,'claim',recorded_at) AS deadline
+          SELECT recollect_memory_deadline(brain_id,id) AS deadline
           FROM claim_revisions WHERE brain_id=$1 AND id=ANY($2)
           UNION ALL
           SELECT recollect_retention_deadline(brain_id,retention_class,created_at)

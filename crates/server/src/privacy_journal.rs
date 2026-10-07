@@ -252,6 +252,7 @@ pub async fn maintain(state: &AppState) -> anyhow::Result<usize> {
     Ok(count)
 }
 pub async fn run_once(state: &AppState) -> anyhow::Result<usize> {
+    crate::support_excerpts::reconcile_artifacts(state, None).await?;
     for _ in 0..20 {
         let request: Option<Uuid> = sqlx::query_scalar("SELECT recollect_expire_one()")
             .fetch_one(&state.pool)

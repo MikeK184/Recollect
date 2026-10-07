@@ -711,7 +711,7 @@ pub(crate) async fn source_selection(
     brain: Uuid,
     source: Uuid,
 ) -> Result<ScopeSelection> {
-    let selection: Option<SqlJson<ScopeSelection>> = sqlx::query_scalar("SELECT b.selection FROM source_versions v JOIN capture_events e ON e.source_id=v.source_id AND e.brain_id=v.brain_id JOIN capture_bindings b ON b.id=e.binding_id WHERE v.brain_id=$1 AND v.id=$2")
+    let selection: Option<SqlJson<ScopeSelection>> = sqlx::query_scalar("SELECT coalesce(a.selection,i.selection,b.selection) FROM source_versions v LEFT JOIN automatic_support_excerpts a ON a.version_id=v.id AND a.brain_id=v.brain_id AND a.privacy_state='active' LEFT JOIN source_import_scopes i ON i.version_id=v.id AND i.brain_id=v.brain_id LEFT JOIN capture_events e ON e.source_id=v.source_id AND e.brain_id=v.brain_id LEFT JOIN capture_bindings b ON b.id=e.binding_id WHERE v.brain_id=$1 AND v.id=$2 AND coalesce(a.selection,i.selection,b.selection) IS NOT NULL LIMIT 1")
         .bind(brain).bind(source).fetch_optional(&mut **tx).await?;
     Ok(selection.map(|s| s.0).unwrap_or_default())
 }

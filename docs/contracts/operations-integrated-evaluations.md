@@ -2,6 +2,42 @@
 
 Status: accepted
 
+## Automatic-memory support baseline (2026-10-07)
+
+The user's implementation goal for the
+[automated memory plan](../research/automated-memory-improvement-plan-2026-10-07.md)
+authorizes a repository-owned synthetic support corpus and offline scoring before
+the new support gate. This evaluation amendment does not itself enable that gate
+or change production memory eligibility. Runtime changes require their own
+accepted support contract and execution pack. Ordinary operation remains automatic
+under [ADR 0006](../adr/0006-autonomous-memory.md).
+
+Keep original synthetic evidence, canonical speaker/tool attribution, exact cited
+spans, proposed assertions/actions and expected support dispositions in a versioned
+JSON corpus. Separate calibration from held-out cases. Cover whole-assertion
+meaning, unrelated valid citations, negation, history, proposals, failed tools,
+corrections, retirement, procedures/handovers and environment identity. Never
+send gold labels or evaluation rationales to a provider. Fixtures prove handler
+enforcement; they cannot count as semantic-model quality evidence.
+
+Freeze thresholds before any held-out paid run: every critical negative remains
+unusable, at least 80% of supported held-out controls are usable, and every held-out
+case has a completed assessment. Report missing/failed/uncertain outcomes separately;
+an unavailable assessor cannot pass by withholding everything. Report support
+verdict accuracy separately from canonical usability, plus request count, charged
+tokens and latency. A fixture run can pass fixture enforcement but must never pass
+the semantic-quality gate. Supplied result files are observations, not proof that
+the reported gateway/provider requests actually ran; retain and validate that
+runtime evidence separately.
+
+Offline corpus checks/scoring make no network call and load no credential. A
+later separately named synthetic provider run uses the existing gateway in an
+owned isolated Brain, the selected installed model, content/purpose permits,
+250,000 daily tokens, output at most 1,024 tokens and concurrency one. Persist
+request IDs before dispatch, do not automatically repeat unknown external
+completion and preserve normal Brains and customer data. Baseline preparation is
+distinct from a paid run, a production cutover or benchmark superiority.
+
 ## Public retrieval benchmark (2026-09-28)
 
 The user requested benchmarks informed by Cognee and Atlas. A separate opt-in

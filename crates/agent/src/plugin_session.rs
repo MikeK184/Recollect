@@ -106,6 +106,7 @@ pub struct SessionStart<'a> {
     pub root: &'a Path,
     pub id: Uuid,
     pub parent_task: Option<Uuid>,
+    pub continuation_of_task: Option<Uuid>,
     pub selection: Option<ScopeSelection>,
     pub agent_id: Option<&'a str>,
 }
@@ -123,6 +124,7 @@ pub async fn create(
         root,
         id,
         parent_task,
+        continuation_of_task,
         selection,
         agent_id,
     } = start;
@@ -136,6 +138,7 @@ pub async fn create(
                 Some(serde_json::to_value(CreateTask {
                     label: format!("{host} session"),
                     parent_task_id: parent_task,
+                    continuation_of_task_id: continuation_of_task,
                     workspace_id: None,
                     selection,
                 })?),
@@ -344,6 +347,11 @@ pub async fn recall(
     .await?;
     let mut input = RecallRequest {
         query: query.into(),
+        project_brief: true,
+        continuation: Some(recollect_protocol::RecallContinuationHint {
+            task_id: session.setup.task_id,
+            binding_id: None,
+        }),
         operation_id: Some(operation.id),
         selection: operation.scope.selection.clone(),
         limit: 6,
@@ -400,6 +408,33 @@ pub async fn recall(
             "Retrieval coverage: exact and lexical only; semantic retrieval was unavailable.\n",
         );
     }
+    if result.status == "scoped_context_only" {
+        context.push_str("Query coverage: no matching query result; supplied items are scoped project context or session continuation.\n");
+    }
+    if matches!(result.status.as_str(), "no_match" | "insufficient_support") {
+        context.push_str("Query coverage: no supported query result was delivered.\n");
+    }
+    if result.coverage.partial {
+        context.push_str("Retrieval coverage: bounded or partially unavailable; missing results are not evidence of absence.\n");
+    }
+    for (reason, message) in [
+        (
+            "continuation_ambiguous",
+            "Continuation coverage: multiple compatible sessions; no continuation was selected.\n",
+        ),
+        (
+            "continuation_partial_inputs",
+            "Continuation coverage: some eligible inputs were omitted by the bounded scan or input budget.\n",
+        ),
+        (
+            "continuation_one_page",
+            "Continuation coverage: one bounded page of the authenticated session.\n",
+        ),
+    ] {
+        if result.coverage.reasons.iter().any(|r| r == reason) {
+            context.push_str(message);
+        }
+    }
     context.push_str("<recollect-memory-data>\n");
     for item in result.context.items {
         let text = serde_json::to_string(&item)?
@@ -417,12 +452,66 @@ pub async fn recall(
 }
 
 pub fn output(event: &str, context: &str) -> Value {
-    json!({"hookSpecificOutput":{"hookEventName":event,"additionalContext":context}})
+    bound_output(json!({"hookSpecificOutput":{"hookEventName":event,"additionalContext":context}}))
+}
+
+/// Count the actual escaped hook envelope, including host-specific metadata.
+/// Drop complete evidence records; never clip JSON or its untrusted boundary.
+pub(crate) fn bound_output(mut output: Value) -> Value {
+    while serde_json::to_vec(&output)
+        .expect("typed hook output")
+        .len()
+        > 8192
+    {
+        let Some(context) = output["hookSpecificOutput"]["additionalContext"].as_str() else {
+            return json!({});
+        };
+        let mut lines: Vec<_> = context.lines().collect();
+        let start = lines.iter().position(|l| *l == "<recollect-memory-data>");
+        let end = lines.iter().position(|l| *l == "</recollect-memory-data>");
+        match (start, end) {
+            (Some(start), Some(end)) if end > start + 1 => {
+                lines.remove(end - 1);
+                output["hookSpecificOutput"]["additionalContext"] = json!(lines.join("\n"));
+            }
+            _ => {
+                output
+                    .as_object_mut()
+                    .expect("hook object")
+                    .remove("hookSpecificOutput");
+            }
+        }
+    }
+    output
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn hook_byte_limit_counts_escaping_and_host_metadata() {
+        let item = json!({"text":"\"\\".repeat(900)}).to_string();
+        let context = format!(
+            "Native bounded coverage.\n<recollect-memory-data>\n{item}\n{item}\n</recollect-memory-data>"
+        );
+        let mut hook = output("UserPromptSubmit", &context);
+        hook["recollectCaptureBinding"] =
+            json!({"selection":"synthetic-host-metadata".repeat(100)});
+        let bounded = bound_output(hook);
+        assert!(serde_json::to_vec(&bounded).unwrap().len() <= 8192);
+        let context = bounded["hookSpecificOutput"]["additionalContext"]
+            .as_str()
+            .unwrap();
+        assert!(context.ends_with("</recollect-memory-data>"));
+        for line in context
+            .lines()
+            .skip(2)
+            .take_while(|l| *l != "</recollect-memory-data>")
+        {
+            let parsed: Value = serde_json::from_str(line).unwrap();
+            assert_eq!(parsed["text"], "\"\\".repeat(900));
+        }
+    }
     #[test]
     fn native_sessions_and_destinations_never_share_state() {
         let root = crate::publication::project_root()

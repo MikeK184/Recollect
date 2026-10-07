@@ -23,7 +23,15 @@ pub fn maintained(r: &ClaimRevision) -> bool {
         && r.content.freshness != "superseded"
 }
 
-pub async fn targets(state: &AppState, tx: &mut Tx<'_>, run: &LearningRun) -> Result<Vec<Uuid>> {
+pub async fn targets(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    run: &LearningRun,
+    limit: usize,
+) -> Result<Vec<Uuid>> {
+    let source = gateway::source(state, tx, run.brain_id, run.source_version_id, limit).await?;
+    let mut remaining =
+        limit.saturating_sub(source.text.len() + source.provenance.to_string().len());
     let candidates: Vec<Json<ClaimRevision>> = sqlx::query_scalar(
         "WITH lineage AS MATERIALIZED (
            SELECT old.id FROM source_versions new JOIN source_versions old
@@ -66,7 +74,19 @@ pub async fn targets(state: &AppState, tx: &mut Tx<'_>, run: &LearningRun) -> Re
             && view.eligibility.rule_ids.is_empty()
             && view.evidence.iter().all(|e| e.availability == "retained")
         {
-            ids.push(view.revision.id);
+            // The gateway transmits the whole canonical view plus its input
+            // provenance. Omit an optional revision rather than truncate its
+            // evidence or let reconciliation overflow the source's allowance.
+            let bytes = serde_json::to_string(&view)
+                .map_err(|_| crate::error::Error::invalid("Invalid reconciliation input."))?
+                .len()
+                + serde_json::json!({"kind":"claim_revision","id":view.revision.id})
+                    .to_string()
+                    .len();
+            if bytes <= remaining {
+                remaining -= bytes;
+                ids.push(view.revision.id);
+            }
         }
         if ids.len() == 12 {
             break;
@@ -106,6 +126,118 @@ pub async fn target(tx: &mut Tx<'_>, run: &LearningRun, id: Uuid) -> Result<Clai
         return Err(crate::memory_rules::capacity());
     }
     Ok(r)
+}
+
+/// Exact families become known only after typed extraction. A sole match is a
+/// hypothesis for the independent support check, never a newest-wins decision.
+pub(crate) async fn discover_families(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    run: &mut LearningRun,
+    payload: &mut crate::memory_support::Payload,
+    limit: usize,
+) -> Result<()> {
+    let source = gateway::source(state, tx, run.brain_id, run.source_version_id, limit).await?;
+    let mut used = source.text.len()
+        + source.provenance.to_string().len()
+        + serde_json::to_vec(payload)
+            .map_err(|_| crate::error::Error::invalid("Invalid stage."))?
+            .len();
+    for id in &run.reconciliation_inputs {
+        let r = target(tx, run, *id).await?;
+        used += serde_json::to_vec(&memory::view(state, tx, r, Utc::now(), None).await?)
+            .map_err(|_| crate::error::Error::invalid("Invalid family input."))?
+            .len();
+    }
+    let mut claimed = payload
+        .claims
+        .iter()
+        .filter_map(|c| c.replaces_revision)
+        .chain(payload.retirements.iter().map(|r| r.revision_id))
+        .collect::<std::collections::HashSet<_>>();
+    for (index, c) in payload.claims.iter_mut().enumerate() {
+        if c.replaces_revision.is_some() {
+            continue;
+        }
+        let rows: Vec<Json<ClaimRevision>> = sqlx::query_scalar(
+            "SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
+             WHERE c.brain_id=$1 AND r.subject_key=$2 AND r.predicate_key=$3
+             AND recollect_memory_supported(r.brain_id,r.id)
+             AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
+             AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
+             ORDER BY r.id LIMIT 500")
+            .bind(run.brain_id).bind(crate::memory_policy::assertion_key(&c.content.subject,true))
+            .bind(crate::memory_policy::assertion_key(&c.content.predicate,true)).fetch_all(&mut **tx).await?;
+        let mut matches = Vec::new();
+        for Json(r) in rows {
+            if !maintained(&r)
+                || r.content.kind != c.content.kind
+                || r.content.selection != c.content.selection
+                || r.content.manifest_revision_id != c.content.manifest_revision_id
+                || r.content.validity != c.content.validity
+            {
+                continue;
+            }
+            let view = memory::view(state, tx, r.clone(), Utc::now(), None).await?;
+            if view.eligibility.investigation
+                && view.eligibility.rule_ids.is_empty()
+                && view.evidence.iter().all(|e| e.availability == "retained")
+            {
+                matches.push((
+                    r,
+                    serde_json::to_vec(&view)
+                        .map_err(|_| crate::error::Error::invalid("Invalid family input."))?
+                        .len(),
+                ));
+            }
+        }
+        let count = matches.len();
+        let mut disposition = if count == 0 { "none" } else { "ambiguous" };
+        if count == 1 {
+            let (r, bytes) = matches.pop().unwrap();
+            let already = run.reconciliation_inputs.contains(&r.id);
+            if claimed.contains(&r.id) {
+                disposition = "already_mutated";
+            } else if !already
+                && (run.reconciliation_inputs.len() >= 12 || used + bytes + 128 > limit)
+            {
+                disposition = "input_budget";
+            } else {
+                if !already {
+                    run.reconciliation_inputs.push(r.id);
+                    used += bytes + 128;
+                }
+                if crate::memory_rules::same_value(&c.content, &r.content)
+                    && c.content.procedure == r.content.procedure
+                {
+                    c.reuses_revision = Some(r.id);
+                    disposition = "reuse_hypothesis";
+                } else {
+                    c.replaces_revision = Some(r.id);
+                    claimed.insert(r.id);
+                    disposition = "replacement_hypothesis";
+                }
+            }
+        }
+        payload
+            .discovery
+            .push(crate::memory_support::FamilyDiscovery {
+                index,
+                disposition: disposition.into(),
+                eligible_matches: count,
+            });
+    }
+    sqlx::query("UPDATE learning_runs SET reconciliation_inputs=$2 WHERE id=$1 AND brain_id=$3")
+        .bind(run.id)
+        .bind(&run.reconciliation_inputs)
+        .bind(run.brain_id)
+        .execute(&mut **tx)
+        .await?;
+    for id in &run.reconciliation_inputs {
+        sqlx::query("INSERT INTO learning_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING")
+            .bind(run.id).bind(run.brain_id).bind(id).execute(&mut **tx).await?;
+    }
+    Ok(())
 }
 
 pub async fn recheck_target(
@@ -167,8 +299,8 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
     let item = &mut schema["properties"]["claims"]["items"];
     item["properties"]["kind"] = json!({"type":"string","enum":["claim","decision","procedure"]});
     item["properties"]["procedure"] = json!({"type":["object","null"],"properties":{
-        "conditions":{"type":"string"},"steps":{"type":"array","minItems":1,"maxItems":20,"items":{"type":"string"}},
-        "expected_outcome":{"type":"string"}},"required":["conditions","steps","expected_outcome"],"additionalProperties":false});
+        "conditions":{"type":"string","maxLength":2000},"steps":{"type":"array","minItems":1,"maxItems":20,"items":{"type":"string","minLength":1,"maxLength":1000}},
+        "expected_outcome":{"type":"string","minLength":1,"maxLength":2000}},"required":["conditions","steps","expected_outcome"],"additionalProperties":false});
     item["required"]
         .as_array_mut()
         .unwrap()
@@ -204,6 +336,9 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
             }),
     );
     inv.instructions.push_str(" Input 0 is the source to learn now; subsequent inputs are existing machine-maintained memories from the same source lineage or authenticated captured session and exact scope. Being offered is only permission to consider a candidate; it is not equivalence, corroboration or evidence that the newest statement wins. Reconcile meaning against the cited source and canonical provenance, using the exact revision.id as replaces_revision only when new evidence explicitly supports an updated assertion. Preserve subject and predicate when their meaning is unchanged. Use null for a new assertion. Do not revise unrelated facts, assume a newer date makes something true, or treat historical quotations, later mentions, assistant proposals or echoes as current changes. Retire an existing assertion only when exact lines explicitly establish it is obsolete or unsupported; return revision_id, a concise evidence-based reason, and line_from/line_to in retirements. Omission, lack of mention, model confidence and age alone are not grounds for retirement. Leave unresolved alternatives qualified by their wording instead of inventing a winner. Return an empty retirements array when nothing can be retired. One existing revision may be replaced or retired at most once.");
+    if run.automatic_attempt > 0 {
+        inv.instructions.push_str(" The preceding completed response was rejected. Return at most three concise fully valid candidates; keep all string bounds, use procedure=null for other kinds and exact positive source line numbers. Return an empty claims array rather than fabricate support.");
+    }
     inv.prompt_label = PROMPT.into();
     inv.instructions.push_str(" Select kind claim for ordinary assertions, decision only for a decision explicitly recorded in the source, and procedure for a stated reusable sequence of steps. A procedure must include conditions, ordered steps and expected_outcome; other kinds use procedure=null. Never supply test observations or execution authority. Keep an existing target's kind when revising it. Do not split an assertion and its change description into separate facts. Replacing a revision already preserves its preceding value as history; do not also retire it.");
     inv.schema_label = PROMPT.into();
@@ -238,12 +373,13 @@ async fn brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
          WHERE s.brain_id=$1 AND v.processing='ready' AND v.artifact_id IS NOT NULL
          AND v.retention_class=ANY($2) AND v.byte_length<=$3
          AND recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active'
+         AND NOT EXISTS(SELECT 1 FROM automatic_support_excerpts a WHERE a.brain_id=v.brain_id AND a.version_id=v.id)
          AND NOT EXISTS(SELECT 1 FROM model_input_fences f WHERE f.brain_id=v.brain_id AND f.source_version_id=v.id)
          AND NOT EXISTS(SELECT 1 FROM learning_runs l WHERE l.brain_id=v.brain_id AND l.source_version_id=v.id AND l.policy_id=$4 AND l.automatic)
          ORDER BY v.created_at,v.id LIMIT 10")
         .bind(brain).bind(&p.policy.content_classes).bind(p.policy.max_input_bytes).bind(p.change_id)
         .fetch_all(&mut *tx).await?;
-    let mut queued = 0;
+    let mut queued = crate::memory_support_audit::enqueue(&mut tx, brain, actor, &p, 4).await?;
     for id in ids {
         crate::jobs::capacity(&mut tx, brain).await?;
         let selection = crate::capture::source_selection(&mut tx, brain, id).await?;
@@ -265,6 +401,9 @@ async fn brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
         queued += 1;
     }
     queued +=
+        crate::session_digests::schedule(state, &mut tx, brain, actor, &p, (20 - queued).min(2))
+            .await?;
+    queued +=
         crate::handovers::refresh(state, &mut tx, brain, actor, &p, (20 - queued).min(5)).await?;
     queued += retries(&mut tx, brain, actor, &p, 20 - queued).await?;
     tx.commit().await?;
@@ -281,15 +420,21 @@ async fn retries(
     if limit == 0 {
         return Ok(0);
     }
-    let mut queued = 0;
+    let mut queued = crate::handover_support::recover(tx, brain, p.change_id, limit).await?;
+    if queued == limit {
+        return Ok(queued);
+    }
     let runs:Vec<Json<LearningRun>>=sqlx::query_scalar(
         "SELECT to_jsonb(r) FROM learning_runs r JOIN sources s ON s.current_version=r.source_version_id
          WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.automatic AND r.state='failed'
-         AND r.error_code IN ('provider_rate_limited','provider_unavailable') AND r.automatic_attempt<2
-         AND r.finished_at+make_interval(mins=>CASE r.automatic_attempt WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp()
+         AND r.error_code IN ('provider_rate_limited','provider_unavailable','provider_incomplete','provider_shape','model_budget_exhausted') AND r.automatic_attempt<2
+         AND CASE WHEN r.error_code='model_budget_exhausted'
+           THEN ((date_trunc('day',r.finished_at AT TIME ZONE 'UTC')+interval '1 day') AT TIME ZONE 'UTC')<=clock_timestamp()
+           ELSE r.finished_at+make_interval(mins=>CASE r.automatic_attempt WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp() END
          AND NOT EXISTS(SELECT 1 FROM learning_runs child WHERE child.retry_of=r.id)
+         AND NOT EXISTS(SELECT 1 FROM learning_support_stages stage WHERE stage.run_id=r.id AND stage.brain_id=r.brain_id AND (stage.verdicts IS NOT NULL OR stage.privacy_state<>'active' OR recollect_learning_support_deadline(stage.brain_id,stage.run_id)<=clock_timestamp()))
          ORDER BY r.finished_at,r.id LIMIT $3")
-        .bind(brain).bind(p.change_id).bind(limit as i64).fetch_all(&mut **tx).await?;
+        .bind(brain).bind(p.change_id).bind((limit-queued) as i64).fetch_all(&mut **tx).await?;
     for Json(old) in runs {
         let run = learning::enqueue(
             tx,
@@ -298,7 +443,7 @@ async fn retries(
             None,
             &LearningInput {
                 source_version_id: old.source_version_id,
-                selection: old.selection,
+                selection: old.selection.clone(),
                 manifest_revision_id: old.manifest_revision_id,
                 operation_id: None,
             },
@@ -309,7 +454,7 @@ async fn retries(
             },
         )
         .await?;
-        let _ = run;
+        crate::memory_support::inherit_assessment_retry(tx, &old, &run).await?;
         queued += 1;
     }
     if queued == limit {
@@ -317,9 +462,11 @@ async fn retries(
     }
     let runs:Vec<Json<HandoverRun>>=sqlx::query_scalar(
         "SELECT to_jsonb(r) FROM handover_runs r WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.state='failed'
-         AND r.error_code IN ('provider_rate_limited','provider_unavailable') AND r.automatic_attempt<2
+         AND r.error_code IN ('provider_rate_limited','provider_unavailable','provider_incomplete','provider_shape','model_response_invalid') AND r.automatic_attempt<2
          AND r.finished_at+make_interval(mins=>CASE r.automatic_attempt WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp()
          AND NOT EXISTS(SELECT 1 FROM handover_runs child WHERE child.retry_of=r.id)
+         AND NOT EXISTS(SELECT 1 FROM handover_support_stages stage WHERE stage.run_id=r.id AND stage.brain_id=r.brain_id AND (stage.verdict IS NOT NULL OR stage.privacy_state<>'active' OR recollect_handover_support_deadline(stage.brain_id,stage.run_id)<=clock_timestamp()))
+         AND EXISTS(SELECT 1 FROM model_requests m LEFT JOIN handover_support_stages stage ON stage.run_id=r.id AND stage.brain_id=r.brain_id WHERE m.brain_id=r.brain_id AND m.operation_id=coalesce(stage.assessment_operation_id,r.id) AND m.state IN ('succeeded','failed') AND NOT m.suppressed)
          ORDER BY r.finished_at,r.id LIMIT $3")
         .bind(brain).bind(p.change_id).bind((limit-queued) as i64).fetch_all(&mut **tx).await?;
     for Json(old) in runs {
@@ -329,10 +476,10 @@ async fn retries(
             crate::jobs::enqueue_work(tx, actor, brain, audit, id, "handover.generate", "model")
                 .await?;
         sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id,retry_of,automatic_attempt) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'queued',true,$9,$10,$11,$12)")
-            .bind(id).bind(brain).bind(old.title).bind(&old.contributions).bind(Json(old.selection))
+            .bind(id).bind(brain).bind(&old.title).bind(&old.contributions).bind(Json(&old.selection))
             .bind(p.change_id).bind(actor).bind(job).bind(old.claim_id).bind(old.base_revision_id)
             .bind(old.id).bind(old.automatic_attempt+1).execute(&mut **tx).await?;
-        for input in old.contributions {
+        for input in &old.contributions {
             sqlx::query(
                 "INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)",
             )
@@ -342,6 +489,7 @@ async fn retries(
             .execute(&mut **tx)
             .await?;
         }
+        crate::handover_support::inherit_retry(tx, &old, id).await?;
         queued += 1;
     }
     Ok(queued)

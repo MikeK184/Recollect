@@ -16,6 +16,7 @@ pub mod devices;
 pub mod error;
 pub mod evidence;
 pub mod graph;
+mod handover_support;
 pub mod handovers;
 pub mod health;
 pub mod jobs;
@@ -28,6 +29,8 @@ pub mod memory_evidence;
 pub mod memory_policy;
 pub mod memory_review;
 pub mod memory_rules;
+mod memory_support;
+mod memory_support_audit;
 pub mod model_gateway;
 pub mod model_policy;
 pub mod oidc;
@@ -41,8 +44,12 @@ pub mod recovery;
 pub mod retention;
 pub mod retrieval;
 pub mod semantic;
+mod session_digests;
 pub mod shutdown;
+mod strict_json;
+mod support_excerpts;
 pub mod team;
+mod web;
 pub mod worker;
 pub mod workspace;
 
@@ -59,10 +66,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
-use tower_http::{
-    services::{ServeDir, ServeFile},
-    trace::TraceLayer,
-};
+use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 
 type LoginAttempts = Arc<Mutex<HashMap<String, (Instant, u32)>>>;
@@ -745,10 +749,12 @@ pub fn app(state: AppState) -> Router {
             get(|| async { Json(serde_json::json!({"live":true})) }),
         )
         .route("/health/ready", get(health::ready))
-        .fallback_service(
-            ServeDir::new(&static_dir).fallback(ServeFile::new(format!("{static_dir}/index.html"))),
-        )
+        .fallback_service(web::files(&static_dir))
         .layer(DefaultBodyLimit::max(64 * 1024))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            devices::record_usage,
+        ))
         .layer(middleware::from_fn_with_state(state.clone(), origin_guard))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request| {

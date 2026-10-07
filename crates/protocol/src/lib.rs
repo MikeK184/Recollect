@@ -244,6 +244,8 @@ pub struct Device {
     pub created_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_kind: Option<String>,
+    #[serde(default)]
+    pub observed_hosts: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub integration: Option<String>,
 }
@@ -257,6 +259,8 @@ pub struct PairingRequest {
 }
 #[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct BrainAgent {
+    #[serde(default)]
+    pub observed_hosts: Vec<String>,
     pub device_id: Uuid,
     pub can_revoke: bool,
     pub name: String,
@@ -288,6 +292,8 @@ pub struct AgentBrainUsage {
 }
 #[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct AccountAgent {
+    #[serde(default)]
+    pub observed_hosts: Vec<String>,
     pub device_id: Uuid,
     pub name: String,
     pub host_kind: Option<String>,
@@ -367,6 +373,8 @@ pub struct EvidencePolicy {
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SourceInput {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation_id: Option<Uuid>,
     pub title: String,
     pub media_type: String,
     pub source_uri: Option<String>,

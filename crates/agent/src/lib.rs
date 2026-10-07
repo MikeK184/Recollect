@@ -110,6 +110,7 @@ impl CredentialSlot {
 pub struct Client {
     pub endpoint: String,
     http: reqwest::Client,
+    host: Option<String>,
 }
 impl Client {
     pub fn new(endpoint: &str) -> Result<Self> {
@@ -144,7 +145,17 @@ impl Client {
             }
         }
         let http = http.build()?;
-        Ok(Self { endpoint, http })
+        Ok(Self {
+            endpoint,
+            http,
+            host: None,
+        })
+    }
+    pub fn with_host(mut self, host: &str) -> Self {
+        if matches!(host, "codex" | "claude_code" | "opencode") {
+            self.host = Some(host.to_owned());
+        }
+        self
     }
     pub async fn send(
         &self,
@@ -156,6 +167,9 @@ impl Client {
         let mut request = self
             .http
             .request(method, format!("{}{path}", self.endpoint));
+        if let Some(host) = &self.host {
+            request = request.header("x-recollect-host", host);
+        }
         if let Some(token) = token {
             request = request.bearer_auth(token);
         }

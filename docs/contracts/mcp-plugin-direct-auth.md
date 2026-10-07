@@ -221,3 +221,12 @@ device-identity dedupe (one record per issuance stands until the successor
 slice); no review-UI removal or Ask/Search simplification (successor slices);
 no OpenCode capture hooks; no change to what a model may do with an approved
 tool; no customer deployment of the public server itself.
+
+## Observed usage and host metadata — 2026-10-07
+
+Successful authorized device requests to a Brain count as observed agent usage,
+including memory, workspace and source operations. Observations retain only
+Brain, device, reported supported host and time; no request content or secrets.
+Rejected requests do not add usage. Native capture host reports override stale
+credential setup hints; multiple observed hosts remain visible for a reused key.
+This metadata does not grant authority or promise a future connection.

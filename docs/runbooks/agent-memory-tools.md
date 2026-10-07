@@ -37,6 +37,24 @@ server-confirmed capture prove functionality; installed files alone do not.
 The current [evidence mapping](../mappings/plugin-session-memory-2026-10-01.md)
 records exact native-host versions, verification and deployment boundaries.
 
+## What happens automatically
+
+Under the Brain's standing capture/content/model policy, permitted inputs become
+canonical evidence, extracted candidates receive a separate whole-assertion support
+check, and supported knowledge becomes usable. Settled sessions produce current
+scoped digests. Subsequent plugin prompts receive relevant recall plus a small
+supported project brief and authenticated continuation when unambiguous, within
+the same 8 KiB/eight-second hook budget. No extra model call assembles the brief.
+
+Late evidence, supported corrections, expiry and erasure invalidate affected
+context before later delivery. Minimal exact evidence survives raw expiry only
+when both original-content and excerpt permissions allow it. Ambiguous or
+unsupported outcomes stay inspectable; they do not create a required review task
+or ask the coding agent to explore Recollect's source. Unknown external completion
+is not blindly charged again. [The operating flow](provider-learning.md#automatic-support-session-digests-and-later-context)
+and [dated proof](../mappings/memory-source-support-staging-2026-10-07.md) distinguish
+implemented behavior from the currently installed runtime.
+
 ## Optional independent execution
 
 Memory does not start a local execution runner. Include `--with-runner` in the
@@ -143,3 +161,13 @@ history/request ID before retrying; neither bridge nor server replays writes
 automatically. Current retention, rejection and erasure affect new reads, but
 cannot retract context already delivered to an external host. Never revoke a
 Vault token or lease as troubleshooting or fixture cleanup.
+
+## Retain documents through supported tools
+
+The native catalogue includes `source.import`, `source.list` and `source.inspect`.
+Use `workspace.begin` with `kind: write` on the plugin's task, then import
+authorized text with `operation_id`, a stable `request_id`, title, media type and
+`retain_content: true`. Keep the returned source and version UUIDs. Use a context
+or retrieval operation for title listing and exact version inspection; incompatible
+environments are excluded. Later versions retain the import scope. Normal memory
+use does not require browsing Recollect's Rust implementation or private auth files.

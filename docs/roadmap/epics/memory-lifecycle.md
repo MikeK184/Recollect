@@ -23,6 +23,8 @@ subsequent ingestion, retrieval and rebuild path.
 - [Autonomous memory decision](../../adr/0006-autonomous-memory.md)
 - [Autonomous maintenance](../../contracts/memory-autonomous-maintenance.md)
 - [Capture reconciliation](../../contracts/memory-capture-reconciliation.md)
+- [Source support verification](../../contracts/memory-source-support-verification.md)
+- [Automatic-memory evaluation baseline](../../contracts/operations-integrated-evaluations.md#automatic-memory-support-baseline-2026-10-07)
 - [Vision: correction and learning](../../foundation/vision.md#correction-and-learning-loop)
 - [Vision: capture, retention and model policy](../../foundation/vision.md#capture-retention-and-model-policy)
 - [Vision: seven capabilities](../../foundation/vision.md#seven-required-capabilities)
@@ -83,8 +85,19 @@ testing those rules through their own paths.
 
 ## Slice Map
 
+The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+authorizes source-support verification, automatic session-derived handovers with
+permitted minimal excerpts, and bounded cross-session correction. These slices
+are locally delivered under accepted contracts and archived execution packs.
+[Native proof, independent review and the versioned actual-model comparison](../../mappings/memory-source-support-staging-2026-10-07.md)
+complete local acceptance. No running-installation deployment is claimed.
+
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `memory-automatic-session-digests` | shipped | contract-backed | pack | Settled-session supported digests and exact permitted durable excerpts with privacy/recovery |
+| `memory-cross-session-reconciliation` | shipped | contract-backed | pack | Post-extraction exact-family replacement/reuse hypotheses with independent support and protected authority |
+| `memory-source-support-verification` | shipped | contract-backed | pack | Whole-assertion assessment, durable staged learning and shared usability guards with automatic audit and privacy/recovery proofs |
+| `memory-support-evaluation-baseline` | shipped | contract-backed | pack | Frozen synthetic corpus, native actual-model measurements, retained failures and independently reviewed receipt/scoring evidence |
 | `brain-model-catalogue-and-selection` | shipped | contract-backed | pack | Account model catalogue, dated prices, per-Brain supported model selection and isolated embedding rebuilds |
 | `memory-claims-and-time` | shipped | adr-backed, contract-backed | pack | Delivered evidence-linked proposals/decisions, independent states, temporal history, selective freshness and canonical eligibility with API/browser/SWEG proof |
 | `memory-review-and-corrections` | shipped | contract-backed | pack | Delivered actionable review/conflicts, rejected-value rules, correction, withdrawal/revalidation and replay with API/browser proof |

@@ -11,6 +11,7 @@ use axum::{
 use recollect_protocol::{LoginRequest, SessionInfo, User};
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct Auth {
     pub user: User,
     pub session: Uuid,
@@ -39,6 +40,9 @@ impl Auth {
 impl FromRequestParts<AppState> for Auth {
     type Rejection = Error;
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self> {
+        if let Some(auth) = parts.extensions.get::<Auth>() {
+            return Ok(auth.clone());
+        }
         if let Some(header) = parts.headers.get(header::AUTHORIZATION) {
             let token = header
                 .to_str()

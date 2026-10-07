@@ -331,8 +331,8 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
     let pending: Vec<Uuid> = if batch_limit == 0 {
         vec![]
     } else {
-        sqlx::query_scalar("SELECT e.id FROM semantic_entries e WHERE brain_id=$1 AND profile_id=$2 AND (state='pending' OR (state='blocked' AND request_id IS NULL AND error_code<>'batch_input_removed' AND updated_at<clock_timestamp()-interval '1 minute' AND (batch_id IS NULL OR EXISTS(SELECT 1 FROM semantic_batches b WHERE b.id=e.batch_id AND b.state='blocked' AND b.request_id IS NULL)))) ORDER BY updated_at,id LIMIT 100")
-            .bind(brain).bind(profile.id).fetch_all(&mut *tx).await?
+        sqlx::query_scalar("SELECT e.id FROM semantic_entries e WHERE brain_id=$1 AND profile_id=$2 AND (state='pending' OR (state='blocked' AND request_id IS NULL AND error_code<>'batch_input_removed' AND updated_at<clock_timestamp()-interval '1 minute' AND (batch_id IS NULL OR EXISTS(SELECT 1 FROM semantic_batches b WHERE b.id=e.batch_id AND b.state='blocked' AND b.request_id IS NULL AND (e.error_code<>'model_budget_exhausted' OR b.policy_id<>$3 OR e.updated_at<(date_trunc('day',clock_timestamp() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')))))) ORDER BY updated_at,id LIMIT 100")
+            .bind(brain).bind(profile.id).bind(p.change_id).fetch_all(&mut *tx).await?
     };
     let mut batch = Vec::new();
     let mut bytes = 0;

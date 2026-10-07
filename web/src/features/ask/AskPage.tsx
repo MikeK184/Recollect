@@ -63,6 +63,8 @@ const tabs = [
 ] as const;
 const label = (s: string) => s.replaceAll("_", " ");
 const initialRequest = (): Request => ({
+  project_brief: false,
+  continuation: null,
   query: "",
   exact: null,
   operation_id: null,

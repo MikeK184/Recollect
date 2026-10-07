@@ -295,3 +295,152 @@ async fn mcp_agent_http_sdk_scoped_tools_and_cold_discovery() {
     let _ = server.await;
     h.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn plugin_source_tools_preserve_scope_idempotency_and_observed_usage() {
+    let (h, owner, brain, _, _) = setup().await;
+    let (device, token) = h
+        .pair_with(&owner, "Shared plugin", Some("opencode"), Some("plugin"))
+        .await;
+    let base = format!("/api/brains/{brain}");
+    let mut environments = Vec::new();
+    for name in ["Scope A", "Scope B"] {
+        let env = ok(
+            &h,
+            &owner,
+            "POST",
+            &format!("{base}/evidence/groups"),
+            json!({"kind":"environment","name":name}),
+        )
+        .await;
+        environments.push(env["id"].clone());
+    }
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let router = h.router.clone();
+    let endpoint = format!(
+        "http://{}/api/brains/{brain}/mcp/agent",
+        listener.local_addr().unwrap()
+    );
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut config = StreamableHttpClientTransportConfig::with_uri(endpoint);
+    config.custom_headers.insert(
+        axum::http::header::AUTHORIZATION,
+        format!("Bearer {token}").parse().unwrap(),
+    );
+    config.custom_headers.insert(
+        axum::http::HeaderName::from_static("x-recollect-host"),
+        "codex".parse().unwrap(),
+    );
+    let service = ().serve(StreamableHttpClientTransport::from_config(config)).await.unwrap();
+    let peer = service.peer();
+    let mut tasks = Vec::new();
+    for env in &environments {
+        tasks.push(tool(peer,"workspace.start_task",json!({"input":{"label":"Source workflow","selection":{"repository_ids":[],"area_ids":[],"environment_id":env}},"context_query":"Scoped evidence"})).await);
+    }
+    let write=tool(peer,"workspace.begin",json!({"id":tasks[0]["task"]["id"],"input":{"kind":"write","expected_scope":tasks[0]["task"]["scope"]["id"]}})).await;
+    let args = json!({"operation_id":write["id"],"request_id":Uuid::new_v4(),"input":{"title":"Scoped document","media_type":"text/plain","content":"Amber.port = 8080\n","retain_content":true}});
+    let source = tool(peer, "source.import", args.clone()).await;
+    assert_eq!(tool(peer, "source.import", args).await, source);
+    let inspect = json!({"id":source["id"],"version_id":source["version"]["id"],"operation_id":tasks[0]["context"]["operation_id"]});
+    assert_eq!(
+        tool(peer, "source.inspect", inspect.clone()).await["content"],
+        "Amber.port = 8080\n"
+    );
+    let list = tool(
+        peer,
+        "source.list",
+        json!({"operation_id":tasks[0]["context"]["operation_id"],"query":{"q":"Scoped"}}),
+    )
+    .await;
+    assert_eq!(list["total"], 1);
+    assert_eq!(
+        tool(
+            peer,
+            "source.list",
+            json!({"operation_id":tasks[1]["context"]["operation_id"]})
+        )
+        .await["total"],
+        0
+    );
+    let mut incompatible = inspect;
+    incompatible["operation_id"] = tasks[1]["context"]["operation_id"].clone();
+    let denied = peer
+        .call_tool(
+            CallToolRequestParams::new("source.inspect")
+                .with_arguments(incompatible.as_object().unwrap().clone()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(denied.is_error, Some(true));
+    let scope: Value =
+        sqlx::query_scalar("SELECT selection FROM source_import_scopes WHERE version_id=$1")
+            .bind(
+                source["version"]["id"]
+                    .as_str()
+                    .unwrap()
+                    .parse::<Uuid>()
+                    .unwrap(),
+            )
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    assert_eq!(scope["environment_id"], environments[0]);
+    assert_eq!(source["version"]["device_id"], json!(device));
+    let appended=ok(&h,&owner,"POST",&format!("{base}/sources/{}/versions",source["id"].as_str().unwrap()),json!({"title":"Scoped document","media_type":"text/plain","content":"Amber.port = 8181\n","retain_content":true,"base_version":source["version"]["id"]})).await;
+    let inherited: Value =
+        sqlx::query_scalar("SELECT selection FROM source_import_scopes WHERE version_id=$1")
+            .bind(
+                appended["version"]["id"]
+                    .as_str()
+                    .unwrap()
+                    .parse::<Uuid>()
+                    .unwrap(),
+            )
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    assert_eq!(inherited, scope);
+    let (_, roster, _) = h
+        .call("GET", &format!("{base}/agents"), Some(&owner), Value::Null)
+        .await;
+    assert_eq!(roster["groups"][0]["agents"][0]["host_kind"], "codex");
+    assert_eq!(
+        roster["groups"][0]["agents"][0]["observed_hosts"],
+        json!(["codex"])
+    );
+    let (_, global, _) = h
+        .call("GET", "/api/agents", Some(&owner), Value::Null)
+        .await;
+    assert_eq!(
+        global["groups"][0]["agents"][0]["brains"][0]["brain_id"],
+        json!(brain)
+    );
+    let (_, devices, _) = h
+        .call("GET", "/api/devices", Some(&owner), Value::Null)
+        .await;
+    assert_eq!(devices[0]["observed_hosts"], json!(["codex"]));
+    let (_, foreign) = h.fixture_member().await;
+    let (foreign_device, foreign_token) = h.pair_device(&foreign, "No Brain access").await;
+    assert_eq!(
+        h.bearer(
+            "GET",
+            &format!("{base}/workspace"),
+            &foreign_token,
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    let count: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM agent_brain_usage WHERE device_id=$1")
+            .bind(foreign_device)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    assert_eq!(count, 0);
+    service.cancel().await.unwrap();
+    server.abort();
+    h.finish().await;
+}

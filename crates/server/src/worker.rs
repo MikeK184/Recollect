@@ -102,6 +102,9 @@ pub async fn fail(pool: &PgPool, job: &ClaimedJob, failure: Failure) -> Result<b
 }
 
 pub async fn execute(state: &AppState, job: &ClaimedJob) -> Result<(), Failure> {
+    if job.kind == "claim.support" {
+        return crate::memory_support_audit::execute(state, job).await;
+    }
     if job.kind == "source.learn" {
         return crate::learning::execute(state, job).await;
     }
@@ -197,6 +200,13 @@ pub async fn run_once(state: &AppState, lane: &str) -> Result<bool, sqlx::Error>
     if let Err(failure) = execute(state, &job).await {
         tracing::warn!(job_id=%job.id,kind=?failure,"Job did not publish");
         fail(&state.pool, &job, failure).await?;
+    }
+    if job.kind == "source.learn"
+        && crate::support_excerpts::reconcile_artifacts(state, Some(job.target_id))
+            .await
+            .is_err()
+    {
+        tracing::warn!(job_id=%job.id,"Pending excerpt artifacts await maintenance");
     }
     Ok(true)
 }

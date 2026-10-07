@@ -478,6 +478,7 @@ pub async fn prepare(
                     Some(serde_json::to_value(CreateTask {
                         label: format!("{} session capture", options.host),
                         parent_task_id: None,
+                        continuation_of_task_id: None,
                         workspace_id: None,
                         selection: None,
                     })?),

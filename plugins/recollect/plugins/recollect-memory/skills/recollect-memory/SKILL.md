@@ -39,6 +39,29 @@ insufficient rather than changing the requested scope. Use `memory.inspect` and
 `memory.review_history` for claim history; `memory.graph_explore` and
 `memory.graph_path` for bounded structural paths.
 
+## Save and inspect document evidence
+
+Use the tools advertised by this connection. Never guess Recollect implementation
+paths, private credential locations or undocumented HTTP routes. Do not inspect
+Recollect's source code merely to use memory. If a required tool is absent, report
+the missing capability and ask for the plugin/server update.
+
+1. Read only user-authorized files using the coding host's own file tools.
+2. Begin a `write` operation on the supplied task with `workspace.begin`; use the
+   exact task and scope IDs returned by the plugin, not invented IDs.
+3. Call `source.import` with that operation ID, a stable UUID `request_id`, and
+   input title, supported media type, authorized UTF-8 content and
+   `retain_content: true`. The server derives applicability from the operation.
+4. Keep the returned source/version IDs. Automatic processing and learning follow
+   the Brain policy; importing is evidence retention, not a verified assertion.
+5. Use `source.list` under a read operation to find exact IDs and `source.inspect`
+   with those IDs to read retained evidence and citation spans. Use existing
+   supports with `memory.contribute` only when the source actually supports it.
+
+A completed import with failed automatic learning remains retained evidence.
+Report the safe failure category; do not silently retry mutations with new IDs,
+change policy, fabricate evidence IDs or widen the scope to find more context.
+
 ## Contribute deliberately
 
 Use `memory.contribute` for evidence-backed claims or procedures, and

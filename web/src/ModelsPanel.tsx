@@ -13,6 +13,7 @@ import {
   FileText,
   ChevronRight,
   Pencil,
+  Info,
 } from "lucide-react";
 import { HostIcon } from "./components/HostIcon";
 import { SemanticPanel } from "./SemanticPanel";
@@ -21,6 +22,7 @@ import "./features/feature-views.css";
 import "./features/settings/ai-settings.css";
 import {
   Alert,
+  ActionIcon,
   Badge,
   Button,
   Card,
@@ -37,6 +39,7 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
@@ -63,6 +66,11 @@ const label = (s: string) =>
       repository: "Repository text",
       claim: "Memory",
       query: "Questions",
+      provider_incomplete: "The model reached its output limit",
+      provider_shape: "The model returned an invalid structured result",
+      model_input_too_large: "The source exceeds the input byte limit",
+      model_input_sensitive: "The source contains sensitive input",
+      model_budget_exhausted: "The request exceeds the remaining daily token allowance",
     }) as Record<string, string>
   )[s] ?? s.replaceAll("_", " ");
 const time = (s: string) => new Date(s).toLocaleString();
@@ -720,7 +728,11 @@ function LearningRows({
                   {label(run.error_code)}.{" "}
                   {run.state === "removed"
                     ? "The input cannot be restored by retrying."
-                    : "Inspect the policy and source before starting another attempt."}
+                    : run.error_code === "model_budget_exhausted"
+                      ? "The allowance resets at midnight UTC. Adjust it in AI permissions → Processing limits."
+                      : run.error_code === "model_input_too_large"
+                        ? "Use a smaller retained excerpt or adjust Maximum input bytes in AI permissions."
+                        : "Inspect the policy and source before starting another attempt."}
                 </Text>
               )}
               {run.state === "succeeded" && (
@@ -1255,6 +1267,80 @@ export function ModelsPanel({
                           }
                         />
                       </Group>
+                    </section>
+                    <section
+                      className="ai-policy-detail ai-processing-limits"
+                      aria-label="Processing limits"
+                    >
+                      <Group gap="xs">
+                        <h3 className="ai-processing-title">
+                          Processing limits
+                        </h3>
+                        <Tooltip
+                          label="Per model call and per Brain. The daily allowance resets at midnight UTC."
+                          multiline
+                          w={260}
+                          events={{ hover: true, focus: true, touch: true }}
+                        >
+                          <ActionIcon
+                            type="button"
+                            variant="subtle"
+                            size="sm"
+                            aria-label="About processing limits"
+                          >
+                            <Info size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </Group>
+                      <div className="ai-limits-grid">
+                        <NumberInput
+                          label="Maximum output tokens"
+                          value={policy.max_output_tokens}
+                          min={128}
+                          max={4096}
+                          step={256}
+                          allowDecimal={false}
+                          disabled={!editable}
+                          onChange={(value) =>
+                            updateDraft({ max_output_tokens: Number(value) })
+                          }
+                        />
+                        <NumberInput
+                          label="Maximum input bytes"
+                          value={policy.max_input_bytes}
+                          min={256}
+                          max={32768}
+                          step={1024}
+                          allowDecimal={false}
+                          disabled={!editable}
+                          onChange={(value) =>
+                            updateDraft({ max_input_bytes: Number(value) })
+                          }
+                        />
+                        <NumberInput
+                          label="Daily token allowance"
+                          value={policy.daily_token_limit}
+                          min={1000}
+                          max={10000000}
+                          step={1000}
+                          allowDecimal={false}
+                          disabled={!editable}
+                          onChange={(value) =>
+                            updateDraft({ daily_token_limit: Number(value) })
+                          }
+                        />
+                        <NumberInput
+                          label="Concurrent model calls"
+                          value={policy.max_concurrent}
+                          min={1}
+                          max={4}
+                          allowDecimal={false}
+                          disabled={!editable}
+                          onChange={(value) =>
+                            updateDraft({ max_concurrent: Number(value) })
+                          }
+                        />
+                      </div>
                     </section>
                   </section>
                 </div>

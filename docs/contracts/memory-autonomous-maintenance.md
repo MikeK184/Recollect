@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The October 7 [source-support amendment](memory-source-support-verification.md)
+requires whole-assertion assessment, durable typed staging and consumer gating.
+Its recovery and automatic budget-resume rules supersede earlier assumptions below.
+
 The [managed experience amendment](memory-managed-experience.md) governs the
 2026-09-28 managed setup, progressive disclosure and owner connector approval
 changes; earlier explicit APIs and stored policies remain compatible.
@@ -113,3 +117,25 @@ Adaptive retrieval-strength scoring is separate from autonomous lifecycle operat
 Executable skills, automatic procedure execution, changing customer files and
 universal semantic equivalence are outside this contract. Session/MCP capture uses
 this loop when its named producer slices are delivered.
+
+## Invalid-result recovery and visible budgets — 2026-10-07
+
+The per-Brain output budget is editable in the main AI permissions policy form.
+New policies default to 4,096 output tokens; the supported range remains 128–4,096.
+An existing policy changes only through its authorized canonical command.
+
+Automatic learning may retry known completed responses rejected for incomplete
+or malformed structured output or invalid generated candidates, in addition to
+rate-limit/unavailability failures. Each replacement is separately accounted,
+linked to its failed predecessor, limited to two replacements and uses existing
+5/30-minute backoff, current policy/source/authorization fences and safe corrective
+instructions. Invalid generated candidates are classified as provider-shape
+failures rather than caller input errors. Unknown transport completion is never
+replayed under this rule. No invalid candidate is published.
+
+Reconciliation selects only whole eligible canonical revisions that fit the
+remaining input byte budget after the complete source and its provenance. It
+does not truncate evidence or exceed the configured limit. An overlarge primary
+source is reported as `model_input_too_large`. A daily budget rejection makes no
+provider call; automatic learning can resume after the next UTC budget reset,
+within the same two-replacement limit and current policy/source fences.

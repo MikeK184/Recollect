@@ -21,17 +21,17 @@ use sqlx::types::Json as SqlJson;
 use uuid::Uuid;
 
 const PROMPT: &str = "handover-1";
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Draft {
+pub(crate) struct Draft {
     summary: String,
     completed: Vec<String>,
     next_steps: Vec<String>,
     risks: Vec<String>,
 }
-async fn row(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<HandoverRun> {
+pub(crate) async fn row(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<HandoverRun> {
     let row: SqlJson<HandoverRun> =
-        sqlx::query_scalar("SELECT to_jsonb(r) FROM handover_runs r WHERE brain_id=$1 AND id=$2")
+        sqlx::query_scalar("SELECT to_jsonb(r)||jsonb_build_object('support',recollect_handover_support_inspection(brain_id,id)) FROM handover_runs r WHERE brain_id=$1 AND id=$2")
             .bind(brain)
             .bind(id)
             .fetch_optional(&mut **tx)
@@ -39,14 +39,14 @@ async fn row(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<HandoverRun> {
             .ok_or_else(Error::missing)?;
     Ok(row.0)
 }
-fn input(run: &HandoverRun) -> HandoverInput {
+pub(crate) fn input(run: &HandoverRun) -> HandoverInput {
     HandoverInput {
         title: run.title.clone(),
         contributions: run.contributions.clone(),
         operation_id: run.operation_id,
     }
 }
-async fn scope(
+pub(crate) async fn scope(
     state: &AppState,
     tx: &mut Tx<'_>,
     brain: Uuid,
@@ -54,25 +54,25 @@ async fn scope(
     device: Option<Uuid>,
     input: &HandoverInput,
 ) -> Result<(ScopeSelection, Vec<ClaimSupport>)> {
+    let fenced: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM model_claim_fences WHERE brain_id=$1 AND revision_id=ANY($2))",
+    )
+    .bind(brain)
+    .bind(&input.contributions)
+    .fetch_one(&mut **tx)
+    .await?;
+    if fenced {
+        return Err(model_policy::failure(
+            "model_input_fenced",
+            "A handover contribution is fenced from model transmission.",
+        ));
+    }
     let rows = procedures::inputs(state, tx, brain, &input.contributions).await?;
     for r in &rows {
         let view = memory::base_view(state, tx, r.clone(), Utc::now(), None).await?;
         if view.evidence.iter().any(|e| e.availability != "retained") {
             return Err(Error::invalid(
                 "Restore or replace unavailable supporting evidence before generating a handover.",
-            ));
-        }
-        let fenced: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM model_claim_fences WHERE brain_id=$1 AND revision_id=$2)",
-        )
-        .bind(brain)
-        .bind(r.id)
-        .fetch_one(&mut **tx)
-        .await?;
-        if fenced {
-            return Err(model_policy::failure(
-                "model_input_fenced",
-                "A handover contribution is fenced from model transmission.",
             ));
         }
     }
@@ -110,6 +110,7 @@ async fn save(
         "synthesis",
         &["claim".into(), "query".into()],
     )?;
+    model_policy::permits(state, &policy.policy, "extraction", &["claim".into()])?;
     let key = commands::key(headers)?;
     if let Some(saved) = commands::reserve::<HandoverRun>(
         &mut tx,
@@ -219,7 +220,7 @@ pub async fn list(
         .bind(&selection)
         .fetch_one(&mut *tx)
         .await?;
-    let rows: Vec<SqlJson<HandoverRun>> = sqlx::query_scalar("SELECT to_jsonb(r)||jsonb_build_object('title',CASE WHEN recollect_retention_deadline(brain_id,'audit',created_at)<=clock_timestamp() THEN '' ELSE title END) FROM handover_runs r WHERE brain_id=$1 AND ($3::jsonb IS NULL OR recollect_recall_scope(selection,$3)) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
+    let rows: Vec<SqlJson<HandoverRun>> = sqlx::query_scalar("SELECT to_jsonb(r)||jsonb_build_object('title',CASE WHEN recollect_retention_deadline(brain_id,'audit',created_at)<=clock_timestamp() THEN '' ELSE title END,'support',recollect_handover_support_inspection(brain_id,id)) FROM handover_runs r WHERE brain_id=$1 AND ($3::jsonb IS NULL OR recollect_recall_scope(selection,$3)) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
         .bind(brain).bind(offset).bind(selection).fetch_all(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(HandoverPage {
@@ -256,9 +257,22 @@ async fn lease(tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<()> {
     }
     Ok(())
 }
-async fn ready<'a>(
+pub(crate) async fn ready<'a>(
     state: &'a AppState,
     job: &ClaimedJob,
+) -> Result<(Tx<'a>, HandoverRun, Vec<ClaimSupport>)> {
+    ready_checked(state, job, false).await
+}
+pub(crate) async fn ready_response<'a>(
+    state: &'a AppState,
+    job: &ClaimedJob,
+) -> Result<(Tx<'a>, HandoverRun, Vec<ClaimSupport>)> {
+    ready_checked(state, job, true).await
+}
+async fn ready_checked<'a>(
+    state: &'a AppState,
+    job: &ClaimedJob,
+    response: bool,
 ) -> Result<(Tx<'a>, HandoverRun, Vec<ClaimSupport>)> {
     let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
     db::require_writer(&mut tx, job.brain_id).await?;
@@ -270,6 +284,7 @@ async fn ready<'a>(
             "This handover attempt no longer accepts output.",
         ));
     }
+    crate::session_digests::check(&mut tx, &run, response).await?;
     let policy = model_policy::current(state, &mut tx, job.brain_id).await?;
     if policy.change_id != run.policy_id {
         return Err(model_policy::failure(
@@ -303,6 +318,7 @@ async fn ready<'a>(
         "synthesis",
         &["claim".into(), "query".into()],
     )?;
+    model_policy::permits(state, &policy.policy, "extraction", &["claim".into()])?;
     let (selection, supports) = scope(
         state,
         &mut tx,
@@ -328,49 +344,123 @@ fn invocation(run: &HandoverRun) -> gateway::Invocation {
         format: gateway::Format::Json { name: "engineering_handover".into(), schema: json!({
             "type":"object", "properties":{"summary":{"type":"string"},"completed":list,"next_steps":list,"risks":list},
             "required":["summary","completed","next_steps","risks"],"additionalProperties":false}) },
-        metadata_replay: false, expected_json: None,
+        work_lease: None, metadata_replay: false, expected_json: None,
     }
+}
+pub(crate) fn content(
+    selection: ScopeSelection,
+    title: String,
+    contributions: Vec<Uuid>,
+    supports: Vec<ClaimSupport>,
+    manifest: Option<Uuid>,
+    draft: Draft,
+) -> ClaimContent {
+    ClaimContent {
+        kind: "handover".into(), subject: title, predicate: "handover".into(), value: draft.summary,
+        rationale: "Synthesized from the linked exact contributions; inspect their individual authority and applicability.".into(), context_role: None,
+        selection, manifest_revision_id: manifest,
+        validity: FactValidity { kind: "unknown".into(), from: None, to: None, precision: "unknown".into() },
+        freshness: "current".into(), operational: "declared".into(), observed_at: None, observation: String::new(), supports,
+        procedure: None, handover: Some(HandoverContent { completed: draft.completed, next_steps: draft.next_steps, risks: draft.risks, contributions }),
+    }
+}
+fn bounded_invocation(run: &HandoverRun, allowance: Option<(usize, usize)>) -> gateway::Invocation {
+    let mut inv = invocation(run);
+    if let Some((n, overhead)) = allowance {
+        // The canonical full candidate is checked again before staging. These
+        // conservative limits account for UTF-8 and JSON string escaping.
+        let summary = n.saturating_sub(overhead) / 12;
+        let item = n.saturating_sub(overhead) / 108;
+        if let gateway::Format::Json { schema, .. } = &mut inv.format {
+            schema["properties"]["summary"]["maxLength"] = json!(summary.clamp(1, 4000));
+            for name in ["completed", "next_steps", "risks"] {
+                schema["properties"][name]["maxItems"] = json!(3);
+                schema["properties"][name]["items"]["maxLength"] = json!(item.clamp(1, 1000));
+            }
+        }
+        inv.instructions.push_str(&format!(" This is a bounded session digest: keep total canonical JSON below {n} UTF-8 bytes, use at most three short items in each list, and prefer a short summary with empty lists over repetition."));
+    }
+    inv
 }
 async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     let (mut tx, run, _) = ready(state, job).await?;
+    let allowance = crate::session_digests::candidate_limit(&mut tx, run.brain_id, run.id).await?;
+    let saved = crate::handover_support::load(&mut tx, run.brain_id, run.id).await?;
     sqlx::query("UPDATE handover_runs SET state='running' WHERE id=$1")
         .bind(run.id)
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    let response = gateway::invoke(
-        state,
-        gateway::Context {
-            brain: job.brain_id,
-            actor: job.actor_id,
-            device: job.device_id,
-        },
-        invocation(&run),
-    )
-    .await?;
-    let Some(gateway::Output::Json(value)) = response.output else {
-        return Err(model_policy::failure(
-            "model_result_not_retained",
-            "This attempt has no retained model result. Start a new handover attempt.",
-        ));
-    };
-    let draft: Draft = serde_json::from_value(value).map_err(|_| {
-        model_policy::failure(
-            "model_response_invalid",
-            "The provider returned an invalid handover.",
+    let stage = if let Some(stage) = saved {
+        stage
+    } else {
+        let response = gateway::invoke_for_policy(
+            state,
+            gateway::Context {
+                brain: job.brain_id,
+                actor: job.actor_id,
+                device: job.device_id,
+            },
+            bounded_invocation(&run, allowance).with_work_lease(job),
+            run.policy_id,
         )
-    })?;
-    let (mut tx, run, supports) = ready(state, job).await?;
-    let mut content = ClaimContent {
-        kind: "handover".into(), subject: run.title.clone(), predicate: "handover".into(), value: draft.summary,
-        rationale: "Synthesized from the linked exact contributions; inspect their individual authority and applicability.".into(),
-        selection: run.selection.clone(), manifest_revision_id: None,
-        validity: FactValidity { kind: "unknown".into(), from: None, to: None, precision: "unknown".into() },
-        freshness: "current".into(), operational: "declared".into(), observed_at: None, observation: String::new(), supports,
-        procedure: None, handover: Some(HandoverContent { completed: draft.completed, next_steps: draft.next_steps, risks: draft.risks, contributions: run.contributions.clone() }),
+        .await?;
+        let Some(gateway::Output::Json(value)) = response.output else {
+            return Err(model_policy::failure(
+                "model_result_not_retained",
+                "This attempt has no retained model result. Start a new handover attempt.",
+            ));
+        };
+        let draft: Draft = serde_json::from_value(value).map_err(|_| {
+            model_policy::failure(
+                "model_response_invalid",
+                "The provider returned an invalid handover.",
+            )
+        })?;
+        let (mut tx, run, supports) = ready_response(state, job).await?;
+        let mut content = content(
+            run.selection.clone(),
+            run.title.clone(),
+            run.contributions.clone(),
+            supports,
+            crate::session_digests::manifest(&mut tx, run.brain_id, run.id).await?,
+            draft,
+        );
+        if allowance
+            .is_some_and(|(n, _)| serde_json::to_vec(&content).expect("typed digest").len() > n)
+        {
+            return Err(model_policy::failure(
+                "provider_shape",
+                "The session digest exceeds its frozen candidate budget.",
+            ));
+        }
+        memory_policy::validate(&mut content)?;
+        publication::safe_payload(state, &json!(content))?;
+        memory::validate_evidence(state, &mut tx, job.brain_id, &content).await?;
+        let stage =
+            crate::handover_support::store(&mut tx, &run, content, response.request).await?;
+        tx.commit().await?;
+        stage
     };
-    memory_policy::validate(&mut content)?;
-    publication::safe_payload(state, &json!(content))?;
+    // A completed draft is durable before waiting for late receipt coverage.
+    let (tx, _, _) = ready(state, job).await?;
+    tx.commit().await?;
+    let verdict = crate::handover_support::assess(state, &run, &stage, job).await?;
+    if verdict.disposition != crate::memory_support::Disposition::Supported {
+        return Err(model_policy::failure(
+            if verdict.disposition == crate::memory_support::Disposition::Contradicted {
+                "support_contradicted"
+            } else {
+                "support_insufficient"
+            },
+            "The generated handover is not fully supported; existing knowledge was preserved.",
+        ));
+    }
+    let (mut tx, run, _) = ready(state, job).await?;
+    let current_stage = crate::handover_support::load(&mut tx, run.brain_id, run.id)
+        .await?
+        .ok_or_else(crate::retention::unavailable)?;
+    let content = current_stage.content;
     memory::validate_evidence(state, &mut tx, job.brain_id, &content).await?;
     memory_rules::check_family(&mut tx, job.brain_id, &content, run.claim_id).await?;
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM claims WHERE brain_id=$1")
@@ -404,11 +494,11 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         acceptance_policy: None,
         derivation: Some(ModelDerivation {
             run_id: run.id,
-            request_id: response.request.id,
+            request_id: stage.synthesis.id,
             policy_id: run.policy_id,
             provider: "openai".into(),
-            requested_model: response.request.model,
-            returned_model: response.request.returned_model.unwrap_or_default(),
+            requested_model: stage.synthesis.model.clone(),
+            returned_model: stage.synthesis.returned_model.clone().unwrap_or_default(),
             prompt_label: PROMPT.into(),
             schema_label: PROMPT.into(),
         }),
@@ -431,6 +521,17 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             r.admission = "uncertain_evidence".into();
         }
     }
+    if run.base_revision_id.is_some()
+        && matches!(
+            r.admission.as_str(),
+            "blocked_by_rule" | "uncertain_evidence"
+        )
+    {
+        return Err(model_policy::failure(
+            "handover_blocked",
+            "The refreshed handover is blocked or conflicting; its prior head was preserved.",
+        ));
+    }
     if run.claim_id.is_none() {
         sqlx::query("INSERT INTO claims(id,brain_id,created_by) VALUES($1,$2,$3)")
             .bind(r.claim_id)
@@ -440,9 +541,11 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             .await?;
     }
     memory::append(&mut tx, &r).await?;
+    crate::handover_support::record(&mut tx, &run, &r).await?;
+    crate::session_digests::published(&mut tx, &run, r.claim_id, r.id).await?;
     lease(&mut tx, job).await?;
     sqlx::query("UPDATE handover_runs SET state='succeeded',request_id=$2,claim_id=$3,finished_at=clock_timestamp() WHERE id=$1")
-        .bind(run.id).bind(response.request.id).bind(r.claim_id).execute(&mut *tx).await?;
+        .bind(run.id).bind(stage.synthesis.id).bind(r.claim_id).execute(&mut *tx).await?;
     let audit = db::audit(
         &mut tx,
         job.actor_id,
@@ -455,6 +558,16 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     jobs::enqueue(&mut tx, job.actor_id, job.brain_id, audit).await?;
     sqlx::query("UPDATE jobs SET state='succeeded',progress=100,lease_token=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE id=$1 AND lease_token=$2")
         .bind(job.id).bind(job.lease_token).execute(&mut *tx).await?;
+    let expired: bool = sqlx::query_scalar(
+        "SELECT coalesce(recollect_handover_support_deadline($1,$2)<=clock_timestamp(),false)",
+    )
+    .bind(run.brain_id)
+    .bind(run.id)
+    .fetch_one(&mut *tx)
+    .await?;
+    if expired {
+        return Err(crate::retention::unavailable());
+    }
     tx.commit().await?;
     Ok(())
 }
@@ -480,7 +593,7 @@ pub(crate) async fn refresh(
     }
     let rows:Vec<SqlJson<ClaimRevision>>=sqlx::query_scalar(
         "SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision
-         WHERE c.brain_id=$1 AND r.revision->>'origin'='model_synthesized'
+         WHERE c.brain_id=$1 AND r.revision->>'origin'='model_synthesized' AND NOT EXISTS(SELECT 1 FROM session_digest_claims d WHERE d.brain_id=c.brain_id AND d.claim_id=c.id)
          AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
          AND EXISTS(SELECT 1 FROM claim_contributions d JOIN claim_revisions old ON old.id=d.input_revision_id
            JOIN claims input ON input.id=old.claim_id WHERE d.revision_id=r.id AND input.current_revision<>old.id)
@@ -581,6 +694,27 @@ pub(crate) async fn refresh(
 pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<(), Failure> {
     let result = worker::with_lease(&state.pool, job, run_job(state, job)).await?;
     if let Err(error) = result {
+        if error.1 == "database_unavailable" {
+            return Err(Failure::Database);
+        }
+        if matches!(error.1, "job_lease_lost" | "handover_lease_lost") {
+            return Err(Failure::LostLease);
+        }
+        if error.0 == StatusCode::UNAUTHORIZED {
+            return Err(Failure::Revoked);
+        }
+        if matches!(
+            error.1,
+            "model_budget_exhausted" | "model_concurrency_full" | "session_coverage_pending"
+        ) {
+            sqlx::query("SELECT recollect_defer_handover_job($1,$2,$3)")
+                .bind(job.id)
+                .bind(job.lease_token)
+                .bind(error.1)
+                .execute(&state.pool)
+                .await?;
+            return Ok(());
+        }
         let reason = if matches!(
             error.0,
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::NOT_FOUND

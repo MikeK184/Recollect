@@ -2467,6 +2467,7 @@ export interface components {
             /** Format: date-time */
             last_used_at?: string | null;
             name: string;
+            observed_hosts?: string[];
         };
         AccountAgentGroup: {
             agents: components["schemas"]["AccountAgent"][];
@@ -2691,6 +2692,7 @@ export interface components {
             /** Format: date-time */
             last_used_on_brain_at?: string | null;
             name: string;
+            observed_hosts?: string[];
         };
         BrainAgentGroup: {
             agents: components["schemas"]["BrainAgent"][];
@@ -3035,6 +3037,7 @@ export interface components {
             workspace_id: string;
         };
         ClaimContent: {
+            context_role?: string | null;
             freshness: string;
             handover?: null | components["schemas"]["HandoverContent"];
             kind: string;
@@ -3213,6 +3216,8 @@ export interface components {
             name: string;
         };
         CreateTask: {
+            /** Format: uuid */
+            continuation_of_task_id?: string | null;
             label: string;
             /** Format: uuid */
             parent_task_id?: string | null;
@@ -3238,6 +3243,7 @@ export interface components {
             /** Format: date-time */
             last_used_at?: string | null;
             name: string;
+            observed_hosts?: string[];
             /** Format: date-time */
             revoked_at?: string | null;
         };
@@ -3645,7 +3651,18 @@ export interface components {
             retry_of?: string | null;
             selection: components["schemas"]["ScopeSelection"];
             state: string;
+            support?: null | components["schemas"]["HandoverSupport"];
             title: string;
+        };
+        HandoverSupport: {
+            /** Format: uuid */
+            assessment_request_id?: string | null;
+            disposition?: string | null;
+            reason?: string | null;
+            request_error_code?: string | null;
+            request_state?: string | null;
+            state: string;
+            verifier_version: string;
         };
         HttpMetrics: {
             /** Format: int64 */
@@ -4811,6 +4828,12 @@ export interface components {
             source_diversity: boolean;
             unknown_lineage_items: number;
         };
+        RecallContinuationHint: {
+            /** Format: uuid */
+            binding_id?: string | null;
+            /** Format: uuid */
+            task_id: string;
+        };
         RecallCoverage: {
             examined: number;
             partial: boolean;
@@ -4856,6 +4879,7 @@ export interface components {
         RecallItem: {
             channels: string[];
             claim?: null | components["schemas"]["RecallClaimState"];
+            delivery_section?: string;
             graph_match?: null | components["schemas"]["RecallGraphMatch"];
             /** Format: uuid */
             id: string;
@@ -4917,6 +4941,8 @@ export interface components {
             /** @default 8192 */
             context_bytes: number;
             /** @default null */
+            continuation: null | components["schemas"]["RecallContinuationHint"];
+            /** @default null */
             exact: null | components["schemas"]["RecallReference"];
             /**
              * Format: date-time
@@ -4944,6 +4970,8 @@ export interface components {
              * @default null
              */
             operation_id: string | null;
+            /** @default false */
+            project_brief: boolean;
             /** @default  */
             query: string;
             /**
@@ -5357,6 +5385,8 @@ export interface components {
             media_type: string;
             /** Format: date-time */
             observed_at?: string | null;
+            /** Format: uuid */
+            operation_id?: string | null;
             retain_content?: boolean;
             retention_class?: string | null;
             source_uri?: string | null;
@@ -5513,6 +5543,8 @@ export interface components {
             /** Format: uuid */
             brain_id: string;
             closed: boolean;
+            /** Format: uuid */
+            continuation_of_task_id?: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: uuid */
@@ -6579,6 +6611,7 @@ export interface operations {
                 environment?: string;
                 q?: string;
                 offset?: number;
+                operation_id?: string;
             };
             header?: never;
             path: {
@@ -8540,7 +8573,9 @@ export interface operations {
     };
     sourceContent: {
         parameters: {
-            query?: never;
+            query?: {
+                operation_id?: string;
+            };
             header?: never;
             path: {
                 brain: string;

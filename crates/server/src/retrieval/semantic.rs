@@ -10,16 +10,17 @@ const SCAN_LIMIT: usize = 5000;
 // The unique (profile_id,kind,input_id) key permits one indexed vector lookup
 // per canonical candidate. Keep that bound even immediately after a large
 // import, before PostgreSQL has refreshed its cardinality statistics.
+// Apply readiness outside the unique lookup: with fresh statistics PostgreSQL
+// can otherwise scan the pending-work index once for every candidate instead.
 const SCOPED: &str = ", semantic_scoped AS MATERIALIZED (
     SELECT m.*,e.embedding,e.truncated FROM matched m JOIN LATERAL (
-      SELECT e.* FROM semantic_entries e WHERE e.brain_id=$1 AND e.profile_id=$11
-      AND e.state='ready' AND e.embedding IS NOT NULL
+      SELECT e.* FROM semantic_entries e WHERE e.profile_id=$11
       AND e.kind=CASE m.kind WHEN 'source_version' THEN 'source_chunk' WHEN 'claim' THEN 'claim_revision' ELSE m.kind END
       AND e.input_id=CASE WHEN m.kind='source_version' THEN m.chunk_id ELSE m.revision_id END
-      AND (m.kind<>'source_version' OR e.source_version_id=m.revision_id)
       LIMIT 1
     ) e ON true
-    WHERE m.status_eligible
+    WHERE m.status_eligible AND e.brain_id=$1 AND e.state='ready' AND e.embedding IS NOT NULL
+      AND (m.kind<>'source_version' OR e.source_version_id=m.revision_id)
       AND NOT EXISTS(SELECT 1 FROM model_input_fences f WHERE f.brain_id=$1 AND f.source_version_id=e.source_version_id)
       AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=$1 AND f.revision_id=e.claim_revision_id)
   )";
@@ -154,6 +155,7 @@ pub(super) async fn embed(
         prompt_label: "semantic-query-1".into(),
         schema_label: "embedding-float-1".into(),
         format: gateway::Format::Embedding,
+        work_lease: None,
         metadata_replay: false,
         expected_json: None,
     };
@@ -220,9 +222,9 @@ pub(super) struct Ranked {
     pub deadline: Option<DateTime<Utc>>,
     pub exact: bool,
     pub alternatives: Vec<(RecallItem, Option<DateTime<Utc>>)>,
-    lexical_rank: Option<usize>,
-    semantic_rank: Option<usize>,
-    graph_rank: Option<usize>,
+    pub(super) lexical_rank: Option<usize>,
+    pub(super) semantic_rank: Option<usize>,
+    pub(super) graph_rank: Option<usize>,
 }
 
 pub(super) async fn ranked(

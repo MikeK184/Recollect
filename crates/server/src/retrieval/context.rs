@@ -210,10 +210,13 @@ pub(super) async fn pack(
     let mut selected = BTreeMap::new();
     let mut covered = BTreeSet::new();
     let mut refused = BTreeSet::new();
+    let mut admitted = BTreeSet::new();
     // Three small bounded passes: exact priority, optional coverage reservation,
     // and global-rank depth fill. Complete serialized attribution must fit.
-    for pass in 0..3 {
-        if pass == 1 && !input.source_diversity {
+    let has_aux = ranked.iter().any(|r| r.item.delivery_section != "query");
+    let mut aux_selected = 0usize;
+    for pass in 0..4 {
+        if pass == 1 && !input.source_diversity && !has_aux {
             continue;
         }
         for (index, entry) in ranked.iter().enumerate() {
@@ -222,6 +225,13 @@ pub(super) async fn pack(
             {
                 break;
             }
+            let aux = entry.item.delivery_section != "query";
+            if (pass == 2) != aux {
+                continue;
+            }
+            if aux && aux_selected >= input.limit / 2 {
+                continue;
+            }
             if selected.contains_key(&index)
                 || refused.contains(&index)
                 || (pass == 0 && !entry.exact)
@@ -229,8 +239,14 @@ pub(super) async fn pack(
                 continue;
             }
             let key = (entry.item.kind.clone(), entry.item.id);
+            if admitted.contains(&key) {
+                continue;
+            }
             let roots = groups.get(&key).and_then(Option::as_ref);
-            if pass == 1 && roots.is_none_or(|rs| rs.iter().all(|r| covered.contains(r))) {
+            if pass == 1
+                && !has_aux
+                && roots.is_none_or(|rs| rs.iter().all(|r| covered.contains(r)))
+            {
                 continue;
             }
             let candidates = std::iter::once((&entry.item, entry.deadline)).chain(
@@ -264,6 +280,10 @@ pub(super) async fn pack(
                     note(coverage, "context_budget");
                 } else {
                     selected.insert(index, candidate);
+                    admitted.insert(key.clone());
+                    if aux {
+                        aux_selected += 1;
+                    }
                     packed.deadlines.insert(
                         key.clone(),
                         [entry.deadline, deadline].into_iter().flatten().min(),

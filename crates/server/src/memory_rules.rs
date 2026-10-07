@@ -103,7 +103,7 @@ pub async fn conflicts(tx: &mut Tx<'_>, r: &ClaimRevision) -> Result<Vec<ClaimRe
     {
         return Ok(Vec::new());
     }
-    let candidates: Vec<Json<ClaimRevision>> = sqlx::query_scalar("SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1 AND c.id<>$2 AND r.subject_key=$3 AND r.predicate_key=$4 AND r.value_key<>$5 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' ORDER BY c.id LIMIT 500")
+    let candidates: Vec<Json<ClaimRevision>> = sqlx::query_scalar("SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1 AND c.id<>$2 AND r.subject_key=$3 AND r.predicate_key=$4 AND r.value_key<>$5 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' AND recollect_memory_supported(r.brain_id,r.id) ORDER BY c.id LIMIT 500")
         .bind(r.brain_id).bind(r.claim_id).bind(assertion_key(&r.content.subject,true)).bind(assertion_key(&r.content.predicate,true)).bind(assertion_key(&r.content.value,false)).fetch_all(&mut **tx).await?;
     let mut result = Vec::new();
     for Json(candidate) in candidates {

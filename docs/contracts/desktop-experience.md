@@ -498,7 +498,11 @@ Show currently queued/running work distinctly from recent outcomes. Initial
 history is static; stable ID/state changes may produce one short path pulse.
 No demonstration/replay data or timer-generated activity enters product views.
 Failed, expired or forbidden refreshes clear protected payload and halt motion;
-selection changes cancel requests and reset the animation baseline. Re-check
+selection changes cancel requests and reset the animation baseline. Ordinary
+background refreshes and brief visibility changes keep an unexpired, successful
+snapshot mounted, with motion paused while hidden. A visibility event does not
+renew its deadline. Brain metadata revisions refresh assurance reads without
+remounting the route; a changed Brain or effective role still resets its boundary. Re-check
 effective retention/erasure on every read, omit removed content and never expose
 private task context. Pause hidden-page motion and honor reduced motion.
 
@@ -604,3 +608,38 @@ feed timestamp on error, advertised expiry or access loss, and re-reads on re-en
 It tracks exact revision identities across list insertions, presents review,
 freshness, operational and conflict/rule qualifications, pauses while hidden,
 honors reduced motion, and provides an explicit exit with isolated focus.
+
+## Plugin workflow repair — 2026-10-07
+
+AI permissions shows a compact Processing limits card beside Selected models,
+with output tokens and the existing input, chunk and execution limits. Controls
+use the shared Edit/Save/Cancel policy flow and retain canonical bounds.
+Access tokens uses searchable compact rows, concise host/integration/status,
+last-use and expiry columns, on-demand identifiers and the existing confirmed
+own-account revoke action. Historical records remain filterable.
+
+## Main-form processing limits — 2026-10-07
+
+The approved follow-up moves Processing limits into the main AI permissions
+form below Automatic processing. The four existing fields are maximum output
+tokens, maximum input bytes, daily token allowance and concurrent model calls.
+Use a compact two-column grid that becomes one column on narrow screens, with
+the same section separator and shared Edit/Save/Cancel policy command. Selected
+models and More options stay in the right sidebar. Values, bounds and authority
+remain canonical; this supersedes the earlier sidebar placement.
+
+
+## Page recovery and learning reasons — 2026-10-07
+
+HTML entry responses require revalidation; missing hashed assets return 404
+rather than the HTML fallback. A failed lazy page shows a styled recovery panel
+with a user-triggered Reload page action preserving the current URL. Never
+automatically reload or discard an open editor, loop retries, or display raw
+module URLs and stack traces. Other page errors retain a neutral recovery state.
+
+Recent inputs distinguish source processing failures from learning failures.
+Budget, input size, sensitive input and model output failures use explicit
+labels and an on-demand reason; capture-only events remain capture-only. Do not
+infer successful learning, rewrite historical outcomes or override policy caps.
+Processing limits keeps its explanation behind a keyboard-accessible info icon
+beside the heading, with no permanent helper paragraph.

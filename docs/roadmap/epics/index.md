@@ -8,14 +8,31 @@
 | [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
-| [memory-lifecycle.md](memory-lifecycle.md) | complete | Supported model catalogue, dated prices and dimension-safe rebuild successor locally validated; prior memory acceptance retained |
-| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Chat-style Ask landing and thread shipped 2026-10-03 over the unchanged model-grounded answer flow |
+| [memory-lifecycle.md](memory-lifecycle.md) | complete | Five automatic memory phases locally delivered with native recovery/privacy proof, independent reviews and versioned actual-model support comparison; uncommitted and not deployed |
+| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Supported scoped project brief and authenticated continuation locally validated within existing plugin budgets; prior Ask and retrieval delivery retained |
 | [graph-intelligence.md](graph-intelligence.md) | complete | Graph/path/analytics browser acceptance, bounded measurements and laptop/desktop visuals passed |
-| [mcp-coordination.md](mcp-coordination.md) | active | Live Ubuntu private filesystem runner, independent reader/permission/offline proof delivered; fresh native-host token acceptance remains open after OpenCode service startup timeout |
+| [mcp-coordination.md](mcp-coordination.md) | active | Supported plugin source workflow, observed roster/hosts, bounded learning recovery and visible limits locally delivered; separate fresh native-host token acceptance remains open |
 | [operational-readiness.md](operational-readiness.md) | active | Assurance band hidden on healthy Brains and knowledge tab-strip removal shipped 2026-10-03; separate LongMemEval benchmark remains blocked on protocol and cost approval |
-| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Approved Private Runner relationship cards, shared authorized metadata and independent laptop/wide acceptance delivered locally |
+| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Dashboard refresh stability, main-form processing limits and safe input/page recovery delivered on the local stack; prior independent Private Runner acceptance retained |
 
 ## Active frontier
+
+The [automatic memory implementation](../../mappings/memory-source-support-staging-2026-10-07.md)
+completes the user-authorized five-phase plan: frozen support baseline, whole
+assertion/consumer guard, automatic settled-session digests and durable exact
+support, compact scoped project brief/authenticated continuation, and bounded
+cross-session exact-family correction. All five packs are archived after native
+local acceptance and two independent reviews. The final v3 held-out comparison
+withheld 15/15 negative cases and delivered 11/11 positives; earlier failures and
+cost remain reported. This is a fixed synthetic comparison, not production truth
+or superiority. Changes are uncommitted and have not upgraded the running stack
+or installed plugin. Public benchmark and fresh direct-token host work stay separate.
+
+The [plugin workflow repair](../../mappings/plugin-workflow-repair-2026-10-07.md)
+is locally delivered with supported source tools, visible processing limits and
+bounded learning recovery. DLAG paid learning remains subject to its daily cap;
+full acceptance of the newly built macOS binary and OpenCode automatic capture
+remain separate from the verified compatible installed workflow.
 
 The [public product and docs site](../../mappings/public-product-docs-site-2026-10-06.md)
 is published and accepted. Main-branch guide changes rebuild the static site;

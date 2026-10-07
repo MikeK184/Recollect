@@ -72,8 +72,19 @@ universal catalogue of customer connectors is introduced.
 
 ## Slice Map
 
+The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+proposes automatic digest scheduling and delivery of a compact canonical project
+brief through the supported plugin/recall path. Memory and retrieval retain primary
+ownership; this epic owns host lifecycle, immutable attribution and delivery proof.
+The memory-owned [digest pack](../execution/archive/memory-automatic-session-digests.md)
+and retrieval-owned [brief pack](../execution/archive/retrieval-scoped-project-brief.md)
+are locally delivered with native ended-task resume and escaped hook bounds.
+No installed-binary upgrade or new injection guarantee for third-party direct
+MCP clients is implied.
+
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `mcp-plugin-workflow-repair` | shipped | contract-backed | pack | Supported evidence tools, observed usage, bounded learning recovery and compact visible policy/token UI |
 | `mcp-ubuntu-private-runner-proof` | shipped | contract-backed | pack | Real Ubuntu filesystem MCP with separate reader caller, permission/boundary denials, offline recovery and fresh OS-store reuse |
 | `mcp-equivalent-http-schema-inspection` | shipped | contract-backed | pack | Bounded equivalent Draft 7 declaration conversion during HTTP inspection; strict manifest approval retained |
 | `mcp-copy-ready-agent-config` | in-progress | contract-backed | pack | Browser direct-token native config and visible account token management, preserving plugin OS storage |
@@ -98,6 +109,7 @@ universal catalogue of customer connectors is introduced.
 
 | Slice ID | Predecessors |
 | --- | --- |
+| `mcp-plugin-workflow-repair` | `mcp-plugin-session-memory`, `agents-surface-refinement` |
 | `mcp-ubuntu-private-runner-proof` | `mcp-vault-and-private-runners`, `mcp-memory-and-workspace-tools` |
 | `mcp-plugin-session-memory` | `mcp-plugin-direct-auth`, `mcp-codex-plugin`, `evidence-session-capture`, `mcp-vault-and-private-runners` |
 | `mcp-direct-auth-repair` | `mcp-direct-connections` |
@@ -229,4 +241,26 @@ Direct browser config and Access tokens are implemented; native configuration re
 - Validation: Pure/owned backend fixtures, build/lint/governance, actual CUA read/check/
   expiry/width proof, preserved runtime invariants and independent source/pixel review.
 - Version: N/A.
+- Commit: Uncommitted.
+
+## Plugin workflow repair closeout — 2026-10-07
+
+- Planned: Supported source workflow, observed agent identity, bounded learning
+  recovery and visible policy/token management.
+- Shipped: Scoped source import/list/inspect, actual Brain/host usage, invalid
+  candidate and budget-aware recovery, whole reconciliation inputs within bounds,
+  visible Processing limits and compact Access tokens; local ready deployment
+  and installed compatible native workflow verified.
+- Not shipped: Paid completion of DLAG's budget-blocked runs, OpenCode automatic
+  capture retest and local Keychain trust acceptance of the new native binary.
+- New blockers: None for the delivered compatible workflow. Existing native-token
+  acceptance remains separate; the trusted runtime preserves current connectivity.
+- Docs updated: Contracts, runbooks, plugin guidance, archived pack/index,
+  active/epic/mapping indexes and
+  [dated evidence](../../mappings/plugin-workflow-repair-2026-10-07.md).
+- Validation: Focused source/usage and learning recovery fixtures, library tests,
+  all 19 semantic regressions after fresh-import performance repair, web/API/
+  formatting/governance, real browser Save/Cancel/search/history/revoke-cancel,
+  normal Compose readiness and installed 26-tool source reads.
+- Version: N/A: no release requested.
 - Commit: Uncommitted.

@@ -242,27 +242,13 @@ pub(crate) async fn selection_valid(
     brain: Uuid,
     selection: &ScopeSelection,
 ) -> Result<bool> {
-    let repos: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM repositories WHERE brain_id=$1 AND id=ANY($2)")
+    Ok(
+        sqlx::query_scalar("SELECT recollect_selection_valid($1,$2)")
             .bind(brain)
-            .bind(&selection.repository_ids)
+            .bind(sqlx::types::Json(selection))
             .fetch_one(&mut **tx)
-            .await?;
-    let areas: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM evidence_groups WHERE brain_id=$1 AND kind='area' AND id=ANY($2)",
+            .await?,
     )
-    .bind(brain)
-    .bind(&selection.area_ids)
-    .fetch_one(&mut **tx)
-    .await?;
-    let environment: bool = if let Some(id) = selection.environment_id {
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM evidence_groups WHERE brain_id=$1 AND kind='environment' AND id=$2)").bind(brain).bind(id).fetch_one(&mut **tx).await?
-    } else {
-        true
-    };
-    Ok(repos as usize == selection.repository_ids.len()
-        && areas as usize == selection.area_ids.len()
-        && environment)
 }
 async fn snapshot(
     tx: &mut Tx<'_>,
@@ -334,6 +320,7 @@ struct TaskRow {
     id: Uuid,
     brain_id: Uuid,
     parent_task_id: Option<Uuid>,
+    continuation_of_task_id: Option<Uuid>,
     workspace_id: Option<Uuid>,
     account_id: Uuid,
     device_id: Option<Uuid>,
@@ -353,6 +340,7 @@ impl TaskRow {
             id: self.id,
             brain_id: self.brain_id,
             parent_task_id: self.parent_task_id,
+            continuation_of_task_id: self.continuation_of_task_id,
             workspace_id: self.workspace_id,
             created_by: self.account_id,
             device_id: self.device_id,
@@ -740,6 +728,27 @@ pub async fn create_task(
     if count >= 100 {
         return Err(capacity());
     }
+    if let Some(previous) = input.continuation_of_task_id {
+        let previous = task(&mut tx, brain, previous).await?;
+        if !previous.closed
+            || previous.created_by != auth.user.id
+            || previous.device_id != auth.device_id
+            || input.parent_task_id.is_some()
+        {
+            return Err(Error::forbidden());
+        }
+        if input
+            .selection
+            .as_ref()
+            .is_some_and(|s| s != &previous.scope.selection)
+        {
+            return Err(Error::forbidden());
+        }
+        input.selection = Some(previous.scope.selection);
+        if input.workspace_id.is_none() {
+            input.workspace_id = previous.workspace_id;
+        }
+    }
     if let Some(parent) = input.parent_task_id {
         let parent = task(&mut tx, brain, parent).await?;
         if parent.closed {
@@ -759,7 +768,7 @@ pub async fn create_task(
         }
     }
     let id = Uuid::new_v4();
-    sqlx::query("INSERT INTO workspace_tasks(id,brain_id,account_id,device_id,parent_task_id,workspace_id,label) VALUES($1,$2,$3,$4,$5,$6,$7)").bind(id).bind(brain).bind(auth.user.id).bind(auth.device_id).bind(input.parent_task_id).bind(input.workspace_id).bind(input.label).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO workspace_tasks(id,brain_id,account_id,device_id,parent_task_id,workspace_id,label,continuation_of_task_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)").bind(id).bind(brain).bind(auth.user.id).bind(auth.device_id).bind(input.parent_task_id).bind(input.workspace_id).bind(input.label).bind(input.continuation_of_task_id).execute(&mut *tx).await?;
     snapshot(
         &mut tx,
         &auth,

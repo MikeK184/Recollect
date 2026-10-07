@@ -58,6 +58,16 @@ later enter this same pipeline through the coordinator.
 
 ## Slice Map
 
+The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+proposes session-derived handovers with original capture attribution and native
+minimal supporting excerpts under both existing content/retention permissions.
+Memory lifecycle owns synthesis; this epic owns exact source/excerpt lineage,
+coverage and private-workspace metadata boundaries. The accepted
+[digest contract](../../contracts/memory-automatic-session-digests.md) and archived
+[memory-owned pack](../execution/archive/memory-automatic-session-digests.md)
+record local delivery, intent-ledger recovery, exact scope/class preservation,
+expiry/erasure and older-backup proof. No customer checkout is modified.
+
 Small-fix exception, 2026-09-14: the user authorized SWEG as real test input.
 Expose the existing bounded Git observation helper to an opt-in native integration
 probe. This adds validation tooling under the shipped workspace contract, with
