@@ -99,12 +99,9 @@ async fn strict_handover_recall_rechecks_contributor_expiry_before_returning() {
             json!({"exact":{"kind":"claim","id":summary["claim_id"]},"mode":mode}),
         )
         .await;
-        assert!(has(&qualified, &summary["claim_id"]));
         assert!(
-            qualified["context"]["items"][0]["qualifications"]
-                .as_array()
-                .unwrap()
-                .contains(&json!("contribution_unavailable"))
+            !has(&qualified, &summary["claim_id"]),
+            "A reviewed parent cannot make an expired required contributor usable model context"
         );
     }
     h.finish().await;
@@ -142,7 +139,8 @@ async fn legacy_claims_and_expired_support_preserve_canonical_recall_eligibility
     sqlx::query("UPDATE claim_revisions SET revision=(revision-'lifecycle') #- '{content,rationale}' WHERE claim_id=$1")
         .bind(claim_id).execute(&h.admin).await.unwrap();
     let exact = json!({"kind":"claim","id":claim["claim_id"]});
-    assert!(has(
+    // Legacy payload shape does not bypass the independent support gate.
+    assert!(!has(
         &recall(&h, &base, &owner, json!({"exact":exact})).await,
         &claim["claim_id"]
     ));
@@ -286,6 +284,7 @@ async fn investigation_deadlines_cover_live_evidence_without_expiring_independen
         super::super::review::proposal(&raw["version"]["id"], "Deadline claim", "blue"),
     )
     .await;
+    let claim = accept(&h, &base, &owner, &claim).await;
     let control = source(
         &h,
         &base,

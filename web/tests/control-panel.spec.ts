@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import {
   itemState,
+  inputStatus,
   observedStages,
   jobState,
   originKey,
@@ -351,6 +352,66 @@ test("pipeline polling pins inspection and clears failed, stale and removed inpu
   await page.unroute(`**/api/brains/${brain.id}/pipeline`);
 });
 
+test("dashboard retains fresh graph and inspection across visibility and metadata refreshes", async ({
+  page,
+}) => {
+  await signIn(page);
+  const brain = await api(page, "/api/brains", {
+    name: "Dashboard refresh proof",
+  });
+  const a = item(randomUUID(), "STABLE_INPUT");
+  let revision = brain.updated_at;
+  let paused: (() => void) | undefined;
+  let hold = false;
+  await page.route(`**/api/brains/${brain.id}`, (route) =>
+    route.fulfill({ json: { ...brain, updated_at: revision } }),
+  );
+  await page.route(`**/api/brains/${brain.id}/pipeline`, async (route) => {
+    if (hold)
+      await new Promise<void>((resolve) => {
+        paused = resolve;
+      });
+    await route.fulfill({ json: feed(brain.id, [a]) }).catch(() => {});
+  });
+  await page.goto(`/brains/${brain.id}/dashboard`);
+  const pipeline = page.getByTestId("live-pipeline");
+  await expect(
+    pipeline.getByText("STABLE_INPUT", { exact: true }).first(),
+  ).toBeVisible();
+  await pipeline.getByRole("button", { name: "Inspect input" }).click();
+  const drawer = page.getByRole("dialog", { name: "Processing record" });
+  await expect(drawer).toBeVisible();
+  const canvas = await pipeline.locator(".flow-canvas").elementHandle();
+  // Keep a replacement read pending so a transient teardown cannot hide behind
+  // a fast response. A visibility signal cannot renew the original deadline.
+  hold = true;
+  await pipeline
+    .getByRole("button", { name: "Refresh pipeline", exact: true })
+    .click({ force: true });
+  await expect.poll(() => !!paused).toBe(true);
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event("visibilitychange")),
+  );
+  await expect(drawer).toBeVisible();
+  expect(await canvas!.evaluate((node) => node.isConnected)).toBe(true);
+  hold = false;
+  paused!();
+  revision = new Date(Date.now() + 1000).toISOString();
+  // The five-second Brain poll applies the changed metadata without replacing
+  // the selected canvas or closing inspection.
+  const refreshed = await page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/api/brains/${brain.id}`) &&
+      response.request().resourceType() === "fetch",
+  );
+  expect((await refreshed.json()).updated_at).toBe(revision);
+  await expect(drawer).toBeVisible();
+  expect(await canvas!.evaluate((node) => node.isConnected)).toBe(true);
+  await expect(
+    pipeline.getByText("Loading recorded activity…", { exact: true }),
+  ).toHaveCount(0);
+});
+
 test("reduced motion suppresses observed-change packets", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await signIn(page);
@@ -558,4 +619,44 @@ test("ambient empty Brain exits without creating content", async ({ page }) => {
     .getByRole("button", { name: "Exit display · Esc", exact: true })
     .click();
   await expect(page.locator(".tv-root")).toHaveCount(0);
+});
+
+test("input reasons distinguish learning limits from capture and processing failures", () => {
+  const a = item(randomUUID());
+  const at = iso();
+  a.learning = {
+    id: randomUUID(),
+    state: "failed",
+    created_at: at,
+    finished_at: at,
+    accepted: 0,
+    proposed: 0,
+    reused: 0,
+    revised: 0,
+    retired: 0,
+    blocked: 0,
+    conflicting: 0,
+    claim_ids: [],
+    job: {
+      ...a.processing_job!,
+      state: "failed",
+      error_code: "model_budget_exhausted",
+    },
+  };
+  expect(inputStatus(a, at).label).toBe("Daily limit reached");
+  expect(inputStatus(a, at).detail).toContain("midnight UTC");
+  a.learning.job.error_code = "model_input_sensitive";
+  expect(inputStatus(a, at).label).toBe("Sensitive input");
+  a.learning.job.error_code = "model_input_too_large";
+  expect(inputStatus(a, at).label).toBe("Input limit reached");
+  a.learning.job.error_code = "invalid_input";
+  expect(inputStatus(a, at).label).toBe("Learning failed");
+  a.processing_job!.state = "queued";
+  expect(inputStatus(a, at).label).toBe("Queued");
+  a.processing_job!.state = "failed";
+  expect(inputStatus(a, at).label).toBe("Processing failed");
+  a.learning = null;
+  a.processing_job = null;
+  a.source_version_id = null;
+  expect(inputStatus(a, at).label).toBe("Capture only");
 });

@@ -1,0 +1,1363 @@
+{
+  "observed": "2026-10-07",
+  "evidence_kind": "synthetic actual-model observations with separately reviewed native gateway receipts",
+  "corpus_file": "crates/server/tests/fixtures/memory-support/corpus.json",
+  "corpus_sha256": "4aafb2163cbe75777f60e3edecd1d9965e6e19855fb0595cde904c7f935337fd",
+  "independent_receipt_audit": "All 124 distinct canonical native calls and final v3 delivery/accounting reviewed by the consumer reviewer. Scorer itself does not verify receipts.",
+  "limits": [
+    "Repeated fixed synthetic corpus; not an unseen-population estimate or production truth guarantee.",
+    "Earlier verifier results remain separate; no favorable case mixing.",
+    "No customer content or credentials are included."
+  ],
+  "runs": [
+    {
+      "artifact_name": "memory-support-native-20261007-all-v1d.json",
+      "artifact_sha256": "c00018898beb0ea284eed36c5d4eba7c0c233f41190daa6430b30d313eb4d3e0",
+      "receipts_sha256": "2eac076d40d8529c128b703238e20ef8f0361130d22c0e3bf7fb9f4d7401b4a7",
+      "observations": {
+        "corpus": "synthetic-memory-support-v1",
+        "mode": "real-model",
+        "observations": [
+          {
+            "case_id": "cal-faithful",
+            "charged_tokens": 1235,
+            "latency_ms": 2515,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-quote-whole",
+            "charged_tokens": 933,
+            "latency_ms": 1932,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-valid-unrelated",
+            "charged_tokens": 922,
+            "latency_ms": 1834,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-negation",
+            "charged_tokens": 1200,
+            "latency_ms": 1993,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-negation-preserved",
+            "charged_tokens": 1205,
+            "latency_ms": 2114,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-history-now",
+            "charged_tokens": 1222,
+            "latency_ms": 1556,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-history-qualified",
+            "charged_tokens": 1217,
+            "latency_ms": 2371,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-proposal-action",
+            "charged_tokens": 1235,
+            "latency_ms": 1914,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-proposal-intent",
+            "charged_tokens": 1230,
+            "latency_ms": 1580,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-tool-failed",
+            "charged_tokens": 1207,
+            "latency_ms": 2063,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-tool-failure-fact",
+            "charged_tokens": 1235,
+            "latency_ms": 1815,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-condition-dropped",
+            "charged_tokens": 934,
+            "latency_ms": 2050,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-condition-preserved",
+            "charged_tokens": 914,
+            "latency_ms": 1636,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-env-widen",
+            "charged_tokens": 1268,
+            "latency_ms": 1848,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-env-exact",
+            "charged_tokens": 1254,
+            "latency_ms": 1819,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-entity-swap",
+            "charged_tokens": 928,
+            "latency_ms": 1601,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-injection",
+            "charged_tokens": 1220,
+            "latency_ms": 1587,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-correction",
+            "charged_tokens": 1255,
+            "latency_ms": 1972,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-omission",
+            "charged_tokens": 937,
+            "latency_ms": 1837,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-explicit-retirement",
+            "charged_tokens": 1251,
+            "latency_ms": 1979,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-direct-bad",
+            "charged_tokens": 922,
+            "latency_ms": 1895,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-direct-good",
+            "charged_tokens": 915,
+            "latency_ms": 1671,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-handover-false",
+            "charged_tokens": 1225,
+            "latency_ms": 1892,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-handover-qualified",
+            "charged_tokens": 1224,
+            "latency_ms": 1532,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-faithful",
+            "charged_tokens": 937,
+            "latency_ms": 3220,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-valid-unrelated",
+            "charged_tokens": 933,
+            "latency_ms": 2040,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-quote-whole",
+            "charged_tokens": 1233,
+            "latency_ms": 1508,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-negation",
+            "charged_tokens": 1219,
+            "latency_ms": 1745,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-negation-good",
+            "charged_tokens": 1248,
+            "latency_ms": 2006,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-history-current",
+            "charged_tokens": 940,
+            "latency_ms": 2172,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-history-good",
+            "charged_tokens": 907,
+            "latency_ms": 1533,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-proposal-action",
+            "charged_tokens": 1213,
+            "latency_ms": 2049,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-proposal-intent",
+            "charged_tokens": 1197,
+            "latency_ms": 1674,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-failed-tool",
+            "charged_tokens": 1226,
+            "latency_ms": 1712,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-partial-tool",
+            "charged_tokens": 1234,
+            "latency_ms": 2049,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-partial-qualified",
+            "charged_tokens": 1239,
+            "latency_ms": 1640,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-condition",
+            "charged_tokens": 912,
+            "latency_ms": 2670,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-procedure-good",
+            "charged_tokens": 911,
+            "latency_ms": 1605,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-env-mismatch",
+            "charged_tokens": 1272,
+            "latency_ms": 1795,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-env-good",
+            "charged_tokens": 1268,
+            "latency_ms": 1566,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-entity",
+            "charged_tokens": 909,
+            "latency_ms": 2092,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-injection",
+            "charged_tokens": 925,
+            "latency_ms": 1636,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-correction-good",
+            "charged_tokens": 1287,
+            "latency_ms": 1672,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-correction-history",
+            "charged_tokens": 1230,
+            "latency_ms": 1923,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-retirement-omission",
+            "charged_tokens": 927,
+            "latency_ms": 1970,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-retirement-good",
+            "charged_tokens": 1221,
+            "latency_ms": 1757,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-direct-bad",
+            "charged_tokens": 896,
+            "latency_ms": 1844,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-direct-good",
+            "charged_tokens": 915,
+            "latency_ms": 2112,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-handover-bad",
+            "charged_tokens": 1203,
+            "latency_ms": 1651,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-handover-good",
+            "charged_tokens": 1223,
+            "latency_ms": 2143,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          }
+        ],
+        "version": 1,
+        "versions": {
+          "prompt": "source-support-1",
+          "requested_model": "gpt-5.6-luna",
+          "returned_model": "gpt-5.6-luna",
+          "schema": "source-support-1",
+          "verifier": "source-support-1"
+        }
+      },
+      "scores": {
+        "calibration": {
+          "corpus": "synthetic-memory-support-v1",
+          "partition": "calibration",
+          "mode": "real-model",
+          "versions": {
+            "prompt": "source-support-1",
+            "requested_model": "gpt-5.6-luna",
+            "returned_model": "gpt-5.6-luna",
+            "schema": "source-support-1",
+            "verifier": "source-support-1"
+          },
+          "expected_cases": 24,
+          "completed": 24,
+          "failed": 0,
+          "uncertain": 0,
+          "missing": [],
+          "critical_false_usable": [
+            "cal-valid-unrelated"
+          ],
+          "unverified_usable": [],
+          "positive_usability": 0.7272727272727273,
+          "verdict_accuracy": 0.5833333333333334,
+          "request_count": 24,
+          "charged_tokens": 27088,
+          "latency_ms_p50": 1892,
+          "latency_ms_p95": 2371,
+          "fixture_enforcement_met": null,
+          "declared_quality_thresholds_met": false,
+          "runtime_evidence_verified": false,
+          "note": "Offline scoring of declared observations; independently verify gateway/runtime receipts before cutover."
+        },
+        "held_out": {
+          "corpus": "synthetic-memory-support-v1",
+          "partition": "held_out",
+          "mode": "real-model",
+          "versions": {
+            "prompt": "source-support-1",
+            "requested_model": "gpt-5.6-luna",
+            "returned_model": "gpt-5.6-luna",
+            "schema": "source-support-1",
+            "verifier": "source-support-1"
+          },
+          "expected_cases": 26,
+          "completed": 26,
+          "failed": 0,
+          "uncertain": 0,
+          "missing": [],
+          "critical_false_usable": [],
+          "unverified_usable": [],
+          "positive_usability": 0.9090909090909091,
+          "verdict_accuracy": 0.7692307692307693,
+          "request_count": 26,
+          "charged_tokens": 28625,
+          "latency_ms_p50": 1844,
+          "latency_ms_p95": 2670,
+          "fixture_enforcement_met": null,
+          "declared_quality_thresholds_met": true,
+          "runtime_evidence_verified": false,
+          "note": "Offline scoring of declared observations; independently verify gateway/runtime receipts before cutover."
+        }
+      }
+    },
+    {
+      "artifact_name": "memory-support-native-20261007-calibration-v2a.json",
+      "artifact_sha256": "64df5443524efe407b59f7f4a50530a9ea1ccfe8558fd8193427a0051e38a371",
+      "receipts_sha256": "b58dfdd5ce46d2dc219a15350531bd1aa36c138129ad52052351556be5c20572",
+      "observations": {
+        "corpus": "synthetic-memory-support-v1",
+        "mode": "real-model",
+        "observations": [
+          {
+            "case_id": "cal-faithful",
+            "charged_tokens": 1350,
+            "latency_ms": 2435,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-quote-whole",
+            "charged_tokens": 1037,
+            "latency_ms": 2088,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-valid-unrelated",
+            "charged_tokens": 1009,
+            "latency_ms": 1963,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-negation",
+            "charged_tokens": 1300,
+            "latency_ms": 2858,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-negation-preserved",
+            "charged_tokens": 1337,
+            "latency_ms": 2042,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-history-now",
+            "charged_tokens": 1344,
+            "latency_ms": 1936,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-history-qualified",
+            "charged_tokens": 1328,
+            "latency_ms": 2196,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-proposal-action",
+            "charged_tokens": 1306,
+            "latency_ms": 1768,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-proposal-intent",
+            "charged_tokens": 1328,
+            "latency_ms": 2085,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-tool-failed",
+            "charged_tokens": 1327,
+            "latency_ms": 2007,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-tool-failure-fact",
+            "charged_tokens": 1297,
+            "latency_ms": 1861,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-condition-dropped",
+            "charged_tokens": 1030,
+            "latency_ms": 1843,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-condition-preserved",
+            "charged_tokens": 1009,
+            "latency_ms": 2073,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-env-widen",
+            "charged_tokens": 1349,
+            "latency_ms": 1964,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-env-exact",
+            "charged_tokens": 1373,
+            "latency_ms": 1804,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-entity-swap",
+            "charged_tokens": 1009,
+            "latency_ms": 1703,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-injection",
+            "charged_tokens": 1295,
+            "latency_ms": 2252,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-correction",
+            "charged_tokens": 1352,
+            "latency_ms": 1982,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-omission",
+            "charged_tokens": 1021,
+            "latency_ms": 1943,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-explicit-retirement",
+            "charged_tokens": 1339,
+            "latency_ms": 1773,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-direct-bad",
+            "charged_tokens": 1006,
+            "latency_ms": 3054,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-direct-good",
+            "charged_tokens": 995,
+            "latency_ms": 1820,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-handover-false",
+            "charged_tokens": 1310,
+            "latency_ms": 1851,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-handover-qualified",
+            "charged_tokens": 1302,
+            "latency_ms": 1680,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          }
+        ],
+        "version": 1,
+        "versions": {
+          "prompt": "source-support-2",
+          "requested_model": "gpt-5.6-luna",
+          "returned_model": "gpt-5.6-luna",
+          "schema": "source-support-2",
+          "verifier": "source-support-2"
+        }
+      },
+      "scores": {
+        "calibration": {
+          "corpus": "synthetic-memory-support-v1",
+          "partition": "calibration",
+          "mode": "real-model",
+          "versions": {
+            "prompt": "source-support-2",
+            "requested_model": "gpt-5.6-luna",
+            "returned_model": "gpt-5.6-luna",
+            "schema": "source-support-2",
+            "verifier": "source-support-2"
+          },
+          "expected_cases": 24,
+          "completed": 24,
+          "failed": 0,
+          "uncertain": 0,
+          "missing": [],
+          "critical_false_usable": [
+            "cal-valid-unrelated"
+          ],
+          "unverified_usable": [],
+          "positive_usability": 0.9090909090909091,
+          "verdict_accuracy": 0.7083333333333334,
+          "request_count": 24,
+          "charged_tokens": 29353,
+          "latency_ms_p50": 1964,
+          "latency_ms_p95": 2858,
+          "fixture_enforcement_met": null,
+          "declared_quality_thresholds_met": false,
+          "runtime_evidence_verified": false,
+          "note": "Offline scoring of declared observations; independently verify gateway/runtime receipts before cutover."
+        }
+      }
+    },
+    {
+      "artifact_name": "memory-support-native-20261007-calibration-v3.json",
+      "artifact_sha256": "cb110216145691b3a372086cf5f1ba859d5ba6247b24fe658295f5e60f8fbda6",
+      "receipts_sha256": "2b01de6425ea7e3087e2fd0fcbb999d0b172fd30a4a769b8d01702a2d5d56de4",
+      "observations": {
+        "corpus": "synthetic-memory-support-v1",
+        "mode": "real-model",
+        "observations": [
+          {
+            "case_id": "cal-faithful",
+            "charged_tokens": 1368,
+            "latency_ms": 2459,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-quote-whole",
+            "charged_tokens": 1100,
+            "latency_ms": 1933,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-valid-unrelated",
+            "charged_tokens": 1076,
+            "latency_ms": 2211,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-negation",
+            "charged_tokens": 1353,
+            "latency_ms": 2750,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-negation-preserved",
+            "charged_tokens": 1351,
+            "latency_ms": 1666,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-history-now",
+            "charged_tokens": 1373,
+            "latency_ms": 2473,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-history-qualified",
+            "charged_tokens": 1360,
+            "latency_ms": 1784,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-proposal-action",
+            "charged_tokens": 1356,
+            "latency_ms": 1962,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-proposal-intent",
+            "charged_tokens": 1392,
+            "latency_ms": 2377,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-tool-failed",
+            "charged_tokens": 1376,
+            "latency_ms": 2310,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-tool-failure-fact",
+            "charged_tokens": 1392,
+            "latency_ms": 2318,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-condition-dropped",
+            "charged_tokens": 1091,
+            "latency_ms": 2398,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-condition-preserved",
+            "charged_tokens": 1063,
+            "latency_ms": 1900,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-env-widen",
+            "charged_tokens": 1418,
+            "latency_ms": 2384,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-env-exact",
+            "charged_tokens": 1397,
+            "latency_ms": 1861,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-entity-swap",
+            "charged_tokens": 1047,
+            "latency_ms": 1559,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-injection",
+            "charged_tokens": 1335,
+            "latency_ms": 1866,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-correction",
+            "charged_tokens": 1401,
+            "latency_ms": 1968,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-omission",
+            "charged_tokens": 1075,
+            "latency_ms": 2086,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-explicit-retirement",
+            "charged_tokens": 1391,
+            "latency_ms": 1869,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-direct-bad",
+            "charged_tokens": 1058,
+            "latency_ms": 1611,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "cal-direct-good",
+            "charged_tokens": 1038,
+            "latency_ms": 2811,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "cal-handover-false",
+            "charged_tokens": 1359,
+            "latency_ms": 1846,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "cal-handover-qualified",
+            "charged_tokens": 1372,
+            "latency_ms": 2099,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          }
+        ],
+        "version": 1,
+        "versions": {
+          "prompt": "source-support-3",
+          "requested_model": "gpt-5.6-luna",
+          "returned_model": "gpt-5.6-luna",
+          "schema": "source-support-3",
+          "verifier": "source-support-3"
+        }
+      },
+      "scores": {
+        "calibration": {
+          "corpus": "synthetic-memory-support-v1",
+          "partition": "calibration",
+          "mode": "real-model",
+          "versions": {
+            "prompt": "source-support-3",
+            "requested_model": "gpt-5.6-luna",
+            "returned_model": "gpt-5.6-luna",
+            "schema": "source-support-3",
+            "verifier": "source-support-3"
+          },
+          "expected_cases": 24,
+          "completed": 24,
+          "failed": 0,
+          "uncertain": 0,
+          "missing": [],
+          "critical_false_usable": [],
+          "unverified_usable": [],
+          "positive_usability": 0.9090909090909091,
+          "verdict_accuracy": 0.8333333333333334,
+          "request_count": 24,
+          "charged_tokens": 30542,
+          "latency_ms_p50": 2086,
+          "latency_ms_p95": 2750,
+          "fixture_enforcement_met": null,
+          "declared_quality_thresholds_met": true,
+          "runtime_evidence_verified": false,
+          "note": "Offline scoring of declared observations; independently verify gateway/runtime receipts before cutover."
+        }
+      }
+    },
+    {
+      "artifact_name": "memory-support-native-20261007-held-out-v3.json",
+      "artifact_sha256": "9f6b6e0b2be2010970b964b2f91bbd226748ed582f2aa02541c230f10ca2fc9e",
+      "receipts_sha256": "ec5442226a42fef8bbcefdee8ab012ed4ff02d8dcabeedddfbc2b6e9a449dafa",
+      "observations": {
+        "corpus": "synthetic-memory-support-v1",
+        "mode": "real-model",
+        "observations": [
+          {
+            "case_id": "held-faithful",
+            "charged_tokens": 1080,
+            "latency_ms": 2148,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-valid-unrelated",
+            "charged_tokens": 1074,
+            "latency_ms": 1937,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-quote-whole",
+            "charged_tokens": 1402,
+            "latency_ms": 1723,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-negation",
+            "charged_tokens": 1354,
+            "latency_ms": 2327,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-negation-good",
+            "charged_tokens": 1369,
+            "latency_ms": 2025,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-history-current",
+            "charged_tokens": 1081,
+            "latency_ms": 2006,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-history-good",
+            "charged_tokens": 1056,
+            "latency_ms": 1784,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-proposal-action",
+            "charged_tokens": 1353,
+            "latency_ms": 2239,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-proposal-intent",
+            "charged_tokens": 1362,
+            "latency_ms": 2092,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-failed-tool",
+            "charged_tokens": 1384,
+            "latency_ms": 2048,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-partial-tool",
+            "charged_tokens": 1383,
+            "latency_ms": 1990,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-partial-qualified",
+            "charged_tokens": 1375,
+            "latency_ms": 1735,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-condition",
+            "charged_tokens": 1097,
+            "latency_ms": 2091,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-procedure-good",
+            "charged_tokens": 1073,
+            "latency_ms": 1803,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-env-mismatch",
+            "charged_tokens": 1415,
+            "latency_ms": 1886,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-env-good",
+            "charged_tokens": 1426,
+            "latency_ms": 2625,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-entity",
+            "charged_tokens": 1074,
+            "latency_ms": 2018,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-injection",
+            "charged_tokens": 1083,
+            "latency_ms": 2040,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-correction-good",
+            "charged_tokens": 1441,
+            "latency_ms": 2165,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-correction-history",
+            "charged_tokens": 1419,
+            "latency_ms": 2686,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-retirement-omission",
+            "charged_tokens": 1073,
+            "latency_ms": 1857,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "insufficient"
+          },
+          {
+            "case_id": "held-retirement-good",
+            "charged_tokens": 1401,
+            "latency_ms": 1894,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-direct-bad",
+            "charged_tokens": 1069,
+            "latency_ms": 2624,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-direct-good",
+            "charged_tokens": 1064,
+            "latency_ms": 2041,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          },
+          {
+            "case_id": "held-handover-bad",
+            "charged_tokens": 1379,
+            "latency_ms": 1937,
+            "request_count": 1,
+            "state": "completed",
+            "usable": false,
+            "verdict": "contradicted"
+          },
+          {
+            "case_id": "held-handover-good",
+            "charged_tokens": 1393,
+            "latency_ms": 1875,
+            "request_count": 1,
+            "state": "completed",
+            "usable": true,
+            "verdict": "supported"
+          }
+        ],
+        "version": 1,
+        "versions": {
+          "prompt": "source-support-3",
+          "requested_model": "gpt-5.6-luna",
+          "returned_model": "gpt-5.6-luna",
+          "schema": "source-support-3",
+          "verifier": "source-support-3"
+        }
+      },
+      "scores": {
+        "held_out": {
+          "corpus": "synthetic-memory-support-v1",
+          "partition": "held_out",
+          "mode": "real-model",
+          "versions": {
+            "prompt": "source-support-3",
+            "requested_model": "gpt-5.6-luna",
+            "returned_model": "gpt-5.6-luna",
+            "schema": "source-support-3",
+            "verifier": "source-support-3"
+          },
+          "expected_cases": 26,
+          "completed": 26,
+          "failed": 0,
+          "uncertain": 0,
+          "missing": [],
+          "critical_false_usable": [],
+          "unverified_usable": [],
+          "positive_usability": 1.0,
+          "verdict_accuracy": 0.8461538461538461,
+          "request_count": 26,
+          "charged_tokens": 32680,
+          "latency_ms_p50": 2025,
+          "latency_ms_p95": 2625,
+          "fixture_enforcement_met": null,
+          "declared_quality_thresholds_met": true,
+          "runtime_evidence_verified": false,
+          "note": "Offline scoring of declared observations; independently verify gateway/runtime receipts before cutover."
+        }
+      }
+    }
+  ]
+}

@@ -34,6 +34,9 @@ behavior; presentation changes never change what a page measures or authorizes.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `desktop-dashboard-refresh-stability` | shipped | contract-backed | pack | Preserve fresh pipeline layout across visibility and metadata refreshes without extending validity |
+| `desktop-input-errors-and-page-recovery` | shipped | contract-backed | pack | Clear learning failure reasons, guarded input diagnostics and stale page recovery |
+| `desktop-inline-processing-limits` | shipped | contract-backed | small-fix: explicit placement correction to existing controls and scoped CSS; canonical fields, bounds and Save/Cancel unchanged | Move Processing limits into the main AI policy form with a responsive two-column grid |
 | `desktop-private-runner-relationships` | shipped | contract-backed | pack | Approved device/connection/tool/group cards with reader-safe binding summaries and independent UI acceptance |
 | `desktop-private-runners-spacing` | shipped | contract-backed | small-fix: explicit alignment correction to existing scoped CSS; registration, device binding and authority unchanged | Align Private Runners with Tool access and reduce excess tab-to-toolbar spacing; relationship display remains a proposal |
 | `desktop-inline-private-runners` | shipped | contract-backed | pack | Approved compact cards and inline Add/Edit delivered locally with immutable device, authority and revision guards |
@@ -484,3 +487,28 @@ All approved scale, diagnostics, agent inspection/context hiding, readable code 
   checks, actual owner/reader APIs and rendered UI, Add/Edit/Cancel, independent
   laptop/wide review, governance32, CodeGraph, readiness and whitespace passed.
 - Version: N/A; commit: uncommitted. No push or external release.
+
+
+## Processing limits and input error follow-up — 2026-10-07
+
+The explicit placement correction qualifies as a small isolated presentation
+fix: canonical fields, bounds, authority and shared policy commands are unchanged.
+Processing limits now sits below Automatic processing with a two-column grid,
+an accessible heading info icon and no permanent helper paragraph. Header
+actions wrap rather than shrink. Browser open-help and Cancel are verified.
+
+The subsequent cross-module error work has its own
+[archived pack](../execution/archive/desktop-input-errors-and-page-recovery.md)
+and [dated evidence](../../mappings/input-errors-and-page-recovery-2026-10-07.md).
+Actual learning rejection is distinct from capture, budget-blocked indexing no
+longer recreates minute-by-minute attempts, and a missing chunk gets safe page
+recovery. Local deployment is healthy; no release or commit was requested.
+
+## Dashboard refresh closeout — 2026-10-07
+
+Fresh activity content stays mounted across brief visibility changes and Brain
+metadata revisions. Hidden motion pauses; role changes and failed/expired reads
+still clear protected state. [Pack](../execution/archive/desktop-dashboard-refresh-stability.md)
+and [evidence](../../mappings/dashboard-refresh-stability-2026-10-07.md) record
+reproduction, exact graph DOM/inspection checks, six live polls, build and
+local readiness. No new cache deadline, server change, release or commit.

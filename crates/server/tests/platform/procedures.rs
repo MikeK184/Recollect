@@ -248,6 +248,7 @@ async fn handover_generation_policy_replay_and_stale_input() {
         review::proposal(&source["version"]["id"], "Amber", "8080"),
     )
     .await;
+    let r = accept(&h, &owner, &base, &r).await;
     let input = generated_input(&r);
     assert_eq!(
         h.call(
@@ -262,8 +263,8 @@ async fn handover_generation_policy_replay_and_stale_input() {
     );
     assert_eq!(p.calls.load(Ordering::SeqCst), 0);
     allow(&h, &owner, &base, |policy| {
-        policy["purposes"] = json!(["synthesis"]);
-        policy["content_classes"] = json!(["claim", "query"]);
+        policy["purposes"] = json!(["synthesis", "extraction"]);
+        policy["content_classes"] = json!(["claim", "query", "document"]);
     })
     .await;
     *p.candidates.lock().unwrap() = draft();
@@ -316,7 +317,7 @@ async fn handover_generation_policy_replay_and_stale_input() {
         detail["selected"]["contributions"][0]["revision_id"],
         r["id"]
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
     let replay = h
         .keyed(
             "POST",
@@ -327,7 +328,7 @@ async fn handover_generation_policy_replay_and_stale_input() {
         )
         .await;
     assert_eq!(replay.1, queued.1);
-    assert_eq!(p.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
     let before: i64 = sqlx::query_scalar("SELECT count(*) FROM claims")
         .fetch_one(&h.admin)
         .await
@@ -343,15 +344,15 @@ async fn handover_generation_policy_replay_and_stale_input() {
     .await;
     let state = h.state.clone();
     let work = tokio::spawn(async move { worker::run_once(&state, "model").await.unwrap() });
-    wait_calls(&p, 2).await;
+    wait_calls(&p, 3).await;
     let mut changed = review::proposal(&source["version"]["id"], "Amber", "9090");
     changed["base_revision"] = r["id"].clone();
     ok(
         &h,
-        "PUT",
-        &format!("{base}/claims/{}", r["claim_id"].as_str().unwrap()),
+        "POST",
+        &format!("{base}/claims/{}/review", r["claim_id"].as_str().unwrap()),
         &owner,
-        changed,
+        json!({"base_revision":r["id"],"action":"correct","reason":"Changed synthetic fixture declaration during generation.","content":changed["content"],"revalidation_basis":null}),
     )
     .await;
     assert!(work.await.unwrap());
@@ -375,7 +376,7 @@ async fn handover_generation_policy_replay_and_stale_input() {
         .0
         .is_client_error()
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 3);
     server.abort();
     h.finish().await;
 }
@@ -386,8 +387,8 @@ async fn handover_erasure_replays_into_pre_handover_database() {
     use recollect_server::privacy_journal;
     let (mut h, owner, base, p, server) = setup().await;
     allow(&h, &owner, &base, |policy| {
-        policy["purposes"] = json!(["synthesis"]);
-        policy["content_classes"] = json!(["claim", "query"]);
+        policy["purposes"] = json!(["synthesis", "extraction"]);
+        policy["content_classes"] = json!(["claim", "query", "document"]);
     })
     .await;
     let source_a = source(&h, &owner, &base, "Amber.port = 8080\n").await;
@@ -408,6 +409,8 @@ async fn handover_erasure_replays_into_pre_handover_database() {
         review::proposal(&source_b["version"]["id"], "Birch", "9090"),
     )
     .await;
+    let r = accept(&h, &owner, &base, &r).await;
+    let unrelated = accept(&h, &owner, &base, &unrelated).await;
     let backup = format!("recollect_test_{}", Uuid::new_v4().simple());
     eprintln!("Disposable handover restore fixture: {backup}");
     h.state.pool.close().await;
@@ -528,7 +531,7 @@ async fn handover_erasure_replays_into_pre_handover_database() {
     model_job(&h).await;
     let run = generated_runs(&h, &owner, &base).await["items"][0].clone();
     assert_eq!(run["state"], "succeeded");
-    assert_eq!(p.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
     // Seven-day maintenance must not delete a job still referenced by durable history.
     sqlx::query("UPDATE jobs SET updated_at=clock_timestamp()-interval '8 days' WHERE id IN(SELECT job_id FROM handover_runs)")
         .execute(&backup_admin).await.unwrap();
@@ -542,7 +545,15 @@ async fn handover_erasure_replays_into_pre_handover_database() {
         .unwrap(),
         1
     );
+    sqlx::query("ALTER TABLE handover_runs DISABLE TRIGGER immutable_handover_run")
+        .execute(&backup_admin)
+        .await
+        .unwrap();
     sqlx::query("UPDATE handover_runs SET created_at=clock_timestamp()-interval '400 days'")
+        .execute(&backup_admin)
+        .await
+        .unwrap();
+    sqlx::query("ALTER TABLE handover_runs ENABLE TRIGGER immutable_handover_run")
         .execute(&backup_admin)
         .await
         .unwrap();
@@ -568,8 +579,8 @@ async fn handover_erasure_replays_into_pre_handover_database() {
 async fn handover_failure_explicit_retry_and_publication_rollback() {
     let (h, owner, base, p, server) = setup().await;
     allow(&h, &owner, &base, |policy| {
-        policy["purposes"] = json!(["synthesis"]);
-        policy["content_classes"] = json!(["claim", "query"]);
+        policy["purposes"] = json!(["synthesis", "extraction"]);
+        policy["content_classes"] = json!(["claim", "query", "document"]);
     })
     .await;
     let source = source(&h, &owner, &base, "Amber.port = 8080\n").await;
@@ -581,6 +592,7 @@ async fn handover_failure_explicit_retry_and_publication_rollback() {
         review::proposal(&source["version"]["id"], "Amber", "8080"),
     )
     .await;
+    let r = accept(&h, &owner, &base, &r).await;
     p.mode.store(1, Ordering::SeqCst);
     ok(
         &h,
@@ -621,7 +633,7 @@ async fn handover_failure_explicit_retry_and_publication_rollback() {
         generated_runs(&h, &owner, &base).await["items"][0]["state"],
         "succeeded"
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 3);
     let before: i64 = sqlx::query_scalar("SELECT count(*) FROM claims")
         .fetch_one(&h.admin)
         .await
@@ -638,7 +650,7 @@ async fn handover_failure_explicit_retry_and_publication_rollback() {
     model_job(&h).await;
     assert_eq!(
         generated_runs(&h, &owner, &base).await["items"][0]["state"],
-        "failed"
+        "running"
     );
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM claims")
@@ -647,7 +659,7 @@ async fn handover_failure_explicit_retry_and_publication_rollback() {
             .unwrap(),
         before
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), 3);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 5);
     sqlx::query("ALTER TABLE mutation_audit DROP CONSTRAINT handover_fault")
         .execute(&h.admin)
         .await
@@ -674,8 +686,8 @@ async fn handover_device_scope_foreign_environment_revocation_and_expiry() {
         .await;
     }
     allow(&h, &owner, &base, |policy| {
-        policy["purposes"] = json!(["synthesis"]);
-        policy["content_classes"] = json!(["claim", "query"]);
+        policy["purposes"] = json!(["synthesis", "extraction"]);
+        policy["content_classes"] = json!(["claim", "query", "document"]);
     })
     .await;
     let source = source(&h, &writer, &base, "Amber.port = 8080\n").await;
@@ -687,6 +699,7 @@ async fn handover_device_scope_foreign_environment_revocation_and_expiry() {
         review::proposal(&source["version"]["id"], "Amber", "8080"),
     )
     .await;
+    let r = accept(&h, &owner, &base, &r).await;
     let mut input = generated_input(&r);
     assert_eq!(
         h.call(
@@ -791,7 +804,7 @@ async fn handover_device_scope_foreign_environment_revocation_and_expiry() {
     different["content"]["selection"]["environment_id"] = env;
     let different = ok(&h, "POST", &format!("{base}/claims"), &owner, different).await;
     assert!(h.call("POST",&format!("{base}/handovers"),Some(&owner),json!({"title":"Wrong combination","contributions":[r["id"],different["id"]],"operation_id":null})).await.0.is_client_error());
-    assert_eq!(p.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
     p.delay.store(250, Ordering::SeqCst);
     assert_eq!(
         h.bearer("POST", &format!("{base}/handovers"), &token, input)
@@ -801,7 +814,7 @@ async fn handover_device_scope_foreign_environment_revocation_and_expiry() {
     );
     let state = h.state.clone();
     let work = tokio::spawn(async move { worker::run_once(&state, "model").await.unwrap() });
-    wait_calls(&p, 2).await;
+    wait_calls(&p, 3).await;
     ok(
         &h,
         "DELETE",
@@ -864,7 +877,7 @@ async fn handover_device_scope_foreign_environment_revocation_and_expiry() {
         .find(|run| run["id"] == completed["id"])
         .unwrap();
     assert_eq!(preserved["state"], "succeeded");
-    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 3);
     server.abort();
     h.finish().await;
 }

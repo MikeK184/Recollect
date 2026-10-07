@@ -8,9 +8,14 @@ WITH captured_sources AS MATERIALIZED (
 ), source_knowledge AS MATERIALIZED (
   -- Same exact-version knowledge time as recollect_source_knowledge. The
   -- separate source-id join below preserves capture scope for later versions.
-  SELECT v.*,coalesce(e.received_at,v.created_at) AS recorded_at
+  SELECT v.*,coalesce(e.received_at,v.created_at) AS recorded_at,
+    coalesce(a.selection,i.selection) AS import_selection
   FROM source_versions v
   LEFT JOIN captured_sources e ON e.source_version_id=v.id
+  -- Resolve version-specific import applicability once, before the chunk
+  -- fan-out, so scoped RLS is not re-evaluated for every search fragment.
+  LEFT JOIN source_import_scopes i ON i.version_id=v.id AND i.brain_id=v.brain_id
+  LEFT JOIN automatic_support_excerpts a ON a.version_id=v.id AND a.brain_id=v.brain_id
   WHERE v.brain_id=$1
 ), known_claims AS (
   SELECT DISTINCT ON(claim_id) * FROM claim_revisions
@@ -19,7 +24,7 @@ WITH captured_sources AS MATERIALIZED (
   -- Apply the same exact manifest boundary as claim_manifest before any
   -- channel ranks or counts claim representations. Keep the canonical view
   -- recheck as well; similarity and projection coverage cannot supply scope.
-  SELECT r.* FROM known_claims r WHERE $6::jsonb IS NULL OR (
+  SELECT r.* FROM known_claims r WHERE recollect_memory_supported(r.brain_id,r.id) AND ($6::jsonb IS NULL OR (
     NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(r.revision#>'{content,selection,repository_ids}') repo
       WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements($6->'entries') entry
         WHERE entry->>'repository_id'=repo))
@@ -41,7 +46,7 @@ WITH captured_sources AS MATERIALIZED (
             WHERE old_entry->>'repository_id'=repo
               AND jsonb_build_object('repository_id',old_entry->'repository_id','revision',old_entry->'revision',
                 'snapshot_id',old_entry->'snapshot_id','config_paths',coalesce(old_entry->'config_paths','[]'::jsonb))=selected_entry))))
-  )
+  ))
 ), known_sources AS (
   SELECT DISTINCT ON(source_id) id FROM source_knowledge
   WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY source_id,recorded_at DESC,id DESC
@@ -87,7 +92,7 @@ WITH captured_sources AS MATERIALIZED (
   UNION ALL
 
   SELECT 'source_version',v.id,v.id,c.id,v.title,coalesce(c.content,''),v.recorded_at,
-    coalesce(e.selection,'{}'::jsonb),v.source_id,NULL,NULL,NULL,NULL,
+    coalesce(v.import_selection,e.selection,'{}'::jsonb),v.source_id,NULL,NULL,NULL,NULL,
     c.line_start,c.line_end,c.byte_start,c.byte_end,v.artifact_id,v.byte_length,v.processing,
     jsonb_build_object('retention_class',v.retention_class),
     v.recall_vector || coalesce(c.recall_vector,''::tsvector),
@@ -99,7 +104,7 @@ WITH captured_sources AS MATERIALIZED (
   WHERE v.brain_id=$1 AND v.recorded_at<=$2 AND $7 IN ('investigation','history')
     AND (v.id IN(SELECT id FROM known_sources) OR ($7='history' AND $8='source_version' AND v.id=$9))
     AND recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active'
-    AND recollect_recall_scope(coalesce(e.selection,'{}'::jsonb),$4)
+    AND recollect_recall_scope(coalesce(v.import_selection,e.selection,'{}'::jsonb),$4)
     AND ($5::uuid IS NULL OR EXISTS(SELECT 1 FROM evidence_memberships m
       WHERE m.brain_id=$1 AND m.source_id=v.source_id AND m.group_id=$5))
     AND ($4->>'environment_id' IS NULL OR NOT EXISTS(SELECT 1 FROM evidence_memberships m

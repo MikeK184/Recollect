@@ -11,6 +11,7 @@ pub(super) enum Scope {
     None,
     Read,
     Write,
+    SourceWrite,
     Graph,
     Managed,
     ExistingCall,
@@ -92,6 +93,30 @@ fn build() -> Result<Vec<Spec>, String> {
     let definitions = &api["components"]["schemas"];
     // Routes are an internal closed vocabulary. Arguments never select a URL.
     let entries = [
+        (
+            "source.list",
+            "List retained source titles and exact version IDs applicable to this read operation. Use q for title search.",
+            "GET",
+            "/evidence",
+            "",
+            Scope::Read,
+        ),
+        (
+            "source.import",
+            "Import authorized UTF-8 document text under a write operation. Returns exact source/version IDs; normal processing and automatic memory follow Brain policy. Read files using your host, never Recollect internals.",
+            "POST",
+            "/sources",
+            "SourceInput",
+            Scope::SourceWrite,
+        ),
+        (
+            "source.inspect",
+            "Read an exact retained source version and citation spans applicable to this read operation. Expired/erased content is unavailable.",
+            "GET",
+            "/sources/{id}/versions/{version_id}",
+            "",
+            Scope::Read,
+        ),
         (
             "workspace.list",
             "List this Brain's repository, area, environment and own task inventory. Does not start tools or extract repositories.",
@@ -271,7 +296,7 @@ fn build() -> Result<Vec<Spec>, String> {
     ];
     let mut result = Vec::new();
     for (name, description, method, path, input_type, scope) in entries {
-        let writer = matches!(scope, Scope::Write | Scope::Handover);
+        let writer = matches!(scope, Scope::Write | Scope::SourceWrite | Scope::Handover);
         let mut properties = serde_json::Map::new();
         let mut required = Vec::new();
         if !input_type.is_empty() {
@@ -296,6 +321,11 @@ fn build() -> Result<Vec<Spec>, String> {
                     remove(&mut input, &["environment_id"], definitions)?;
                     remove(&mut input, &["operation_id"], definitions)?;
                 }
+                Scope::SourceWrite => {
+                    remove(&mut input, &["operation_id"], definitions)?;
+                    remove(&mut input, &["base_version"], definitions)?;
+                    remove(&mut input, &["retention_class"], definitions)?;
+                }
                 Scope::Handover => remove(&mut input, &["operation_id"], definitions)?,
                 _ => {}
             }
@@ -310,6 +340,10 @@ fn build() -> Result<Vec<Spec>, String> {
         if path.contains("{id}") {
             properties.insert("id".into(), uuid());
             required.push("id");
+        }
+        if name == "source.inspect" {
+            properties.insert("version_id".into(), uuid());
+            required.push("version_id");
         }
         if name == "memory.contribute" {
             properties.insert("claim_id".into(), uuid());
@@ -328,6 +362,7 @@ fn build() -> Result<Vec<Spec>, String> {
         if method == "GET" {
             let mut query = serde_json::Map::new();
             for field in match name {
+                "source.list" => &["offset"][..],
                 "workspace.list" => &["checkout_offset", "task_offset"][..],
                 "workspace.inspect_task" => &["scope_offset", "operation_offset"][..],
                 "memory.inspect" | "memory.review_history" | "memory.handover_status" => {
@@ -336,6 +371,9 @@ fn build() -> Result<Vec<Spec>, String> {
                 _ => &[][..],
             } {
                 query.insert((*field).into(), json!({"type":"integer","minimum":0}));
+            }
+            if name == "source.list" {
+                query.insert("q".into(), json!({"type":"string","maxLength":200}));
             }
             if name == "workspace.list" {
                 query.insert("workspace_id".into(), uuid());

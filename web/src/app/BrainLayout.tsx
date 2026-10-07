@@ -48,7 +48,9 @@ function BrainBoundary({ id }: { id: string }) {
           continue using this space.
         </Alert>
       )}
-      <AssuranceProvider key={`${query.data.role}-${query.data.updated_at}`}>
+      {/* Metadata revisions invalidate assurance queries, not the entire page.
+          Effective role changes still discard the protected route subtree. */}
+      <AssuranceProvider key={query.data.role}>
         <Outlet />
       </AssuranceProvider>
     </BrainContext.Provider>

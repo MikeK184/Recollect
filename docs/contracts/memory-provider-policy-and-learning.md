@@ -2,6 +2,10 @@
 
 Status: accepted
 
+The October 7 [source-support amendment](memory-source-support-verification.md)
+requires whole-assertion assessment, durable typed staging and consumer gating.
+Its recovery and automatic budget-resume rules supersede earlier assumptions below.
+
 The 2026-10-05 [model catalogue amendment](brain-model-catalogue-and-selection.md)
 supersedes the installation-only pair restriction below with supported per-Brain
 selection, dated prices, account discovery and atomic embedding rebuilds. Historical
@@ -229,3 +233,12 @@ They must use this gateway and prove their purpose/content/retention boundary.
 The gateway supplies generation/embedding/reranking seams but does not declare those
 consumer products shipped. Additional provider/region adapters, trained models and
 arbitrary automatic acceptance rule languages are outside this initial adapter.
+
+
+## Model input rejection reasons — 2026-10-07
+
+The existing credential/private-key publication guard also protects model
+transmission. Its rejection at the gateway is `model_input_sensitive`, rather
+than generic `invalid_input`. Preserve the retained source and reject before a
+provider call; never weaken detection or silently redact/truncate the evidence.
+The UI names this boundary without exposing the matched bytes.

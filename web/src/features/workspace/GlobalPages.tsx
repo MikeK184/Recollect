@@ -70,7 +70,7 @@ export function AgentsGlobalPage() {
   for (const agent of agents)
     for (const brain of agent.brains) {
       if (
-        !`${brain.name} ${agent.name} ${hostLabel(agent.host_kind)}`
+        !`${brain.name} ${agent.name} ${hostLabel(agent.host_kind)} ${(agent.observed_hosts ?? []).map(hostLabel).join(" ")}`
           .toLocaleLowerCase()
           .includes(term)
       )
@@ -182,7 +182,11 @@ export function AgentsGlobalPage() {
                         </button>
                       </td>
                       <td>
-                        <span>{hostLabel(agent.host_kind)}</span>
+                        <span>
+                          {agent.observed_hosts?.length
+                            ? agent.observed_hosts.map(hostLabel).join(" · ")
+                            : hostLabel(agent.host_kind)}
+                        </span>
                         <small>{integrationLabel(agent.integration)}</small>
                       </td>
                       <td>
@@ -225,8 +229,10 @@ export function AgentsGlobalPage() {
               <div>
                 <strong>{inspected.name}</strong>
                 <p>
-                  {hostLabel(inspected.host_kind)} ·{" "}
-                  {integrationLabel(inspected.integration)}
+                  {inspected.observed_hosts?.length
+                    ? inspected.observed_hosts.map(hostLabel).join(" · ")
+                    : hostLabel(inspected.host_kind)}{" "}
+                  · {integrationLabel(inspected.integration)}
                 </p>
               </div>
             </div>

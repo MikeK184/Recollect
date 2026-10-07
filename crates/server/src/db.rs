@@ -156,6 +156,30 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "034_brain_model_selection",
         include_str!("../migrations/034_brain_model_selection.sql"),
     ),
+    (
+        "035_plugin_workflow",
+        include_str!("../migrations/035_plugin_workflow.sql"),
+    ),
+    (
+        "036_memory_source_support",
+        include_str!("../migrations/036_memory_source_support.sql"),
+    ),
+    (
+        "037_memory_revision_support",
+        include_str!("../migrations/037_memory_revision_support.sql"),
+    ),
+    (
+        "038_handover_source_support",
+        include_str!("../migrations/038_handover_source_support.sql"),
+    ),
+    (
+        "039_automatic_session_digests",
+        include_str!("../migrations/039_automatic_session_digests.sql"),
+    ),
+    (
+        "040_scoped_project_brief",
+        include_str!("../migrations/040_scoped_project_brief.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

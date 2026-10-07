@@ -82,6 +82,59 @@ export const stateLabel = (value: string) =>
     not_recorded: "Not recorded",
   })[value] ?? value.replaceAll("_", " ");
 
+export function learningFailure(code?: string | null) {
+  switch (code) {
+    case "model_budget_exhausted":
+      return {
+        label: "Daily limit reached",
+        detail:
+          "Source processed. Learning could not fit the remaining daily token allowance. Automatic learning can retry after midnight UTC; the allowance is set in Settings → AI permissions → Processing limits.",
+      };
+    case "model_input_too_large":
+      return {
+        label: "Input limit reached",
+        detail:
+          "Source processed. The source and its provenance exceed the model input byte limit. Adjust Processing limits or import a smaller explicit excerpt.",
+      };
+    case "model_input_sensitive":
+      return {
+        label: "Sensitive input",
+        detail:
+          "Source processed. Credential values or private-key markers block model transmission. Import a separate sanitized excerpt if appropriate; the retained source stays unchanged.",
+      };
+    case "provider_incomplete":
+      return {
+        label: "Output limit reached",
+        detail:
+          "Source processed. The model reached its output token limit before completing its structured result. Check maximum output tokens in Processing limits.",
+      };
+    case "provider_shape":
+      return {
+        label: "Learning failed",
+        detail:
+          "Source processed. The model returned an invalid structured result; no memory was published from this attempt.",
+      };
+    default:
+      return {
+        label: "Learning failed",
+        detail:
+          "Source processed. This learning attempt failed. Open the processing record to inspect its recorded reason.",
+      };
+  }
+}
+
+export function inputStatus(item: PipelineItem, at: string) {
+  const state = itemState(item, at);
+  if (state !== "failed") return { label: stateLabel(state), detail: null };
+  if (processingState(item, at) === "failed")
+    return {
+      label: "Processing failed",
+      detail:
+        "The input arrived, but source processing failed. Open the processing record to inspect its recorded reason.",
+    };
+  return learningFailure(item.learning?.job.error_code);
+}
+
 export type FlowStage = "contribution" | "process" | "learn" | "outcome";
 /** Pulses report a newly observed change on its own edge, never replay a path. */
 export function observedStages(

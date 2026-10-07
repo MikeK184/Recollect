@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActionIcon,
+  TextInput,
+  Tooltip,
   Alert,
   Button,
   Card,
@@ -15,13 +18,27 @@ import {
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Check, Copy, History, Laptop, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  Copy,
+  History,
+  Laptop,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import type { components } from "./api-schema";
 import { client, result } from "./api";
 import { StatusBadge } from "./components/StatusBadge";
 import { HostIcon } from "./components/HostIcon";
+import "./features/agents/access-tokens.css";
 
-const date = (value: string) => new Date(value).toLocaleString();
+const date = (value: string) =>
+  new Date(value).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 const hostLabels: Record<string, string> = {
   codex: "Codex",
   claude_code: "Claude Code",
@@ -66,6 +83,7 @@ export function AgentAccessPanel({ code }: { code?: string }) {
     null,
   );
   const [showHistory, setShowHistory] = useState(false);
+  const [search, setSearch] = useState("");
   const devices = useQuery({
     queryKey: ["devices"],
     queryFn: async ({ signal }) =>
@@ -111,6 +129,10 @@ export function AgentAccessPanel({ code }: { code?: string }) {
     seen.current = next;
     if (becameHistory) setShowHistory(true);
   }, [devices.data]);
+  const matches = (device: Device) =>
+    `${device.name} ${device.host_kind ?? ""} ${(device.observed_hosts ?? []).map((host) => hostLabels[host] ?? host).join(" ")} ${device.integration ?? ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
   const rows = useMemo(() => {
     const list = [...(devices.data ?? [])].sort(
       (a, b) => order[statusOf(a).label] - order[statusOf(b).label],
@@ -120,6 +142,8 @@ export function AgentAccessPanel({ code }: { code?: string }) {
       history: list.filter((device) => statusOf(device).historical),
     };
   }, [devices.data]);
+  const visibleCurrent = rows.current.filter(matches);
+  const visibleHistory = rows.history.filter(matches);
   return (
     <Stack gap="xl">
       {code && <PairingApproval key={code} code={code} />}
@@ -160,28 +184,36 @@ export function AgentAccessPanel({ code }: { code?: string }) {
                     onChange={(event) =>
                       setShowHistory(event.currentTarget.checked)
                     }
-                    label="Show revoked and expired devices"
+                    label="Include revoked and expired"
                   />
                   <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
                     {rows.current.length} enabled credentials ·{" "}
                     {rows.history.length} in history
                   </Text>
                 </Group>
-                <Stack gap="md">
+                <TextInput
+                  placeholder="Find an access token…"
+                  aria-label="Find an access token"
+                  value={search}
+                  onChange={(event) => setSearch(event.currentTarget.value)}
+                  leftSection={<Search size={16} />}
+                />
+                <Stack gap="xs">
                   <Text fw={600}>
                     Enabled credentials{" "}
                     <span className="count-pill">{rows.current.length}</span>
                   </Text>
-                  {rows.current.map((device) => (
-                    <DeviceCard
-                      device={device}
-                      key={device.id}
-                      onRevoke={(target) => {
-                        revoke.reset();
-                        setSelected(target);
-                      }}
-                    />
-                  ))}
+                  {visibleCurrent
+                    .map((device) => (
+                      <DeviceCard
+                        device={device}
+                        key={device.id}
+                        onRevoke={(target) => {
+                          revoke.reset();
+                          setSelected(target);
+                        }}
+                      />
+                    ))}
                   {!rows.current.length && (
                     <Card withBorder className="empty-state">
                       <div className="empty-icon">
@@ -194,6 +226,9 @@ export function AgentAccessPanel({ code }: { code?: string }) {
                       </Text>
                     </Card>
                   )}
+                  {!!rows.current.length && !visibleCurrent.length && (
+                    <Text size="sm" c="dimmed">No enabled access tokens match your search.</Text>
+                  )}
                 </Stack>
                 {!!rows.history.length && (
                   <Stack gap="md">
@@ -203,23 +238,24 @@ export function AgentAccessPanel({ code }: { code?: string }) {
                       <span className="count-pill">{rows.history.length}</span>
                     </Group>
                     {showHistory ? (
-                      rows.history.map((device) => (
-                        <DeviceCard
-                          device={device}
-                          key={device.id}
-                          onRevoke={(target) => {
-                            revoke.reset();
-                            setSelected(target);
-                          }}
-                        />
-                      ))
+                      visibleHistory
+                        .map((device) => (
+                          <DeviceCard
+                            device={device}
+                            key={device.id}
+                            onRevoke={(target) => {
+                              revoke.reset();
+                              setSelected(target);
+                            }}
+                          />
+                        ))
                     ) : (
-                      <Text size="sm" c="dimmed">
+                      <Text size="xs" c="dimmed">
                         {rows.history.length}{" "}
                         {rows.history.length === 1
                           ? "record is"
                           : "records are"}{" "}
-                        collapsed. Use “Show revoked and expired devices” above
+                        collapsed. Use “Include revoked and expired” above
                         to list them.
                       </Text>
                     )}
@@ -276,70 +312,78 @@ function DeviceCard({
 }) {
   const status = statusOf(device);
   return (
-    <Card withBorder p="lg" data-testid="device-card">
-      <Group justify="space-between" align="flex-start" gap="md">
-        <Stack gap={7} style={{ minWidth: 0, flex: "1 1 230px" }}>
-          <Group gap="xs">
-            <HostIcon host={device.host_kind} size={18} />
-            <Text
-              fw={600}
-              data-testid="device-row-name"
-              style={{ overflowWrap: "anywhere" }}
-            >
-              {device.name}
-            </Text>
-            <StatusBadge state={status.mark}>{status.label}</StatusBadge>
-          </Group>
-          {(device.host_kind || device.integration) && (
-            <Text size="xs" c="dimmed">
-              {hostLabels[device.host_kind ?? ""] ?? "Host unreported"} ·{" "}
-              {device.integration === "plugin"
-                ? "Recollect plugin"
-                : device.integration === "mcp"
-                  ? "MCP token"
-                  : "Integration unreported"}
-            </Text>
-          )}
-          <Text size="xs" c="dimmed">
-            Paired {date(device.created_at)}
+    <div className="access-token-row" data-testid="device-card">
+      <div className="access-token-identity">
+        <div className="access-token-icon">
+          <HostIcon host={device.host_kind} size={20} />
+        </div>
+        <div>
+          <Text fw={600} size="sm" data-testid="device-row-name">
+            {device.name}
           </Text>
           <Text size="xs" c="dimmed">
-            Last used{" "}
-            {device.last_used_at ? date(device.last_used_at) : "— not used yet"}
+            {(device.observed_hosts?.length
+              ? device.observed_hosts
+              : [device.host_kind ?? ""]
+            )
+              .map((host) => hostLabels[host])
+              .filter(Boolean)
+              .join(" · ") || "Host unreported"}
+            {" · "}
+            {device.integration === "plugin"
+              ? "Recollect plugin"
+              : device.integration === "mcp"
+                ? "MCP token"
+                : "Integration unreported"}
           </Text>
+          <StatusBadge state={status.mark}>
+            {status.label === "Credential enabled" ? "Enabled" : status.label}
+          </StatusBadge>
+        </div>
+      </div>
+      <div className="access-token-dates">
+        <Text size="xs" c="dimmed">
+          Last used
+        </Text>
+        <Text size="xs">
+          {device.last_used_at ? date(device.last_used_at) : "Not used yet"}
+        </Text>
+        <Tooltip
+          label={`Paired ${new Date(device.created_at).toLocaleString()}`}
+        >
           <Text size="xs" c="dimmed">
             {device.revoked_at
               ? `Revoked ${date(device.revoked_at)}`
               : `Expires ${date(device.expires_at)}`}
           </Text>
-        </Stack>
+        </Tooltip>
+      </div>
+      <Group gap={4} wrap="nowrap">
+        <CopyButton value={device.id}>
+          {({ copied, copy }) => (
+            <Tooltip label={copied ? "Copied" : "Copy device ID"}>
+              <ActionIcon
+                variant="subtle"
+                aria-label="Copy device ID"
+                onClick={copy}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </CopyButton>
         {!device.revoked_at && (
           <Button
-            size="xs"
+            size="compact-xs"
             color="red"
-            variant="light"
+            variant="subtle"
             onClick={() => onRevoke(device)}
           >
             Revoke
           </Button>
         )}
       </Group>
-      <details className="record-identity">
-        <summary>Device identifier</summary>
-        <CopyButton value={device.id}>
-          {({ copied, copy }) => (
-            <Button
-              size="xs"
-              variant="default"
-              onClick={copy}
-              leftSection={copied ? <Check size={14} /> : <Copy size={14} />}
-            >
-              {copied ? "Copied" : "Copy device ID"}
-            </Button>
-          )}
-        </CopyButton>
-      </details>
-    </Card>
+    </div>
   );
 }
 

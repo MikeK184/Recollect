@@ -37,6 +37,16 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub model_input_claim_revisions: Vec<Uuid>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub learning_support_stages: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub memory_support_assessments: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub handover_support_stages: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub session_digest_partitions: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub session_digest_generations: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub capture_event_fences: Vec<CaptureFence>,
     pub publication_fences: Vec<PublicationFence>,
     pub independent_claim_revisions: i64,

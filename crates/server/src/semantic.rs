@@ -100,6 +100,14 @@ pub(crate) async fn representation(
             let version = entry.source_version_id.ok_or_else(Error::missing)?;
             let source =
                 gateway::source(state, tx, brain, version, crate::artifacts::MAX_TEXT).await?;
+            if let Some(original) = source.provenance["original_content_class"].as_str() {
+                model_policy::permits(
+                    state,
+                    &policy.policy,
+                    "embedding",
+                    &[source.class.clone(), original.into()],
+                )?;
+            }
             let (start, end, indexed): (i32, i32, String) = sqlx::query_as(
                 "SELECT byte_start,byte_end,content FROM source_chunks WHERE brain_id=$1 AND id=$2 AND version_id=$3",
             )

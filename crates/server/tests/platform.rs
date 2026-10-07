@@ -887,6 +887,9 @@ async fn invited_team_recovery_effective_grants_and_ownership() {
 
 impl Harness {
     async fn new() -> Self {
+        Self::new_through(db::MIGRATIONS.len()).await
+    }
+    async fn new_through(migrations: usize) -> Self {
         let mut config = Config::from_env()
             .expect("Use ./scripts/test-platform.sh with repository-owned databases");
         let admin_url = std::env::var("DATABASE_ADMIN_URL").expect("DATABASE_ADMIN_URL required");
@@ -902,7 +905,26 @@ impl Harness {
         let mut url = reqwest::Url::parse(&admin_url).unwrap();
         url.set_path(&database);
         let admin = db::pool(url.as_str()).await.unwrap();
-        db::migrate(&admin).await.unwrap();
+        if migrations == db::MIGRATIONS.len() {
+            db::migrate(&admin).await.unwrap();
+        } else {
+            // Owned upgrade fixture: use the exact production migration texts.
+            let mut tx = admin.begin().await.unwrap();
+            sqlx::raw_sql("CREATE TABLE recollect_migrations(name text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT clock_timestamp())").execute(&mut *tx).await.unwrap();
+            for (name, sql) in &db::MIGRATIONS[..migrations] {
+                sqlx::raw_sql(sql).execute(&mut *tx).await.unwrap();
+                sqlx::query("INSERT INTO recollect_migrations(name) VALUES($1)")
+                    .bind(name)
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap();
+            }
+            sqlx::raw_sql("GRANT SELECT ON recollect_migrations TO recollect_app")
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            tx.commit().await.unwrap();
+        }
         db::bootstrap(&admin, &config.owner_username).await.unwrap();
         let mut url = reqwest::Url::parse(&config.database_url).unwrap();
         url.set_path(&database);

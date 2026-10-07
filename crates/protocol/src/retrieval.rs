@@ -13,6 +13,10 @@ pub struct RecallReference {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct RecallRequest {
+    #[schema(required = false)]
+    pub project_brief: bool,
+    #[schema(required = false)]
+    pub continuation: Option<RecallContinuationHint>,
     pub query: String,
     pub strategy: String,
     pub exact: Option<RecallReference>,
@@ -34,6 +38,8 @@ pub struct RecallRequest {
 impl Default for RecallRequest {
     fn default() -> Self {
         Self {
+            project_brief: false,
+            continuation: None,
             query: String::new(),
             strategy: "manual".into(),
             exact: None,
@@ -53,6 +59,12 @@ impl Default for RecallRequest {
             context_bytes: 8192,
         }
     }
+}
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RecallContinuationHint {
+    pub task_id: Uuid,
+    pub binding_id: Option<Uuid>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct RecallProvenance {
@@ -86,6 +98,8 @@ pub struct RecallClaimState {
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct RecallItem {
+    #[serde(default = "query_section")]
+    pub delivery_section: String,
     pub kind: String,
     pub id: Uuid,
     pub revision_id: Uuid,
@@ -192,4 +206,8 @@ pub struct RecallContextSelection {
     pub source_diversity: bool,
     pub distinct_source_groups: usize,
     pub unknown_lineage_items: usize,
+}
+
+fn query_section() -> String {
+    "query".into()
 }

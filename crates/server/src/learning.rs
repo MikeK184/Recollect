@@ -5,7 +5,8 @@ use crate::{
     error::{Error, Result},
     jobs, memory,
     memory_evidence::Tx,
-    memory_policy, memory_rules, model_gateway as gateway, model_policy, publication,
+    memory_policy, memory_rules, memory_support, model_gateway as gateway, model_policy,
+    publication,
     worker::{self, ClaimedJob, Failure},
 };
 use axum::{
@@ -29,6 +30,8 @@ struct Candidate {
     predicate: String,
     value: String,
     rationale: String,
+    #[serde(default)]
+    context_role: Option<String>,
     line_from: i32,
     line_to: i32,
     #[serde(default)]
@@ -83,6 +86,7 @@ fn content(input: &LearningInput, c: Candidate) -> ClaimContent {
         predicate: c.predicate,
         value: c.value,
         rationale: c.rationale,
+        context_role: c.context_role,
         selection: input.selection.clone(),
         manifest_revision_id: input.manifest_revision_id,
         validity: FactValidity {
@@ -127,6 +131,7 @@ async fn validate_scope(
             predicate: "declaration".into(),
             value: "Learning request".into(),
             rationale: String::new(),
+            context_role: None,
             line_from: 1,
             line_to: 1,
             replaces_revision: None,
@@ -307,6 +312,11 @@ pub(crate) async fn automatic(
     brain: Uuid,
     source: Uuid,
 ) -> Result<()> {
+    let automatic_copy: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM automatic_support_excerpts WHERE brain_id=$1 AND version_id=$2)")
+        .bind(brain).bind(source).fetch_one(&mut **tx).await?;
+    if automatic_copy {
+        return Ok(());
+    }
     let policy = model_policy::current(state, tx, brain).await?;
     let p = &policy.policy;
     // Autonomous work is scheduled under the standing policy grant by the
@@ -368,7 +378,7 @@ async fn lease(tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<()> {
     }
     Ok(())
 }
-async fn ready<'a>(
+pub(crate) async fn ready<'a>(
     state: &'a AppState,
     job: &ClaimedJob,
 ) -> Result<(Tx<'a>, LearningRun, ModelPolicyVersion)> {
@@ -449,7 +459,7 @@ async fn existing(
     brain: Uuid,
     content: &ClaimContent,
 ) -> Result<Option<ClaimRevision>> {
-    let rows:Vec<SqlJson<ClaimRevision>>=sqlx::query_scalar("SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1 AND r.subject_key=$2 AND r.predicate_key=$3 AND r.value_key=$4 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' ORDER BY r.recorded_at LIMIT 500")
+    let rows:Vec<SqlJson<ClaimRevision>>=sqlx::query_scalar("SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1 AND r.subject_key=$2 AND r.predicate_key=$3 AND r.value_key=$4 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' AND recollect_memory_supported(r.brain_id,r.id) ORDER BY r.recorded_at LIMIT 500")
         .bind(brain).bind(memory_policy::assertion_key(&content.subject,true)).bind(memory_policy::assertion_key(&content.predicate,true)).bind(memory_policy::assertion_key(&content.value,false)).fetch_all(&mut **tx).await?;
     Ok(rows.into_iter().map(|r| r.0).find(|r| {
         r.content.selection == content.selection
@@ -459,10 +469,16 @@ async fn existing(
             && r.content.supports == content.supports
     }))
 }
-async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
+async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_support::Stage> {
     let (mut tx, mut run, policy) = ready(state, job).await?;
+    if let Some(stage) = memory_support::load(&mut tx, run.brain_id, run.id).await? {
+        tx.commit().await?;
+        return Ok(stage);
+    }
     if policy.policy.autonomous_memory && run.reconciliation_inputs.is_empty() {
-        run.reconciliation_inputs = autonomous::targets(state, &mut tx, &run).await?;
+        run.reconciliation_inputs =
+            autonomous::targets(state, &mut tx, &run, policy.policy.max_input_bytes as usize)
+                .await?;
         sqlx::query("UPDATE learning_runs SET reconciliation_inputs=$2 WHERE id=$1")
             .bind(run.id)
             .bind(&run.reconciliation_inputs)
@@ -478,7 +494,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    let response = gateway::invoke(
+    let response = gateway::invoke_for_policy(
         state,
         gateway::Context {
             brain: job.brain_id,
@@ -489,7 +505,9 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             autonomous::invocation(&run)
         } else {
             gateway::extraction(run.id, run.source_version_id)
-        },
+        }
+        .with_work_lease(job),
+        run.policy_id,
     )
     .await?;
     let Some(gateway::Output::Json(value)) = response.output else {
@@ -512,8 +530,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             "The provider returned too many claims.",
         ));
     }
-    let (mut tx, run, policy) = ready(state, job).await?;
-    let input_deadline = autonomous::input_deadline(&mut tx, &run).await?;
+    let (mut tx, mut run, policy) = ready(state, job).await?;
     let source = gateway::source(
         state,
         &mut tx,
@@ -554,17 +571,29 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         let replaces = candidate.replaces_revision;
         if let Some(id) = replaces {
             if !policy.policy.autonomous_memory || !mutations.insert(id) {
-                return Err(Error::invalid("Invalid or repeated model revision target."));
+                return Err(Error(
+                    StatusCode::BAD_GATEWAY,
+                    "provider_shape",
+                    "The model repeated an invalid revision target.",
+                ));
             }
             let old = autonomous::target(&mut tx, &run, id).await?;
             if old.content.kind != candidate.kind {
-                return Err(Error::invalid(
-                    "Reconciliation cannot change an existing memory's kind.",
+                return Err(Error(
+                    StatusCode::BAD_GATEWAY,
+                    "provider_shape",
+                    "The model changed an existing memory kind.",
                 ));
             }
         }
         let mut c = content(&input(&run), candidate);
-        memory_policy::validate(&mut c)?;
+        memory_policy::validate(&mut c).map_err(|_| {
+            Error(
+                StatusCode::BAD_GATEWAY,
+                "provider_shape",
+                "The generated memory candidate violates the required fields or size limits.",
+            )
+        })?;
         publication::safe_payload(state, &json!(&c))?;
         memory::validate_evidence(state, &mut tx, job.brain_id, &c).await?;
         if !contents.iter().any(|(other, _)| other == &c) {
@@ -587,11 +616,131 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             || retire.line_to < retire.line_from
             || retire.line_to as usize > lines.len()
         {
-            return Err(Error::invalid("Invalid model retirement or evidence span."));
+            return Err(model_policy::failure(
+                "provider_shape",
+                "The generated retirement has an invalid target or evidence span.",
+            ));
         }
-        memory_policy::text(&retire.reason, 2000, true)?;
+        memory_policy::text(&retire.reason, 2000, true).map_err(|_| {
+            model_policy::failure(
+                "provider_shape",
+                "The generated retirement reason is invalid.",
+            )
+        })?;
         let old = autonomous::target(&mut tx, &run, retire.revision_id).await?;
         retirements.push((old, retire));
+    }
+    // Store normalized candidates only after full canonical shape, span and target
+    // validation. A restart after this commit never repeats extraction.
+    let mut payload = memory_support::Payload {
+        claims: contents
+            .into_iter()
+            .map(|(content, replaces_revision)| memory_support::StagedClaim {
+                content,
+                replaces_revision,
+                reuses_revision: None,
+            })
+            .collect(),
+        retirements: retirements
+            .into_iter()
+            .map(|(_, r)| memory_support::StagedRetirement {
+                revision_id: r.revision_id,
+                reason: r.reason,
+                line_from: r.line_from,
+                line_to: r.line_to,
+            })
+            .collect(),
+        discovery: vec![],
+    };
+    if policy.policy.autonomous_memory {
+        autonomous::discover_families(
+            state,
+            &mut tx,
+            &mut run,
+            &mut payload,
+            policy.policy.max_input_bytes as usize,
+        )
+        .await?;
+    }
+    lease(&mut tx, job).await?;
+    let stage = memory_support::store(state, &mut tx, &run, response.request.id, payload).await?;
+    tx.commit().await?;
+    Ok(stage)
+}
+async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
+    let stage = prepare_stage(state, job).await?;
+    let (tx, run, _) = ready(state, job).await?;
+    tx.commit().await?;
+    let verdicts = memory_support::assess(state, &run, &stage, job).await?;
+    // Never publish from the pre-call transaction or trust stale base revisions.
+    let (mut tx, run, policy) = ready(state, job).await?;
+    memory_support::load(&mut tx, run.brain_id, run.id)
+        .await?
+        .ok_or_else(crate::retention::unavailable)?;
+    let input_deadline = memory_support::deadline(&mut tx, &run).await?;
+    let source = gateway::source(
+        state,
+        &mut tx,
+        job.brain_id,
+        run.source_version_id,
+        policy.policy.max_input_bytes as usize,
+    )
+    .await?;
+    model_policy::permits(
+        state,
+        &policy.policy,
+        "extraction",
+        std::slice::from_ref(&source.class),
+    )?;
+    let lines: Vec<&str> = source.text.lines().collect();
+    let request = model_policy::request(&mut tx, run.brain_id, stage.extraction_request).await?;
+    if request.suppressed {
+        return Err(crate::retention::unavailable());
+    }
+    let mut contents = Vec::new();
+    let mut retirements = Vec::new();
+    let mut withheld = 0;
+    for (index, candidate) in stage.payload.claims.iter().enumerate() {
+        if verdicts[index].disposition == memory_support::Disposition::Supported {
+            if contents
+                .iter()
+                .any(|(other, _): &(ClaimContent, Option<Uuid>)| {
+                    memory_rules::family(other, &candidate.content)
+                        && memory_rules::same_value(other, &candidate.content)
+                        && other.kind == candidate.content.kind
+                        && other.selection == candidate.content.selection
+                        && other.manifest_revision_id == candidate.content.manifest_revision_id
+                        && other.validity == candidate.content.validity
+                        && other.context_role == candidate.content.context_role
+                        && other.procedure == candidate.content.procedure
+                })
+            {
+                continue;
+            }
+            if let Some(id) = candidate.reuses_revision {
+                autonomous::recheck_target(state, &mut tx, &run, id).await?;
+                let r = autonomous::target(&mut tx, &run, id).await?;
+                // Reuse has no mutation or retention effect. Count it below
+                // only after the new assertion's independent assessment.
+                contents.push((candidate.content.clone(), Some(r.id)));
+                continue;
+            }
+            contents.push((candidate.content.clone(), candidate.replaces_revision));
+        } else {
+            withheld += 1;
+        }
+    }
+    for (index, retirement) in stage.payload.retirements.iter().enumerate() {
+        if verdicts[stage.payload.claims.len() + index].disposition
+            == memory_support::Disposition::Supported
+        {
+            retirements.push((
+                autonomous::target(&mut tx, &run, retirement.revision_id).await?,
+                retirement.clone(),
+            ));
+        } else {
+            withheld += 1;
+        }
     }
     let mut count: i64 = sqlx::query_scalar("SELECT count(*) FROM claims WHERE brain_id=$1")
         .bind(job.brain_id)
@@ -604,7 +753,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         .await?;
     let mut proposed = 0;
     let mut accepted = 0;
-    let mut blocked = 0;
+    let mut blocked = withheld;
     let mut conflicting = 0;
     let mut reused = 0;
     let mut revised = 0;
@@ -635,7 +784,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         });
         r.admission = "retired_by_policy".into();
         r.acceptance_policy = Some(format!("{}@{}", autonomous::POLICY, policy.change_id));
-        r.derivation = Some(derivation(&run, &response.request, true));
+        r.derivation = Some(derivation(&run, &request, true));
         memory_policy::validate(&mut r.content)?;
         publication::safe_payload(state, &json!(&r.content))?;
         memory::validate_evidence(state, &mut tx, job.brain_id, &r.content).await?;
@@ -654,6 +803,17 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         retired += 1;
     }
     for (c, replaces) in &contents {
+        if let Some(candidate) = stage
+            .payload
+            .claims
+            .iter()
+            .find(|a| a.content == *c && a.reuses_revision.is_some())
+        {
+            let r = autonomous::target(&mut tx, &run, candidate.reuses_revision.unwrap()).await?;
+            ids.push(r.claim_id);
+            reused += 1;
+            continue;
+        }
         let mut previous = match replaces {
             Some(id) => Some(autonomous::target(&mut tx, &run, *id).await?),
             None => None,
@@ -705,11 +865,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             lifecycle: "active".into(),
             review_decision_id: None,
             admission: "proposed".into(),
-            derivation: Some(derivation(
-                &run,
-                &response.request,
-                policy.policy.autonomous_memory,
-            )),
+            derivation: Some(derivation(&run, &request, policy.policy.autonomous_memory)),
         };
         let rules = memory_rules::matching(&mut tx, &r, false).await?;
         let conflicts = memory_rules::conflicts(&mut tx, &r).await?;
@@ -786,10 +942,14 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         } else {
             revised += 1;
         }
+        r.content = crate::support_excerpts::retain(state, &mut tx, &run, c).await?;
+        memory::validate_evidence(state, &mut tx, job.brain_id, &r.content).await?;
         memory::append(&mut tx, &r).await?;
         autonomous::basis(&mut tx, &r, &run.reconciliation_inputs).await?;
         sqlx::query("INSERT INTO claim_model_derivations(revision_id,brain_id,run_id,request_id) VALUES($1,$2,$3,$4)")
-            .bind(r.id).bind(job.brain_id).bind(run.id).bind(response.request.id).execute(&mut *tx).await?;
+            .bind(r.id).bind(job.brain_id).bind(run.id).bind(request.id).execute(&mut *tx).await?;
+        crate::support_excerpts::equivalent(state, &mut tx, &run, c, &r.content).await?;
+        crate::memory_support_audit::record_learning(state, &mut tx, &r, &run, c).await?;
         db::audit(
             &mut tx,
             job.actor_id,
@@ -804,7 +964,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     // The external call and canonical publication have separate durable outcomes.
     lease(&mut tx, job).await?;
     sqlx::query("UPDATE learning_runs SET state='succeeded',request_id=$2,claim_ids=$3,proposed=$4,accepted=$5,blocked=$6,conflicting=$7,reused=$8,revised=$9,retired=$10,finished_at=clock_timestamp() WHERE id=$1")
-        .bind(run.id).bind(response.request.id).bind(&ids).bind(proposed).bind(accepted).bind(blocked).bind(conflicting).bind(reused).bind(revised).bind(retired).execute(&mut *tx).await?;
+        .bind(run.id).bind(request.id).bind(&ids).bind(proposed).bind(accepted).bind(blocked).bind(conflicting).bind(reused).bind(revised).bind(retired).execute(&mut *tx).await?;
     let audit = db::audit(
         &mut tx,
         job.actor_id,
@@ -857,6 +1017,12 @@ pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<
     let result = worker::with_lease(&state.pool, job, run_job(state, job)).await?;
     if let Err(error) = result {
         tracing::warn!(job_id=%job.id,code=error.1,reason=error.2,"Learning did not publish");
+        if error.1 == "database_unavailable" {
+            // Native bounded worker recovery preserves the same generation.
+            // Saved stages/verdicts resume locally; a charged response lost
+            // before its commit remains unavailable through gateway identity.
+            return Err(Failure::Database);
+        }
         let reason = if matches!(
             error.0,
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::NOT_FOUND
@@ -865,6 +1031,15 @@ pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<
         } else {
             error.1
         };
+        if matches!(reason, "model_budget_exhausted" | "model_concurrency_full") {
+            sqlx::query("SELECT recollect_defer_learning_job($1,$2,$3)")
+                .bind(job.id)
+                .bind(job.lease_token)
+                .bind(reason)
+                .execute(&state.pool)
+                .await?;
+            return Ok(());
+        }
         sqlx::query("SELECT recollect_fail_learning_job($1,$2,$3)")
             .bind(job.id)
             .bind(job.lease_token)

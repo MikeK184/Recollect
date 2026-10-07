@@ -160,3 +160,19 @@ contribute deliberately (`memory.contribute`) as the bundled skill describes.
 - One server entry selects one Brain. The token itself works for every Brain
   your account may access.
 - Automatic capture and prompt recall belong to the complete packaged plugin above.
+
+### Document evidence and agent visibility
+
+Use the bundled memory skill and the advertised `source.import`, `source.list`
+and `source.inspect` tools to retain authorized document evidence, find exact
+source/version IDs and inspect citation spans. Imports use a write operation's
+exact scope and a stable command ID. Automatic capture remains independent of
+manual document import. Never guess internal Recollect paths or private API/auth
+files to use memory. Update both server and installed plugin when these tools
+are absent.
+
+Successful memory/workspace/source requests now appear in the Brain's agent
+roster. Actual reported coding hosts take precedence over stale pairing hints;
+a reused credential can show more than one observed host. Manage your credentials
+in My agents → Access tokens. Processing limits are visible in Settings → AI
+permissions in the main form below Automatic processing.

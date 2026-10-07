@@ -170,6 +170,8 @@ pub struct WorkspaceTask {
     pub id: Uuid,
     pub brain_id: Uuid,
     pub parent_task_id: Option<Uuid>,
+    #[serde(default)]
+    pub continuation_of_task_id: Option<Uuid>,
     pub workspace_id: Option<Uuid>,
     pub created_by: Uuid,
     pub device_id: Option<Uuid>,
@@ -208,6 +210,8 @@ pub struct TaskChange {
 pub struct CreateTask {
     pub label: String,
     pub parent_task_id: Option<Uuid>,
+    #[serde(default)]
+    pub continuation_of_task_id: Option<Uuid>,
     pub workspace_id: Option<Uuid>,
     pub selection: Option<ScopeSelection>,
 }

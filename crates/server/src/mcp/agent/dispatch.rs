@@ -96,7 +96,7 @@ impl AgentService {
         db::require_role(&mut tx, self.brain, false).await?;
         let bound = crate::workspace::bound_operation(&mut tx, self.brain, operation).await?;
         let valid_kind = match kind {
-            Scope::Write | Scope::Handover => bound.kind == "write",
+            Scope::Write | Scope::SourceWrite | Scope::Handover => bound.kind == "write",
             Scope::Managed | Scope::ExistingCall => bound.kind == "tool",
             Scope::Discover => matches!(bound.kind.as_str(), "context" | "retrieval" | "tool"),
             _ => matches!(bound.kind.as_str(), "context" | "retrieval"),
@@ -151,6 +151,7 @@ impl AgentService {
                         input["environment_id"] = json!(bound.scope.selection.environment_id);
                         input["operation_id"] = json!(bound.id);
                     }
+                    Scope::SourceWrite => input["operation_id"] = json!(bound.id),
                     Scope::Handover => input["operation_id"] = json!(bound.id),
                     _ => {}
                 }
@@ -159,6 +160,9 @@ impl AgentService {
         let mut suffix = spec.path.to_owned();
         if suffix.contains("{id}") {
             suffix = suffix.replace("{id}", &id(&arguments["id"])?.to_string());
+        }
+        if suffix.contains("{version_id}") {
+            suffix = suffix.replace("{version_id}", &id(&arguments["version_id"])?.to_string());
         }
         let mut method = spec.method;
         if spec.tool.name == "memory.contribute"
@@ -190,7 +194,11 @@ impl AgentService {
             .unwrap_or_default();
         if matches!(
             spec.tool.name.as_ref(),
-            "memory.inspect" | "memory.review_history" | "memory.handover_status"
+            "memory.inspect"
+                | "memory.review_history"
+                | "memory.handover_status"
+                | "source.list"
+                | "source.inspect"
         ) {
             query.insert("operation_id".into(), arguments["operation_id"].clone());
         }

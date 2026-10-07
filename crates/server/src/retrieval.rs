@@ -22,6 +22,7 @@ use tokio::sync::Semaphore;
 use uuid::Uuid;
 
 pub(crate) mod answer_bundle;
+mod brief;
 mod context;
 pub(crate) mod graph;
 mod semantic;
@@ -408,6 +409,7 @@ async fn item_with_gates(
         return Ok(None);
     }
     let mut result = RecallItem {
+        delivery_section: "query".into(),
         kind: row.kind.clone(),
         id: row.id,
         revision_id: row.revision_id,
@@ -497,38 +499,13 @@ async fn item_with_gates(
                 availability: e.availability.clone(),
             });
         }
-        if matches!(
-            input.mode.as_str(),
-            "strict_accepted" | "strict_operational"
-        ) && !view.contributions.is_empty()
-        {
-            // These are the handover's required current contributions, not
-            // historical reasoning edges retained for erasure ancestry.
-            let ids: Vec<_> = view.contributions.iter().map(|c| c.revision_id).collect();
-            let contributing_deadline: Option<DateTime<Utc>> = sqlx::query_scalar(
-                "WITH deadlines AS (
-                  SELECT recollect_retention_deadline(brain_id,'claim',recorded_at) AS deadline
-                  FROM claim_revisions WHERE brain_id=$1 AND id=ANY($2)
-                  UNION ALL
-                  SELECT recollect_retention_deadline(v.brain_id,v.retention_class,v.created_at)
-                  FROM claim_supports s JOIN source_versions v ON v.id=s.source_version_id AND v.brain_id=s.brain_id
-                  WHERE s.brain_id=$1 AND s.revision_id=ANY($2)
-                  UNION ALL
-                  SELECT recollect_retention_deadline(p.brain_id,'repository',p.created_at)
-                  FROM claim_supports s JOIN repository_facts f ON f.id=s.fact_id AND f.brain_id=s.brain_id
-                  JOIN repository_snapshots p ON p.id=f.snapshot_id AND p.brain_id=f.brain_id
-                  WHERE s.brain_id=$1 AND s.revision_id=ANY($2)
-                ) SELECT min(deadline) FROM deadlines",
-            )
-            .bind(brain)
-            .bind(ids)
-            .fetch_one(&mut **tx)
-            .await?;
-            deadline = [deadline, contributing_deadline]
-                .into_iter()
-                .flatten()
-                .min();
-        }
+        let dependency_deadline: Option<DateTime<Utc>> =
+            sqlx::query_scalar("SELECT recollect_memory_deadline($1,$2)")
+                .bind(brain)
+                .bind(view.revision.id)
+                .fetch_one(&mut **tx)
+                .await?;
+        deadline = [deadline, dependency_deadline].into_iter().flatten().min();
         result.claim = Some(RecallClaimState {
             kind: view.revision.content.kind.clone(),
             review: view.revision.review,
@@ -945,6 +922,15 @@ async fn execute(
     } else {
         None
     };
+    brief::supplement(
+        state,
+        &mut tx,
+        auth,
+        &read_context,
+        &mut ranked,
+        &mut coverage,
+    )
+    .await?;
     let mut packed = context::pack(&mut tx, brain, &input, &ranked, &mut coverage).await?;
     let memory_epoch: i64 = sqlx::query_scalar(
         "SELECT coalesce((SELECT epoch FROM memory_epochs WHERE brain_id=$1),0)",
@@ -969,7 +955,11 @@ async fn execute(
     .flatten()
     .min();
     let context = packed.context;
-    let status = if !context.items.is_empty() {
+    let status = if !context.items.is_empty()
+        && context.items.iter().all(|i| i.delivery_section != "query")
+    {
+        "scoped_context_only"
+    } else if !context.items.is_empty() {
         "results"
     } else if coverage.withheld > 0
         || coverage.partial

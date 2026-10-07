@@ -179,6 +179,7 @@ pub async fn run(
                 Some(serde_json::to_value(CreateTask {
                     label,
                     parent_task_id,
+                    continuation_of_task_id: None,
                     workspace_id,
                     selection,
                 })?),

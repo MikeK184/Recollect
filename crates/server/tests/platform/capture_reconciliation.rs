@@ -3,6 +3,12 @@ use super::*;
 #[path = "capture_publication.rs"]
 mod publication;
 
+#[path = "memory_support_eval.rs"]
+mod support_eval;
+
+#[path = "memory_digest_boundaries.rs"]
+mod digest_boundaries;
+
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL"]
 async fn recall_capture_source_groups_use_binding_session_agent_and_original_version() {
@@ -408,7 +414,7 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
         .map_err(|e| e.1)
         .unwrap();
     assert!(
-        autonomous::targets(&h.state, &mut tx, &guard)
+        autonomous::targets(&h.state, &mut tx, &guard, 16384)
             .await
             .map_err(|e| e.1)
             .unwrap()
@@ -669,4 +675,692 @@ async fn capture_knowledge_time_delayed_arrival_append_replay_lock_and_feedback_
     assert_eq!(p.calls.load(Ordering::SeqCst), 0);
     server.abort();
     h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn automatic_excerpt_preserves_scoped_reply_after_raw_expiry_and_original_class_denial() {
+    let (h, owner, base, p, server) = setup().await;
+    capture_policy(&h, &owner, &base, true).await;
+    allow(&h, &owner, &base, |policy| {
+        policy["autonomous_memory"] = json!(true);
+        policy["purposes"] = json!(["extraction", "synthesis"]);
+        policy["content_classes"] = json!(["raw_session", "support_excerpt", "claim", "query"]);
+    })
+    .await;
+    let (_, token) = h.pair_device(&owner, "Automatic excerpt proof").await;
+    let env = ok(
+        &h,
+        "POST",
+        &format!("{base}/evidence/groups"),
+        &owner,
+        json!({"kind":"environment","name":"Synthetic office"}),
+    )
+    .await;
+    let selection = json!({"repository_ids":[],"area_ids":[],"environment_id":env["id"]});
+    let bound = binding(&h, &base, &token, selection.clone()).await;
+    let mut input = event(
+        &bound,
+        "excerpt-reply",
+        "The assistant reports that Amber.port is configured as 8080. Runtime was not tested.\n",
+    );
+    input["event"]["kind"] = json!("reply");
+    input["event"]["host_event"] = json!("Stop");
+    *p.candidates.lock().unwrap() = extracted(
+        "Amber",
+        "assistant reports configured port 8080; runtime untested",
+        Value::Null,
+        1,
+    );
+    let receipt = device_ok(&h, "POST", &format!("{base}/capture/events"), &token, input).await;
+    process(&h).await;
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        1
+    );
+    model_job(&h).await;
+    let result = runs(&h, &owner, &base).await["items"][0].clone();
+    assert_eq!(result["state"], "succeeded", "{result}");
+    let detail = ok(
+        &h,
+        "GET",
+        &format!("{base}/claims/{}", result["claim_ids"][0].as_str().unwrap()),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    let revision = &detail["selected"]["revision"];
+    let copy = revision["content"]["supports"][0]["id"]
+        .as_str()
+        .unwrap()
+        .parse::<Uuid>()
+        .unwrap();
+    let original = receipt["source_version_id"]
+        .as_str()
+        .unwrap()
+        .parse::<Uuid>()
+        .unwrap();
+    assert_ne!(
+        copy, original,
+        "Permitted exact support is retained automatically"
+    );
+    let metadata: Value =
+        sqlx::query_scalar("SELECT provenance FROM automatic_support_excerpts WHERE version_id=$1")
+            .bind(copy)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    assert_eq!(metadata["role"], "assistant_statement");
+    assert_eq!(metadata["capture"]["selection"], selection);
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        2,
+        "Retaining exact support needs no extra provider call"
+    );
+    sqlx::query(
+        "UPDATE source_versions SET created_at=clock_timestamp()-interval '400 days' WHERE id=$1",
+    )
+    .bind(original)
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    let guarded: bool = sqlx::query_scalar(
+        "SELECT recollect_memory_supported(brain_id,id) FROM claim_revisions WHERE id=$1",
+    )
+    .bind(revision["id"].as_str().unwrap().parse::<Uuid>().unwrap())
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert!(
+        guarded,
+        "An independently retained exact copy survives ordinary raw expiry"
+    );
+    let before = p.calls.load(Ordering::SeqCst);
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0,
+        "The copy cannot enter a second learning loop"
+    );
+    allow(&h, &owner, &base, |policy| {
+        policy["autonomous_memory"] = json!(true);
+        policy["purposes"] = json!(["extraction", "synthesis"]);
+        policy["content_classes"] = json!(["support_excerpt", "claim", "query"]);
+    })
+    .await;
+    let response = gateway::invoke(
+        &h.state,
+        context(&h, &base).await,
+        gateway::extraction(Uuid::new_v4(), copy),
+    )
+    .await;
+    assert_eq!(response.err().unwrap().1, "model_policy_denied");
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        before,
+        "Copy class cannot bypass original raw-session denial"
+    );
+    erase(&h, &owner, &base, &receipt["source_id"]).await;
+    let scrubbed: (String, Value) = sqlx::query_as(
+        "SELECT privacy_state,provenance FROM automatic_support_excerpts WHERE version_id=$1",
+    )
+    .bind(copy)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(scrubbed, ("erased".into(), json!({})));
+    assert!(
+        !sqlx::query_scalar::<_, bool>(
+            "SELECT recollect_memory_supported(brain_id,id) FROM claim_revisions WHERE id=$1"
+        )
+        .bind(revision["id"].as_str().unwrap().parse::<Uuid>().unwrap())
+        .fetch_one(&h.admin)
+        .await
+        .unwrap()
+    );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn automatic_session_digest_settles_refreshes_and_deduplicates_native_work() {
+    let (h, owner, base, p, server) = setup().await;
+    capture_policy(&h, &owner, &base, true).await;
+    allow(&h, &owner, &base, |policy| {
+        policy["autonomous_memory"] = json!(true);
+        policy["purposes"] = json!(["extraction", "synthesis"]);
+        policy["content_classes"] = json!(["raw_session", "claim", "query", "support_excerpt"]);
+    })
+    .await;
+    let (_, token) = h.pair_device(&owner, "Digest proof").await;
+    let bound = binding(&h, &base, &token, json!({})).await;
+    let brain = base.rsplit('/').next().unwrap().parse::<Uuid>().unwrap();
+    let mut declared = extracted("Amber", "8080", Value::Null, 1);
+    declared["claims"][0]["context_role"] = json!("convention");
+    *p.candidates.lock().unwrap() = declared;
+    let first = device_ok(
+        &h,
+        "POST",
+        &format!("{base}/capture/events"),
+        &token,
+        event(&bound, "digest-one", "Amber.port = 8080\n"),
+    )
+    .await;
+    process(&h).await;
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        1
+    );
+    model_job(&h).await;
+    let roles = provider_inputs(&p);
+    let assessed: Value = serde_json::from_str(
+        roles
+            .iter()
+            .find(|i| i["provenance"]["kind"] == "learning_support_stage")
+            .unwrap()["data"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(assessed["actions"][0]["context_role"], "convention");
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0,
+        "Active session waits for quiet time"
+    );
+    sqlx::query(
+        "UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE id=$1",
+    )
+    .bind(first["event_id"].as_str().unwrap().parse::<Uuid>().unwrap())
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0,
+        "Queued generation is unique"
+    );
+    *p.candidates.lock().unwrap() =
+        json!({"summary":"Amber declares port 8080.","completed":[],"next_steps":[],"risks":[]});
+    model_job(&h).await;
+    let (claim,revision):(Uuid,Uuid)=sqlx::query_as("SELECT d.claim_id,c.current_revision FROM session_digest_claims d JOIN claims c ON c.id=d.claim_id WHERE d.brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+    let usable: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
+        .bind(brain)
+        .bind(revision)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert!(usable);
+    let calls = p.calls.load(Ordering::SeqCst);
+    assert_eq!(
+        calls, 4,
+        "Extraction and assessment plus digest and assessment"
+    );
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0
+    );
+    assert_eq!(p.calls.load(Ordering::SeqCst), calls);
+    let task: Uuid =
+        sqlx::query_scalar("SELECT task_id FROM session_digest_partitions WHERE brain_id=$1")
+            .bind(brain)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    let op = device_ok(
+        &h,
+        "POST",
+        &format!("{base}/workspace/tasks/{task}/operations"),
+        &token,
+        json!({"kind":"retrieval"}),
+    )
+    .await;
+    let recalled=device_ok(&h,"POST",&format!("{base}/recall"),&token,json!({"query":"Unrelated question with no lexical match","operation_id":op["id"],"selection":op["scope"]["selection"],"project_brief":true,"continuation":{"task_id":task,"binding_id":bound["id"]},"context_bytes":6000,"limit":6})).await;
+    assert_eq!(recalled["status"], "scoped_context_only", "{recalled}");
+    assert!(
+        recalled["context"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["delivery_section"] == "project_brief"),
+        "{recalled}"
+    );
+    assert!(
+        recalled["context"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["delivery_section"] == "continuation"),
+        "{recalled}"
+    );
+    assert!(recalled["context_bytes"].as_u64().unwrap() <= 6000);
+    let operational=device_ok(&h,"POST",&format!("{base}/recall"),&token,json!({"query":"Unrelated question with no lexical match","mode":"strict_operational","operation_id":op["id"],"selection":op["scope"]["selection"],"project_brief":true,"continuation":{"task_id":task,"binding_id":bound["id"]}})).await;
+    assert!(
+        operational["context"]["items"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "Declared context cannot weaken operational mode: {operational}"
+    );
+    let continuation_only=device_ok(&h,"POST",&format!("{base}/recall"),&token,json!({"query":"Unrelated question with no lexical match","operation_id":op["id"],"selection":op["scope"]["selection"],"continuation":{"task_id":task,"binding_id":bound["id"]}})).await;
+    assert_eq!(
+        continuation_only["context"]["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        continuation_only["context"]["items"][0]["delivery_section"],
+        "continuation"
+    );
+
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        calls,
+        "Stable context and continuation pay no model call"
+    );
+    let (status,_)=h.bearer("POST",&format!("{base}/recall"),&token,json!({"query":"No lexical match","operation_id":op["id"],"selection":op["scope"]["selection"],"project_brief":true,"continuation":{"task_id":Uuid::new_v4(),"binding_id":null}})).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    // Even a metadata-only later receipt makes current coverage stale immediately.
+    let mut late = event(&bound, "digest-late", "");
+    late["event"]["kind"] = json!("lifecycle");
+    late["event"]["host_event"] = json!("PreToolUse");
+    late["event"]["content"] = Value::Null;
+    let late = device_ok(&h, "POST", &format!("{base}/capture/events"), &token, late).await;
+    let stale: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
+        .bind(brain)
+        .bind(revision)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert!(!stale);
+    let invalidated=device_ok(&h,"POST",&format!("{base}/recall"),&token,json!({"query":"Unrelated question with no lexical match","operation_id":op["id"],"selection":op["scope"]["selection"],"project_brief":true,"continuation":{"task_id":task,"binding_id":bound["id"]}})).await;
+    assert!(
+        invalidated["context"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["delivery_section"] != "continuation")
+    );
+    assert!(
+        invalidated["context"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["delivery_section"] == "project_brief")
+    );
+    assert_eq!(p.calls.load(Ordering::SeqCst), calls);
+    sqlx::query(
+        "UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE id=$1",
+    )
+    .bind(late["event_id"].as_str().unwrap().parse::<Uuid>().unwrap())
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0,
+        "Same contributors advance coverage without a model call"
+    );
+    assert_eq!(p.calls.load(Ordering::SeqCst), calls);
+    let usable: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
+        .bind(brain)
+        .bind(revision)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert!(usable);
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM claim_revisions WHERE claim_id=$1")
+        .bind(claim)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    device_ok(
+        &h,
+        "POST",
+        &format!("{base}/workspace/tasks/{task}/close"),
+        &token,
+        Value::Null,
+    )
+    .await;
+    let resumed=device_ok(&h,"POST",&format!("{base}/workspace/tasks"),&token,json!({"label":"Native ended-session continuation","selection":op["scope"]["selection"],"continuation_of_task_id":task})).await;
+    assert_eq!(resumed["task"]["continuation_of_task_id"], json!(task));
+    let resumed_task = resumed["task"]["id"].as_str().unwrap();
+    let resumed_op = device_ok(
+        &h,
+        "POST",
+        &format!("{base}/workspace/tasks/{resumed_task}/operations"),
+        &token,
+        json!({"kind":"retrieval"}),
+    )
+    .await;
+    let continued=device_ok(&h,"POST",&format!("{base}/recall"),&token,json!({"query":"Unrelated question with no lexical match","operation_id":resumed_op["id"],"selection":resumed_op["scope"]["selection"],"continuation":{"task_id":resumed["task"]["id"]}})).await;
+    assert!(
+        continued["context"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["delivery_section"] == "continuation"),
+        "{continued}"
+    );
+    assert_eq!(p.calls.load(Ordering::SeqCst), calls);
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn automatic_digest_preserves_completed_responses_and_retained_inputs() {
+    for boundary in 0..4 {
+        let (h, owner, base, p, server) = setup().await;
+        capture_policy(&h, &owner, &base, true).await;
+        allow(&h, &owner, &base, |policy| {
+            policy["autonomous_memory"] = json!(true);
+            policy["purposes"] = json!(["extraction", "synthesis"]);
+            policy["content_classes"] = json!(["raw_session", "claim", "query", "support_excerpt"]);
+        })
+        .await;
+        let (_, token) = h.pair_device(&owner, "Digest late receipt proof").await;
+        let bound = binding(&h, &base, &token, json!({})).await;
+        let brain = base.rsplit('/').next().unwrap().parse::<Uuid>().unwrap();
+        *p.candidates.lock().unwrap() = extracted("Amber", "8080", Value::Null, 1);
+        let first = device_ok(
+            &h,
+            "POST",
+            &format!("{base}/capture/events"),
+            &token,
+            event(&bound, "digest-frozen", "Amber.port = 8080\n"),
+        )
+        .await;
+        process(&h).await;
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap();
+        model_job(&h).await;
+        sqlx::query("UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE brain_id=$1").bind(brain).execute(&h.admin).await.unwrap();
+        assert_eq!(
+            autonomous::run_once(&h.state)
+                .await
+                .map_err(|e| e.1)
+                .unwrap(),
+            1
+        );
+        *p.candidates.lock().unwrap() = json!({"summary":"Amber declares port 8080.","completed":[],"next_steps":[],"risks":[]});
+        let before = p.calls.load(Ordering::SeqCst);
+        if boundary == 3 {
+            let raw = first["source_version_id"]
+                .as_str()
+                .unwrap()
+                .parse::<Uuid>()
+                .unwrap();
+            sqlx::query("UPDATE source_versions SET created_at=clock_timestamp()-interval '400 days' WHERE id=$1").bind(raw).execute(&h.admin).await.unwrap();
+            sqlx::query("UPDATE capture_events SET captured_at=clock_timestamp()-interval '400 days' WHERE id=$1").bind(first["event_id"].as_str().unwrap().parse::<Uuid>().unwrap()).execute(&h.admin).await.unwrap();
+            recollect_server::privacy_journal::run_once(&h.state)
+                .await
+                .unwrap();
+            let removed: (String, Option<Uuid>) =
+                sqlx::query_as("SELECT privacy_state,artifact_id FROM source_versions WHERE id=$1")
+                    .bind(raw)
+                    .fetch_one(&h.admin)
+                    .await
+                    .unwrap();
+            assert_eq!(removed, ("expired".into(), None));
+            let active:bool=sqlx::query_scalar("SELECT bool_and(privacy_state='active') FROM automatic_support_excerpts WHERE brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+            assert!(active);
+            model_job(&h).await;
+        } else {
+            let mut late = event(&bound, "digest-metadata-late", "");
+            late["event"]["kind"] = json!("lifecycle");
+            late["event"]["host_event"] = json!("PreToolUse");
+            late["event"]["content"] = Value::Null;
+            if boundary == 0 {
+                device_ok(&h, "POST", &format!("{base}/capture/events"), &token, late).await;
+                model_job(&h).await;
+                assert_eq!(p.calls.load(Ordering::SeqCst), before);
+            } else {
+                p.delay.store(450, Ordering::SeqCst);
+                let state = h.state.clone();
+                let worker =
+                    tokio::spawn(async move { worker::run_once(&state, "model").await.unwrap() });
+                wait_calls(&p, before + boundary).await;
+                device_ok(&h, "POST", &format!("{base}/capture/events"), &token, late).await;
+                assert!(worker.await.unwrap());
+                let stage:(bool,bool)=sqlx::query_as("SELECT count(*)=1,coalesce(bool_and(verdict IS NOT NULL),false) FROM handover_support_stages WHERE brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+                assert!(
+                    stage.0,
+                    "Completed synthesis remains durable at boundary {boundary}"
+                );
+                assert_eq!(stage.1, boundary == 2);
+                assert_eq!(p.calls.load(Ordering::SeqCst), before + boundary);
+                p.delay.store(0, Ordering::SeqCst);
+            }
+            let mapping: i64 =
+                sqlx::query_scalar("SELECT count(*) FROM session_digest_claims WHERE brain_id=$1")
+                    .bind(brain)
+                    .fetch_one(&h.admin)
+                    .await
+                    .unwrap();
+            assert_eq!(mapping, 0, "No publication while coverage is unsettled");
+            let pending:(String,i32)=sqlx::query_as("SELECT error_code,attempts FROM jobs WHERE brain_id=$1 AND kind='handover.generate'").bind(brain).fetch_one(&h.admin).await.unwrap();
+            assert_eq!(pending, ("session_coverage_pending".into(), 0));
+            sqlx::query("UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE brain_id=$1").bind(brain).execute(&h.admin).await.unwrap();
+            assert_eq!(
+                autonomous::run_once(&h.state)
+                    .await
+                    .map_err(|e| e.1)
+                    .unwrap(),
+                0
+            );
+            sqlx::query("UPDATE jobs SET not_before=clock_timestamp()-interval '1 second' WHERE brain_id=$1 AND kind='handover.generate'").bind(brain).execute(&h.admin).await.unwrap();
+            model_job(&h).await;
+        }
+        let usable:bool=sqlx::query_scalar("SELECT recollect_memory_supported(d.brain_id,d.revision_id) FROM session_digest_claims d WHERE d.brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+        assert!(usable, "Continuation completes at boundary {boundary}");
+        assert_eq!(
+            p.calls.load(Ordering::SeqCst),
+            before + 2,
+            "Exactly one synthesis and assessment at boundary {boundary}"
+        );
+        assert_eq!(
+            autonomous::run_once(&h.state)
+                .await
+                .map_err(|e| e.1)
+                .unwrap(),
+            0
+        );
+        assert_eq!(p.calls.load(Ordering::SeqCst), before + 2);
+        server.abort();
+        h.finish().await;
+    }
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn automatic_digest_recovery_respects_leaf_attempts_and_omission_reasons() {
+    for scenario in 0..4 {
+        let (h, owner, base, p, server) = setup().await;
+        capture_policy(&h, &owner, &base, true).await;
+        allow(&h, &owner, &base, |policy| {
+            policy["autonomous_memory"] = json!(true);
+            policy["purposes"] = json!(["extraction", "synthesis"]);
+            policy["content_classes"] = json!(["raw_session", "claim", "query", "support_excerpt"]);
+        })
+        .await;
+        let (_, token) = h.pair_device(&owner, "Digest retry proof").await;
+        let bound = binding(&h, &base, &token, json!({})).await;
+        let brain = base.rsplit('/').next().unwrap().parse::<Uuid>().unwrap();
+        *p.candidates.lock().unwrap() = extracted("Amber", "8080", Value::Null, 1);
+        device_ok(
+            &h,
+            "POST",
+            &format!("{base}/capture/events"),
+            &token,
+            event(&bound, "retry", "Amber.port = 8080\n"),
+        )
+        .await;
+        process(&h).await;
+        assert_eq!(
+            autonomous::run_once(&h.state)
+                .await
+                .map_err(|e| e.1)
+                .unwrap(),
+            1
+        );
+        model_job(&h).await;
+        let before = p.calls.load(Ordering::SeqCst);
+        sqlx::query("UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE brain_id=$1").bind(brain).execute(&h.admin).await.unwrap();
+        if scenario >= 2 {
+            // Protected human authority keeps a positive input eligible after
+            // policy changes; transmission still requires the original class.
+            let input:Value=sqlx::query_scalar("SELECT revision FROM claim_revisions WHERE brain_id=$1 ORDER BY recorded_at DESC LIMIT 1").bind(brain).fetch_one(&h.admin).await.unwrap();
+            ok(&h,"POST",&format!("{base}/claims/{}/review",input["claim_id"].as_str().unwrap()),&owner,
+                json!({"base_revision":input["id"],"action":"revalidate","reason":"Synthetic preflight authority control","content":input["content"],"revalidation_basis":"review_correction"})).await;
+            allow(&h, &owner, &base, |policy| {
+                policy["autonomous_memory"] = json!(true);
+                policy["purposes"] = json!(["extraction", "synthesis"]);
+                policy["content_classes"] = if scenario == 2 {
+                    json!(["claim", "query", "support_excerpt"])
+                } else {
+                    json!(["raw_session", "claim", "query", "support_excerpt"])
+                };
+                if scenario == 3 {
+                    policy["max_input_bytes"] = json!(256);
+                }
+            })
+            .await;
+            let queued = autonomous::run_once(&h.state)
+                .await
+                .map_err(|e| e.1)
+                .unwrap();
+            if scenario == 3 {
+                // The changed policy also rechecks the original raw source.
+                // Its full canonical input exceeds this allowance before HTTP.
+                assert_eq!(queued, 1);
+                model_job(&h).await;
+                assert_eq!(
+                    autonomous::run_once(&h.state)
+                        .await
+                        .map_err(|e| e.1)
+                        .unwrap(),
+                    0
+                );
+            } else {
+                assert_eq!(queued, 0);
+            }
+            let coverage: Value = sqlx::query_scalar(
+                "SELECT coverage FROM session_digest_partitions WHERE brain_id=$1",
+            )
+            .bind(brain)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+            let reason = if scenario == 2 {
+                "source_permission_denied"
+            } else {
+                "whole_input_budget"
+            };
+            assert_eq!(coverage["omissions"][reason], 1, "{coverage}");
+            assert_eq!(p.calls.load(Ordering::SeqCst), before);
+        } else {
+            assert_eq!(
+                autonomous::run_once(&h.state)
+                    .await
+                    .map_err(|e| e.1)
+                    .unwrap(),
+                1
+            );
+            p.mode.store(1, Ordering::SeqCst);
+            model_job(&h).await;
+            for attempt in 1..=2 {
+                if scenario == 0 {
+                    p.mode.store(0, Ordering::SeqCst);
+                }
+                sqlx::query("UPDATE handover_runs SET finished_at=clock_timestamp()-interval '31 minutes' WHERE brain_id=$1 AND state='failed'").bind(brain).execute(&h.admin).await.unwrap();
+                assert_eq!(
+                    autonomous::run_once(&h.state)
+                        .await
+                        .map_err(|e| e.1)
+                        .unwrap(),
+                    1
+                );
+                // A subsequent coordinator pass sees failed ancestors and an
+                // active child. It must keep the frozen generation authorized.
+                assert_eq!(
+                    autonomous::run_once(&h.state)
+                        .await
+                        .map_err(|e| e.1)
+                        .unwrap(),
+                    0
+                );
+                let active: bool = sqlx::query_scalar(
+                    "SELECT bool_and(active) FROM session_digest_pages WHERE brain_id=$1",
+                )
+                .bind(brain)
+                .fetch_one(&h.admin)
+                .await
+                .unwrap();
+                assert!(active);
+                *p.candidates.lock().unwrap() = json!({"summary":"Amber declares port 8080.","completed":[],"next_steps":[],"risks":[]});
+                model_job(&h).await;
+                if scenario == 0 {
+                    let usable:bool=sqlx::query_scalar("SELECT recollect_memory_supported(brain_id,revision_id) FROM session_digest_claims WHERE brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+                    assert!(usable);
+                    assert_eq!(p.calls.load(Ordering::SeqCst), before + 3);
+                    break;
+                }
+                assert_eq!(p.calls.load(Ordering::SeqCst), before + attempt + 1);
+            }
+            assert_eq!(
+                autonomous::run_once(&h.state)
+                    .await
+                    .map_err(|e| e.1)
+                    .unwrap(),
+                0
+            );
+            if scenario == 1 {
+                let coverage: Value = sqlx::query_scalar(
+                    "SELECT coverage FROM session_digest_partitions WHERE brain_id=$1",
+                )
+                .bind(brain)
+                .fetch_one(&h.admin)
+                .await
+                .unwrap();
+                assert_eq!(coverage["generation_outcome"], "terminal_unchanged_inputs");
+                assert_eq!(p.calls.load(Ordering::SeqCst), before + 3);
+            }
+        }
+        server.abort();
+        h.finish().await;
+    }
 }

@@ -1,5 +1,15 @@
 .models-management .ai-inline-actions {
   flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.models-management .management-section-heading {
+  flex-wrap: wrap;
+}
+.models-management .management-section-heading > div:first-child {
+  flex: 1 1 260px;
+}
+.models-management .management-section-heading > .mantine-Button-root {
+  flex-shrink: 0;
 }
 .ai-provider-identity {
   display: inline-flex;
@@ -41,4 +51,22 @@
   .models-management .management-row .mantine-Checkbox-root {
     flex-shrink: 0;
   }
+}
+
+.models-management .ai-limits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin-top: 12px;
+}
+@media (max-width: 520px) {
+  .models-management .ai-limits-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.models-management .ai-processing-limits .mantine-NumberInput-input:disabled {
+  color: var(--rc-ink);
+  background: var(--rc-canvas);
+  opacity: 1;
+  -webkit-text-fill-color: var(--rc-ink);
 }

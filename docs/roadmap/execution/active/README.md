@@ -8,6 +8,10 @@ Statuses here are planned, in-progress, or blocked. Shipped packs belong in the
 | [mcp-copy-ready-agent-config](mcp-copy-ready-agent-config.md) | in-progress |
 | [operations-longmemeval-bench](operations-longmemeval-bench.md) | blocked |
 
+The five [automatic memory phases](../../../mappings/memory-source-support-staging-2026-10-07.md)
+are archived with native local acceptance, two independent reviews and a versioned
+actual-model support comparison. They remain uncommitted and are not deployed.
+
 The public product and searchable docs site is published through GitHub Pages.
 Its [pack](../archive/repository-product-docs-site.md) is archived with
 [live deployment and browser evidence](../../../mappings/public-product-docs-site-2026-10-06.md).

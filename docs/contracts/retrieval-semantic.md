@@ -236,3 +236,11 @@ host prompt injection, response caching and generated answers are outside this s
 No customer content is newly transmitted in local proof. External deployment and
 commits remain outside the goal. These exclusions do not defer current-consumer
 scope, rejection, retention, erasure, provenance or recovery acceptance.
+
+
+## Budget-blocked scheduling — 2026-10-07
+
+A semantic batch blocked before transmission by `model_budget_exhausted` waits
+until the next UTC day or a changed model policy before automatic rescheduling.
+Do not recreate blocked batches every minute. Explicit authorized retry remains
+available and still passes the gateway's current budget and authority checks.

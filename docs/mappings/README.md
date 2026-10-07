@@ -11,6 +11,16 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Automatic memory implementation and versioned support evaluation, 2026-10-07](memory-source-support-staging-2026-10-07.md)
+
+- [Muse memory comparison and Recollect implementation audit, 2026-10-07](muse-memory-comparison-2026-10-07.md)
+
+- [Dashboard refresh stability, 2026-10-07](dashboard-refresh-stability-2026-10-07.md)
+
+- [Input errors, processing limits and stale page recovery, 2026-10-07](input-errors-and-page-recovery-2026-10-07.md)
+
+- [Native plugin workflow, learning recovery and visible limits, 2026-10-07](plugin-workflow-repair-2026-10-07.md)
+
 - [Published product site and searchable documentation, 2026-10-06](public-product-docs-site-2026-10-06.md)
 
 - [Original identity and clearer service/environment README workflows, 2026-10-06](readme-branded-workflows-2026-10-06.md)

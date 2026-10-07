@@ -279,7 +279,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
     } else {
         None
     };
-    let client = Client::new(&config.endpoint)?;
+    let client = Client::new(&config.endpoint)?.with_host(host);
     // Ordinary tool hooks never open the OS store or make a network request.
     // New sessions are established only at a documented start/prompt boundary.
     let boundary = matches!(
@@ -287,6 +287,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         "SessionStart" | "UserPromptSubmit" | "ContextRequest" | "StepStart" | "SubagentStart"
     );
     let mut resume_selection = None;
+    let mut resume_task = None;
     if boundary && session.as_ref().is_some_and(|s| s.ended) {
         let previous = session.as_mut().expect("existing session");
         let device = credential(&config)?;
@@ -295,6 +296,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             .map_err(|_| anyhow!("plugin_session_timeout"))??;
         plugin_storage::write(&state, previous)?;
         resume_selection = Some(previous.scope.selection.clone());
+        resume_task = Some(previous.setup.task_id);
         session = None;
     }
     if session.is_none() {
@@ -361,6 +363,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
                     root: &root,
                     id,
                     parent_task,
+                    continuation_of_task: resume_task,
                     selection: resume_selection,
                     agent_id: agent,
                 },
@@ -442,7 +445,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             .as_str()
             .unwrap_or("Important decisions, facts and procedures for continuing this task");
         let mut query = sanitize_capture_text(query, &configured_secrets);
-        let mut end = query.len().min(2000);
+        let mut end = query.len().min(512);
         while !query.is_char_boundary(end) {
             end -= 1;
         }
@@ -461,7 +464,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         output["recollectCaptureBinding"] = json!(launch.current()?);
         output["recollectCapturedEvent"] = json!(captured);
     }
-    Ok(output)
+    Ok(plugin_session::bound_output(output))
 }
 
 /// OS keychain calls and local filesystem calls can block synchronously, outside

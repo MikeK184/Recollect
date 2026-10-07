@@ -117,6 +117,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             prompt_label: REPRESENTATION.into(),
             schema_label: "embedding-float-1".into(),
             format: gateway::Format::Embedding,
+            work_lease: None,
             metadata_replay: false,
             expected_json: None,
         },

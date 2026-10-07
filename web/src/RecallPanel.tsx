@@ -238,6 +238,8 @@ export function RecallPanel({
     const next = {
       nonce: crypto.randomUUID(),
       request: {
+        project_brief: false,
+        continuation: null,
         query: queryText,
         exact: filters.exactKind
           ? { kind: filters.exactKind, id: filters.exactId }

@@ -13,6 +13,8 @@ mod mcp_memory;
 mod procedures;
 #[path = "semantic.rs"]
 mod semantic;
+#[path = "memory_support.rs"]
+mod support;
 use axum::{Json, extract::State, routing::post};
 use recollect_server::{model_gateway as gateway, worker};
 use review::ok;
@@ -28,6 +30,8 @@ pub(crate) struct Provider {
     mode: AtomicUsize,
     pub(crate) candidates: Mutex<Value>,
     pub(crate) bodies: Mutex<Vec<Value>>,
+    pub(crate) assessments: Mutex<Option<Value>>,
+    pub(crate) usage_total: AtomicU64,
     entered: tokio::sync::Notify,
 }
 fn candidate(subject: &str, predicate: &str, value: &str, line: i32) -> Value {
@@ -141,15 +145,79 @@ async fn wire(
             assert!(body.get("reasoning").is_none());
         }
         assert!(body.get("tools").is_none());
-        let extracted = if body["text"]["format"]["name"] == "synthetic_connection" {
+        let mut extracted = if body["text"]["format"]["name"] == "synthetic_connection" {
             json!({"service":"Amber","environment":"test"})
+        } else if matches!(
+            body["text"]["format"]["name"].as_str(),
+            Some("revision_support" | "handover_support")
+        ) {
+            provider.assessments.lock().unwrap().clone().unwrap_or_else(|| json!({"assessments":[{"index":0,"disposition":"supported","reason":"Controlled canonical audit verdict"}]}))
+        } else if body["text"]["format"]["name"] == "source_support" {
+            // Controlled verdicts exercise server plumbing, not semantic quality.
+            provider.assessments.lock().unwrap().clone().unwrap_or_else(|| {
+                let stage = body["input"].as_str().unwrap().lines()
+                    .map(|line|serde_json::from_str::<Value>(line).unwrap())
+                    .find(|v|v["provenance"]["kind"]=="learning_support_stage").unwrap();
+                let stage:Value=serde_json::from_str(stage["data"].as_str().unwrap()).unwrap();
+                json!({"assessments":stage["actions"].as_array().unwrap().iter().map(|a|json!({"index":a["index"],"disposition":"supported","reason":"Controlled fixture support verdict"})).collect::<Vec<_>>()})
+            })
         } else {
             provider.candidates.lock().unwrap().clone()
         };
+        if let Some(assessments) = extracted
+            .get_mut("assessments")
+            .and_then(Value::as_array_mut)
+        {
+            for assessment in assessments {
+                // Controlled provider fixtures supply their declared premise.
+                // This is plumbing proof, never semantic model-quality proof.
+                if assessment.get("citation_support").is_none() {
+                    assessment["citation_support"] =
+                        json!(assessment["disposition"] == "supported");
+                }
+                if assessment.get("evidence_quote").is_none() {
+                    fn quote(value: &Value, index: usize) -> Option<String> {
+                        if let Some(spans) = value["cited_spans"].as_array() {
+                            return spans
+                                .get(index)
+                                .or_else(|| spans.first())
+                                .and_then(|s| s["text"].as_str())
+                                .map(|s| s.chars().take(500).collect());
+                        }
+                        if let Some(items) = value["evidence"].as_array() {
+                            for item in items {
+                                if let Some(q) = quote(&item["data"], index) {
+                                    return Some(q);
+                                }
+                            }
+                            if let Some(item) =
+                                items.iter().find(|i| i["kind"] != "manifest_applicability")
+                            {
+                                return Some(item["data"].to_string().chars().take(500).collect());
+                            }
+                        }
+                        value["contributors"]
+                            .as_array()
+                            .and_then(|c| c.first())
+                            .map(|c| c.to_string().chars().take(500).collect())
+                    }
+                    let index = assessment["index"].as_u64().unwrap_or(0) as usize;
+                    let chosen = body["input"]
+                        .as_str()
+                        .unwrap()
+                        .lines()
+                        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+                        .filter_map(|v| serde_json::from_str::<Value>(v["data"].as_str()?).ok())
+                        .find_map(|v| quote(&v, index))
+                        .unwrap_or_default();
+                    assessment["evidence_quote"] = json!(chosen);
+                }
+            }
+        }
         (
             StatusCode::OK,
             Json(
-                json!({"model":body["model"],"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":extracted.to_string()}]}],"usage":{"input_tokens":23,"output_tokens":17,"total_tokens":40}}),
+                json!({"model":body["model"],"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":extracted.to_string()}]}],"usage":{"input_tokens":23,"output_tokens":17,"total_tokens":provider.usage_total.load(Ordering::SeqCst)}}),
             ),
         )
     }
@@ -208,6 +276,8 @@ pub(crate) async fn configure_provider(
         mode: AtomicUsize::new(0),
         candidates: Mutex::new(json!({"claims":[candidate("Amber","port","8080",1)]})),
         bodies: Mutex::new(vec![]),
+        assessments: Mutex::new(None),
+        usage_total: AtomicU64::new(40),
         entered: tokio::sync::Notify::new(),
     });
     let router = Router::new()
@@ -247,7 +317,13 @@ pub(crate) async fn allow(
     // This helper exercises the original explicit/literal mode; autonomous
     // closed-loop scenarios opt in below through their own policy mutation.
     policy["autonomous_memory"] = json!(false);
-    policy["content_classes"] = json!(["document", "query", "raw_session", "support_excerpt"]);
+    policy["content_classes"] = json!([
+        "document",
+        "claim",
+        "query",
+        "raw_session",
+        "support_excerpt"
+    ]);
     mutate(policy);
     ok(
         h,
@@ -770,10 +846,10 @@ async fn learning_automatic_retry_restart_atomic_failure_and_inflight_erasure() 
     .await;
     let atomic = source(&h, &owner, &base, "Amber.port = 9191\n").await;
     *p.candidates.lock().unwrap() = json!({"claims":[candidate("Amber","port","9191",1)]});
-    learn(&h, &owner, &base, &atomic).await;
+    let atomic_run = learn(&h, &owner, &base, &atomic).await;
     sqlx::query("ALTER TABLE mutation_audit ADD CONSTRAINT model_publication_fault CHECK(action<>'claim.learn') NOT VALID").execute(&h.admin).await.unwrap();
     model_job(&h).await;
-    assert_eq!(runs(&h, &owner, &base).await["items"][0]["state"], "failed");
+    assert_eq!(runs(&h, &owner, &base).await["items"][0]["state"], "queued");
     let absent: i64 =
         sqlx::query_scalar("SELECT count(*) FROM claim_revisions WHERE value_key='9191'")
             .fetch_one(&h.admin)
@@ -784,6 +860,24 @@ async fn learning_automatic_retry_restart_atomic_failure_and_inflight_erasure() 
         .execute(&h.admin)
         .await
         .unwrap();
+    let completed_calls = p.calls.load(Ordering::SeqCst);
+    sqlx::query(
+        "UPDATE jobs SET not_before=clock_timestamp()-interval '1 second' WHERE target_id=$1",
+    )
+    .bind(Uuid::parse_str(atomic_run["id"].as_str().unwrap()).unwrap())
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    model_job(&h).await;
+    assert_eq!(
+        runs(&h, &owner, &base).await["items"][0]["state"],
+        "succeeded"
+    );
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        completed_calls,
+        "Publication recovery reuses its completed draft and support verdict"
+    );
     let doomed = source(&h, &owner, &base, "Amber.port = 9292\n").await;
     *p.candidates.lock().unwrap() = json!({"claims":[candidate("Amber","port","9292",1)]});
     let run = learn(&h, &owner, &base, &doomed).await;
@@ -1062,6 +1156,31 @@ async fn learning_literal_acceptance_interpretation_conflict_rejection_and_repla
     let result = runs(&h, &owner, &base).await;
     assert_eq!(result["items"][0]["reused"], 2);
     assert_eq!(p.calls.load(Ordering::SeqCst), 3);
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn sensitive_model_input_has_a_typed_reason_and_never_calls_the_provider() {
+    let (h, owner, base, p, server) = setup().await;
+    allow(&h, &owner, &base, |_| {}).await;
+    let cx = context(&h, &base).await;
+    let mut inv = gateway::extraction(Uuid::new_v4(), Uuid::new_v4());
+    inv.inputs.clear();
+    inv.query =
+        Some("Synthetic documentation: -----BEGIN PRIVATE KEY----- test marker only".into());
+    let error = match gateway::invoke(&h.state, cx, inv).await {
+        Err(error) => error,
+        Ok(_) => panic!("Sensitive input must not be transmitted"),
+    };
+    assert_eq!(error.1, "model_input_sensitive");
+    assert_eq!(p.calls.load(Ordering::SeqCst), 0);
+    let requests: i64 = sqlx::query_scalar("SELECT count(*) FROM model_requests")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(requests, 0, "Guard rejection is neither sent nor charged");
     server.abort();
     h.finish().await;
 }

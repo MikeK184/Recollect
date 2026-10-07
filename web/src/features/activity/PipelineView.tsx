@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState, memo } from "react";
-import { Alert, Button, Drawer, Group, Stack, Text } from "@mantine/core";
+import {
+  Alert,
+  Button,
+  Drawer,
+  Group,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
@@ -35,6 +43,8 @@ import {
   observedStages,
   type FlowStage,
   itemState,
+  inputStatus,
+  learningFailure,
   learningState,
   origin,
   originKey,
@@ -188,7 +198,10 @@ function Diagram({
       data: {
         kind: "learning",
         label: "Recollect learning",
-        value: stateLabel(learning),
+        value:
+          learning === "failed"
+            ? learningFailure(run?.job.error_code).label
+            : stateLabel(learning),
         detail: run ? "Extract + reconcile" : "No learning run recorded",
         live: learning === "running",
       },
@@ -304,11 +317,9 @@ export function BrainPipeline({
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  const [visibleSince, setVisibleSince] = useState(0);
   useEffect(() => {
     const update = () => {
       setVisible(!document.hidden);
-      setVisibleSince(Date.now());
       setNow(Date.now());
       previous.current = null;
       setChanged(new Map());
@@ -363,10 +374,10 @@ export function BrainPipeline({
   }, [query.data]);
   const stale =
     !!query.data && Math.max(now, Date.now()) >= query.data.clientExpiresAt;
-  const data =
-    visible && query.dataUpdatedAt >= visibleSince && !query.isError && !stale
-      ? query.data
-      : undefined;
+  // Visibility pauses polling/motion, not a still-valid snapshot. Clearing it
+  // on every focus event tears down the graph and closes inspection while the
+  // replacement read is pending. Errors and the original deadline still clear it.
+  const data = !query.isError && !stale ? query.data : undefined;
   useEffect(() => {
     if (!data) {
       previous.current = null;
@@ -377,7 +388,7 @@ export function BrainPipeline({
     }
     const changes = observedStages(previous.current, data);
     previous.current = data;
-    if (reduced || !changes.size) return;
+    if (!visible || reduced || !changes.size) return;
     clearTimeout(pulseTimer.current);
     const token = Date.now();
     setChanged(
@@ -389,7 +400,7 @@ export function BrainPipeline({
       ),
     );
     pulseTimer.current = setTimeout(() => setChanged(new Map()), 1600);
-  }, [data, reduced]);
+  }, [data, reduced, visible]);
   useEffect(() => {
     if (inspecting && !data?.items.some((row) => row.id === selected))
       setInspecting(false);
@@ -418,6 +429,7 @@ export function BrainPipeline({
       className="control-pipeline"
       aria-label={`${brain.name} activity pipeline`}
       data-testid="live-pipeline"
+      data-paused={!visible}
     >
       <div className="control-panel-heading">
         <div>
@@ -525,7 +537,7 @@ export function BrainPipeline({
             brain={brain}
             item={item}
             at={data.observed_at}
-            pulses={reduced ? {} : (changed.get(item.id) ?? {})}
+            pulses={!visible || reduced ? {} : (changed.get(item.id) ?? {})}
             onInspect={() => {
               setSelected(item.id);
               setInspecting(true);
@@ -537,7 +549,7 @@ export function BrainPipeline({
             />
             <span>
               {item.contributor} → {origin(item)} →{" "}
-              {stateLabel(itemState(item, data.observed_at))}
+              {inputStatus(item, data.observed_at).label}
             </span>
             <time dateTime={item.activity_at}>
               {new Date(item.activity_at).toLocaleString()}
@@ -586,13 +598,16 @@ export function BrainPipeline({
             {shown?.map((row) => (
               <motion.button
                 type="button"
-                layout={!reduced}
+                layout={visible && !reduced}
                 key={row.id}
                 initial={{ opacity: 1 }}
                 transition={{ duration: reduced ? 0 : 0.22 }}
                 className={`flow-input-row ${row.id === item.id ? "selected" : ""} ${changed.has(row.id) ? "changed" : ""}`}
                 onClick={() => choose(row.id)}
                 aria-pressed={row.id === item.id}
+                aria-description={
+                  inputStatus(row, data.observed_at).detail ?? undefined
+                }
                 data-testid={`pipeline-input-${row.id}`}
               >
                 <span className="flow-input-icon">
@@ -609,11 +624,19 @@ export function BrainPipeline({
                     {row.agent_id ? ` · Agent ${row.agent_id}` : ""}
                   </small>
                 </span>
-                <span
-                  className={`flow-state state-${itemState(row, data.observed_at)}`}
+                <Tooltip
+                  label={inputStatus(row, data.observed_at).detail}
+                  disabled={!inputStatus(row, data.observed_at).detail}
+                  multiline
+                  w={300}
+                  events={{ hover: true, focus: true, touch: true }}
                 >
-                  {stateLabel(itemState(row, data.observed_at))}
-                </span>
+                  <span
+                    className={`flow-state state-${itemState(row, data.observed_at)}`}
+                  >
+                    {inputStatus(row, data.observed_at).label}
+                  </span>
+                </Tooltip>
                 <time dateTime={row.activity_at}>
                   {new Date(row.activity_at).toLocaleTimeString()}
                 </time>
@@ -724,7 +747,9 @@ export function BrainPipeline({
             <div className="control-detail-section">
               <h3>Recollect learning</h3>
               <Text size="sm">
-                {stateLabel(learningState(item, data.observed_at))}
+                {learningState(item, data.observed_at) === "failed"
+                  ? learningFailure(item.learning?.job.error_code).label
+                  : stateLabel(learningState(item, data.observed_at))}
               </Text>
               <Text size="xs" c="dimmed">
                 Background processing is separate from the contributing agent.
@@ -739,9 +764,17 @@ export function BrainPipeline({
                       : ""}
                   </Text>
                   {item.learning.job.error_code && (
-                    <Text size="sm" c="red">
-                      {item.learning.job.error_code}
-                    </Text>
+                    <Alert
+                      color="red"
+                      title={
+                        learningFailure(item.learning.job.error_code).label
+                      }
+                    >
+                      {learningFailure(item.learning.job.error_code).detail}
+                      <Text size="xs" mt="xs">
+                        Reason: {item.learning.job.error_code}
+                      </Text>
+                    </Alert>
                   )}
                   {item.learning.state === "succeeded" && (
                     <>

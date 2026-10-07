@@ -70,7 +70,7 @@ pub(crate) fn defaults(state: &AppState) -> ModelPolicy {
         purposes: vec!["extraction".into(), "synthesis".into(), "embedding".into()],
         content_classes: vec!["document".into(), "claim".into(), "query".into()],
         max_input_bytes: 16384,
-        max_output_tokens: 1024,
+        max_output_tokens: 4096,
         daily_token_limit: 100000,
         max_concurrent: 1,
         automatic_learning: false,
@@ -320,6 +320,7 @@ pub(crate) async fn persist(
         .bind(id).bind(brain).bind(SqlJson(&policy)).bind(actor).fetch_one(&mut **tx).await?;
     sqlx::query("INSERT INTO model_policy_heads(brain_id,policy_id) VALUES($1,$2) ON CONFLICT(brain_id) DO UPDATE SET policy_id=excluded.policy_id")
         .bind(brain).bind(id).execute(&mut **tx).await?;
+    crate::memory_rules::advance_epoch(tx, brain).await?;
     let response = ModelPolicyVersion {
         change_id: id,
         brain_id: brain,

@@ -355,7 +355,11 @@ async fn autonomous_catchup_revision_handover_retirement_and_erasure() {
             .unwrap(),
         0
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), 5);
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        10,
+        "Both generated handover generations include an independent support assessment"
+    );
     let decisions: i64 = sqlx::query_scalar("SELECT count(*) FROM memory_decisions")
         .fetch_one(&h.admin)
         .await
@@ -715,7 +719,7 @@ async fn autonomous_inflight_erasure_expiry_and_older_restore_preserve_independe
         .unwrap();
     let state = h.state.clone();
     let inflight = tokio::spawn(async move { worker::execute(&state, &job).await });
-    wait_calls(&p, 3).await;
+    wait_calls(&p, 5).await;
     let target = json!({"kind":"claim","id":claim});
     let preview = ok(
         &h,
@@ -792,7 +796,7 @@ async fn autonomous_inflight_erasure_expiry_and_older_restore_preserve_independe
     );
     assert_eq!(
         p.calls.load(Ordering::SeqCst),
-        3,
+        5,
         "Expiry must not require a model or human action per record"
     );
     assert!(
@@ -832,13 +836,165 @@ async fn autonomous_inflight_erasure_expiry_and_older_restore_preserve_independe
     .map_err(|e| e.1)
     .unwrap();
     assert_eq!(positive.request.state, "succeeded");
-    assert_eq!(p.calls.load(Ordering::SeqCst), 4);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 6);
     backup_state.pool.close().await;
     backup_admin.close().await;
     sqlx::query(&format!("DROP DATABASE {backup}"))
         .execute(&h.root)
         .await
         .unwrap();
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn invalid_generated_candidates_recover_without_publishing_or_unbounded_retries() {
+    let (h, owner, base, p, server) = setup().await;
+    enable(&h, &owner, &base).await;
+    source(&h, &owner, &base, "Amber.port = 8080\n").await;
+    process(&h).await;
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        1
+    );
+    let mut malformed = extracted("8080", Value::Null);
+    malformed["claims"][0]["kind"] = json!("procedure");
+    malformed["claims"][0]["procedure"] = Value::Null;
+    *p.candidates.lock().unwrap() = malformed;
+    model_job(&h).await;
+    assert_eq!(
+        runs(&h, &owner, &base).await["items"][0]["error_code"],
+        "provider_shape"
+    );
+    let claims: i64 = sqlx::query_scalar("SELECT count(*) FROM claims")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(claims, 0);
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0
+    );
+    sqlx::query("UPDATE learning_runs SET finished_at=clock_timestamp()-interval '1 hour' WHERE state='failed'").execute(&h.admin).await.unwrap();
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        1
+    );
+    let replacement = runs(&h, &owner, &base).await;
+    assert_eq!(replacement["items"][0]["automatic_attempt"], 1);
+    assert!(replacement["items"][0]["retry_of"].is_string());
+    *p.candidates.lock().unwrap() = extracted("8080", Value::Null);
+    model_job(&h).await;
+    assert_eq!(
+        runs(&h, &owner, &base).await["items"][0]["state"],
+        "succeeded"
+    );
+    assert_eq!(p.calls.load(Ordering::SeqCst), 3);
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0
+    );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn reconciliation_fits_input_budget_and_daily_rejections_wait_for_reset() {
+    let (h, owner, base, p, server) = setup().await;
+    enable(&h, &owner, &base).await;
+    allow(&h, &owner, &base, |policy| {
+        policy["autonomous_memory"] = json!(true);
+        policy["content_classes"] = json!(["document", "claim"]);
+        policy["max_input_bytes"] = json!(2048);
+    })
+    .await;
+    let original = source(&h, &owner, &base, "Amber.port = 8080\n").await;
+    *p.candidates.lock().unwrap() = extracted("8080", Value::Null);
+    learn(&h, &owner, &base, &original).await;
+    model_job(&h).await;
+    assert_eq!(
+        runs(&h, &owner, &base).await["items"][0]["state"],
+        "succeeded"
+    );
+    let text = format!("Amber.port = 9090\n{}", "Context.\n".repeat(140));
+    let changed = change(&h, &owner, &base, &original, &text).await;
+    *p.candidates.lock().unwrap() = extracted("9090", Value::Null);
+    let run = learn(&h, &owner, &base, &changed).await;
+    model_job(&h).await;
+    let result = runs(&h, &owner, &base).await;
+    assert_eq!(result["items"][0]["state"], "succeeded", "{result}");
+    assert_eq!(result["items"][0]["id"], run["id"]);
+    assert_eq!(result["items"][0]["reconciliation_inputs"], json!([]));
+    assert_eq!(p.calls.load(Ordering::SeqCst), 4);
+
+    allow(&h, &owner, &base, |policy| {
+        policy["autonomous_memory"] = json!(true);
+        policy["daily_token_limit"] = json!(1000);
+        policy["content_classes"] = json!(["document", "claim"]);
+    })
+    .await;
+    process(&h).await;
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        3,
+        "The changed policy queues two existing revision audits and source catch-up"
+    );
+    model_job(&h).await;
+    model_job(&h).await;
+    model_job(&h).await;
+    assert_eq!(
+        runs(&h, &owner, &base).await["items"][0]["error_code"],
+        "model_budget_exhausted"
+    );
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        4,
+        "Budget rejection makes no provider call"
+    );
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0
+    );
+    let deferred = runs(&h, &owner, &base).await;
+    assert_eq!(deferred["items"][0]["state"], "queued");
+    assert_eq!(deferred["items"][0]["automatic_attempt"], 0);
+    assert!(deferred["items"][0]["retry_of"].is_null());
+    // Reset makes the SAME no-call admission eligible; it does not allocate
+    // another generation or spend the two charged replacement attempts.
+    sqlx::query("UPDATE jobs SET not_before=clock_timestamp() WHERE target_id=$1")
+        .bind(Uuid::parse_str(deferred["items"][0]["id"].as_str().unwrap()).unwrap())
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    model_job(&h).await;
+    assert_eq!(p.calls.load(Ordering::SeqCst), 4);
+    assert_eq!(
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap(),
+        0
+    );
     server.abort();
     h.finish().await;
 }

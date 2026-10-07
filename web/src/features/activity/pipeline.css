@@ -118,7 +118,7 @@
 }
 @keyframes flow-packet {
   from {
-    stroke-dashoffset: .09;
+    stroke-dashoffset: 0.09;
     opacity: 1;
   }
   to {
@@ -334,6 +334,11 @@
 
 .flow-stage.is-running .flow-stage-icon {
   animation: flow-working 1.8s ease-in-out infinite;
+}
+
+.control-pipeline[data-paused="true"] .flow-stage-icon,
+.control-pipeline[data-paused="true"] .flow-input-row.changed {
+  animation-play-state: paused;
 }
 @keyframes flow-working {
   50% {

@@ -116,17 +116,37 @@ pub(crate) async fn inputs(
     brain: Uuid,
     ids: &[Uuid],
 ) -> Result<Vec<ClaimRevision>> {
+    dependency_inputs(state, tx, brain, ids, true).await
+}
+async fn dependency_inputs(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    ids: &[Uuid],
+    require_current: bool,
+) -> Result<Vec<ClaimRevision>> {
     let mut revisions = Vec::new();
     for id in ids {
         let revision = exact(tx, brain, *id)
             .await?
             .ok_or_else(crate::retention::unavailable)?;
         if revision.content.kind == "handover"
-            || memory::current(tx, brain, revision.claim_id).await?.id != *id
+            || (require_current && memory::current(tx, brain, revision.claim_id).await?.id != *id)
         {
             return Err(Error::invalid(
                 "Use current claims, decisions or procedures as handover contributions.",
             ));
+        }
+        if !require_current {
+            let supported: bool = sqlx::query_scalar("SELECT recollect_memory_exact_acyclic($1,$2) AND NOT EXISTS(SELECT 1 FROM recollect_memory_exact_dependencies($1,$2) d WHERE NOT recollect_revision_supported($1,d.revision_id))")
+                .bind(brain).bind(revision.id).fetch_one(&mut **tx).await?;
+            if !supported {
+                return Err(Error::invalid(
+                    "An exact contribution is no longer supported.",
+                ));
+            }
+            revisions.push(revision);
+            continue;
         }
         let view = memory::base_view(state, tx, revision, Utc::now(), None).await?;
         if !view.eligibility.investigation {
@@ -187,8 +207,26 @@ pub(crate) async fn validate_dependencies(
     brain: Uuid,
     content: &ClaimContent,
 ) -> Result<()> {
+    validate_dependency_content(state, tx, brain, content, true).await
+}
+pub(crate) async fn validate_audit_dependencies(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    content: &ClaimContent,
+) -> Result<()> {
+    validate_dependency_content(state, tx, brain, content, false).await
+}
+async fn validate_dependency_content(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    content: &ClaimContent,
+    require_current: bool,
+) -> Result<()> {
     if let Some(handover) = &content.handover {
-        let rows = inputs(state, tx, brain, &handover.contributions).await?;
+        let rows =
+            dependency_inputs(state, tx, brain, &handover.contributions, require_current).await?;
         let (scope, supports) = combined(&rows)?;
         if scope != content.selection || supports.iter().any(|s| !content.supports.contains(s)) {
             return Err(Error::invalid(

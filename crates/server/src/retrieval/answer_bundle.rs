@@ -159,6 +159,12 @@ impl Bundle {
                     .fetch_one(&mut **tx)
                     .await?;
                     classes.insert(class);
+                    let original: Option<String> = sqlx::query_scalar("SELECT original_class FROM automatic_support_excerpts WHERE brain_id=$1 AND version_id=$2 AND privacy_state='active'")
+                        .bind(brain).bind(item.revision_id).fetch_optional(&mut **tx).await?;
+                    if let Some(original) = original {
+                        classes.insert(original);
+                    }
+
                     dependencies.push(InputRef {
                         kind: "source_version".into(),
                         id: item.revision_id,

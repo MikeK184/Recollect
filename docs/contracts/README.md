@@ -34,6 +34,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Brain model catalogue and selection](brain-model-catalogue-and-selection.md)
 - [Procedures and multi-repository handovers](memory-procedures-and-handovers.md)
 - [Autonomous Brain maintenance](memory-autonomous-maintenance.md)
+- [Source support before usable memory](memory-source-support-verification.md)
 - [Automatic host session capture](evidence-session-capture.md)
 - [Canonical exact and lexical recall](retrieval-exact-and-lexical.md)
 - [Capture provenance and autonomous reconciliation](memory-capture-reconciliation.md)
@@ -59,3 +60,9 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [LongMemEval answer-level benchmark protocol](operations-longmemeval-protocol.md) (proposed; not governing until accepted with user cost approval)
 
 - [Plugin-managed coding-host memory](mcp-plugin-session-memory.md)
+
+- [Bounded cross-session reconciliation](memory-cross-session-reconciliation.md) — accepted automated exact-family discovery.
+
+- [Automatic session digests and durable support](memory-automatic-session-digests.md) — accepted automatic scoped handover/excerpt lifecycle.
+
+- [Scoped project brief and authenticated continuation](retrieval-scoped-project-brief.md).

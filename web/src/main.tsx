@@ -21,6 +21,7 @@ import { App } from "./App";
 import { BrainLayout } from "./app/BrainLayout";
 import { validateBrainSearch } from "./app/useBrainSearch";
 import { theme, cssVariablesResolver } from "./design/theme";
+import { PageFailure } from "./components/PageFailure";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -216,6 +217,7 @@ const devices = createRoute({
   },
 });
 const router = createRouter({
+  defaultErrorComponent: PageFailure,
   routeTree: root.addChildren([
     home,
     brain.addChildren([

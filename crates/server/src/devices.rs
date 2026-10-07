@@ -368,7 +368,7 @@ pub async fn cancel(
 #[utoipa::path(get,path="/api/devices",operation_id="listDevices",responses((status=200,body=Vec<Device>)))]
 pub async fn list(State(state): State<AppState>, auth: Auth) -> Result<Json<Vec<Device>>> {
     let mut tx = auth.tx(&state.pool).await?;
-    let rows:Vec<DbJson<Device>>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'name',name,'claimed',claimed,'revoked_at',revoked_at,'expires_at',expires_at,'last_used_at',last_used_at,'created_at',created_at,'host_kind',host_kind,'integration',integration) FROM devices WHERE account_id=$1 ORDER BY created_at DESC LIMIT 1000").bind(auth.user.id).fetch_all(&mut *tx).await?;
+    let rows:Vec<DbJson<Device>>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'name',name,'claimed',claimed,'revoked_at',revoked_at,'expires_at',expires_at,'last_used_at',last_used_at,'created_at',created_at,'host_kind',coalesce((recollect_agent_hosts(id))[1],host_kind),'observed_hosts',recollect_agent_hosts(id),'integration',integration) FROM devices WHERE account_id=$1 ORDER BY created_at DESC LIMIT 1000").bind(auth.user.id).fetch_all(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(rows.into_iter().map(|r| r.0).collect()))
 }
@@ -389,6 +389,7 @@ pub async fn brain_agents(
         id: Uuid,
         name: String,
         host_kind: Option<String>,
+        observed_hosts: Vec<String>,
         integration: String,
         claimed: bool,
         active: bool,
@@ -405,7 +406,7 @@ pub async fn brain_agents(
         "d.revoked_at IS NULL AND d.expires_at>now()"
     };
     let rows: Vec<Row> = sqlx::query_as(&format!(
-        "SELECT d.id,d.name,coalesce(d.host_kind,(SELECT b.host FROM capture_bindings b JOIN capture_events e ON e.binding_id=b.id AND e.brain_id=b.brain_id WHERE b.brain_id=$1 AND b.device_id=d.id AND e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)>clock_timestamp() ORDER BY e.received_at DESC,e.id DESC LIMIT 1)) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,CASE WHEN d.account_id=$2 THEN d.created_at END created_at,CASE WHEN d.account_id=$2 THEN d.expires_at END expires_at,CASE WHEN d.account_id=$2 THEN d.last_used_at END last_used_at,u.last_used last_used_on_brain_at,a.username user_name,d.account_id=$2 can_revoke FROM recollect_brain_agent_usage($1) u JOIN devices d ON d.id=u.device_id JOIN accounts a ON a.id=d.account_id WHERE ({visible}) ORDER BY a.username,active DESC,d.name,d.id"
+        "SELECT d.id,d.name,coalesce((recollect_agent_hosts(d.id,$1))[1],d.host_kind,(SELECT b.host FROM capture_bindings b JOIN capture_events e ON e.binding_id=b.id AND e.brain_id=b.brain_id WHERE b.brain_id=$1 AND b.device_id=d.id AND e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)>clock_timestamp() ORDER BY e.received_at DESC,e.id DESC LIMIT 1)) host_kind,recollect_agent_hosts(d.id,$1) observed_hosts,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,CASE WHEN d.account_id=$2 THEN d.created_at END created_at,CASE WHEN d.account_id=$2 THEN d.expires_at END expires_at,CASE WHEN d.account_id=$2 THEN d.last_used_at END last_used_at,u.last_used last_used_on_brain_at,a.username user_name,d.account_id=$2 can_revoke FROM recollect_brain_agent_usage($1) u JOIN devices d ON d.id=u.device_id JOIN accounts a ON a.id=d.account_id WHERE ({visible}) ORDER BY a.username,active DESC,d.name,d.id"
     ))
     .bind(brain)
     .bind(auth.user.id)
@@ -425,6 +426,7 @@ pub async fn brain_agents(
             can_revoke: row.can_revoke,
             name: row.name,
             host_kind: row.host_kind,
+            observed_hosts: row.observed_hosts,
             integration: row.integration,
             claimed: row.claimed,
             active: row.active,
@@ -458,6 +460,7 @@ pub async fn account_agents(
         id: Uuid,
         name: String,
         host_kind: Option<String>,
+        observed_hosts: Vec<String>,
         integration: String,
         claimed: bool,
         active: bool,
@@ -468,7 +471,7 @@ pub async fn account_agents(
         brains: DbJson<Vec<AgentBrainUsage>>,
     }
     let rows: Vec<Row> = sqlx::query_as(
-        "WITH acc AS (SELECT oidc_issuer,oidc_groups,membership_until FROM accounts WHERE id=$1), accessible AS (SELECT b.id,b.name,b.icon_revision FROM brains b WHERE b.owner_id=$1 OR EXISTS(SELECT 1 FROM brain_grants d WHERE d.brain_id=b.id AND d.account_id=$1) OR EXISTS(SELECT 1 FROM brain_group_grants g JOIN acc a ON a.oidc_issuer=g.issuer WHERE g.brain_id=b.id AND g.group_name=ANY(a.oidc_groups) AND a.membership_until>now())), usage AS (SELECT device_id,brain_id,max(last_used) last_used FROM (SELECT device_id,brain_id,created_at last_used FROM mcp_calls WHERE device_id IS NOT NULL AND brain_id IN (SELECT id FROM accessible) UNION ALL SELECT b.device_id,e.brain_id,e.received_at last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE b.device_id IS NOT NULL AND e.brain_id IN (SELECT id FROM accessible) AND e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)>clock_timestamp()) u GROUP BY 1,2), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE(d.host_kind,h.host) host_kind,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,a.username user_name,coalesce((SELECT jsonb_agg(jsonb_build_object('brain_id',u.brain_id,'name',ab2.name,'icon_revision',ab2.icon_revision,'last_used_at',u.last_used) ORDER BY u.last_used DESC) FROM usage u JOIN accessible ab2 ON ab2.id=u.brain_id WHERE u.device_id=d.id),'[]'::jsonb) brains FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN binding_host h ON h.device_id=d.id WHERE d.account_id=$1 AND d.revoked_at IS NULL AND d.expires_at>now() ORDER BY active DESC,d.created_at DESC",
+        "WITH acc AS (SELECT oidc_issuer,oidc_groups,membership_until FROM accounts WHERE id=$1), accessible AS (SELECT b.id,b.name,b.icon_revision FROM brains b WHERE b.owner_id=$1 OR EXISTS(SELECT 1 FROM brain_grants d WHERE d.brain_id=b.id AND d.account_id=$1) OR EXISTS(SELECT 1 FROM brain_group_grants g JOIN acc a ON a.oidc_issuer=g.issuer WHERE g.brain_id=b.id AND g.group_name=ANY(a.oidc_groups) AND a.membership_until>now())), usage AS (SELECT device_id,brain_id,max(last_used) last_used FROM (SELECT device_id,brain_id,used_at last_used FROM agent_brain_usage WHERE brain_id IN (SELECT id FROM accessible) UNION ALL SELECT device_id,brain_id,created_at last_used FROM mcp_calls WHERE device_id IS NOT NULL AND brain_id IN (SELECT id FROM accessible) UNION ALL SELECT b.device_id,e.brain_id,e.received_at last_used FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE b.device_id IS NOT NULL AND e.brain_id IN (SELECT id FROM accessible) AND e.state='accepted' AND recollect_retention_deadline(e.brain_id,e.retention_class,e.captured_at)>clock_timestamp()) u GROUP BY 1,2), binding_host AS (SELECT DISTINCT ON (device_id) device_id,host FROM capture_bindings WHERE device_id IS NOT NULL AND host IN ('codex','claude_code','opencode') ORDER BY device_id) SELECT d.id,d.name,COALESCE((recollect_agent_hosts(d.id))[1],d.host_kind,h.host) host_kind,recollect_agent_hosts(d.id) observed_hosts,d.integration,d.claimed,d.revoked_at IS NULL AND d.expires_at>now() active,d.created_at,d.expires_at,d.last_used_at,a.username user_name,coalesce((SELECT jsonb_agg(jsonb_build_object('brain_id',u.brain_id,'name',ab2.name,'icon_revision',ab2.icon_revision,'last_used_at',u.last_used) ORDER BY u.last_used DESC) FROM usage u JOIN accessible ab2 ON ab2.id=u.brain_id WHERE u.device_id=d.id),'[]'::jsonb) brains FROM devices d JOIN accounts a ON a.id=d.account_id LEFT JOIN binding_host h ON h.device_id=d.id WHERE d.account_id=$1 AND d.revoked_at IS NULL AND d.expires_at>now() ORDER BY active DESC,d.created_at DESC",
     )
     .bind(auth.user.id)
     .fetch_all(&mut *tx)
@@ -486,6 +489,7 @@ pub async fn account_agents(
             device_id: row.id,
             name: row.name,
             host_kind: row.host_kind,
+            observed_hosts: row.observed_hosts,
             integration: row.integration,
             claimed: row.claimed,
             active: row.active,
@@ -560,4 +564,58 @@ pub async fn revoke_self(
     }
     tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Observe only a successful authorized device request; never store its payload.
+pub(crate) async fn record_usage(
+    State(state): State<AppState>,
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::extract::FromRequestParts;
+    let brain = request
+        .uri()
+        .path()
+        .strip_prefix("/api/brains/")
+        .and_then(|s| s.split('/').next())
+        .and_then(|s| s.parse::<Uuid>().ok());
+    if brain.is_none()
+        || !request
+            .headers()
+            .contains_key(axum::http::header::AUTHORIZATION)
+    {
+        return next.run(request).await;
+    }
+    let host = request
+        .headers()
+        .get("x-recollect-host")
+        .and_then(|v| v.to_str().ok())
+        .filter(|v| matches!(*v, "codex" | "claude_code" | "opencode"))
+        .unwrap_or("unknown")
+        .to_owned();
+    let (mut parts, body) = request.into_parts();
+    let auth = match Auth::from_request_parts(&mut parts, &state).await {
+        Ok(auth) => auth,
+        Err(error) => {
+            use axum::response::IntoResponse;
+            return error.into_response();
+        }
+    };
+    parts.extensions.insert(auth.clone());
+    let response = next.run(axum::http::Request::from_parts(parts, body)).await;
+    if response.status().is_success()
+        && let (Some(brain), Some(device)) = (brain, auth.device_id)
+    {
+        let recorded=async {
+            let mut tx=auth.tx(&state.pool).await?;
+            crate::db::require_role(&mut tx,brain,false).await?;
+            sqlx::query("INSERT INTO agent_brain_usage(brain_id,device_id,host_kind) VALUES($1,$2,$3) ON CONFLICT(brain_id,device_id,host_kind) DO UPDATE SET used_at=clock_timestamp() WHERE agent_brain_usage.used_at<clock_timestamp()-interval '1 minute'").bind(brain).bind(device).bind(host).execute(&mut *tx).await?;
+            tx.commit().await?;
+            Ok::<_,crate::error::Error>(())
+        }.await;
+        if recorded.is_err() {
+            tracing::warn!("Agent usage metadata could not be recorded");
+        }
+    }
+    response
 }

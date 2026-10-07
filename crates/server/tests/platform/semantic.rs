@@ -409,6 +409,7 @@ fn embed(entries: &[Uuid]) -> gateway::Invocation {
         prompt_label: "engineering-text-1".into(),
         schema_label: "embedding-3072-1".into(),
         format: gateway::Format::Embedding,
+        work_lease: None,
         metadata_replay: false,
         expected_json: None,
     }
@@ -795,6 +796,70 @@ async fn semantic_chunk_gateway_uses_exact_bytes_parent_dependencies_and_privacy
         "content_removed"
     );
     assert_eq!(p.calls.load(Ordering::SeqCst), 2);
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn semantic_budget_block_waits_for_reset_or_a_policy_change() {
+    let (h, owner, base, p, server) = setup().await;
+    let cx = context(&h, &base).await;
+    p.mode.store(6, Ordering::SeqCst);
+    enable(&h, &owner, &base).await;
+    allow(&h, &owner, &base, |policy| {
+        policy["automatic_embedding"] = json!(true);
+        policy["daily_token_limit"] = json!(1000);
+    })
+    .await;
+    source(&h, &owner, &base, "Synthetic budget scheduling source.").await;
+    assert_eq!(discover(&h, cx).await, 1);
+    model_job(&h).await;
+    assert_eq!(p.calls.load(Ordering::SeqCst), 0);
+    let blocked = status(&h, &owner, &base).await;
+    assert!(blocked["counts"]["blocked"].as_i64().unwrap() > 0);
+    sqlx::query("UPDATE semantic_entries SET updated_at=clock_timestamp()-interval '2 minutes'")
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(
+        discover(&h, cx).await,
+        0,
+        "Same-day budget rejection must not loop every minute"
+    );
+    sqlx::query("UPDATE semantic_entries SET updated_at=clock_timestamp()-interval '1 day'")
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(
+        discover(&h, cx).await,
+        1,
+        "A new UTC day permits a new check"
+    );
+    model_job(&h).await;
+    assert_eq!(p.calls.load(Ordering::SeqCst), 0);
+    sqlx::query("UPDATE semantic_entries SET updated_at=clock_timestamp()-interval '2 minutes'")
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    allow(&h, &owner, &base, |policy| {
+        policy["automatic_embedding"] = json!(true);
+        policy["daily_token_limit"] = json!(100000);
+    })
+    .await;
+    assert_eq!(
+        discover(&h, cx).await,
+        1,
+        "A changed policy permits a new check"
+    );
+    model_job(&h).await;
+    assert_eq!(p.calls.load(Ordering::SeqCst), 1);
+    assert!(
+        status(&h, &owner, &base).await["counts"]["ready"]
+            .as_i64()
+            .unwrap()
+            > 0
+    );
     server.abort();
     h.finish().await;
 }
