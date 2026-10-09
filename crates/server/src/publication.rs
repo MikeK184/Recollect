@@ -113,6 +113,9 @@ pub(crate) fn configured_secrets(state: &AppState) -> Vec<String> {
     if let Some(key) = &state.config.models.key {
         values.push(key.clone());
     }
+    if let Some(key) = &state.config.models.openrouter_key {
+        values.push(key.clone());
+    }
     values.extend(std::env::vars().filter_map(|(key, value)| {
         let key = key.to_ascii_uppercase();
         (value.len() >= 4

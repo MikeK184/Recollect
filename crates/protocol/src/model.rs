@@ -54,6 +54,8 @@ pub struct InstalledModels {
 pub struct ModelSettings {
     pub current: ModelPolicyVersion,
     pub installed: InstalledModels,
+    #[serde(default)]
+    pub providers: Vec<InstalledModels>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
@@ -94,6 +96,9 @@ pub struct ModelRequest {
     pub operation_id: Uuid,
     pub policy_id: Uuid,
     pub purpose: String,
+    #[serde(default = "legacy_request_provider")]
+    pub provider: String,
+    pub cost_usd: Option<f64>,
     pub model: String,
     pub returned_model: Option<String>,
     pub prompt_label: String,
@@ -111,6 +116,9 @@ pub struct ModelRequest {
     pub detail_expired: bool,
     pub created_at: DateTime<Utc>,
     pub finished_at: Option<DateTime<Utc>>,
+}
+fn legacy_request_provider() -> String {
+    "openai".into()
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct ModelUsage {
@@ -196,4 +204,25 @@ pub struct ModelDerivation {
     pub returned_model: String,
     pub prompt_label: String,
     pub schema_label: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pre_provider_request_receipt_remains_openai_with_unknown_cost() {
+        let legacy = serde_json::json!({
+            "id":Uuid::nil(), "brain_id":Uuid::nil(), "actor_id":Uuid::nil(),
+            "operation_id":Uuid::nil(), "policy_id":Uuid::nil(),
+            "purpose":"answering", "model":"gpt-5.6-luna",
+            "prompt_label":"brain-answer-1", "schema_label":"brain-answer-1",
+            "state":"succeeded", "reserved_tokens":100, "charged_tokens":42,
+            "suppressed":false, "created_at":"2026-10-07T00:00:00Z"
+        });
+        let receipt: ModelRequest = serde_json::from_value(legacy).unwrap();
+        assert_eq!(receipt.provider, "openai");
+        assert_eq!(receipt.cost_usd, None);
+        assert_eq!(receipt.charged_tokens, 42);
+    }
 }

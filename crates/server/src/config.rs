@@ -23,6 +23,8 @@ pub struct Config {
 pub struct ModelConfig {
     pub key: Option<String>,
     pub endpoint: String,
+    pub openrouter_key: Option<String>,
+    pub openrouter_endpoint: String,
     pub text_model: String,
     pub embedding_model: String,
     pub embedding_dimensions: i32,
@@ -34,6 +36,10 @@ impl ModelConfig {
                 .ok()
                 .filter(|v| !v.trim().is_empty()),
             endpoint: "https://api.openai.com/v1".into(),
+            openrouter_key: std::env::var("OPENROUTER_API_KEY")
+                .ok()
+                .filter(|v| !v.trim().is_empty()),
+            openrouter_endpoint: "https://openrouter.ai/api/v1".into(),
             text_model: std::env::var("RECOLLECT_TEXT_MODEL").unwrap_or("gpt-5.6-luna".into()),
             embedding_model: std::env::var("RECOLLECT_EMBEDDING_MODEL")
                 .unwrap_or("text-embedding-3-large".into()),
@@ -61,6 +67,22 @@ impl ModelConfig {
             );
         }
         Ok(value)
+    }
+
+    pub fn key_for(&self, provider: &str) -> Option<&str> {
+        match provider {
+            "openai" => self.key.as_deref(),
+            "openrouter" => self.openrouter_key.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn endpoint_for(&self, provider: &str) -> Option<&str> {
+        match provider {
+            "openai" => Some(&self.endpoint),
+            "openrouter" => Some(&self.openrouter_endpoint),
+            _ => None,
+        }
     }
 }
 

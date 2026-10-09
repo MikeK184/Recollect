@@ -50,7 +50,7 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
         retain_content: true,
         content: `${name} port 8080.\nGRAPH_INERT_EVIDENCE <script>window.graphInjected=true</script>\n`,
       });
-      const claim = await post(`/api/brains/${brain.id}/claims`, {
+      let claim = await post(`/api/brains/${brain.id}/claims`, {
         content: {
           kind: "claim",
           subject: `${name} graph service`,
@@ -65,7 +65,7 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
             to: null,
             precision: "unknown",
           },
-          freshness: "current",
+          freshness: "needs_verification",
           operational: "declared",
           observed_at: null,
           observation: "",
@@ -79,6 +79,10 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
           ],
         },
       });
+      const reviewed = await post(`/api/brains/${brain.id}/claims/${claim.claim_id}/review`, {
+        base_revision: claim.id, action: "accept", reason: "Synthetic evidence checked by the fixture owner.",
+      });
+      claim = reviewed.claims[0].revision;
       rows.push({
         source: source.id,
         version: source.version.id,
@@ -150,17 +154,14 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/brains/${fixture.brain}/graph`);
   const canvas = page.getByTestId("graph-canvas");
-  await expect(canvas).toHaveAttribute("data-ready", "true");
-  // The bounded default invokes the existing read endpoint exactly once and
-  // runs no model, rebuild, analytics or arbitrary traversal on navigation.
-  // The explorer's own overview read is the pre-existing bounded display read
-  // (null center, hop and display bounds); it must not become a centered or
-  // unbounded traversal.
-  expect(requests.view).toBe(1);
+  await expect(canvas).toHaveAttribute("data-layout-ready", "true");
+  // Navigation uses exactly one bounded exploration response, including its
+  // canonical view, with no redundant complete-view read.
+  expect(requests.view).toBe(0);
   expect(requests.rebuild).toBe(0);
   expect(requests.path).toBe(0);
   expect(requests.analytics).toBe(0);
-  expect(exploreRequests.length).toBeLessThanOrEqual(1);
+  expect(exploreRequests).toHaveLength(1);
   for (const body of exploreRequests) {
     expect(JSON.parse(body).center ?? null).toBe(null);
   }
@@ -194,7 +195,15 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.reload();
-    await expect(canvas).toHaveAttribute("data-ready", "true");
+    await expect(canvas).toHaveAttribute("data-layout-ready", "true");
+    const overlapping = await canvas.evaluate((element) => {
+      const cy = (element as HTMLElement & { _cyreg: { cy: import("cytoscape").Core } })._cyreg.cy;
+      const nodes = cy.nodes().map((node) => ({ id: node.id(), box: node.boundingBox({ includeLabels: true }) }));
+      return nodes.flatMap((a, index) => nodes.slice(index + 1).filter((b) =>
+        a.box.x1 < b.box.x2 && b.box.x1 < a.box.x2 && a.box.y1 < b.box.y2 && b.box.y1 < a.box.y2,
+      ).map((b) => [a.id, b.id]));
+    });
+    expect(overlapping, `Settled node and label bounds at ${width}px`).toEqual([]);
     await page.screenshot({ path: `../.cache/ui/graph-review-${width}.png` });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -279,6 +288,6 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
   ).toContainText("Amber graph service");
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
-  await expect(canvas).toHaveAttribute("data-ready", "true");
+  await expect(canvas).toHaveAttribute("data-layout-ready", "true");
   expect(errors).toEqual([]);
 });

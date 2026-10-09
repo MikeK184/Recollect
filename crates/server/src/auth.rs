@@ -35,6 +35,35 @@ impl Auth {
     ) -> Result<sqlx::Transaction<'a, sqlx::Postgres>> {
         crate::db::device_tx(pool, self.user.id, self.device_id).await
     }
+
+    pub async fn preparation_tx<'a>(
+        &self,
+        pool: &'a sqlx::PgPool,
+    ) -> Result<sqlx::Transaction<'a, sqlx::Postgres>> {
+        crate::db::preparation_tx(pool, self.user.id, self.device_id).await
+    }
+
+    /// Reauthenticate buffered reads and serialize session revocation through
+    /// the final commit. Paired devices are checked/locked by device_tx.
+    pub async fn publication_tx<'a>(
+        &self,
+        pool: &'a sqlx::PgPool,
+    ) -> Result<sqlx::Transaction<'a, sqlx::Postgres>> {
+        let mut tx = self.tx(pool).await?;
+        if self.device_id.is_none() {
+            let valid: Option<bool> = sqlx::query_scalar(
+                "SELECT expires_at>clock_timestamp() FROM sessions WHERE token=$1 AND account_id=$2 FOR SHARE",
+            )
+            .bind(self.session)
+            .bind(self.user.id)
+            .fetch_optional(&mut *tx)
+            .await?;
+            if valid != Some(true) {
+                return Err(Error::unauthorized());
+            }
+        }
+        Ok(tx)
+    }
 }
 
 impl FromRequestParts<AppState> for Auth {

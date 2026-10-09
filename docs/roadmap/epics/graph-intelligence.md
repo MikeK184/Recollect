@@ -1,6 +1,6 @@
 # Repository Graphs, Knowledge Graphs and Analytics
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -17,6 +17,9 @@ clustering and bounded large-graph analysis in the first usable product.
 - [Exact combined graph contract](../../contracts/graph-cross-repository-views.md)
 - [Bounded analytics contract](../../contracts/graph-analytics.md)
 - [Exploration contract](../../contracts/graph-exploration.md)
+- [Concurrent preparation contract](../../contracts/graph-concurrent-preparation.md)
+- [Automatic organization ADR](../../adr/0020-automatic-knowledge-organization.md)
+- [Automatic organization contract](../../contracts/automatic-knowledge-organization.md)
 - [Vision: revisions and evidence](../../foundation/vision.md#revisions-and-evidence)
 - [Stack: graph computation and recovery](../../foundation/techstack.md#graph-computation-and-recovery)
 - [Engineering principles: graph reproducibility](../../foundation/engineering-principles.md#preserve-repository-and-graph-reproducibility)
@@ -63,6 +66,8 @@ scope, with queued work and explicit resource limits.
 | `graph-analytics` | shipped | contract-backed | pack | Delivered native GDS reports, complete qualification/invalidation, owned scratch recovery and reader concurrency with normal runtime/browser proof |
 | `graph-exploration` | shipped | contract-backed | pack | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and SWEG runtime proof |
 | `graph-desktop-workspace` | shipped | adr-backed, contract-backed | pack | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
+| `graph-concurrent-preparation` | in-progress | contract-backed | pack | Consistent off-lock graph preparation with short current-authority/epoch publication gates and populated concurrency proof |
+| `graph-automatic-knowledge-mapping` | in-progress | adr-backed, contract-backed | pack | User-authorized Rust entities, reversible aliases, overlapping topics, progressive graph entry and incremental invalidation; independent candidate work proceeds while populated graph acceptance remains open |
 
 ## Slice Dependencies
 
@@ -73,6 +78,8 @@ scope, with queued work and explicit resource limits.
 | `graph-analytics` | `graph-cross-repository-views` |
 | `graph-exploration` | `graph-analytics` |
 | `graph-desktop-workspace` | `platform-desktop-shell` |
+| `graph-concurrent-preparation` | `graph-exploration` |
+| `graph-automatic-knowledge-mapping` | `graph-concurrent-preparation` |
 
 ## Completion Criteria
 

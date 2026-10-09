@@ -30,3 +30,5 @@ pending foundation documents as accepted authority.
 - [0017: One knowledge surface, primary Ask and separated wiring](0017-desktop-knowledge-and-ask-experience.md)
 
 - [0018: Plugin-managed automatic agent memory](0018-plugin-managed-agent-memory.md)
+- [0019: Rust semantic navigation and Graft developer context](0019-rust-semantic-developer-navigation.md)
+- [0020: Automatic knowledge organization in Rust](0020-automatic-knowledge-organization.md)

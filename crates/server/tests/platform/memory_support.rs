@@ -1,5 +1,638 @@
 use super::*;
 
+async fn discovery_clone(h: &Harness, base: &str, template: &Value, id: Uuid, unavailable: bool) {
+    let brain = brain_id(base);
+    let claim = Uuid::new_v4();
+    let mut revision = template.clone();
+    revision["id"] = json!(id);
+    revision["claim_id"] = json!(claim);
+    if unavailable {
+        revision["content"]["freshness"] = json!("superseded");
+    }
+    let mut tx = h.admin.begin().await.unwrap();
+    sqlx::query("INSERT INTO claims(id,brain_id,created_by,current_revision) SELECT $1,brain_id,created_by,NULL FROM claims WHERE brain_id=$2 AND id=$3")
+        .bind(claim).bind(brain).bind(uuid(&template["claim_id"])).execute(&mut *tx).await.unwrap();
+    sqlx::query("INSERT INTO claim_revisions(id,claim_id,brain_id,recorded_at,revision,subject_key,predicate_key,value_key)
+        SELECT $1,$2,brain_id,recorded_at,$3,subject_key,predicate_key,value_key FROM claim_revisions WHERE brain_id=$4 AND id=$5")
+        .bind(id).bind(claim).bind(sqlx::types::Json(revision)).bind(brain).bind(uuid(&template["id"]))
+        .execute(&mut *tx).await.unwrap();
+    sqlx::query("INSERT INTO claim_supports SELECT $1,brain_id,ordinal,source_version_id,fact_id,manifest_revision_id FROM claim_supports WHERE brain_id=$2 AND revision_id=$3")
+        .bind(id).bind(brain).bind(uuid(&template["id"])).execute(&mut *tx).await.unwrap();
+    sqlx::query("UPDATE claims SET current_revision=$1 WHERE brain_id=$2 AND id=$3")
+        .bind(id)
+        .bind(brain)
+        .bind(claim)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn support_discovery_walk_passes_unavailable_prefix_wraps_and_survives_restart() {
+    use recollect_server::autonomous::support_discovery;
+    let (h, _, base, p, server, template) = direct_audit_fixture().await;
+    let cx = context(&h, &base).await;
+    for index in 1..=35 {
+        discovery_clone(&h, &base, &template, Uuid::from_u128(index), true).await;
+    }
+    let target = Uuid::from_u128(u128::MAX);
+    discovery_clone(&h, &base, &template, target, false).await;
+    // Start this controlled walk at the prefix. The fixture already completed
+    // one ordinary audit walk with a randomly ordered revision identity.
+    sqlx::query("UPDATE memory_support_discovery SET last_revision_id=NULL,version=version+1 WHERE brain_id=$1")
+        .bind(cx.brain).execute(&h.admin).await.unwrap();
+    let calls = p.calls.load(Ordering::SeqCst);
+    for (pass, expected) in [(1, 0), (2, 0), (3, 1)] {
+        // New AppState each pass: progress must come from PostgreSQL, not a
+        // process-local cache or a prepared object retained across iterations.
+        let state = h.state.clone();
+        let prepared = support_discovery::prepare(&state, cx.brain, cx.actor)
+            .await
+            .ok()
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            support_discovery::publish(&state, prepared)
+                .await
+                .ok()
+                .unwrap(),
+            expected
+        );
+        if pass < 3 {
+            let last: Uuid = sqlx::query_scalar(
+                "SELECT last_revision_id FROM memory_support_discovery WHERE brain_id=$1",
+            )
+            .bind(cx.brain)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+            assert_eq!(last, Uuid::from_u128(pass * 16));
+        }
+    }
+    let recorded: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM memory_support_assessments WHERE brain_id=$1 AND revision_id=$2",
+    )
+    .bind(cx.brain)
+    .bind(target)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(recorded, 1);
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        0
+    );
+    let last: Uuid = sqlx::query_scalar(
+        "SELECT last_revision_id FROM memory_support_discovery WHERE brain_id=$1",
+    )
+    .bind(cx.brain)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert!(
+        last < target,
+        "The completed tail must wrap within the next examination allowance"
+    );
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        calls,
+        "Discovery and publication never call a provider"
+    );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn support_discovery_fresh_publication_fences_cursors_review_policy_erasure_and_access() {
+    use recollect_server::autonomous::support_discovery;
+    let (h, owner, base, p, server, template) = direct_audit_fixture().await;
+    let cx = context(&h, &base).await;
+    let target = Uuid::from_u128(100);
+    discovery_clone(&h, &base, &template, target, false).await;
+    let first = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    let stale = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    // An unrelated capture/epoch advance is not a reason to trust a prepared
+    // Boolean or starve audits: complete fresh qualification remains decisive.
+    let mut writer = db::actor_tx(&h.state.pool, cx.actor).await.ok().unwrap();
+    db::require_writer(&mut writer, cx.brain)
+        .await
+        .ok()
+        .unwrap();
+    sqlx::query("UPDATE brains SET analytics_epoch=analytics_epoch+1 WHERE id=$1")
+        .bind(cx.brain)
+        .execute(&mut *writer)
+        .await
+        .unwrap();
+    writer.commit().await.unwrap();
+    assert_eq!(
+        support_discovery::publish(&h.state, first)
+            .await
+            .ok()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        support_discovery::publish(&h.state, stale)
+            .await
+            .ok()
+            .unwrap(),
+        0
+    );
+    // Human review changes the exact current head before the prepared revision
+    // is published. The old assertion cannot be automatically queued afterward.
+    let target = Uuid::from_u128(200);
+    discovery_clone(&h, &base, &template, target, false).await;
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    let revision: sqlx::types::Json<Value> =
+        sqlx::query_scalar("SELECT revision FROM claim_revisions WHERE brain_id=$1 AND id=$2")
+            .bind(cx.brain)
+            .bind(target)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    reviewed(&h, &owner, &base, &revision.0).await;
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        0
+    );
+    let aged = Uuid::from_u128(300);
+    discovery_clone(&h, &base, &template, aged, false).await;
+    sqlx::query("UPDATE claim_revisions SET recorded_at=clock_timestamp()-interval '2 days' WHERE brain_id=$1 AND id=$2")
+        .bind(cx.brain).bind(aged).execute(&h.admin).await.unwrap();
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    let retention = ok(&h, "GET", &format!("{base}/retention"), &owner, Value::Null).await;
+    let mut retention_policy = retention["policy"].clone();
+    retention_policy["claim_days"] = json!(1);
+    ok(
+        &h,
+        "PUT",
+        &format!("{base}/retention"),
+        &owner,
+        json!({"base_change":retention["change_id"],"policy":retention_policy}),
+    )
+    .await;
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        0,
+        "Fresh retention gates reject a candidate that expired after preparation"
+    );
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    permit(&h, &owner, &base, 100000).await;
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        0,
+        "Policy generations cannot inherit prepared eligibility"
+    );
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    let source: Uuid = sqlx::query_scalar("SELECT v.source_id FROM claim_supports s JOIN source_versions v ON v.id=s.source_version_id WHERE s.brain_id=$1 AND s.revision_id=$2 LIMIT 1")
+        .bind(cx.brain).bind(uuid(&template["id"])).fetch_one(&h.admin).await.unwrap();
+    let target = json!({"kind":"source","id":source});
+    let preview = ok(
+        &h,
+        "POST",
+        &format!("{base}/erasures/preview"),
+        &owner,
+        target.clone(),
+    )
+    .await;
+    ok(
+        &h,
+        "POST",
+        &format!("{base}/erasures"),
+        &owner,
+        json!({"target":target,"eligibility_epoch":preview["eligibility_epoch"]}),
+    )
+    .await;
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        0,
+        "Erased targets never enter the audit queue"
+    );
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    sqlx::query("UPDATE accounts SET enabled=false WHERE id=$1")
+        .bind(cx.actor)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    assert!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .is_err(),
+        "Disabled actors cannot publish prepared work"
+    );
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        1,
+        "Only the fixture's original local extraction made a model call"
+    );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn support_discovery_preparation_releases_writers_and_timeouts_are_revisited() {
+    use recollect_server::autonomous::support_discovery;
+    let (h, _, base, p, server, template) = direct_audit_fixture().await;
+    let cx = context(&h, &base).await;
+    let target = Uuid::from_u128(100);
+    discovery_clone(&h, &base, &template, target, false).await;
+    // A test-only native gate pauses a canonical check inside the real prepare
+    // transaction. The production helper and complete graph remain underneath.
+    sqlx::raw_sql(
+        "ALTER FUNCTION recollect_memory_exact_acyclic(uuid,uuid) RENAME TO fixture_exact_acyclic;
+      CREATE FUNCTION recollect_memory_exact_acyclic(b uuid,target uuid) RETURNS boolean
+      LANGUAGE plpgsql STABLE SET search_path=public,pg_temp AS $$ BEGIN
+       PERFORM pg_advisory_xact_lock(67126123,7);
+       RETURN fixture_exact_acyclic(b,target);
+      END $$;",
+    )
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    let mut gate = h.admin.acquire().await.unwrap();
+    sqlx::query("SELECT pg_advisory_lock(67126123,7)")
+        .execute(&mut *gate)
+        .await
+        .unwrap();
+    let state = h.state.clone();
+    let preparing =
+        tokio::spawn(async move { support_discovery::prepare(&state, cx.brain, cx.actor).await });
+    let mut entered = false;
+    for _ in 0..100 {
+        entered = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE locktype='advisory' AND classid=67126123 AND objid=7 AND NOT granted)")
+            .fetch_one(&h.admin).await.unwrap();
+        if entered {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+    assert!(
+        entered,
+        "The actual prepare transaction reached the blocked complete canonical check"
+    );
+    let writer = async {
+        let mut tx = db::actor_tx(&h.state.pool, cx.actor).await.ok().unwrap();
+        db::require_writer(&mut tx, cx.brain).await.ok().unwrap();
+        sqlx::query("UPDATE brains SET analytics_epoch=analytics_epoch+1 WHERE id=$1")
+            .bind(cx.brain)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    };
+    tokio::time::timeout(std::time::Duration::from_millis(500), writer)
+        .await
+        .expect("Same-Brain writer must commit while complete audit preparation is paused");
+    sqlx::query("SELECT pg_advisory_unlock(67126123,7)")
+        .execute(&mut *gate)
+        .await
+        .unwrap();
+    let prepared = preparing.await.unwrap().ok().unwrap().unwrap();
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        1
+    );
+    // The next candidate actually reaches the native statement deadline. It
+    // gets no assessment and the saved walk advances, then retries after wrap.
+    let target = Uuid::from_u128(200);
+    discovery_clone(&h, &base, &template, target, false).await;
+    sqlx::query("SELECT pg_advisory_lock(67126123,7)")
+        .execute(&mut *gate)
+        .await
+        .unwrap();
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        0
+    );
+    let attempts: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM memory_support_assessments WHERE brain_id=$1 AND revision_id=$2",
+    )
+    .bind(cx.brain)
+    .bind(target)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(
+        attempts, 0,
+        "A timeout cannot be turned into a verdict or recorded attempt"
+    );
+    sqlx::query("SELECT pg_advisory_unlock(67126123,7)")
+        .execute(&mut *gate)
+        .await
+        .unwrap();
+    let prepared = support_discovery::prepare(&h.state, cx.brain, cx.actor)
+        .await
+        .ok()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        support_discovery::publish(&h.state, prepared)
+            .await
+            .ok()
+            .unwrap(),
+        1
+    );
+    assert_eq!(p.calls.load(Ordering::SeqCst), 1);
+    drop(gate);
+    server.abort();
+    h.finish().await;
+}
+
+async fn audit_candidates_match(h: &Harness, base: &str) -> Vec<Uuid> {
+    let cx = context(h, base).await;
+    let policy: Uuid =
+        sqlx::query_scalar("SELECT policy_id FROM model_policy_heads WHERE brain_id=$1")
+            .bind(cx.brain)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    let mut tx = db::actor_tx(&h.state.pool, cx.actor).await.ok().unwrap();
+    let mut selected = Vec::new();
+    for (old, new) in [
+        (
+            include_str!("../fixtures/support_audit_current_before_qualification.sql"),
+            include_str!("../../src/memory_support_audit/current_candidates.sql"),
+        ),
+        (
+            include_str!("../fixtures/support_audit_historical_before_qualification.sql"),
+            include_str!("../../src/memory_support_audit/historical_candidates.sql"),
+        ),
+    ] {
+        for limit in [0i64, 1, 4] {
+            let before: Vec<Uuid> = sqlx::query_scalar(old)
+                .bind(cx.brain)
+                .bind(policy)
+                .bind("source-support-3")
+                .bind(limit)
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap();
+            let after: Vec<Uuid> = sqlx::query_scalar(new)
+                .bind(cx.brain)
+                .bind(policy)
+                .bind("source-support-3")
+                .bind(limit)
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap();
+            assert_eq!(
+                after, before,
+                "Current/historical audit selection preserves exact order, eligibility and capacity"
+            );
+            if limit == 4 {
+                selected.extend(after);
+            }
+        }
+    }
+    tx.rollback().await.unwrap();
+    selected
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn support_audit_discovery_all_recorded_states_policy_verifier_and_rls_match() {
+    let (h, _, base, p, server, revision) = direct_audit_fixture().await;
+    let cx = context(&h, &base).await;
+    let policy: Uuid =
+        sqlx::query_scalar("SELECT policy_id FROM model_policy_heads WHERE brain_id=$1")
+            .bind(cx.brain)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    let old = include_str!("../fixtures/support_audit_current_before_qualification.sql");
+    let new = include_str!("../../src/memory_support_audit/current_candidates.sql");
+    let calls = p.calls.load(Ordering::SeqCst);
+    let mut tx = db::actor_tx(&h.state.pool, cx.actor).await.ok().unwrap();
+    for state in ["queued", "running", "succeeded", "failed", "removed"] {
+        sqlx::query("SAVEPOINT fixture_state")
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        sqlx::query("UPDATE memory_support_assessments SET state=$3,disposition=CASE WHEN $3='succeeded' THEN 'supported' ELSE NULL END,
+            privacy_state=CASE WHEN $3='removed' THEN 'erased' ELSE 'active' END,reason=NULL WHERE brain_id=$1 AND revision_id=$2")
+            .bind(cx.brain).bind(uuid(&revision["id"])).bind(state).execute(&mut *tx).await.unwrap();
+        for (selected_policy, verifier, expected) in [
+            (policy, "source-support-3", 0),
+            (Uuid::new_v4(), "source-support-3", 1),
+            (policy, "other-verifier", 1),
+        ] {
+            let before: Vec<Uuid> = sqlx::query_scalar(old)
+                .bind(cx.brain)
+                .bind(selected_policy)
+                .bind(verifier)
+                .bind(4i64)
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap();
+            let after: Vec<Uuid> = sqlx::query_scalar(new)
+                .bind(cx.brain)
+                .bind(selected_policy)
+                .bind(verifier)
+                .bind(4i64)
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap();
+            assert_eq!(after, before);
+            assert_eq!(
+                after.len(),
+                expected,
+                "Only the exact recorded policy/verifier tuple suppresses rediscovery, in every state"
+            );
+            let qualified: Option<Uuid> =
+                sqlx::query_scalar(include_str!("../../src/memory_support_audit/qualify.sql"))
+                    .bind(cx.brain)
+                    .bind(selected_policy)
+                    .bind(verifier)
+                    .bind(uuid(&revision["id"]))
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                usize::from(qualified.is_some()),
+                expected,
+                "The production point qualification preserves every recorded state and exact tuple"
+            );
+            let batch: Vec<Uuid> =
+                sqlx::query_scalar(include_str!("../../src/memory_support_audit/batch.sql"))
+                    .bind(cx.brain)
+                    .bind(selected_policy)
+                    .bind(verifier)
+                    .bind(None::<Uuid>)
+                    .bind(16i64)
+                    .bind(None::<Uuid>)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                batch.len(),
+                expected,
+                "Recorded identities are excluded before bounded examination"
+            );
+        }
+        sqlx::query("ROLLBACK TO SAVEPOINT fixture_state")
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+        sqlx::query("RELEASE SAVEPOINT fixture_state")
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+    }
+    tx.rollback().await.unwrap();
+    let (foreign, _) = h.fixture_member().await;
+    let mut tx = db::actor_tx(&h.state.pool, foreign).await.ok().unwrap();
+    for query in [
+        old,
+        new,
+        include_str!("../../src/memory_support_audit/historical_candidates.sql"),
+    ] {
+        let hidden: Vec<Uuid> = sqlx::query_scalar(query)
+            .bind(cx.brain)
+            .bind(policy)
+            .bind("source-support-3")
+            .bind(4i64)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap();
+        assert!(hidden.is_empty());
+    }
+    tx.rollback().await.unwrap();
+    assert_eq!(
+        p.calls.load(Ordering::SeqCst),
+        calls,
+        "Selection does not call a model or resend recorded work"
+    );
+    server.abort();
+    h.finish().await;
+}
+
+async fn original_support_predicates_match(h: &Harness, brain: Uuid) {
+    let mut tx = h.admin.begin().await.unwrap();
+    for (source, name, original) in [
+        (
+            include_str!("../../migrations/037_memory_revision_support.sql"),
+            "recollect_memory_dependencies",
+            "original_memory_dependencies",
+        ),
+        (
+            include_str!("../../migrations/037_memory_revision_support.sql"),
+            "recollect_revision_supported",
+            "original_revision_supported",
+        ),
+        (
+            include_str!("../../migrations/037_memory_revision_support.sql"),
+            "recollect_memory_supported",
+            "original_pre_digest_supported",
+        ),
+        (
+            include_str!("../../migrations/039_automatic_session_digests.sql"),
+            "recollect_memory_supported",
+            "original_memory_supported",
+        ),
+    ] {
+        let block = source
+            .split(&format!("CREATE FUNCTION {name}("))
+            .nth(1)
+            .unwrap()
+            .split("$$;")
+            .next()
+            .unwrap();
+        let mut statement = format!("CREATE FUNCTION pg_temp.{original}({block}$$;");
+        statement = statement
+            .replace(
+                "recollect_revision_supported(",
+                "pg_temp.original_revision_supported(",
+            )
+            .replace(
+                "recollect_memory_dependencies(",
+                "pg_temp.original_memory_dependencies(",
+            )
+            .replace(
+                "recollect_pre_digest_supported(",
+                "pg_temp.original_pre_digest_supported(",
+            );
+        sqlx::query(&statement).execute(&mut *tx).await.unwrap();
+    }
+    let mismatches: i64 = sqlx::query_scalar("WITH targets(id) AS (
+        SELECT id FROM claim_revisions WHERE brain_id=$1 UNION SELECT gen_random_uuid()
+      ) SELECT count(*) FROM targets WHERE
+        ARRAY(SELECT revision_id FROM recollect_memory_dependencies($1,id) ORDER BY revision_id)
+          IS DISTINCT FROM ARRAY(SELECT revision_id FROM pg_temp.original_memory_dependencies($1,id) ORDER BY revision_id)
+        OR
+        recollect_revision_supported($1,id) IS DISTINCT FROM pg_temp.original_revision_supported($1,id)
+        OR recollect_pre_digest_supported($1,id) IS DISTINCT FROM pg_temp.original_pre_digest_supported($1,id)
+        OR recollect_memory_supported($1,id) IS DISTINCT FROM pg_temp.original_memory_supported($1,id)")
+        .bind(brain).fetch_one(&mut *tx).await.unwrap();
+    assert_eq!(
+        mismatches, 0,
+        "False-only fast paths must preserve original support predicates"
+    );
+    tx.rollback().await.unwrap();
+}
+
 async fn permit(h: &Harness, owner: &Login, base: &str, daily: u64) {
     allow(h, owner, base, |p| {
         p["autonomous_memory"] = json!(true);
@@ -962,7 +1595,27 @@ async fn support_legacy_lineage_audits_bottom_up_and_withholds_exact_cycles() {
             .bind(brain_id(&base)).bind(uuid(&next["id"])).bind(uuid(&prior["id"])).execute(&h.admin).await.unwrap();
         lineage.push(next);
     }
+    // Differential proof against the original canonical target predicate,
+    // including exact historical revisions and an absent target. This catches
+    // optimizations that accidentally check only current heads.
+    let mismatches: i64 = sqlx::query_scalar("WITH targets(id) AS (
+        SELECT id FROM claim_revisions WHERE brain_id=$1 UNION SELECT gen_random_uuid()
+      ) SELECT count(*) FROM targets t WHERE recollect_support_audit_target($1,t.id) IS DISTINCT FROM EXISTS(
+        SELECT 1 FROM claims c JOIN claim_revisions r ON r.brain_id=c.brain_id AND r.id=c.current_revision
+        WHERE c.brain_id=$1 AND recollect_content_state($1,'claim',r.privacy_state,r.recorded_at)='active'
+          AND r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active'
+          AND EXISTS(SELECT 1 FROM recollect_memory_dependencies($1,r.id) d WHERE d.revision_id=t.id))")
+        .bind(brain_id(&base)).fetch_one(&h.admin).await.unwrap();
+    assert_eq!(
+        mismatches, 0,
+        "The optimized function must preserve the original current-root and historical dependency predicate"
+    );
     for target in &lineage {
+        assert_eq!(
+            audit_candidates_match(&h, &base).await,
+            vec![uuid(&target["id"])],
+            "Exact historical predecessors qualify bottom-up before the current root"
+        );
         assert_eq!(
             recollect_server::autonomous::run_once(&h.state)
                 .await
@@ -1024,12 +1677,18 @@ async fn support_legacy_lineage_audits_bottom_up_and_withholds_exact_cycles() {
         .await
         .unwrap();
     assert!(!guard(&h, &base, lineage.last().unwrap()).await);
+    original_support_predicates_match(&h, brain_id(&base)).await;
     assert_eq!(
         recollect_server::autonomous::run_once(&h.state)
             .await
             .ok()
             .unwrap(),
         0
+    );
+    permit(&h, &owner, &base, 100000).await;
+    assert!(
+        audit_candidates_match(&h, &base).await.is_empty(),
+        "A new policy with no recorded attempts cannot admit an exact cycle"
     );
     server.abort();
     h.finish().await;
@@ -2099,6 +2758,7 @@ async fn support_direct_revisions_are_automatically_audited_before_recall_and_pr
             .any(|i| i["id"] == bad["claim_id"])
     );
     assert_eq!(p.calls.load(Ordering::SeqCst), 3);
+    original_support_predicates_match(&h, brain_id(&base)).await;
     // A policy generation invalidates automatic support and cached eligibility.
     let epoch: i64 = sqlx::query_scalar("SELECT epoch FROM memory_epochs WHERE brain_id=$1")
         .bind(brain_id(&base))
@@ -2116,6 +2776,7 @@ async fn support_direct_revisions_are_automatically_audited_before_recall_and_pr
     assert_eq!(unchecked["selected"]["eligibility"]["investigation"], false);
     let reviewed=ok(&h,"POST",&format!("{claim_path}/review"),&owner,json!({"base_revision":good["id"],"action":"accept","reason":"Explicit synthetic human review","content":null,"revalidation_basis":null})).await;
     assert_eq!(reviewed["claims"][0]["eligibility"]["investigation"], true);
+    original_support_predicates_match(&h, brain_id(&base)).await;
     server.abort();
     h.finish().await;
 }

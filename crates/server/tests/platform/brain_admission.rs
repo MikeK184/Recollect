@@ -128,3 +128,103 @@ async fn brain_admission_waiting_writer_precedes_new_readers_without_blocking_ot
         .unwrap();
     h.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn brain_preparation_snapshot_does_not_block_writes_and_cannot_publish_mutations() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (_, value, _) = h
+        .call(
+            "POST",
+            "/api/brains",
+            Some(&owner),
+            json!({"name":"Snapshot concurrency fixture"}),
+        )
+        .await;
+    let brain: Uuid = value["id"].as_str().unwrap().parse().unwrap();
+    let actor: Uuid = sqlx::query_scalar("SELECT owner_id FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    let mut snapshot = checked(db::preparation_tx(&h.state.pool, actor, None).await);
+    checked(db::require_role(&mut snapshot, brain, false).await);
+    let epoch: i64 = sqlx::query_scalar("SELECT analytics_epoch FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_one(&mut *snapshot)
+        .await
+        .unwrap();
+    let start = std::time::Instant::now();
+    tokio::time::timeout(Duration::from_secs(1), async {
+        let mut writer = checked(db::actor_tx(&h.state.pool, actor).await);
+        checked(db::require_writer(&mut writer, brain).await);
+        sqlx::query("INSERT INTO evidence_groups(id,brain_id,kind,name,created_by) VALUES($1,$2,'area','Concurrent fixture', $3)")
+            .bind(Uuid::new_v4()).bind(brain).bind(actor).execute(&mut *writer).await.unwrap();
+        writer.commit().await.unwrap();
+    }).await.expect("provisional preparation must not hold Brain/account write locks");
+    let unchanged: i64 = sqlx::query_scalar("SELECT analytics_epoch FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_one(&mut *snapshot)
+        .await
+        .unwrap();
+    assert_eq!(
+        epoch, unchanged,
+        "all preparation reads must use one consistent snapshot"
+    );
+    snapshot.commit().await.unwrap();
+    let mut current = checked(db::actor_tx(&h.state.pool, actor).await);
+    checked(db::require_role(&mut current, brain, false).await);
+    let changed: i64 = sqlx::query_scalar("SELECT analytics_epoch FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_one(&mut *current)
+        .await
+        .unwrap();
+    assert!(changed > epoch);
+    let flag: Option<String> =
+        sqlx::query_scalar("SELECT nullif(current_setting('recollect.preparation',true),'')")
+            .fetch_one(&mut *current)
+            .await
+            .unwrap();
+    assert_ne!(
+        flag.as_deref(),
+        Some("on"),
+        "local preparation state must not leak through the pool"
+    );
+    current.commit().await.unwrap();
+
+    let mut snapshot = checked(db::preparation_tx(&h.state.pool, actor, None).await);
+    let write = sqlx::query("UPDATE brains SET archived=true WHERE id=$1")
+        .bind(brain)
+        .execute(&mut *snapshot)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        write.as_database_error().unwrap().code().as_deref(),
+        Some("25006")
+    );
+    snapshot.rollback().await.unwrap();
+    let mut snapshot = checked(db::preparation_tx(&h.state.pool, actor, None).await);
+    assert!(db::lock_brain(&mut snapshot, brain, true).await.is_err());
+    snapshot.rollback().await.unwrap();
+    let mut write = checked(db::actor_tx(&h.state.pool, actor).await);
+    sqlx::query("SET LOCAL recollect.preparation='on'")
+        .execute(&mut *write)
+        .await
+        .unwrap();
+    assert!(
+        db::lock_brain(&mut write, brain, false).await.is_err(),
+        "a flag in a mutable transaction cannot bypass admission"
+    );
+    write.rollback().await.unwrap();
+    let calls: i64 = sqlx::query_scalar("SELECT count(*) FROM model_requests")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(calls, 0);
+    eprintln!(
+        "Snapshot/writer concurrency proof: writer committed in {} ms; model requests=0",
+        start.elapsed().as_millis()
+    );
+    h.finish().await;
+}

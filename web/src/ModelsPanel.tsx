@@ -70,7 +70,8 @@ const label = (s: string) =>
       provider_shape: "The model returned an invalid structured result",
       model_input_too_large: "The source exceeds the input byte limit",
       model_input_sensitive: "The source contains sensitive input",
-      model_budget_exhausted: "The request exceeds the remaining daily token allowance",
+      model_budget_exhausted:
+        "The request exceeds the remaining daily token allowance",
     }) as Record<string, string>
   )[s] ?? s.replaceAll("_", " ");
 const time = (s: string) => new Date(s).toLocaleString();
@@ -821,26 +822,31 @@ export function ModelsPanel({
       ),
     refetchInterval: 3000,
   });
+  const catalogueProvider =
+    draft?.provider ?? settings.data?.current.policy.provider ?? "openai";
   const modelCatalogue = useQuery({
-    queryKey: ["model-catalogue", brain.id],
+    queryKey: ["model-catalogue", brain.id, catalogueProvider],
     enabled: section === "settings",
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/models/catalogue", {
-          params: { path: { brain: brain.id } },
+          params: {
+            path: { brain: brain.id },
+            query: { provider: catalogueProvider },
+          },
         }),
       ),
     retry: false,
   });
   const refreshModels = useMutation({
-    mutationFn: async () =>
+    mutationFn: async (provider: string) =>
       result(
         await client.POST("/api/brains/{brain}/models/catalogue", {
-          params: { path: { brain: brain.id } },
+          params: { path: { brain: brain.id }, query: { provider } },
         }),
       ),
-    onSuccess: (data) =>
-      cache.setQueryData(["model-catalogue", brain.id], data),
+    onSuccess: (data, provider) =>
+      cache.setQueryData(["model-catalogue", brain.id, provider], data),
   });
   const save = useMutation({
     mutationFn: async () => {
@@ -851,6 +857,7 @@ export function ModelsPanel({
         base_change: base,
         policy: draft,
         rebuild_embeddings:
+          previous.provider !== draft.provider ||
           previous.embedding_model !== draft.embedding_model ||
           previous.embedding_dimensions !== draft.embedding_dimensions,
       };
@@ -916,7 +923,10 @@ export function ModelsPanel({
   const policy = settings.error
     ? undefined
     : (draft ?? settings.data?.current.policy);
-  const installed = settings.error ? undefined : settings.data?.installed;
+  const installed = settings.error
+    ? undefined
+    : (settings.data?.providers?.find((p) => p.provider === policy?.provider) ??
+      settings.data?.installed);
   const editable =
     editing && brain.role === "admin" && !brain.archived && !save.isPending;
   const updateDraft = (patch: Partial<Policy>) => {
@@ -944,7 +954,8 @@ export function ModelsPanel({
   const changedEmbedding =
     !!draft &&
     !!settings.data &&
-    (draft.embedding_model !== settings.data.current.policy.embedding_model ||
+    (draft.provider !== settings.data.current.policy.provider ||
+      draft.embedding_model !== settings.data.current.policy.embedding_model ||
       draft.embedding_dimensions !==
         settings.data.current.policy.embedding_dimensions);
   const modelChoices = (kind: string, selected: string) => {
@@ -978,9 +989,14 @@ export function ModelsPanel({
           href={entry.source_url}
           target="_blank"
           rel="noreferrer"
-          title="Standard short-context rates; batch, regional and long-context pricing can differ."
+          title={
+            policy?.provider === "openrouter"
+              ? "Reference rates; OpenRouter routes can charge different prices. Request history shows actual billed cost."
+              : "Standard short-context rates; batch, regional and long-context pricing can differ."
+          }
         >
-          Standard · {entry.checked_on}
+          {policy?.provider === "openrouter" ? "Reference" : "Standard"} ·{" "}
+          {entry.checked_on}
           {entry.pricing_stale ? " · stale" : ""}
         </a>
       </p>
@@ -1033,7 +1049,7 @@ export function ModelsPanel({
                                   Date.parse(modelCatalogue.data.observed_at) >=
                                   300_000
                               )
-                                refreshModels.mutate();
+                                refreshModels.mutate(catalogueProvider);
                             }
                           }}
                         >
@@ -1068,7 +1084,7 @@ export function ModelsPanel({
                     </div>
                     <Failure error={save.error} />
                     <div className="ai-installed-provider">
-                      <strong>Installed provider</strong>
+                      <strong>Selected provider</strong>
                       <span className="ai-provider-identity">
                         <HostIcon host={installed.provider} size={26} />
                         <span>
@@ -1348,6 +1364,48 @@ export function ModelsPanel({
                   <section className="management-surface ai-installed-models">
                     <h3 className="management-title">Selected models</h3>
                     <Select
+                      label="AI provider"
+                      value={policy.provider}
+                      data={(settings.data?.providers ?? [installed]).map(
+                        (p) => ({
+                          value: p.provider,
+                          label:
+                            p.provider === "openrouter"
+                              ? "OpenRouter"
+                              : "OpenAI",
+                        }),
+                      )}
+                      disabled={!editable}
+                      allowDeselect={false}
+                      onChange={(value) => {
+                        const next = settings.data?.providers?.find(
+                          (p) => p.provider === value,
+                        );
+                        if (next && next.provider !== policy.provider) {
+                          updateDraft({
+                            provider: next.provider,
+                            text_model: next.text_model,
+                            embedding_model: next.embedding_model,
+                            embedding_dimensions: next.embedding_dimensions,
+                          });
+                          refreshModels.mutate(next.provider);
+                        }
+                      }}
+                    />
+                    {!installed.credentials_present && (
+                      <Alert color="yellow" mt="sm">
+                        The selected provider credential is missing on this
+                        installation.
+                      </Alert>
+                    )}
+                    {policy.text_model ===
+                      "meta/muse-spark-1.3-contributor" && (
+                      <Alert color="yellow" mt="sm">
+                        Meta may use prompts and outputs to improve its products
+                        for this Contributor model.
+                      </Alert>
+                    )}
+                    <Select
                       label="Text model"
                       value={policy.text_model}
                       data={modelChoices("text", policy.text_model)}
@@ -1414,7 +1472,7 @@ export function ModelsPanel({
                         size="compact-sm"
                         variant="subtle"
                         loading={refreshModels.isPending}
-                        onClick={() => refreshModels.mutate()}
+                        onClick={() => refreshModels.mutate(catalogueProvider)}
                       >
                         Refresh available models
                       </Button>
@@ -1577,6 +1635,16 @@ export function ModelsPanel({
                         ? "reserved"
                         : "used"}
                   </Text>
+                  {request.provider === "openrouter" && (
+                    <Text size="xs" c="dimmed">
+                      OpenRouter ·{" "}
+                      {request.cost_usd == null
+                        ? "Billed cost unavailable"
+                        : request.cost_usd > 0 && request.cost_usd < 0.000001
+                          ? "< $0.000001 billed"
+                          : `$${request.cost_usd.toFixed(6)} billed`}
+                    </Text>
+                  )}
                   {request.error_code && (
                     <Text size="sm" c="red">
                       {label(request.error_code)}

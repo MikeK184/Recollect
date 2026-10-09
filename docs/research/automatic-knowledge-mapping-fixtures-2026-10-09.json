@@ -1,0 +1,1189 @@
+{
+  "name": "automatic-knowledge-mapping-v1",
+  "version": 1,
+  "created": "2026-10-09",
+  "source": "Authored synthetic engineering documents; no customer content.",
+  "annotation_policy": "All listed entity mentions, including historical, hypothetical and negated mentions, are annotated. Mentions never establish operational truth. Longest explicit entity spans are preferred; unsupported types remain unassigned. Topics may overlap.",
+  "entity_schema": {
+    "person": "Named people",
+    "technology": "Software products, tools and programming languages",
+    "service": "Named application services and workers",
+    "environment": "Explicit DEV, STAGING and PROD deployment environments",
+    "repository": "Named source-code repositories",
+    "concept": "Named engineering concepts such as PKI, TLS, SPIFFE, authentication and certificate renewal",
+    "setting": "Named configuration parameters"
+  },
+  "documents": [
+    {
+      "id": "mapping-01",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Mira configured HashiCorp Vault for certificate renewal in PROD.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Mira",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "technology",
+          "text": "HashiCorp Vault",
+          "start": 16,
+          "end": 31
+        },
+        {
+          "type": "concept",
+          "text": "certificate renewal",
+          "start": 36,
+          "end": 55
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 59,
+          "end": 63
+        }
+      ],
+      "topics": [
+        "pki"
+      ]
+    },
+    {
+      "id": "mapping-02",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The payments-api service uses PostgreSQL in DEV.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "payments-api",
+          "start": 4,
+          "end": 16
+        },
+        {
+          "type": "technology",
+          "text": "PostgreSQL",
+          "start": 30,
+          "end": 40
+        },
+        {
+          "type": "environment",
+          "text": "DEV",
+          "start": 44,
+          "end": 47
+        }
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-03",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Jonas operates Consul for service discovery in STAGING.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Jonas",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "technology",
+          "text": "Consul",
+          "start": 15,
+          "end": 21
+        },
+        {
+          "type": "concept",
+          "text": "service discovery",
+          "start": 26,
+          "end": 43
+        },
+        {
+          "type": "environment",
+          "text": "STAGING",
+          "start": 47,
+          "end": 54
+        }
+      ],
+      "topics": [
+        "networking"
+      ]
+    },
+    {
+      "id": "mapping-04",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The infra-core repository contains Terraform modules for Kubernetes.",
+      "mentions": [
+        {
+          "type": "repository",
+          "text": "infra-core",
+          "start": 4,
+          "end": 14
+        },
+        {
+          "type": "technology",
+          "text": "Terraform",
+          "start": 35,
+          "end": 44
+        },
+        {
+          "type": "technology",
+          "text": "Kubernetes",
+          "start": 57,
+          "end": 67
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-05",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Grafana displays the latency metrics collected by Prometheus.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Grafana",
+          "start": 0,
+          "end": 7
+        },
+        {
+          "type": "technology",
+          "text": "Prometheus",
+          "start": 50,
+          "end": 60
+        }
+      ],
+      "topics": [
+        "observability"
+      ]
+    },
+    {
+      "id": "mapping-06",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Alice prefers Rust for command-line tools and Go for the auth-service.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Alice",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "technology",
+          "text": "Rust",
+          "start": 14,
+          "end": 18
+        },
+        {
+          "type": "technology",
+          "text": "Go",
+          "start": 46,
+          "end": 48
+        },
+        {
+          "type": "service",
+          "text": "auth-service",
+          "start": 57,
+          "end": 69
+        }
+      ],
+      "topics": [
+        "preferences"
+      ]
+    },
+    {
+      "id": "mapping-07",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The billing-worker service reads messages from Kafka.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "billing-worker",
+          "start": 4,
+          "end": 18
+        },
+        {
+          "type": "technology",
+          "text": "Kafka",
+          "start": 47,
+          "end": 52
+        }
+      ],
+      "topics": [
+        "databases"
+      ]
+    },
+    {
+      "id": "mapping-08",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "OpenBao issues short-lived TLS certificates in DEV.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "OpenBao",
+          "start": 0,
+          "end": 7
+        },
+        {
+          "type": "concept",
+          "text": "TLS",
+          "start": 27,
+          "end": 30
+        },
+        {
+          "type": "environment",
+          "text": "DEV",
+          "start": 47,
+          "end": 50
+        }
+      ],
+      "topics": [
+        "pki"
+      ]
+    },
+    {
+      "id": "mapping-09",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Bob changed the max_connections setting for PostgreSQL.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Bob",
+          "start": 0,
+          "end": 3
+        },
+        {
+          "type": "setting",
+          "text": "max_connections",
+          "start": 16,
+          "end": 31
+        },
+        {
+          "type": "technology",
+          "text": "PostgreSQL",
+          "start": 44,
+          "end": 54
+        }
+      ],
+      "topics": [
+        "databases"
+      ]
+    },
+    {
+      "id": "mapping-10",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Argo CD synchronizes the service-payments repository into Kubernetes.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Argo CD",
+          "start": 0,
+          "end": 7
+        },
+        {
+          "type": "repository",
+          "text": "service-payments",
+          "start": 25,
+          "end": 41
+        },
+        {
+          "type": "technology",
+          "text": "Kubernetes",
+          "start": 58,
+          "end": 68
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-11",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The gateway-api service uses nginx in PROD.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "gateway-api",
+          "start": 4,
+          "end": 15
+        },
+        {
+          "type": "technology",
+          "text": "nginx",
+          "start": 29,
+          "end": 34
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 38,
+          "end": 42
+        }
+      ],
+      "topics": [
+        "networking",
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-12",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Helm packages the Redis deployment for STAGING.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Helm",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "technology",
+          "text": "Redis",
+          "start": 18,
+          "end": 23
+        },
+        {
+          "type": "environment",
+          "text": "STAGING",
+          "start": 39,
+          "end": 46
+        }
+      ],
+      "topics": [
+        "deployment",
+        "databases"
+      ]
+    },
+    {
+      "id": "mapping-13",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "GitLab runs Ansible jobs from the infra-network repository.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "GitLab",
+          "start": 0,
+          "end": 6
+        },
+        {
+          "type": "technology",
+          "text": "Ansible",
+          "start": 12,
+          "end": 19
+        },
+        {
+          "type": "repository",
+          "text": "infra-network",
+          "start": 34,
+          "end": 47
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-14",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Mira documented PKI and SPIFFE for the identity-service.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Mira",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "concept",
+          "text": "PKI",
+          "start": 16,
+          "end": 19
+        },
+        {
+          "type": "concept",
+          "text": "SPIFFE",
+          "start": 24,
+          "end": 30
+        },
+        {
+          "type": "service",
+          "text": "identity-service",
+          "start": 39,
+          "end": 55
+        }
+      ],
+      "topics": [
+        "pki",
+        "identity"
+      ]
+    },
+    {
+      "id": "mapping-15",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The auth-service uses OpenBao for authentication in PROD.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "auth-service",
+          "start": 4,
+          "end": 16
+        },
+        {
+          "type": "technology",
+          "text": "OpenBao",
+          "start": 22,
+          "end": 29
+        },
+        {
+          "type": "concept",
+          "text": "authentication",
+          "start": 34,
+          "end": 48
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 52,
+          "end": 56
+        }
+      ],
+      "topics": [
+        "identity"
+      ]
+    },
+    {
+      "id": "mapping-16",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Alice renamed the billing-api service to invoices-api.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Alice",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "service",
+          "text": "billing-api",
+          "start": 18,
+          "end": 29
+        },
+        {
+          "type": "service",
+          "text": "invoices-api",
+          "start": 41,
+          "end": 53
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-17",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Vault is an alias for HashiCorp Vault in this document.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Vault",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "technology",
+          "text": "HashiCorp Vault",
+          "start": 22,
+          "end": 37
+        }
+      ],
+      "topics": [
+        "pki"
+      ]
+    },
+    {
+      "id": "mapping-18",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The cache-service does not use Redis; it uses PostgreSQL.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "cache-service",
+          "start": 4,
+          "end": 17
+        },
+        {
+          "type": "technology",
+          "text": "Redis",
+          "start": 31,
+          "end": 36
+        },
+        {
+          "type": "technology",
+          "text": "PostgreSQL",
+          "start": 46,
+          "end": 56
+        }
+      ],
+      "topics": [
+        "databases"
+      ]
+    },
+    {
+      "id": "mapping-19",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "If Kubernetes were installed in PROD, Prometheus could collect metrics.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Kubernetes",
+          "start": 3,
+          "end": 13
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 32,
+          "end": 36
+        },
+        {
+          "type": "technology",
+          "text": "Prometheus",
+          "start": 38,
+          "end": 48
+        }
+      ],
+      "topics": [
+        "deployment",
+        "observability"
+      ]
+    },
+    {
+      "id": "mapping-20",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Jonas proposed certificate renewal with Vault, but no deployment has occurred.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Jonas",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "concept",
+          "text": "certificate renewal",
+          "start": 15,
+          "end": 34
+        },
+        {
+          "type": "technology",
+          "text": "Vault",
+          "start": 40,
+          "end": 45
+        }
+      ],
+      "topics": [
+        "pki",
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-21",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The morning was cold and the afternoon was sunny.",
+      "mentions": [],
+      "topics": []
+    },
+    {
+      "id": "mapping-22",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "A bicycle stood near the river under a blue sky.",
+      "mentions": [],
+      "topics": []
+    },
+    {
+      "id": "mapping-23",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The document contains an empty example and no system information.",
+      "mentions": [],
+      "topics": []
+    },
+    {
+      "id": "mapping-24",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Alice prefers Python now; an older note says Rust.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Alice",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "technology",
+          "text": "Python",
+          "start": 14,
+          "end": 20
+        },
+        {
+          "type": "technology",
+          "text": "Rust",
+          "start": 45,
+          "end": 49
+        }
+      ],
+      "topics": [
+        "preferences"
+      ]
+    },
+    {
+      "id": "mapping-25",
+      "partition": "development",
+      "language": "en",
+      "brain": "scope-fixture",
+      "text": "PostgreSQL in DEV and PostgreSQL in PROD are separate instances.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "PostgreSQL",
+          "start": 0,
+          "end": 10
+        },
+        {
+          "type": "technology",
+          "text": "PostgreSQL",
+          "start": 22,
+          "end": 32
+        },
+        {
+          "type": "environment",
+          "text": "DEV",
+          "start": 14,
+          "end": 17
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 36,
+          "end": 40
+        }
+      ],
+      "topics": [
+        "databases"
+      ]
+    },
+    {
+      "id": "mapping-26",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The monitor-service queries Prometheus while Grafana renders dashboards.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "monitor-service",
+          "start": 4,
+          "end": 19
+        },
+        {
+          "type": "technology",
+          "text": "Prometheus",
+          "start": 28,
+          "end": 38
+        },
+        {
+          "type": "technology",
+          "text": "Grafana",
+          "start": 45,
+          "end": 52
+        }
+      ],
+      "topics": [
+        "observability"
+      ]
+    },
+    {
+      "id": "mapping-27",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The retry_limit setting on payments-api is five.",
+      "mentions": [
+        {
+          "type": "setting",
+          "text": "retry_limit",
+          "start": 4,
+          "end": 15
+        },
+        {
+          "type": "service",
+          "text": "payments-api",
+          "start": 27,
+          "end": 39
+        }
+      ],
+      "topics": [
+        "operations"
+      ]
+    },
+    {
+      "id": "mapping-28",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Terraform plans a Kubernetes deployment, but a plan is not a running cluster.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Terraform",
+          "start": 0,
+          "end": 9
+        },
+        {
+          "type": "technology",
+          "text": "Kubernetes",
+          "start": 18,
+          "end": 28
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-29",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The devops-tools repository contains Go utilities maintained by Bob.",
+      "mentions": [
+        {
+          "type": "repository",
+          "text": "devops-tools",
+          "start": 4,
+          "end": 16
+        },
+        {
+          "type": "technology",
+          "text": "Go",
+          "start": 37,
+          "end": 39
+        },
+        {
+          "type": "person",
+          "text": "Bob",
+          "start": 64,
+          "end": 67
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-30",
+      "partition": "development",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The bakery sold bread and the garden had red flowers.",
+      "mentions": [],
+      "topics": []
+    },
+    {
+      "id": "mapping-31",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Certificate renewal for the edge-service is managed by OpenBao in STAGING.",
+      "mentions": [
+        {
+          "type": "concept",
+          "text": "Certificate renewal",
+          "start": 0,
+          "end": 19
+        },
+        {
+          "type": "service",
+          "text": "edge-service",
+          "start": 28,
+          "end": 40
+        },
+        {
+          "type": "technology",
+          "text": "OpenBao",
+          "start": 55,
+          "end": 62
+        },
+        {
+          "type": "environment",
+          "text": "STAGING",
+          "start": 66,
+          "end": 73
+        }
+      ],
+      "topics": [
+        "pki"
+      ]
+    },
+    {
+      "id": "mapping-32",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Mira moved the audit-worker from Redis to Kafka in PROD.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Mira",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "service",
+          "text": "audit-worker",
+          "start": 15,
+          "end": 27
+        },
+        {
+          "type": "technology",
+          "text": "Redis",
+          "start": 33,
+          "end": 38
+        },
+        {
+          "type": "technology",
+          "text": "Kafka",
+          "start": 42,
+          "end": 47
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 51,
+          "end": 55
+        }
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-33",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The infra-security repository has Ansible tasks for Vault and TLS.",
+      "mentions": [
+        {
+          "type": "repository",
+          "text": "infra-security",
+          "start": 4,
+          "end": 18
+        },
+        {
+          "type": "technology",
+          "text": "Ansible",
+          "start": 34,
+          "end": 41
+        },
+        {
+          "type": "technology",
+          "text": "Vault",
+          "start": 52,
+          "end": 57
+        },
+        {
+          "type": "concept",
+          "text": "TLS",
+          "start": 62,
+          "end": 65
+        }
+      ],
+      "topics": [
+        "pki",
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-34",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Jonas reviews Grafana dashboards after Prometheus detects a latency increase.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Jonas",
+          "start": 0,
+          "end": 5
+        },
+        {
+          "type": "technology",
+          "text": "Grafana",
+          "start": 14,
+          "end": 21
+        },
+        {
+          "type": "technology",
+          "text": "Prometheus",
+          "start": 39,
+          "end": 49
+        }
+      ],
+      "topics": [
+        "observability"
+      ]
+    },
+    {
+      "id": "mapping-35",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The session-service uses PostgreSQL, but it must never connect to the PROD instance from DEV.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "session-service",
+          "start": 4,
+          "end": 19
+        },
+        {
+          "type": "technology",
+          "text": "PostgreSQL",
+          "start": 25,
+          "end": 35
+        },
+        {
+          "type": "environment",
+          "text": "PROD",
+          "start": 70,
+          "end": 74
+        },
+        {
+          "type": "environment",
+          "text": "DEV",
+          "start": 89,
+          "end": 92
+        }
+      ],
+      "topics": [
+        "databases"
+      ]
+    },
+    {
+      "id": "mapping-36",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "SPIFFE supplies workload identity for the proxy-service on Kubernetes.",
+      "mentions": [
+        {
+          "type": "concept",
+          "text": "SPIFFE",
+          "start": 0,
+          "end": 6
+        },
+        {
+          "type": "concept",
+          "text": "workload identity",
+          "start": 16,
+          "end": 33
+        },
+        {
+          "type": "service",
+          "text": "proxy-service",
+          "start": 42,
+          "end": 55
+        },
+        {
+          "type": "technology",
+          "text": "Kubernetes",
+          "start": 59,
+          "end": 69
+        }
+      ],
+      "topics": [
+        "identity",
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-37",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Bob prefers Rust over Python for tools in the platform-tools repository.",
+      "mentions": [
+        {
+          "type": "person",
+          "text": "Bob",
+          "start": 0,
+          "end": 3
+        },
+        {
+          "type": "technology",
+          "text": "Rust",
+          "start": 12,
+          "end": 16
+        },
+        {
+          "type": "technology",
+          "text": "Python",
+          "start": 22,
+          "end": 28
+        },
+        {
+          "type": "repository",
+          "text": "platform-tools",
+          "start": 46,
+          "end": 60
+        }
+      ],
+      "topics": [
+        "preferences"
+      ]
+    },
+    {
+      "id": "mapping-38",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "Helm and Argo CD deploy the invoices-api service into STAGING.",
+      "mentions": [
+        {
+          "type": "technology",
+          "text": "Helm",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "technology",
+          "text": "Argo CD",
+          "start": 9,
+          "end": 16
+        },
+        {
+          "type": "service",
+          "text": "invoices-api",
+          "start": 28,
+          "end": 40
+        },
+        {
+          "type": "environment",
+          "text": "STAGING",
+          "start": 54,
+          "end": 61
+        }
+      ],
+      "topics": [
+        "deployment"
+      ]
+    },
+    {
+      "id": "mapping-39",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The stars were bright above the quiet lake.",
+      "mentions": [],
+      "topics": []
+    },
+    {
+      "id": "mapping-40",
+      "partition": "held_out",
+      "language": "en",
+      "brain": "synthetic-fixture",
+      "text": "The auth-service timeout setting changed after Alice tested authentication in DEV.",
+      "mentions": [
+        {
+          "type": "service",
+          "text": "auth-service",
+          "start": 4,
+          "end": 16
+        },
+        {
+          "type": "setting",
+          "text": "timeout",
+          "start": 17,
+          "end": 24
+        },
+        {
+          "type": "person",
+          "text": "Alice",
+          "start": 47,
+          "end": 52
+        },
+        {
+          "type": "concept",
+          "text": "authentication",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "type": "environment",
+          "text": "DEV",
+          "start": 78,
+          "end": 81
+        }
+      ],
+      "topics": [
+        "identity",
+        "operations"
+      ]
+    }
+  ]
+}

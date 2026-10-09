@@ -9,6 +9,8 @@ use recollect_protocol::*;
 use sqlx::types::Json;
 use uuid::Uuid;
 
+pub mod support_discovery;
+
 pub const POLICY: &str = "autonomous-evidence";
 pub const PROMPT: &str = "source-reconciliation-1";
 
@@ -358,6 +360,17 @@ pub async fn basis(tx: &mut Tx<'_>, r: &ClaimRevision, inputs: &[Uuid]) -> Resul
 }
 
 async fn brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
+    let audits = support_discovery::schedule(state, brain, actor).await?;
+    match maintenance(state, brain, actor).await {
+        Ok(queued) => Ok(audits + queued),
+        Err(error) => {
+            tracing::warn!(brain_id=%brain,code=error.1,"Other autonomous maintenance is waiting");
+            Ok(audits)
+        }
+    }
+}
+
+async fn maintenance(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
     let mut tx = db::actor_tx(&state.pool, actor).await?;
     db::require_writer(&mut tx, brain).await?;
     let p = model_policy::current(state, &mut tx, brain).await?;
@@ -379,7 +392,7 @@ async fn brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
          ORDER BY v.created_at,v.id LIMIT 10")
         .bind(brain).bind(&p.policy.content_classes).bind(p.policy.max_input_bytes).bind(p.change_id)
         .fetch_all(&mut *tx).await?;
-    let mut queued = crate::memory_support_audit::enqueue(&mut tx, brain, actor, &p, 4).await?;
+    let mut queued = 0;
     for id in ids {
         crate::jobs::capacity(&mut tx, brain).await?;
         let selection = crate::capture::source_selection(&mut tx, brain, id).await?;

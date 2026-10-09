@@ -496,7 +496,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             run_id: run.id,
             request_id: stage.synthesis.id,
             policy_id: run.policy_id,
-            provider: "openai".into(),
+            provider: stage.synthesis.provider.clone(),
             requested_model: stage.synthesis.model.clone(),
             returned_model: stage.synthesis.returned_model.clone().unwrap_or_default(),
             prompt_label: PROMPT.into(),

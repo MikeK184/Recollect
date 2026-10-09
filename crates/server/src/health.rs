@@ -63,15 +63,22 @@ pub async fn check(state: &AppState) -> ServiceStatus {
 }
 
 pub async fn ready(State(state): State<AppState>) -> (StatusCode, Json<serde_json::Value>) {
-    let ready = check(&state).await.ready;
+    let (status, schema) = tokio::join!(check(&state), crate::db::ready(&state.pool));
+    let ready = status.ready && schema.is_ok();
     (
         if ready {
             StatusCode::OK
         } else {
             StatusCode::SERVICE_UNAVAILABLE
         },
-        Json(json!({"ready":ready})),
+        Json(json!({"ready":ready,"schema_current":schema.is_ok(),
+            "migration":crate::db::MIGRATIONS.last().map(|(name,_)|name),"build":build()})),
     )
+}
+
+pub fn build() -> serde_json::Value {
+    json!({"revision":option_env!("RECOLLECT_BUILD_REVISION").unwrap_or("development"),
+        "built_at":option_env!("RECOLLECT_BUILD_TIME").unwrap_or("unknown")})
 }
 
 #[utoipa::path(get,path="/api/status",responses((status=200,body=ServiceStatus)))]

@@ -9,6 +9,8 @@ mod capture;
 mod catalogue;
 #[path = "mcp_memory.rs"]
 mod mcp_memory;
+#[path = "openrouter.rs"]
+mod openrouter;
 #[path = "procedures.rs"]
 mod procedures;
 #[path = "semantic.rs"]

@@ -41,7 +41,8 @@ export function GraphExplorer({
   onExpired,
   initialCenter = "",
   initialDirection = "outgoing",
-  initialHops = 2,
+  initialHops = 1,
+  initialExploration,
   compactControls = false,
   expectedMemoryEpoch,
   onExplore,
@@ -56,6 +57,7 @@ export function GraphExplorer({
   initialCenter?: string;
   initialDirection?: string;
   initialHops?: number;
+  initialExploration?: components["schemas"]["GraphExploration"];
   compactControls?: boolean;
   expectedMemoryEpoch?: number;
   onExplore?: (center: string | null, direction: string, hops: number) => void;
@@ -96,7 +98,13 @@ export function GraphExplorer({
   const [showPath, setShowPath] = useState(false);
   const [expired, setExpired] = useState(false);
   const [coverageOpen, setCoverageOpen] = useState(false);
+  const initialNonce = useRef(request.nonce);
   const read = useQuery({
+    initialData: request.nonce === initialNonce.current &&
+      JSON.stringify(initialExploration?.view.scope) === JSON.stringify(view.scope) &&
+      initialExploration?.view.generation.id === view.generation.id &&
+      initialExploration.center === request.center && initialExploration.direction === request.direction &&
+      initialExploration.max_hops === request.max_hops ? initialExploration : undefined,
     queryKey: [
       "graph-explore",
       brain.id,
@@ -118,6 +126,7 @@ export function GraphExplorer({
             center: request.center,
             direction: request.direction,
             max_hops: request.max_hops,
+            windowed: !request.center || request.max_hops === 1,
           },
           signal,
         }),
@@ -417,6 +426,15 @@ export function GraphExplorer({
       />
     </SimpleGrid>
   );
+  const coverageIndicator = shownView?.coverage.partial ? (
+    <span className="graph-coverage">
+      <button type="button" className="graph-coverage-toggle" aria-expanded={coverageOpen}
+        onClick={() => setCoverageOpen((value) => !value)}>
+        <TriangleAlert size={iconSize.small} />Coverage limits
+      </button>
+      {coverageOpen && <span className="graph-coverage-reasons">{shownView.coverage.reasons.map(label).join(" · ")}</span>}
+    </span>
+  ) : null;
   const canvasTools = (
     <>
       <Button
@@ -463,19 +481,22 @@ export function GraphExplorer({
       {data && nodes.length === 0 && (
         <EmptyState
           icon={Network}
-          title="No eligible entities"
-          description="This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."
+          title={data.view.coverage.reasons.includes("graph_window") ? "No eligible entities in this window" : "No eligible entities"}
+          description={data.view.coverage.reasons.includes("graph_window")
+            ? "Other pages may contain evidence. Browse entities in Graph tools, choose an entity, or adjust the filters."
+            : "This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."}
         />
       )}
       {/* When the bounded read has no data to display (an error such as an
           ineligible center, or a retention deadline), the canvas chrome is
           unmounted with it. Keep the exploration entry point reachable so a
           failed read can be corrected and reloaded from its new location. */}
-      {!read.isFetching && !data && (
+      {!read.isFetching && (!data || nodes.length === 0) && (
         <div
           className="graph-chrome graph-explorer-recover"
           data-graph-chrome=""
         >
+          {data && coverageIndicator}
           <Button
             variant="default"
             leftSection={<Settings2 size={iconSize.small} />}
@@ -604,8 +625,9 @@ export function GraphExplorer({
           </div>
           {data.center && nodes.length === 1 && (
             <Text size="sm">
-              No other eligible entity is reachable within this direction and
-              hop bound.
+              {data.view.coverage.reasons.includes("graph_window")
+                ? "No other eligible entity was found in this window. Other candidates may exist."
+                : "No other eligible entity is reachable within this direction and hop bound."}
             </Text>
           )}
           <div
@@ -623,28 +645,12 @@ export function GraphExplorer({
                   ? "Bounded reachability"
                   : "Eligible overview"}
             </Badge>
-            {shownView!.coverage.partial && (
-              <span className="graph-coverage">
-                <button
-                  type="button"
-                  className="graph-coverage-toggle"
-                  aria-expanded={coverageOpen}
-                  onClick={() => setCoverageOpen((value) => !value)}
-                >
-                  <TriangleAlert size={iconSize.small} />
-                  Coverage limits
-                </button>
-                {coverageOpen && (
-                  <span className="graph-coverage-reasons">
-                    {shownView!.coverage.reasons.map(label).join(" · ")}
-                  </span>
-                )}
-              </span>
-            )}
+            {coverageIndicator}
             <Text size="xs" c="dimmed" className="graph-display-note">
               Blue repository · amber memory · sage source; recorded edges
-              describe this evidence only. Limit: 500 entities, 2,000
-              relationships.
+              describe this evidence only. {shownView!.coverage.reasons.includes("graph_window")
+                ? "Window limit: 250 entities, 1,000 relationships."
+                : "Limit: 500 entities, 2,000 relationships."}
             </Text>
           </div>
         </>
@@ -685,7 +691,7 @@ export function GraphExplorer({
           {data && (
             <Text size="xs" className="feature-meta">
               Generation {shownView!.generation.id} · {label(shownView!.state)}{" "}
-              · {shownView!.total_nodes} eligible entities in the full selection
+              · {shownView!.total_nodes} eligible entities in this {shownView!.coverage.reasons.includes("graph_window") ? "window" : "selection"}
             </Text>
           )}
         </Stack>

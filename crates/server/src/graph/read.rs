@@ -11,6 +11,8 @@ use tokio::sync::Semaphore;
 pub(super) static CAPACITY: Semaphore = Semaphore::const_new(2);
 
 pub(super) struct Selected {
+    pub(super) windowed: bool,
+    pub preparation_epoch: i64,
     pub view: GraphView,
     pub nodes: BTreeMap<String, GraphNode>,
     pub edges: Vec<GraphEdge>,
@@ -54,9 +56,49 @@ pub(super) async fn select_at(
     tx: &mut Tx<'_>,
     auth: &Auth,
     brain: Uuid,
+    scope: GraphSelection,
+    limits: (usize, usize),
+    at: Option<DateTime<Utc>>,
+) -> Result<Selected> {
+    select_inner(state, tx, auth, brain, scope, limits, at, None).await
+}
+
+pub(super) enum Window {
+    Page { offset: usize, limit: usize },
+    Neighbors { center: String, direction: String },
+}
+
+pub(super) async fn select_windowed(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    auth: &Auth,
+    brain: Uuid,
+    scope: GraphSelection,
+    window: Window,
+) -> Result<Selected> {
+    select_inner(
+        state,
+        tx,
+        auth,
+        brain,
+        scope,
+        (NODE_LIMIT, EDGE_LIMIT),
+        None,
+        Some(window),
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn select_inner(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    auth: &Auth,
+    brain: Uuid,
     mut scope: GraphSelection,
     limits: (usize, usize),
     at: Option<DateTime<Utc>>,
+    window: Option<Window>,
 ) -> Result<Selected> {
     let (node_limit, edge_limit) = limits;
     if !matches!(scope.kind.as_str(), "repository" | "knowledge" | "combined")
@@ -81,6 +123,7 @@ pub(super) async fn select_at(
     scope.relations.sort();
     scope.relations.dedup();
     db::require_role(tx, brain, false).await?;
+    let prepared_at = preparation_epoch(tx, brain).await?;
     retrieval::graph::authorize(tx, auth, brain, &scope).await?;
     if scope.kind == "repository" && scope.snapshot_id.is_none() {
         if scope.selection.repository_ids.len() != 1 {
@@ -151,12 +194,92 @@ pub(super) async fn select_at(
         }
     }
     projections.push((g.clone(), d));
-    let entities: Vec<_> = projections
+    let mut entities: Vec<_> = projections
         .iter()
         .flat_map(|(_, d)| d.nodes.iter().cloned())
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
+    let windowed = window.is_some();
+    let center = match &window {
+        Some(Window::Neighbors { center, .. }) => Some(center.clone()),
+        _ => None,
+    };
+    let mut next_offset = None;
+    if let Some(window) = window {
+        entities = match window {
+            Window::Page { offset, limit } => {
+                let next = offset.checked_add(limit).ok_or_else(|| {
+                    Error::invalid("The graph page offset is outside the supported view.")
+                })?;
+                next_offset = (next < entities.len()).then_some(next);
+                entities.into_iter().skip(offset).take(limit).collect()
+            }
+            Window::Neighbors { center, direction } => {
+                let entity = entities
+                    .iter()
+                    .find(|e| e.key() == center)
+                    .cloned()
+                    .ok_or_else(|| {
+                        Error::invalid(
+                            "The center must be an eligible entity in this exact graph view.",
+                        )
+                    })?;
+                let seed = retrieval::graph::qualify(
+                    state,
+                    tx,
+                    auth,
+                    brain,
+                    &mut scope,
+                    std::slice::from_ref(&entity),
+                    (node_limit, at),
+                )
+                .await?;
+                if !seed.nodes.contains_key(&center) {
+                    return Err(Error::invalid(
+                        "The center must be an eligible entity in this exact graph view.",
+                    ));
+                }
+                let keys = adapter::neighbor_keys(
+                    state,
+                    &projections,
+                    &scope.relations,
+                    &center,
+                    &direction,
+                    250,
+                )
+                .await?;
+                // Keep the seed even when its key sorts after a full page of
+                // neighbors. Qualification and reachability both require it.
+                let neighbors = entities
+                    .into_iter()
+                    .filter(|e| e.key() != center && keys.contains(&e.key()))
+                    .take(249);
+                std::iter::once(entity).chain(neighbors).collect()
+            }
+        };
+        let keys: BTreeSet<_> = entities.iter().map(Entity::key).collect();
+        let mut candidates: Vec<_> = projections
+            .iter()
+            .flat_map(|(_, d)| d.edges.iter())
+            .filter(|e| {
+                keys.contains(&e.from)
+                    && keys.contains(&e.to)
+                    && (scope.relations.is_empty() || scope.relations.contains(&e.relation))
+            })
+            .collect();
+        candidates.sort_by_key(|e| {
+            (
+                center.as_ref().is_some_and(|c| e.from != *c && e.to != *c),
+                e.id,
+            )
+        });
+        let edge_ids: BTreeSet<_> = candidates.into_iter().take(1000).map(|e| e.id).collect();
+        for (_, descriptor) in &mut projections {
+            descriptor.nodes.retain(|e| keys.contains(&e.key()));
+            descriptor.edges.retain(|e| edge_ids.contains(&e.id));
+        }
+    }
     let mut qualified = retrieval::graph::qualify(
         state,
         tx,
@@ -168,6 +291,11 @@ pub(super) async fn select_at(
     )
     .await?;
     let mut issues = vec![];
+    // Window qualification is deliberately partial even when it happens to
+    // contain every candidate. It cannot establish global path absence.
+    if windowed {
+        note(&mut qualified.coverage, "graph_window");
+    }
     let mut deadline = qualified.deadline;
     if g.kind == "combined" {
         // Retention policy can change after projection. Every exact input is
@@ -258,10 +386,13 @@ pub(super) async fn select_at(
         total_nodes: qualified.nodes.len(),
         total_edges: edges.len(),
         offset: 0,
+        next_offset,
         relations: relations.into_iter().collect(),
         coverage: qualified.coverage,
     };
     Ok(Selected {
+        windowed,
+        preparation_epoch: prepared_at,
         view,
         nodes: qualified.nodes,
         edges,
@@ -275,6 +406,7 @@ pub(super) async fn final_gate(
     selection: &Selected,
 ) -> Result<DateTime<Utc>> {
     db::require_role(tx, selection.view.brain_id, false).await?;
+    preparation_unchanged(tx, selection.view.brain_id, selection.preparation_epoch).await?;
     retrieval::graph::authorize(tx, auth, selection.view.brain_id, &selection.view.scope).await?;
     let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
         .fetch_one(&mut **tx)
@@ -286,6 +418,87 @@ pub(super) async fn final_gate(
         ));
     }
     Ok(now)
+}
+
+/// Partial pages can survive unrelated captures only after every buffered value
+/// is requalified under the fresh canonical lock. Full reach/path consumers keep
+/// the strict epoch gate: a page cannot prove absence or whole-graph stability.
+pub(super) async fn interactive_final_gate(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    auth: &Auth,
+    selection: &mut Selected,
+) -> Result<DateTime<Utc>> {
+    let brain = selection.view.brain_id;
+    db::require_role(tx, brain, false).await?;
+    let current = preparation_epoch(tx, brain).await?;
+    if !selection.windowed || current == selection.preparation_epoch {
+        return final_gate(tx, auth, selection).await;
+    }
+    let changed = || {
+        failure(
+            "graph_preparation_changed",
+            "Selected graph inputs changed during preparation. Read the current view again.",
+        )
+    };
+    retrieval::graph::authorize(tx, auth, brain, &selection.view.scope).await?;
+    for (generation, descriptor) in &selection.projections {
+        let row: Option<(Json<GraphGeneration>, bool)> = sqlx::query_as(
+            "SELECT to_jsonb(g)-'descriptor',descriptor @> jsonb_build_object('nodes',$3::jsonb,'edges',$4::jsonb) FROM graph_generations g WHERE brain_id=$1 AND id=$2 AND state='ready'",
+        ).bind(brain).bind(generation.id).bind(Json(&descriptor.nodes)).bind(Json(&descriptor.edges))
+            .fetch_optional(&mut **tx).await?;
+        let Some((Json(actual), true)) = row else {
+            return Err(changed());
+        };
+        if serde_json::to_value(actual).map_err(|_| changed())?
+            != serde_json::to_value(generation).map_err(|_| changed())?
+        {
+            return Err(changed());
+        }
+        if generation.kind != "knowledge" {
+            descriptor::available(tx, generation).await?;
+        }
+    }
+    let entities: Vec<_> = selection
+        .projections
+        .iter()
+        .flat_map(|(_, d)| d.nodes.iter().cloned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let mut scope = selection.view.scope.clone();
+    let qualified = retrieval::graph::qualify(
+        state,
+        tx,
+        auth,
+        brain,
+        &mut scope,
+        &entities,
+        (NODE_LIMIT, None),
+    )
+    .await?;
+    if qualified.scope_id != selection.view.scope_id
+        || serde_json::to_value(&scope).map_err(|_| changed())?
+            != serde_json::to_value(&selection.view.scope).map_err(|_| changed())?
+        || serde_json::to_value(&qualified.nodes).map_err(|_| changed())?
+            != serde_json::to_value(&selection.nodes).map_err(|_| changed())?
+    {
+        return Err(changed());
+    }
+    selection.deadline = [selection.deadline, qualified.deadline]
+        .into_iter()
+        .flatten()
+        .min();
+    selection.view.expires_at = selection.deadline;
+    selection.view.memory_epoch = epoch(tx, brain).await?;
+    if selection.view.generation.kind == "knowledge"
+        && selection.view.generation.input_epoch != selection.view.memory_epoch
+    {
+        note(&mut selection.view.coverage, "knowledge_generation_stale");
+        selection.view.state = "partial".into();
+    }
+    selection.preparation_epoch = current;
+    final_gate(tx, auth, selection).await
 }
 
 pub(super) async fn verify(state: &AppState, selected: &Selected) -> Result<()> {
@@ -312,31 +525,51 @@ pub async fn view(
         .try_acquire()
         .map_err(|_| failure("graph_busy", "Graph reads are busy. Try again shortly."))?;
     tokio::time::timeout(Duration::from_secs(15), async {
-        if input.offset > NODE_LIMIT {
+        if !input.windowed && input.offset > NODE_LIMIT {
             return Err(Error::invalid(
                 "The graph page offset is outside the supported view.",
             ));
         }
-        let mut tx = auth.tx(&state.pool).await?;
+        let mut tx = auth.preparation_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'")
             .execute(&mut *tx)
             .await?;
-        let mut selected = select(
-            &state,
-            &mut tx,
-            &auth,
-            brain,
-            input.scope,
-            NODE_LIMIT,
-            EDGE_LIMIT,
-        )
-        .await?;
+        let mut selected = if input.windowed {
+            select_windowed(
+                &state,
+                &mut tx,
+                &auth,
+                brain,
+                input.scope,
+                Window::Page {
+                    offset: input.offset,
+                    limit: 100,
+                },
+            )
+            .await?
+        } else {
+            select(
+                &state,
+                &mut tx,
+                &auth,
+                brain,
+                input.scope,
+                NODE_LIMIT,
+                EDGE_LIMIT,
+            )
+            .await?
+        };
         verify(&state, &selected).await?;
-        final_gate(&mut tx, &auth, &selected).await?;
+        tx.commit().await?;
+        let mut tx = auth.publication_tx(&state.pool).await?;
+        sqlx::query("SET LOCAL statement_timeout='2s'")
+            .execute(&mut *tx)
+            .await?;
+        interactive_final_gate(&state, &mut tx, &auth, &mut selected).await?;
         selected.view.nodes = selected
             .nodes
             .into_values()
-            .skip(input.offset)
+            .skip(if input.windowed { 0 } else { input.offset })
             .take(100)
             .collect();
         selected.view.offset = input.offset;
@@ -372,7 +605,7 @@ pub async fn path(
                 "Choose exact graph entities, one to eight hops and a supported direction.",
             ));
         }
-        let mut tx = auth.tx(&state.pool).await?;
+        let mut tx = auth.preparation_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'")
             .execute(&mut *tx)
             .await?;
@@ -458,6 +691,11 @@ pub async fn path(
         } else {
             "no_path_within_bound"
         };
+        tx.commit().await?;
+        let mut tx = auth.publication_tx(&state.pool).await?;
+        sqlx::query("SET LOCAL statement_timeout='2s'")
+            .execute(&mut *tx)
+            .await?;
         final_gate(&mut tx, &auth, &selected).await?;
         tx.commit().await?;
         Ok(ResponseJson(GraphPath {

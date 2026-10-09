@@ -214,6 +214,7 @@ pub(crate) async fn enqueue(
     actor: Uuid,
     p: &ModelPolicyVersion,
     limit: usize,
+    ids: &[Uuid],
 ) -> Result<usize> {
     if limit == 0
         || !p.policy.purposes.iter().any(|c| c == "extraction")
@@ -221,16 +222,6 @@ pub(crate) async fn enqueue(
     {
         return Ok(0);
     }
-    let ids:Vec<Uuid>=sqlx::query_scalar("SELECT r.id FROM claim_revisions r
-       WHERE r.brain_id=$1 AND recollect_support_audit_target($1,r.id) AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
-       AND r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active' AND r.revision#>>'{content,freshness}'<>'superseded'
-       AND NOT recollect_reviewed_revision($1,r.id)
-       AND recollect_memory_exact_acyclic($1,r.id)
-       AND NOT EXISTS(SELECT 1 FROM recollect_memory_exact_dependencies(r.brain_id,r.id) d
-         WHERE d.revision_id<>r.id AND NOT recollect_revision_supported(r.brain_id,d.revision_id))
-       AND NOT EXISTS(SELECT 1 FROM memory_support_assessments a WHERE a.brain_id=$1 AND a.revision_id=r.id AND a.policy_id=$2 AND a.verifier_version=$3)
-       ORDER BY r.recorded_at,r.id LIMIT $4")
-        .bind(brain).bind(p.change_id).bind(support::VERSION).bind(limit as i64).fetch_all(&mut **tx).await?;
     let mut count = 0;
     // Database and lease exhaustion may resume this same input generation:
     // either no admission exists, or the typed verdict is already durable.
@@ -257,7 +248,7 @@ pub(crate) async fn enqueue(
             .bind(job).bind(brain).execute(&mut **tx).await?;
         count += 1;
     }
-    for revision in ids.into_iter().take(limit - count) {
+    for revision in ids.iter().copied().take(limit - count) {
         queue(tx, brain, actor, p.change_id, revision, None, 0).await?;
         count += 1;
     }

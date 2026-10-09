@@ -277,7 +277,31 @@ pub fn repository_secret(text: &str, configured: &[String]) -> bool {
             return true;
         }
     }
+    let mut typescript = false;
     text.lines().any(|line| {
+        let trimmed = line.trim();
+        if trimmed.starts_with("```") {
+            typescript = matches!(trimmed.trim_start_matches('`'), "typescript" | "ts");
+            return false;
+        }
+        // A fenced TypeScript property type has no credential value. Keep
+        // quoted values, initializers and ordinary YAML/assignments subject
+        // to the scanner; configured secrets were checked above regardless.
+        if typescript
+            && !line.contains('=')
+            && let Some((key, value)) = line.split_once(':')
+            && !key.trim().is_empty()
+            && key
+                .trim()
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_')
+            && matches!(
+                value.trim(),
+                "string;" | "number;" | "boolean;" | "unknown;" | "never;"
+            )
+        {
+            return false;
+        }
         let Some((key, value)) = line.split_once('=').or_else(|| line.split_once(':')) else {
             return false;
         };
@@ -322,6 +346,40 @@ pub fn repository_secret(text: &str, configured: &[String]) -> bool {
             .iter()
             .any(|p| value.starts_with(p))
     })
+}
+
+#[cfg(test)]
+mod credential_annotation_tests {
+    use super::repository_secret;
+
+    #[test]
+    fn fenced_types_are_not_literal_credentials_and_values_stay_excluded() {
+        assert!(!repository_secret(
+            "```typescript\napiKey: string;\npassword: string;\n```",
+            &[]
+        ));
+        assert!(!repository_secret(
+            "```ts\nclient_secret: string;\n```",
+            &[]
+        ));
+        for text in [
+            "apiKey: string;",
+            "```yaml\napi_key: string;\n```",
+            "```typescript\napiKey: 'synthetic-sensitive-value';\n```",
+            "```typescript\napi_key = 'synthetic-sensitive-value';\n```",
+            "```typescript\napiKey: string;\n```\npassword: synthetic-sensitive-value",
+            "```typescript\napiKey: string;\n// ghp_12345678901234567890\n```",
+        ] {
+            assert!(
+                repository_secret(text, &[]),
+                "credential exclusion regressed"
+            );
+        }
+        assert!(repository_secret(
+            "```typescript\napiKey: string;\n```",
+            &["string".into()]
+        ));
+    }
 }
 fn json_bounded(value: &Value, depth: usize) -> bool {
     if depth > 16 {

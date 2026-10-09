@@ -50,6 +50,12 @@ unresolved product decisions; do not invent them in code.
 
 ## Code navigation
 
+- Use the repository-local Rust Analyzer MCP for Rust definitions, references,
+  types and diagnostics, and Graft MCP for repository context and call traces.
+  See [setup and proof](docs/runbooks/rust-semantic-navigation.md). Allow initial
+  indexing to finish; empty or stale results do not prove absence. Explicit
+  `graft build --lsp` refreshes optional compiler edges; automatic Graft refresh
+  is structural only. Verify ambiguous relationships in source.
 - Use the repo-local `./.codex/tools/codegraph/codegraph` launcher for structural
   navigation. Run `status` and `sync` before relying on relationships after
   source changes; setup is `./scripts/setup-codegraph.sh`.

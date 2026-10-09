@@ -5,14 +5,14 @@
 | Epic | Status | Current focus |
 | --- | --- | --- |
 | [repository-governance.md](repository-governance.md) | complete | Branded product site and 27 searchable canonical guides published through GitHub Pages; live HTTPS and browser acceptance passed |
-| [developer-tooling.md](developer-tooling.md) | complete | OpenCode root/nested roles and skills, real Context7 and browser MCP calls verified |
+| [developer-tooling.md](developer-tooling.md) | complete | Local Rust Analyzer MCP and Graft installed with semantic/structural calls and effective isolation; existing developer tooling preserved |
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
-| [memory-lifecycle.md](memory-lifecycle.md) | complete | Five automatic memory phases locally delivered with native recovery/privacy proof, independent reviews and versioned actual-model support comparison; uncommitted and not deployed |
-| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Supported scoped project brief and authenticated continuation locally validated within existing plugin budgets; prior Ask and retrieval delivery retained |
-| [graph-intelligence.md](graph-intelligence.md) | complete | Graph/path/analytics browser acceptance, bounded measurements and laptop/desktop visuals passed |
+| [memory-lifecycle.md](memory-lifecycle.md) | active | Five automatic memory phases published at 27bbd00; normal runtime update and uncommitted query repairs have separate dated proof; model policies unchanged |
+| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Semantic discovery query repair deployed with native/normal-data equivalence; remaining graph locks stay with active graph and operations packs |
+| [graph-intelligence.md](graph-intelligence.md) | active | User-authorized automatic entity/topic plan; concurrent graph preparation implementation precedes semantic mapping and populated-runtime acceptance |
 | [mcp-coordination.md](mcp-coordination.md) | active | Supported plugin source workflow, observed roster/hosts, bounded learning recovery and visible limits locally delivered; separate fresh native-host token acceptance remains open |
-| [operational-readiness.md](operational-readiness.md) | active | Assurance band hidden on healthy Brains and knowledge tab-strip removal shipped 2026-10-03; separate LongMemEval benchmark remains blocked on protocol and cost approval |
+| [operational-readiness.md](operational-readiness.md) | active | Complete 40% benchmark baseline retained; local update/evidence repairs deployed, but final populated graph timeout acceptance and new benchmark quality proof remain open |
 | [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Dashboard refresh stability, main-form processing limits and safe input/page recovery delivered on the local stack; prior independent Private Runner acceptance retained |
 
 ## Active frontier
@@ -25,8 +25,10 @@ cross-session exact-family correction. All five packs are archived after native
 local acceptance and two independent reviews. The final v3 held-out comparison
 withheld 15/15 negative cases and delivered 11/11 positives; earlier failures and
 cost remain reported. This is a fixed synthetic comparison, not production truth
-or superiority. Changes are uncommitted and have not upgraded the running stack
-or installed plugin. Public benchmark and fresh direct-token host work stay separate.
+or superiority. The implementation was published in commit `27bbd00`; the
+[first-batch report](../../mappings/memory-quality-first-batch-proof-2026-10-08.md)
+records the normal-stack upgrade and later uncommitted repairs. Installed-plugin
+acceptance, public benchmark quality and fresh direct-token host work stay separate.
 
 The [plugin workflow repair](../../mappings/plugin-workflow-repair-2026-10-07.md)
 is locally delivered with supported source tools, visible processing limits and
@@ -105,8 +107,11 @@ preceding local closeouts before deployment.
 
 The Codex plugin and native OpenCode bridge also pass actual installed-host
 verification and are shipped. The OS approval gate is resolved, fresh native
-processes connect successfully, and disposable proof resources are cleaned up. LongMemEval is separately blocked on its
-proposed protocol and explicit cost approval. Published marketplace/OAuth remain outside these slices; direct user-token/device-code
+processes connect successfully, and disposable proof resources are cleaned up. LongMemEval is a separate locally shipped campaign under its
+accepted USD 10 protocol: all 50 answers are available after recovery, with
+official scoring, audit and [quality/cost limits](../../mappings/openrouter-benchmark-proof-2026-10-08.md). OpenRouter selection is locally shipped with independent
+provider/browser proof; normal-stack deployment has not been performed.
+Published marketplace/OAuth remain outside these slices; direct user-token/device-code
 authentication and OpenCode automatic capture/recall are delivered. No commit, push or release was performed.
 
 Normal laptops and larger monitors take priority. Small-screen and additional

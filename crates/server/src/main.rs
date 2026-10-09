@@ -14,6 +14,10 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", ApiDoc::openapi().to_pretty_json()?);
         return Ok(());
     }
+    if command == "build-info" {
+        println!("{}", recollect_server::health::build());
+        return Ok(());
+    }
     if command == "recovery-schema" {
         println!(
             "{}",

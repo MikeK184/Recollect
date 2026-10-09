@@ -194,7 +194,19 @@ class Validator:
             "command": "npx", "args": ["-y", "@upstash/context7-mcp"],
             "env_vars": ["CONTEXT7_API_KEY"],
         }}
-        require(config["mcp_servers"] == expected, file, "expected secret-free Context7 stanza only")
+        expected["rust_analyzer"] = {
+            "command": "bash",
+            "args": ["-c", 'set -e; RECOLLECT_MCP_ROOT="$(git rev-parse --show-toplevel)"; exec "$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp"'],
+            "startup_timeout_sec": 60, "tool_timeout_sec": 60,
+            "enabled_tools": ["rust_analyzer_symbols", "rust_analyzer_definition", "rust_analyzer_references", "rust_analyzer_hover", "rust_analyzer_completion", "rust_analyzer_diagnostics", "rust_analyzer_workspace_diagnostics"],
+        }
+        expected["graft"] = {
+            "command": "bash",
+            "args": ["-c", 'set -e; RECOLLECT_MCP_ROOT="$(git rev-parse --show-toplevel)"; exec "$RECOLLECT_MCP_ROOT/.codex/tools/graft/graft" mcp . --dir .cache/rust-navigation/graft-graph'],
+            "startup_timeout_sec": 30, "tool_timeout_sec": 60,
+            "enabled_tools": ["graft_find_code", "graft_file_api", "graft_trace_calls", "graft_find_all", "graft_repo_map", "graft_check_freshness"],
+        }
+        require(config["mcp_servers"] == expected, file, "expected secret-free Context7 and local Rust/Graft navigation stanzas only")
 
     def toml(self, file: str) -> dict:
         try:

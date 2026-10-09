@@ -863,3 +863,70 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
     );
     h.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn recall_keeps_late_chunk_text_and_nonoverlapping_same_source_windows() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let brain = ok(
+        &h,
+        "POST",
+        "/api/brains",
+        &owner,
+        json!({"name":"Window controls"}),
+    )
+    .await;
+    let base = format!("/api/brains/{}", brain["id"].as_str().unwrap());
+    let text = format!(
+        "{}\nmarker current language is Go.\n{}\nmarker previous language was Rust.\n{}\nmarker deployment is unverified.\n",
+        "x".repeat(2500),
+        "y".repeat(4000),
+        "z".repeat(4000)
+    );
+    let source = source(&h, &base, &owner, "Exact window control", &text).await;
+    while worker::run_once(&h.state, "capture").await.unwrap() {}
+    let result = recall(
+        &h,
+        &base,
+        &owner,
+        json!({"query":"marker","limit":6,"context_bytes":32768,"source_diversity":true}),
+    )
+    .await;
+    let items = result["context"]["items"].as_array().unwrap();
+    assert!(
+        items.iter().any(|i| i["text"]
+            .as_str()
+            .unwrap()
+            .contains("current language is Go")),
+        "{result}"
+    );
+    assert!(
+        items.iter().any(|i| i["text"]
+            .as_str()
+            .unwrap()
+            .contains("previous language was Rust")),
+        "{result}"
+    );
+    assert!((2..=3).contains(&items.len()), "{result}");
+    let version = source["version"]["id"].as_str().unwrap();
+    let mut spans = Vec::new();
+    for item in items {
+        let p = &item["provenance"][0];
+        assert_eq!(item["revision_id"], version);
+        let from = p["byte_from"].as_u64().unwrap() as usize;
+        let to = p["byte_to"].as_u64().unwrap() as usize;
+        assert_eq!(&text[from..to], item["text"].as_str().unwrap());
+        assert!(spans.iter().all(|(a, b)| to <= *a || from >= *b));
+        spans.push((from, to));
+    }
+    let small = recall(
+        &h,
+        &base,
+        &owner,
+        json!({"query":"marker","limit":6,"context_bytes":2048}),
+    )
+    .await;
+    assert!(small["context_bytes"].as_u64().unwrap() <= 2048);
+    h.finish().await;
+}

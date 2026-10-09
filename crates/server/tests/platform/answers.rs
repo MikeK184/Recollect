@@ -502,7 +502,13 @@ async fn answer_historical_revision_grant_revocation_content_budget_and_expiry()
     let (h, owner, base, p, server) = setup().await;
     enable(&h, &owner, &base).await;
     *p.candidates.lock().unwrap() = supported();
-    let evidence = source(&h, &owner, &base, "Amber uses port 8080.\n").await;
+    let evidence = source(
+        &h,
+        &owner,
+        &base,
+        "Amber used port 8080 before a later configuration change to 9000.\n",
+    )
+    .await;
     while worker::run_once(&h.state, "capture").await.unwrap() {}
     let proposal = super::super::review::proposal(&evidence["version"]["id"], "Amber", "8080");
     let original = ok(
@@ -513,17 +519,12 @@ async fn answer_historical_revision_grant_revocation_content_budget_and_expiry()
         proposal.clone(),
     )
     .await;
-    let mut changed = proposal;
-    changed["base_revision"] = original["id"].clone();
-    changed["content"]["value"] = json!("9000");
-    let current = ok(
-        &h,
-        "PUT",
-        &format!("{base}/claims/{}", original["claim_id"].as_str().unwrap()),
-        &owner,
-        changed,
-    )
-    .await;
+    let unchecked = ok(&h, "POST", &format!("{base}/answer-requests"), &owner,
+        json!({"request_id":Uuid::new_v4(),"question":"What was Amber's recorded port?","recall":{"exact":{"kind":"claim","id":original["claim_id"]},"channels":["exact"],"limit":1}})).await;
+    assert_eq!(unchecked["state"], "no_evidence");
+    assert_eq!(p.calls.load(Ordering::SeqCst), 0);
+    let original = ok(&h,"POST",&format!("{base}/claims/{}/review",original["claim_id"].as_str().unwrap()),&owner,
+        json!({"base_revision":original["id"],"action":"accept","reason":"The owner checked the original recorded configuration."})).await["claims"][0]["revision"].clone();
     let path = format!("{base}/answer-requests");
     let historical = ok(&h, "POST", &path, &owner, json!({"request_id":Uuid::new_v4(),"question":"What was Amber's recorded port?",
         "recall":{"exact":{"kind":"claim","id":original["claim_id"]},"channels":["exact"],"mode":"history","knowledge_at":original["recorded_at"],"limit":1}})).await;
@@ -544,6 +545,21 @@ async fn answer_historical_revision_grant_revocation_content_budget_and_expiry()
             .unwrap()
             .contains("9000")
     );
+    let mut changed = proposal["content"].clone();
+    changed["value"] = json!("9000");
+    let current = ok(
+        &h,
+        "POST",
+        &format!("{base}/claims/{}/review", original["claim_id"].as_str().unwrap()),
+        &owner,
+        json!({"base_revision":original["id"],"action":"correct","reason":"The fixture owner records the later configuration.","content":changed}),
+    )
+    .await["claims"][0]["revision"].clone();
+    // A later explicit correction fences the old assertion even for an
+    // historical request. History cannot revive currently rejected content.
+    let fenced = ok(&h,"POST",&path,&owner,json!({"request_id":Uuid::new_v4(),"question":"What was Amber's recorded port?",
+        "recall":{"exact":{"kind":"claim","id":original["claim_id"]},"channels":["exact"],"mode":"history","knowledge_at":original["recorded_at"],"limit":1}})).await;
+    assert_eq!(fenced["state"], "no_evidence");
     // Current rejection also excludes its overlapping raw support. No model
     // call may recreate the rejected assertion under the original source ID.
     ok(&h,"POST",&format!("{base}/claims/{}/review",current["claim_id"].as_str().unwrap()),&owner,
@@ -988,7 +1004,14 @@ async fn answer_cancellation_policy_epoch_erasure_and_restart_suppress_output() 
 #[ignore = "Requires repository-owned PostgreSQL; run a focused platform test"]
 async fn desktop_list_filters_before_pagination_and_treats_wildcards_literally() {
     let (h, owner, base, _p, server) = setup().await;
-    let first=ok(&h,"POST",&format!("{base}/sources"),&owner,json!({"title":"Needle 100%_literal","content":"Support for list search.","media_type":"text/plain","retain_content":true})).await;
+    let list_evidence = format!(
+        "Needle 100%_literal configuration 8080. {}",
+        (0..21)
+            .map(|n| format!("Later assertion {n} configuration active."))
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
+    let first=ok(&h,"POST",&format!("{base}/sources"),&owner,json!({"title":"Needle 100%_literal","content":list_evidence,"media_type":"text/plain","retain_content":true})).await;
     for n in 0..51 {
         ok(&h,"POST",&format!("{base}/sources"),&owner,json!({"title":format!("Later source {n}"),"source_uri":format!("https://example.test/{n}"),"media_type":"text/plain","retain_content":false})).await;
     }
@@ -1012,6 +1035,7 @@ async fn desktop_list_filters_before_pagination_and_treats_wildcards_literally()
     .await;
     assert_eq!(literal["total"], 1);
     let version = first["version"]["id"].clone();
+    while worker::run_once(&h.state, "capture").await.unwrap() {}
     let first_claim = ok(
         &h,
         "POST",
@@ -1020,8 +1044,19 @@ async fn desktop_list_filters_before_pagination_and_treats_wildcards_literally()
         super::super::review::proposal(&version, "Needle 100%_literal", "8080"),
     )
     .await;
+    let unchecked = ok(
+        &h,
+        "GET",
+        &format!("{base}/claims?q=needle"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(unchecked["total_candidates"], 0);
+    ok(&h,"POST",&format!("{base}/claims/{}/review",first_claim["claim_id"].as_str().unwrap()),&owner,
+        json!({"base_revision":first_claim["id"],"action":"accept","reason":"The owner checked the literal list example."})).await;
     for n in 0..21 {
-        ok(
+        let later = ok(
             &h,
             "POST",
             &format!("{base}/claims"),
@@ -1029,6 +1064,8 @@ async fn desktop_list_filters_before_pagination_and_treats_wildcards_literally()
             super::super::review::proposal(&version, &format!("Later assertion {n}"), "active"),
         )
         .await;
+        ok(&h,"POST",&format!("{base}/claims/{}/review",later["claim_id"].as_str().unwrap()),&owner,
+            json!({"base_revision":later["id"],"action":"accept","reason":"The owner checked the declared list example."})).await;
     }
     let claims = ok(
         &h,
@@ -1088,6 +1125,125 @@ async fn desktop_list_filters_before_pagination_and_treats_wildcards_literally()
         .0,
         StatusCode::NOT_FOUND
     );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; local HTTP model fixture only"]
+async fn answer_multiple_source_windows_are_exact_and_erasure_suppresses_publication() {
+    let (h, owner, base, p, server) = setup().await;
+    enable(&h, &owner, &base).await;
+    let text = format!(
+        "{}\nmarker current language is Go.\n{}\nmarker previous language was Rust.\n",
+        "x".repeat(2500),
+        "y".repeat(4000)
+    );
+    let original = source(&h, &owner, &base, &text).await;
+    source(
+        &h,
+        &owner,
+        &base,
+        "marker independent deployment remains unverified.\n",
+    )
+    .await;
+    source(
+        &h,
+        &owner,
+        &base,
+        "marker independent operating system is Linux.\n",
+    )
+    .await;
+    while worker::run_once(&h.state, "capture").await.unwrap() {}
+    let recall = json!({"query":"marker","channels":["exact","lexical"],"limit":10,"context_bytes":16384,"source_diversity":true});
+    let found = ok(
+        &h,
+        "POST",
+        &format!("{base}/recall"),
+        &owner,
+        recall.clone(),
+    )
+    .await;
+    let items = found["context"]["items"].as_array().unwrap();
+    assert!(
+        items
+            .iter()
+            .map(|i| i["id"].as_str().unwrap())
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            >= 3
+    );
+    let windows: Vec<_> = items
+        .iter()
+        .filter(|i| i["id"] == original["version"]["id"])
+        .collect();
+    assert!(windows.len() >= 2, "{found}");
+    for window in windows {
+        let provenance = &window["provenance"][0];
+        let from = provenance["byte_from"].as_u64().unwrap() as usize;
+        let to = provenance["byte_to"].as_u64().unwrap() as usize;
+        assert_eq!(&text[from..to], window["text"].as_str().unwrap());
+    }
+    let index = items
+        .iter()
+        .position(|i| {
+            i["text"]
+                .as_str()
+                .unwrap()
+                .contains("previous language was Rust")
+        })
+        .unwrap();
+    let citation = format!("E{}", index + 1);
+    *p.candidates.lock().unwrap() = json!({"summary":"The source records a prior preference.","statements":[{"text":"The user's previous language was Rust according to the source.","citation_ids":[citation]}],"limitations":[]});
+    let request = || json!({"request_id":Uuid::new_v4(),"question":"marker","recall":recall});
+    let completed = ok(
+        &h,
+        "POST",
+        &format!("{base}/answer-requests"),
+        &owner,
+        request(),
+    )
+    .await;
+    assert_eq!(completed["state"], "completed", "{completed}");
+    let cited = completed["citations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["id"] == citation)
+        .unwrap();
+    assert!(
+        cited["evidence"]["text"]
+            .as_str()
+            .unwrap()
+            .contains("previous language was Rust")
+    );
+    let before = p.calls.load(Ordering::SeqCst);
+    p.delay.store(500, Ordering::SeqCst);
+    let path = format!("{base}/answer-requests");
+    let pending = h.call("POST", &path, Some(&owner), request());
+    let erase = async {
+        wait_calls(&p, before + 1).await;
+        let target = json!({"kind":"source","id":original["id"]});
+        let preview = ok(
+            &h,
+            "POST",
+            &format!("{base}/erasures/preview"),
+            &owner,
+            target.clone(),
+        )
+        .await;
+        ok(
+            &h,
+            "POST",
+            &format!("{base}/erasures"),
+            &owner,
+            json!({"target":target,"eligibility_epoch":preview["eligibility_epoch"]}),
+        )
+        .await;
+    };
+    let (suppressed, ()) = tokio::join!(pending, erase);
+    assert_eq!(suppressed.1["state"], "stale", "{}", suppressed.1);
+    assert!(suppressed.1.get("answer").is_none());
     server.abort();
     h.finish().await;
 }

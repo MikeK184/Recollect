@@ -27,10 +27,18 @@ pub struct AutomationUpdate {
     pub capture_change: Uuid,
 }
 async fn settings(state: &AppState, tx: &mut Tx<'_>, brain: Uuid) -> Result<AutomationSettings> {
+    let current = model_policy::current(state, tx, brain).await?;
+    let providers = model_policy::providers(state);
+    let installed = providers
+        .iter()
+        .find(|p| p.provider == current.policy.provider)
+        .cloned()
+        .unwrap_or_else(|| model_policy::installed(state));
     Ok(AutomationSettings {
         models: ModelSettings {
-            current: model_policy::current(state, tx, brain).await?,
-            installed: model_policy::installed(state),
+            current,
+            installed,
+            providers,
         },
         capture: capture::current(tx, brain).await?,
         retention: retention::settings(tx, brain).await?,
@@ -42,7 +50,12 @@ pub(crate) async fn apply(
     brain: Uuid,
     actor: Uuid,
 ) -> Result<AutomationSettings> {
+    let selected = model_policy::current(state, tx, brain).await?.policy;
     let mut policy = model_policy::defaults(state);
+    policy.provider = selected.provider;
+    policy.text_model = selected.text_model;
+    policy.embedding_model = selected.embedding_model;
+    policy.embedding_dimensions = selected.embedding_dimensions;
     policy.enabled = true;
     policy.purposes = ["extraction", "synthesis", "embedding", "answering"]
         .map(String::from)

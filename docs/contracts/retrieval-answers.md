@@ -211,3 +211,14 @@ not silent retries or unapproved provider fallbacks. Manual channel selections
 remain available unchanged. Auto is deterministic routing, not an LLM planner
 or natural-language time parser; it never widens scope or guesses latest manifest.
 No Ask-driven writes, tool calls or durable conversations are introduced.
+
+## Useful attributed answers — 2026-10-08
+
+The improvement request accepts explicit attributed reporting and personalization
+within read-only Ask. Unreviewed retained evidence may support what a user said or
+preferred; it does not independently establish current deployment or truth.
+Historical questions can report the original statement/date with qualifications.
+Use explicit preferences to shape useful advice without adding invented current
+resources, prices or URLs. Use the question's language, keep substantive supported
+answers in cited statements, and reserve limitations for decision-relevant gaps.
+No added paid repair/retry, learning from output, external tool or execution occurs.

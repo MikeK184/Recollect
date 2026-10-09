@@ -32,6 +32,19 @@ async fn mcp_agent_handover_pagination_and_native_graph_preserve_scope() {
         selections.push(selection);
     }
     while worker::run_once(&h.state, "capture").await.unwrap() {}
+    for claim in &mut claims {
+        let before = ok(
+            &h,
+            "GET",
+            &format!("{base}/claims/{}", claim["claim_id"].as_str().unwrap()),
+            &owner,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(before["selected"]["eligibility"]["investigation"], false);
+        *claim = ok(&h, "POST", &format!("{base}/claims/{}/review", claim["claim_id"].as_str().unwrap()), &owner,
+            json!({"base_revision":claim["id"],"action":"accept","reason":"The synthetic scoped contribution was checked by its owner."})).await["claims"][0]["revision"].clone();
+    }
     let (_, token) = h.pair_device(&owner, "Handover and graph bridge").await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let uri = format!("http://{}{base}/mcp/agent", listener.local_addr().unwrap());
@@ -84,8 +97,8 @@ async fn mcp_agent_handover_pagination_and_native_graph_preserve_scope() {
     );
     assert_eq!(provider.calls.load(Ordering::SeqCst), 0);
     allow(&h, &owner, &base, |policy| {
-        policy["purposes"] = json!(["synthesis"]);
-        policy["content_classes"] = json!(["claim", "query"]);
+        policy["purposes"] = json!(["synthesis", "extraction"]);
+        policy["content_classes"] = json!(["claim", "query", "document"]);
     })
     .await;
     *provider.candidates.lock().unwrap() = json!({
@@ -100,7 +113,11 @@ async fn mcp_agent_handover_pagination_and_native_graph_preserve_scope() {
         "request replay must preserve the same generation job"
     );
     model_job(&h).await;
-    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        provider.calls.load(Ordering::SeqCst),
+        2,
+        "Synthesis and independent support assessment are separately charged"
+    );
     let read = tasks[0]["context"]["operation_id"].clone();
     let initial = tool(peer, "memory.handover_status", json!({"operation_id":read})).await;
     assert_eq!(initial["total"], 1);
@@ -223,7 +240,7 @@ async fn mcp_agent_handover_pagination_and_native_graph_preserve_scope() {
     );
     assert_eq!(
         provider.calls.load(Ordering::SeqCst),
-        1,
+        2,
         "paging and graph reads must not generate model requests"
     );
     service.cancel().await.unwrap();

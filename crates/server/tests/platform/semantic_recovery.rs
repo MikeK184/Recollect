@@ -2,6 +2,15 @@ use super::*;
 use crate::review::proposal;
 use recollect_server::{db, privacy_journal};
 
+// Positive graph/embedding fixtures require actual server-attributed human
+// review under the source-support contract. Browser submission alone is a
+// proposal, and cannot supply usable graph anchors or claim vectors.
+async fn reviewed_proposal(h: &Harness, owner: &Login, base: &str, input: Value) -> Value {
+    let claim = ok(h, "POST", &format!("{base}/claims"), owner, input).await;
+    ok(h, "POST", &format!("{base}/claims/{}/review",claim["claim_id"].as_str().unwrap()), owner,
+        json!({"base_revision":claim["id"],"action":"accept","reason":"Checked fixture evidence for this positive control."})).await["claims"][0]["revision"].clone()
+}
+
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
 async fn graph_recall_requalifies_after_embedding_and_freezes_new_projection_knowledge() {
@@ -11,11 +20,10 @@ async fn graph_recall_requalifies_after_embedding_and_freezes_new_projection_kno
     let victim = source(&h, &owner, &base, "GRAPH_QUERY_ERASED_PAYLOAD").await;
     let control = source(&h, &owner, &base, "Independent live graph query control.").await;
     for (source, name) in [(&victim, "Victim claim"), (&control, "Control claim")] {
-        ok(
+        reviewed_proposal(
             &h,
-            "POST",
-            &format!("{base}/claims"),
             &owner,
+            &base,
             proposal(&source["version"]["id"], name, "retained declaration"),
         )
         .await;
@@ -36,11 +44,10 @@ async fn graph_recall_requalifies_after_embedding_and_freezes_new_projection_kno
             json!({"kind":"source","id":victim["id"]}),
         )
         .await;
-        let late = ok(
+        let late = reviewed_proposal(
             &h,
-            "POST",
-            &format!("{base}/claims"),
             &owner,
+            &base,
             proposal(
                 &control["version"]["id"],
                 "LATE_GRAPH_QUERY_KNOWLEDGE",
@@ -76,8 +83,13 @@ async fn graph_recall_requalifies_after_embedding_and_freezes_new_projection_kno
         projection["id"]
     );
     assert_eq!(
-        result["graph"]["candidates"], 1,
-        "The new projection's late claim cannot enter the frozen query"
+        result["graph"]["anchors"].as_array().unwrap().len(),
+        2,
+        "Both surviving supported representations are qualified graph anchors"
+    );
+    assert_eq!(
+        result["graph"]["candidates"], 0,
+        "Qualified anchors get no graph vote and the late claim cannot enter the frozen query"
     );
     p.delay.store(0, Ordering::SeqCst);
     let current = ok(
@@ -109,11 +121,10 @@ async fn graph_recall_budget_covers_both_provider_sides_without_replaying_a_char
     let cx = context(&h, &base).await;
     enable(&h, &owner, &base).await;
     let evidence = source(&h, &owner, &base, "Graph budget retained evidence.").await;
-    ok(
+    reviewed_proposal(
         &h,
-        "POST",
-        &format!("{base}/claims"),
         &owner,
+        &base,
         proposal(
             &evidence["version"]["id"],
             "Budget anchor",
@@ -266,7 +277,7 @@ async fn semantic_fusion_keeps_the_score_bearing_fragment_and_exact_priority() {
     for predicate in ["handling", "recovery", "dispatch"] {
         let mut input = proposal(&split["version"]["id"], "LEXICAL_ONLY", "qualified anchor");
         input["content"]["predicate"] = json!(predicate);
-        ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+        reviewed_proposal(&h, &owner, &base, input).await;
     }
     crate::graph::build(&h, &owner, &base, "knowledge", None).await;
     let mut graph_query = query("LEXICAL_ONLY", &["exact", "lexical", "semantic", "graph"]);
@@ -353,7 +364,7 @@ async fn semantic_handover_publication_checks_contributor_deadline_without_inher
     );
     body["content"]["kind"] = json!("handover");
     body["content"]["handover"] = json!({"completed":["Recorded the declaration."],"next_steps":["Inspect supporting evidence."],"risks":["No deployment observation."],"contributions":[contribution["id"]]});
-    let summary = ok(&h, "POST", &format!("{base}/claims"), &owner, body).await;
+    let summary = reviewed_proposal(&h, &owner, &base, body).await;
     discover(&h, cx).await;
     let retention = ok(&h, "GET", &format!("{base}/retention"), &owner, Value::Null).await;
     let mut policy = retention["policy"].clone();
@@ -1189,6 +1200,23 @@ async fn semantic_correction_raw_copy_reindex_and_historical_strict_recall_share
         json!([{"kind":"source_version","id":current["version"]["id"],"line_from":1,"line_to":1}]);
     let corrected=ok(&h,"POST",&format!("{base}/claims/{}/review",original["claim_id"].as_str().unwrap()),&owner,
         json!({"base_revision":original["id"],"action":"correct","reason":"The new source corrects the declared port.","content":content})).await["claims"][0]["revision"].clone();
+    let inspection = ok(
+        &h,
+        "GET",
+        &format!("{base}/claims/{}", original["claim_id"].as_str().unwrap()),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert!(
+        inspection["history"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|revision| revision["id"] == original["id"]
+                && revision["content"]["value"] == "8080"),
+        "The prior assertion remains inspectable through canonical history"
+    );
     let copied = source(&h, &owner, &base, "Amber.port = 8080\n").await;
     discover(&h, cx).await;
     while worker::run_once(&h.state, "model").await.unwrap() {}
@@ -1250,24 +1278,10 @@ async fn semantic_correction_raw_copy_reindex_and_historical_strict_recall_share
             let items = historical["context"]["items"].as_array().unwrap();
             assert!(items.iter().any(|i| i["id"] == control["claim_id"]));
             let old = items.iter().find(|i| i["revision_id"] == original["id"]);
-            if mode == "history" && !rebuild {
-                let old = old.expect(
-                    "Retained historical vector remains inspectable with current qualifications",
-                );
-                assert!(!old["claim"]["rule_ids"].as_array().unwrap().is_empty());
-                assert!(
-                    old["qualifications"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .any(|q| q.as_str().is_some_and(|q| q.contains("rule")))
-                );
-            } else {
-                assert!(
-                    old.is_none(),
-                    "Current correction rules govern retained historical vectors"
-                );
-            }
+            assert!(
+                old.is_none(),
+                "Model-facing recall applies current support/correction even to retained historical vectors"
+            );
         }
     }
     strict["semantic_request_id"] = json!(Uuid::new_v4());

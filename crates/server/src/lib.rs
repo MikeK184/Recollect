@@ -20,6 +20,7 @@ mod handover_support;
 pub mod handovers;
 pub mod health;
 pub mod jobs;
+pub mod knowledge_mapping;
 pub mod learning;
 pub mod manifests;
 pub mod mcp;

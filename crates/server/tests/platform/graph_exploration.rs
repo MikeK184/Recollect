@@ -256,7 +256,50 @@ async fn graph_exploration_display_limits_refuse_complete_overflow_and_allow_sma
     build(&h, &owner, &base, "repository", Some(&snapshot)).await;
     let scope = json!({"kind":"repository","snapshot_id":snapshot,"selection":{"repository_ids":[repo]},"relations":["calls"]});
     let endpoint = format!("{base}/graph/explore");
+    let window = ok(
+        &h,
+        "POST",
+        &endpoint,
+        &owner,
+        json!({"scope":scope,"center":null,"direction":"outgoing","max_hops":1,"windowed":true}),
+    )
+    .await;
+    assert_eq!(window["nodes"].as_array().unwrap().len(), 250);
+    assert!(
+        window["view"]["coverage"]["reasons"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("graph_window"))
+    );
     let root = combined::entity(&records, "node_0");
+    let first = root.as_str();
+    let neighborhood = ok(
+        &h,
+        "POST",
+        &endpoint,
+        &owner,
+        json!({"scope":scope,"center":first,"direction":"both","max_hops":1,"windowed":true}),
+    )
+    .await;
+    assert_eq!(neighborhood["nodes"].as_array().unwrap().len(), 250);
+    assert_eq!(neighborhood["edges"].as_array().unwrap().len(), 249);
+    assert!(
+        neighborhood["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|n| n["key"] == first)
+    );
+    let page = ok(
+        &h,
+        "POST",
+        &format!("{base}/graph/view"),
+        &owner,
+        json!({"scope":scope,"offset":100,"windowed":true}),
+    )
+    .await;
+    assert_eq!(page["nodes"].as_array().unwrap().len(), 100);
+    assert_eq!(page["next_offset"], 200);
     for center in [None, Some(root.as_str())] {
         let refused = h
             .call(

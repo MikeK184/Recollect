@@ -383,7 +383,16 @@ fn body(
                     "Embedding format requires embedding purpose.",
                 ));
             }
-            json!({"model":p.embedding_model,"input":texts.iter().map(|t|&t.data).collect::<Vec<_>>(),"encoding_format":"float","dimensions":p.embedding_dimensions})
+            let input: Vec<String> = texts.iter().map(|t| {
+                if p.provider == "openrouter" && p.embedding_model == "qwen/qwen3-embedding-8b" && inv.query.is_some() {
+                    format!("Instruct: Given an engineering question, retrieve relevant passages that answer the question\nQuery:{}", t.data)
+                } else { t.data.clone() }
+            }).collect();
+            let mut value = json!({"model":p.embedding_model,"input":input,"encoding_format":"float","dimensions":p.embedding_dimensions});
+            if p.provider == "openrouter" {
+                value["provider"] = json!({"allow_fallbacks":false});
+            }
+            value
         }
         format => {
             if !matches!(
@@ -392,13 +401,53 @@ fn body(
             ) {
                 return Err(Error::invalid("Unsupported text purpose."));
             }
-            let mut result = json!({"model":p.text_model,"store":false,"max_output_tokens":p.max_output_tokens,
-                "instructions":inv.instructions,"input":texts.iter().enumerate().map(|(i,text)|json!({"input":i,"data":text.data,"provenance":text.provenance})).collect::<Vec<_>>().iter().map(Value::to_string).collect::<Vec<_>>().join("\n")});
+            let input = texts
+                .iter()
+                .enumerate()
+                .map(|(i, text)| {
+                    json!({"input":i,"data":text.data,"provenance":text.provenance}).to_string()
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            let mut result = if p.provider == "openrouter" {
+                json!({"model":p.text_model,"max_tokens":p.max_output_tokens,
+                    "messages":[{"role":"system","content":inv.instructions},{"role":"user","content":input}],
+                    "provider":{"require_parameters":true,"allow_fallbacks":false}})
+            } else {
+                json!({"model":p.text_model,"store":false,"max_output_tokens":p.max_output_tokens,
+                    "instructions":inv.instructions,"input":input})
+            };
+            if p.provider == "openrouter" && p.text_model == "z-ai/glm-5.3-flash" {
+                result["reasoning"] = json!({"effort":"low"});
+            }
+            if p.provider == "openrouter" && p.text_model == "z-ai/glm-4.7-flash" {
+                result["reasoning"] = json!({"enabled":false});
+            }
+            if p.provider == "openrouter"
+                && matches!(
+                    p.text_model.as_str(),
+                    "z-ai/glm-5.3-flash" | "z-ai/glm-4.7-flash"
+                )
+            {
+                result["provider"]["sort"] = json!("throughput");
+                result["provider"]["max_price"] = json!({"prompt":0.15,"completion":0.5});
+                if p.text_model == "z-ai/glm-5.3-flash" {
+                    result["provider"].as_object_mut().unwrap().remove("sort");
+                    result["provider"]["only"] = json!(["deepinfra/fp4"]);
+                }
+            }
+            if p.provider == "openrouter" && p.text_model == "openai/gpt-6-luna" {
+                result["reasoning"] = json!({"effort":"none"});
+            }
             if p.text_model == "gpt-5.6-luna" {
                 result["reasoning"] = json!({"effort":"none"});
             }
             if let Format::Json { name, schema } = format {
-                result["text"] = json!({"format":{"type":"json_schema","name":name,"strict":true,"schema":schema}});
+                if p.provider == "openrouter" {
+                    result["response_format"] = json!({"type":"json_schema","json_schema":{"name":name,"strict":true,"schema":schema}});
+                } else {
+                    result["text"] = json!({"format":{"type":"json_schema","name":name,"strict":true,"schema":schema}});
+                }
             }
             result
         }
@@ -415,6 +464,7 @@ struct ProviderResult {
     output_tokens: Option<i64>,
     total: Option<i64>,
     dimensions: Option<i32>,
+    cost_usd: Option<f64>,
 }
 impl ProviderResult {
     fn error(code: &'static str, uncertain: bool) -> Self {
@@ -427,6 +477,7 @@ impl ProviderResult {
             output_tokens: None,
             total: None,
             dimensions: None,
+            cost_usd: None,
         }
     }
 }
@@ -439,6 +490,8 @@ async fn provider(
 ) -> ProviderResult {
     let suffix = if matches!(inv.format, Format::Embedding) {
         "embeddings"
+    } else if p.provider == "openrouter" {
+        "chat/completions"
     } else {
         "responses"
     };
@@ -449,12 +502,17 @@ async fn provider(
     };
     let url = format!(
         "{}/{suffix}",
-        state.config.models.endpoint.trim_end_matches('/')
+        state
+            .config
+            .models
+            .endpoint_for(&p.provider)
+            .unwrap_or("")
+            .trim_end_matches('/')
     );
     let request = state
         .http
         .post(url)
-        .bearer_auth(state.config.models.key.as_deref().unwrap_or(""))
+        .bearer_auth(state.config.models.key_for(&p.provider).unwrap_or(""))
         .timeout(Duration::from_secs(45))
         .json(&request);
     let mut response = match request.send().await {
@@ -470,34 +528,37 @@ async fn provider(
             );
         }
     };
-    if !response.status().is_success() {
-        return ProviderResult::error(
-            match response.status().as_u16() {
-                429 => "provider_rate_limited",
-                502..=504 => "provider_unavailable",
-                _ => "provider_http",
-            },
-            false,
-        );
-    }
+    let http_error = (!response.status().is_success()).then(|| match response.status().as_u16() {
+        429 => "provider_rate_limited",
+        502..=504 => "provider_unavailable",
+        _ => "provider_http",
+    });
+    // A known HTTP error can still carry billable usage. Parse it under the
+    // same body limits without accepting output or exposing the provider body.
+    let failure = |code, uncertain| {
+        ProviderResult::error(
+            http_error.unwrap_or(code),
+            http_error.is_none() && uncertain,
+        )
+    };
     if response
         .content_length()
         .is_some_and(|n| n > max_body as u64)
     {
-        return ProviderResult::error("provider_body_limit", true);
+        return failure("provider_body_limit", true);
     }
     let mut bytes = Vec::new();
     loop {
         match response.chunk().await {
             Ok(Some(chunk)) => {
                 if bytes.len() + chunk.len() > max_body {
-                    return ProviderResult::error("provider_body_limit", true);
+                    return failure("provider_body_limit", true);
                 }
                 bytes.extend_from_slice(&chunk);
             }
             Ok(None) => break,
             Err(e) => {
-                return ProviderResult::error(
+                return failure(
                     if e.is_timeout() {
                         "provider_timeout"
                     } else {
@@ -510,24 +571,30 @@ async fn provider(
     }
     let value: Value = match crate::strict_json::from_slice(&bytes) {
         Ok(v) => v,
-        Err(_) => return ProviderResult::error("provider_shape", false),
+        Err(_) => return failure("provider_shape", false),
     };
-    let mut result = ProviderResult::error("provider_shape", false);
+    let mut result = failure("provider_shape", false);
     let usage = &value["usage"];
     result.input = usage["input_tokens"]
         .as_i64()
         .or_else(|| usage["prompt_tokens"].as_i64())
         .filter(|v| *v >= 0);
-    result.output_tokens =
-        usage["output_tokens"]
-            .as_i64()
-            .filter(|v| *v >= 0)
-            .or(if suffix == "embeddings" {
-                Some(0)
-            } else {
-                None
-            });
+    result.output_tokens = usage["output_tokens"]
+        .as_i64()
+        .or_else(|| usage["completion_tokens"].as_i64())
+        .filter(|v| *v >= 0)
+        .or(if suffix == "embeddings" {
+            Some(0)
+        } else {
+            None
+        });
     result.total = usage["total_tokens"].as_i64().filter(|v| *v >= 0);
+    result.cost_usd = usage["cost"]
+        .as_f64()
+        .filter(|v| v.is_finite() && *v >= 0.0 && *v < 1_000_000.0);
+    if http_error.is_some() {
+        return result;
+    }
     let expected = if suffix == "embeddings" {
         &p.embedding_model
     } else {
@@ -535,8 +602,12 @@ async fn provider(
     };
     let Some(returned) = value["model"].as_str().filter(|v| {
         policy::identifier(v, 120)
-            && (*v == expected
-                || (suffix != "embeddings" && v.starts_with(&format!("{expected}-"))))
+            && policy::catalogue::returned_model_matches(
+                &p.provider,
+                expected,
+                v,
+                suffix == "embeddings",
+            )
     }) else {
         return result;
     };
@@ -580,6 +651,35 @@ async fn provider(
         };
         result.dimensions = Some(p.embedding_dimensions);
         result.output = Some(Output::Embeddings(vectors));
+    } else if p.provider == "openrouter" {
+        let Some(choices) = value["choices"].as_array().filter(|v| v.len() == 1) else {
+            return result;
+        };
+        let choice = &choices[0];
+        if choice["finish_reason"] != "stop" {
+            result.code = Some("provider_incomplete");
+            return result;
+        }
+        if choice["message"]["refusal"].as_str().is_some() {
+            result.code = Some("provider_refusal");
+            return result;
+        }
+        let Some(text) = choice["message"]["content"]
+            .as_str()
+            .filter(|t| !t.is_empty())
+        else {
+            return result;
+        };
+        if publication::safe_payload(state, &json!(text)).is_err() {
+            return result;
+        }
+        result.output = Some(match inv.format {
+            Format::Json { .. } => match crate::strict_json::from_str(text) {
+                Ok(v) => Output::Json(v),
+                Err(_) => return result,
+            },
+            _ => Output::Text(text.into()),
+        });
     } else {
         if value["status"] != "completed" {
             result.code = Some("provider_incomplete");
@@ -778,8 +878,8 @@ async fn invoke_inner(
     } else {
         &version.policy.text_model
     };
-    sqlx::query("INSERT INTO model_requests(id,brain_id,actor_id,device_id,operation_id,policy_id,purpose,model,prompt_label,schema_label,state,call_token,reserved_tokens,charged_tokens) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'running',$11,$12,$12)")
-        .bind(id).bind(context.brain).bind(context.actor).bind(context.device).bind(inv.operation).bind(version.change_id).bind(&inv.purpose).bind(model).bind(&inv.prompt_label).bind(&inv.schema_label).bind(token).bind(reservation).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO model_requests(id,brain_id,actor_id,device_id,operation_id,policy_id,purpose,model,prompt_label,schema_label,state,call_token,reserved_tokens,charged_tokens,provider) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'running',$11,$12,$12,$13)")
+        .bind(id).bind(context.brain).bind(context.actor).bind(context.device).bind(inv.operation).bind(version.change_id).bind(&inv.purpose).bind(model).bind(&inv.prompt_label).bind(&inv.schema_label).bind(token).bind(reservation).bind(&version.policy.provider).execute(&mut *tx).await?;
     for input in &dependencies {
         sqlx::query("INSERT INTO model_request_inputs(request_id,brain_id,kind,input_id) VALUES($1,$2,$3,$4)")
             .bind(id).bind(context.brain).bind(&input.kind).bind(input.id).execute(&mut *tx).await?;
@@ -797,7 +897,7 @@ async fn invoke_inner(
         "succeeded"
     };
     let finished: bool =
-        sqlx::query_scalar("SELECT recollect_finish_model_request($1,$2,$3,$4,$5,$6,$7,$8,$9)")
+        sqlx::query_scalar("SELECT recollect_finish_model_request($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)")
             .bind(id)
             .bind(token)
             .bind(outcome)
@@ -807,6 +907,7 @@ async fn invoke_inner(
             .bind(result.output_tokens)
             .bind(result.total)
             .bind(result.dimensions)
+            .bind(result.cost_usd)
             .fetch_one(&state.pool)
             .await?;
     if !finished {

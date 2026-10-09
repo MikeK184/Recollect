@@ -38,10 +38,10 @@ pub(super) async fn create_profile(
     let id = Uuid::new_v4();
     let Json(profile) = sqlx::query_scalar(
         "INSERT INTO semantic_profiles(id,brain_id,provider,model,dimensions,representation,created_by,policy_id)
-         VALUES($1,$2,'openai',$3,$4,$5,$6,$7) RETURNING to_jsonb(semantic_profiles)",
+         VALUES($1,$2,$8,$3,$4,$5,$6,$7) RETURNING to_jsonb(semantic_profiles)",
     )
     .bind(id).bind(brain).bind(&policy.policy.embedding_model).bind(policy.policy.embedding_dimensions)
-    .bind(REPRESENTATION).bind(actor).bind(policy.change_id).fetch_one(&mut **tx).await?;
+    .bind(REPRESENTATION).bind(actor).bind(policy.change_id).bind(&policy.policy.provider).fetch_one(&mut **tx).await?;
     sqlx::query("INSERT INTO semantic_heads(brain_id,profile_id) VALUES($1,$2) ON CONFLICT(brain_id) DO UPDATE SET profile_id=excluded.profile_id")
         .bind(brain).bind(id).execute(&mut **tx).await?;
     db::audit(tx, actor, brain, "semantic.reindex", id, "queued").await?;
@@ -116,8 +116,13 @@ pub async fn get(
         coverage.push("semantic_representation_truncated".into());
     }
     let candidate_sql = include_str!("../semantic_candidates.sql");
-    let missing: bool = sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM ({candidate_sql}) c WHERE NOT EXISTS(SELECT 1 FROM semantic_entries e WHERE e.brain_id=$1 AND e.profile_id=$3 AND e.kind=c.kind AND e.input_id=c.input_id))"))
-        .bind(brain).bind(&p.policy.content_classes).bind(profile_id).fetch_one(&mut *tx).await?;
+    let missing: bool =
+        sqlx::query_scalar(&format!("SELECT EXISTS(SELECT 1 FROM ({candidate_sql}) c)"))
+            .bind(brain)
+            .bind(&p.policy.content_classes)
+            .bind(profile_id)
+            .fetch_one(&mut *tx)
+            .await?;
     if missing {
         coverage.push("semantic_discovery_pending".into());
     }
@@ -309,7 +314,6 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
     .await?;
     let candidates = include_str!("../semantic_candidates.sql");
     let inputs: Vec<Candidate> = sqlx::query_as(&format!("SELECT kind,input_id,source_version_id,claim_revision_id,fact_id,manifest_revision_id FROM ({candidates}) c
-        WHERE NOT EXISTS(SELECT 1 FROM semantic_entries e WHERE e.brain_id=$1 AND e.profile_id=$3 AND e.kind=c.kind AND e.input_id=c.input_id)
         ORDER BY c.created_at,c.kind,c.input_id LIMIT $4"))
         .bind(brain).bind(&p.policy.content_classes).bind(profile.id).bind((ENTRY_LIMIT-count).clamp(0,100)).fetch_all(&mut *tx).await?;
     for input in &inputs {

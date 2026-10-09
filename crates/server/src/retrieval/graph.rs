@@ -10,6 +10,71 @@ pub(crate) struct Qualified {
     pub deadline: Option<DateTime<Utc>>,
 }
 
+// Narrow graph representations before support checks and source-chunk fan-out.
+// Latest-at-time CTEs retain entire histories for the selected logical IDs:
+// an old descriptor must never make an older revision the latest eligible one.
+// MATERIALIZED prevents expensive canonical gates being evaluated outside the
+// requested entity window. These comments are no-ops for ordinary recall SQL.
+fn candidate_sql() -> String {
+    const REQUESTED: &str = r#"
+graph_requested_claims AS MATERIALIZED (
+  SELECT r.claim_id FROM unnest($11::text[]) key CROSS JOIN LATERAL (
+    SELECT claim_id FROM claim_revisions WHERE brain_id=$1
+      AND id=CASE WHEN starts_with(key,'claim:') THEN split_part(key,':',2)::uuid END LIMIT 1
+  ) r WHERE starts_with(key,'claim:')
+), graph_requested_sources AS MATERIALIZED (
+  SELECT v.source_id FROM unnest($11::text[]) key CROSS JOIN LATERAL (
+    SELECT source_id FROM source_versions WHERE brain_id=$1
+      AND id=CASE WHEN starts_with(key,'source_version:') THEN split_part(key,':',2)::uuid END LIMIT 1
+  ) v WHERE starts_with(key,'source_version:')
+),
+"#;
+    const WINDOWS: &str = r#"
+graph_claims AS MATERIALIZED (
+  SELECT r.* FROM known_claims r WHERE r.id IN (
+    SELECT split_part(key,':',2)::uuid FROM unnest($11::text[]) key WHERE starts_with(key,'claim:'))
+), graph_sources AS MATERIALIZED (
+  SELECT v.* FROM source_knowledge v WHERE v.id IN (
+    SELECT split_part(key,':',2)::uuid FROM unnest($11::text[]) key WHERE starts_with(key,'source_version:'))
+), graph_facts AS MATERIALIZED (
+  SELECT f.* FROM repository_facts f WHERE f.brain_id=$1 AND f.id IN (
+    SELECT split_part(key,':',2)::uuid FROM unnest($11::text[]) key WHERE starts_with(key,'repository_fact:'))
+), graph_manifests AS MATERIALIZED (
+  SELECT r.* FROM manifest_revisions r WHERE r.brain_id=$1 AND r.id IN (
+    SELECT split_part(key,':',2)::uuid FROM unnest($11::text[]) key WHERE starts_with(key,'manifest_revision:'))
+),
+"#;
+    // This CTE must precede selected_claims (which consumes graph_claims).
+    include_str!("../retrieval_candidates.sql")
+        .replace("/* graph_requested_ctes */", REQUESTED)
+        // Narrow logical identities, retaining their ENTIRE version histories.
+        // Filtering the exact revision before latest selection would resurrect
+        // stale evidence. Capture associations keep the same source boundary.
+        .replace(
+            "/* graph_window:capture_sources */",
+            "AND e.source_id IN (SELECT source_id FROM graph_requested_sources)",
+        )
+        .replace(
+            "/* graph_window:source_knowledge */",
+            "AND v.source_id IN (SELECT source_id FROM graph_requested_sources)",
+        )
+        .replace(
+            "/* graph_window:claim_histories */",
+            "AND claim_id IN (SELECT claim_id FROM graph_requested_claims)",
+        )
+        .replace("/* graph_window_ctes */", WINDOWS)
+        .replace("/* graph_window:claims */ known_claims", "graph_claims")
+        .replace(
+            "/* graph_window:sources */ source_knowledge",
+            "graph_sources",
+        )
+        .replace("/* graph_window:facts */ repository_facts", "graph_facts")
+        .replace(
+            "/* graph_window:manifests */ manifest_revisions",
+            "graph_manifests",
+        )
+}
+
 pub(crate) async fn qualify(
     state: &AppState,
     tx: &mut Tx<'_>,
@@ -76,7 +141,7 @@ pub(crate) async fn qualify(
     let keys: Vec<_> = entities.iter().map(Entity::key).collect();
     let sql = format!(
         "{} SELECT kind,id,revision_id,chunk_id,label,text,recorded_at,selection,source_id,repository_id,snapshot_id,revision,path,line_from,line_to,byte_from,byte_to,artifact_id,byte_length,processing,data,expires_at,exact_match,lexical_match,rank FROM matched WHERE status_eligible AND kind||':'||revision_id::text=ANY($11) ORDER BY kind,id,chunk_id NULLS FIRST LIMIT $12",
-        include_str!("../retrieval_candidates.sql")
+        candidate_sql()
     );
     let rows: Vec<Candidate> = sqlx::query_as(&sql)
         .bind(brain)
@@ -90,10 +155,17 @@ pub(crate) async fn qualify(
         .bind(Option::<Uuid>::None)
         .bind(Vec::<String>::new())
         .bind(keys)
-        .bind((node_limit + 1) as i64)
+        .bind(32_001_i64)
         .fetch_all(&mut **tx)
         .await?;
-    if rows.len() > node_limit {
+    if rows.len() > 32_000
+        || rows
+            .iter()
+            .map(|r| (r.kind.as_str(), r.revision_id))
+            .collect::<BTreeSet<_>>()
+            .len()
+            > node_limit
+    {
         return Err(graph::selection_limit(node_limit));
     }
     let context = ReadContext {

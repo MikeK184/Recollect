@@ -23,6 +23,186 @@ async fn enable(h: &Harness, owner: &Login, base: &str) {
 
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL"]
+async fn semantic_discovery_cohorts_preserve_current_eligibility_and_all_state_identity() {
+    let (h, owner, base, provider, server) = setup().await;
+    let cx = context(&h, &base).await;
+    let mut claims = Vec::new();
+    let mut versions = Vec::new();
+    for index in 0..8 {
+        let evidence = source(&h, &owner, &base, "The service uses port 8080.\n").await;
+        while worker::run_once(&h.state, "capture").await.unwrap() {}
+        versions.push(
+            evidence["version"]["id"]
+                .as_str()
+                .unwrap()
+                .parse::<Uuid>()
+                .unwrap(),
+        );
+        let claim = ok(
+            &h,
+            "POST",
+            &format!("{base}/claims"),
+            &owner,
+            review::proposal(
+                &evidence["version"]["id"],
+                &format!("Discovery service {index}"),
+                "8080",
+            ),
+        )
+        .await;
+        let accepted = ok(&h, "POST", &format!("{base}/claims/{}/review",claim["claim_id"].as_str().unwrap()),
+            &owner,json!({"base_revision":claim["id"],"action":"accept","reason":"Checked synthetic source."})).await;
+        claims.push(accepted["claims"][0]["revision"].clone());
+    }
+    while worker::run_once(&h.state, "capture").await.unwrap() {}
+    let mut unchecked = Vec::new();
+    for index in 0..101 {
+        let claim = ok(
+            &h,
+            "POST",
+            &format!("{base}/claims"),
+            &owner,
+            review::proposal(
+                &json!(versions[7]),
+                &format!("Unchecked prefix {index}"),
+                "8080",
+            ),
+        )
+        .await;
+        unchecked.push(claim["id"].as_str().unwrap().parse::<Uuid>().unwrap());
+    }
+    // Give the unavailable cohort an earlier discovery order. Taking the first
+    // 100 identities before support qualification would hide the valid claim.
+    sqlx::query("UPDATE claim_revisions SET recorded_at=clock_timestamp()-interval '1 minute',
+        revision=jsonb_set(revision,'{recorded_at}',to_jsonb(clock_timestamp()-interval '1 minute')) WHERE id=ANY($1)")
+        .bind(&unchecked).execute(&h.admin).await.unwrap();
+    enable(&h, &owner, &base).await;
+    let profile = ok(
+        &h,
+        "POST",
+        &format!("{base}/semantic/reindex"),
+        &owner,
+        json!({"base_profile":null}),
+    )
+    .await;
+    let profile_id: Uuid = profile["id"].as_str().unwrap().parse().unwrap();
+    for (index, state) in [
+        "pending", "queued", "running", "ready", "blocked", "failed", "removed",
+    ]
+    .iter()
+    .enumerate()
+    {
+        sqlx::query("INSERT INTO semantic_entries(id,brain_id,profile_id,kind,input_id,chunk_id,source_version_id,state,embedding)
+            SELECT $1,$2,$3,'source_chunk',c.id,c.id,c.version_id,$5,
+              CASE WHEN $5='ready' THEN array_fill(1::real,ARRAY[3072])::vector ELSE NULL END
+            FROM source_chunks c WHERE c.brain_id=$2 AND c.version_id=$4")
+            .bind(Uuid::new_v4()).bind(cx.brain).bind(profile_id).bind(versions[index]).bind(state)
+            .execute(&h.admin).await.unwrap();
+        let revision: Uuid = claims[index]["id"].as_str().unwrap().parse().unwrap();
+        sqlx::query("INSERT INTO semantic_entries(id,brain_id,profile_id,kind,input_id,claim_revision_id,state,embedding)
+            VALUES($1,$2,$3,'claim_revision',$4,$4,$5,
+              CASE WHEN $5='ready' THEN array_fill(1::real,ARRAY[3072])::vector ELSE NULL END)")
+            .bind(Uuid::new_v4()).bind(cx.brain).bind(profile_id).bind(revision).bind(state)
+            .execute(&h.admin).await.unwrap();
+    }
+    // The old query is retained as a counterfactual, rather than recreating the
+    // new cohort logic in assertions. Both run through the actual app role/RLS.
+    let old_sql = include_str!("../fixtures/semantic_candidates_before_discovery.sql");
+    let new_sql = include_str!("../../src/semantic_candidates.sql");
+    let old_query = format!(
+        "SELECT kind,input_id FROM ({old_sql}) c WHERE NOT EXISTS(
+        SELECT 1 FROM semantic_entries e WHERE e.brain_id=$1 AND e.profile_id=$3::uuid
+          AND e.kind=c.kind AND e.input_id=c.input_id) ORDER BY created_at,kind,input_id LIMIT 100"
+    );
+    let new_query = format!(
+        "SELECT kind,input_id FROM ({new_sql}) c ORDER BY created_at,kind,input_id LIMIT 100"
+    );
+    let classes = vec!["document", "claim", "repository"];
+    let mut tx = db::actor_tx(&h.state.pool, cx.actor).await.ok().unwrap();
+    for (selected_profile, expected) in [
+        (None, 16),
+        (Some(profile_id), 2),
+        (Some(Uuid::new_v4()), 16),
+    ] {
+        let old: Vec<(String, Uuid)> = sqlx::query_as(&old_query)
+            .bind(cx.brain)
+            .bind(&classes)
+            .bind(selected_profile)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap();
+        let new: Vec<(String, Uuid)> = sqlx::query_as(&new_query)
+            .bind(cx.brain)
+            .bind(&classes)
+            .bind(selected_profile)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap();
+        assert_eq!(
+            new, old,
+            "The exact eligible canonical identities must match"
+        );
+        assert_eq!(new.len(), expected);
+        assert!(
+            !new.iter().any(|(_, revision)| unchecked.contains(revision)),
+            "Browser submission alone cannot qualify a claim for embedding"
+        );
+    }
+    tx.rollback().await.unwrap();
+    // A new current revision is a new identity; the old represented revision
+    // must not suppress it, while rejection still excludes a missing input.
+    ok(&h, "POST", &format!("{base}/claims/{}/review",claims[0]["claim_id"].as_str().unwrap()),
+        &owner, json!({"base_revision":claims[0]["id"],"action":"revalidate","reason":"New current identity.","revalidation_basis":"review_correction","content":claims[0]["content"]})).await;
+    ok(&h, "POST", &format!("{base}/claims/{}/review",claims[7]["claim_id"].as_str().unwrap()),
+        &owner, json!({"base_revision":claims[7]["id"],"action":"reject","reason":"Negative eligibility control."})).await;
+    let mut tx = db::actor_tx(&h.state.pool, cx.actor).await.ok().unwrap();
+    let old: Vec<(String, Uuid)> = sqlx::query_as(&old_query)
+        .bind(cx.brain)
+        .bind(&classes)
+        .bind(profile_id)
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+    let new: Vec<(String, Uuid)> = sqlx::query_as(&new_query)
+        .bind(cx.brain)
+        .bind(&classes)
+        .bind(profile_id)
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+    assert_eq!(new, old);
+    assert_eq!(
+        new.len(),
+        2,
+        "One missing chunk and one newly accepted revision"
+    );
+    tx.rollback().await.unwrap();
+    let (foreign, _) = h.fixture_member().await;
+    let mut tx = db::actor_tx(&h.state.pool, foreign).await.ok().unwrap();
+    let hidden: Vec<(String, Uuid)> = sqlx::query_as(&new_query)
+        .bind(cx.brain)
+        .bind(&classes)
+        .bind(None::<Uuid>)
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap();
+    assert!(hidden.is_empty(), "Missing profile cannot bypass Brain RLS");
+    tx.rollback().await.unwrap();
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 0);
+    let requests: i64 = sqlx::query_scalar("SELECT count(*) FROM model_requests")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(
+        requests, 0,
+        "Cohort qualification does not need a model judge or call"
+    );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
 async fn semantic_automatic_batches_reindex_and_canonical_new_inputs() {
     let (h, owner, base, p, server) = setup().await;
     let cx = context(&h, &base).await;
@@ -859,6 +1039,56 @@ async fn semantic_budget_block_waits_for_reset_or_a_policy_change() {
             .as_i64()
             .unwrap()
             > 0
+    );
+    server.abort();
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; local HTTP embedding fixture only"]
+async fn semantic_windows_survive_lexical_alternatives_and_keep_span_scores() {
+    let (h, owner, base, p, server) = setup().await;
+    let cx = context(&h, &base).await;
+    enable(&h, &owner, &base).await;
+    p.mode.store(5, Ordering::SeqCst);
+    let text = (0..6)
+        .map(|i| format!("marker window {i}: {}\n", "q".repeat(3950)))
+        .collect::<String>();
+    let original = source(&h, &owner, &base, &text).await;
+    discover(&h, cx).await;
+    while worker::run_once(&h.state, "model").await.unwrap() {}
+    let mut input = query("marker", &["lexical", "semantic"]);
+    input["context_bytes"] = json!(16384);
+    input["limit"] = json!(3);
+    let recalled = ok(&h, "POST", &format!("{base}/recall"), &owner, input.clone()).await;
+    let items = recalled["context"]["items"].as_array().unwrap();
+    assert!(items.len() >= 2, "{recalled}");
+    assert!(recalled["context_bytes"].as_u64().unwrap() <= 16384);
+    let mut spans = Vec::new();
+    for item in items {
+        assert_eq!(item["id"], original["version"]["id"]);
+        assert!(
+            item["channels"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("semantic"))
+        );
+        assert!((item["semantic_similarity"].as_f64().unwrap() - 1.0).abs() < 1e-6);
+        let provenance = &item["provenance"][0];
+        let from = provenance["byte_from"].as_u64().unwrap() as usize;
+        let to = provenance["byte_to"].as_u64().unwrap() as usize;
+        assert_eq!(&text[from..to], item["text"].as_str().unwrap());
+        assert!(spans.iter().all(|(a, b)| to <= *a || from >= *b));
+        spans.push((from, to));
+    }
+    // A scored primary cannot silently become a different lexical span when
+    // its complete attribution exceeds the caller's tight budget.
+    input["semantic_request_id"] = json!(Uuid::new_v4());
+    input["context_bytes"] = json!(2048);
+    let tight = ok(&h, "POST", &format!("{base}/recall"), &owner, input).await;
+    assert!(
+        tight["context"]["items"].as_array().unwrap().is_empty(),
+        "{tight}"
     );
     server.abort();
     h.finish().await;

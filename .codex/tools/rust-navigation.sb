@@ -1,0 +1,9 @@
+;; Developer tools may read trusted local source/toolchains. They may write only
+;; inside the selected checkout and may not open network connections.
+(version 1)
+(allow default)
+(deny network*)
+(deny file-write*)
+(allow file-write*
+  (subpath (param "RECOLLECT_ROOT"))
+  (literal "/dev/null"))

@@ -47,6 +47,8 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub session_digest_generations: Vec<Uuid>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_mapping_inputs: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub capture_event_fences: Vec<CaptureFence>,
     pub publication_fences: Vec<PublicationFence>,
     pub independent_claim_revisions: i64,

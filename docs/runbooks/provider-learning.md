@@ -11,20 +11,53 @@ under **Advanced model controls**. See the [desktop guide](desktop-experience.md
 ## Prerequisites
 
 Start `./scripts/dev.sh` and sign in at `http://127.0.0.1:8787`. The installed
-OpenAI adapter reads `OPENAI_API_KEY` from the environment. This installation uses
-`gpt-5.6-luna` and `text-embedding-3-large` with 3,072 dimensions, configured by
+adapters read `OPENAI_API_KEY` and `OPENROUTER_API_KEY` from the environment.
+The initial OpenAI pair is `gpt-5.6-luna` and `text-embedding-3-large` with
+3,072 dimensions, configured by
 `RECOLLECT_TEXT_MODEL`, `RECOLLECT_EMBEDDING_MODEL` and
 `RECOLLECT_EMBEDDING_DIMENSIONS`. The ignored `.env` is preserved by setup.
 
-Key presence does not prove a successful call. Each Brain starts with transmission
-disabled; its policy independently grants model, purpose and content-class access.
+Key presence does not prove a successful call. Each Brain's policy independently
+grants model, purpose and content-class access.
 New policy forms select autonomous maintenance. Existing saved policies preserve
 their previous mode until an admin changes them. No fallback model/provider is
 selected automatically.
 
+## Select OpenRouter per Brain
+
+1. Set `OPENROUTER_API_KEY` in the installation's ignored `.env` and restart
+   the API and worker with the current build. The key stays on the server.
+2. As a Brain admin, open **Settings → AI permissions → Edit AI permissions**.
+   Under **Selected models**, choose **AI provider → OpenRouter**. This selects
+   GLM 5.3 Flash and Qwen3 Embedding 8B at 1,024 dimensions initially, and
+   refreshes the reviewed model list. Existing saved Brain policies stay unchanged
+   until saved; **Cancel** discards the draft.
+3. Choose **Save and rebuild**. Changing provider or embedding dimensions queues
+   a new semantic generation. Wait for its indexing state before comparing recall.
+4. Optionally choose **Check selected models**. This makes actual text and embedding
+   calls using fixed synthetic inputs and records their usage.
+
+GLM 4.7 Flash, Meta Muse Spark 1.3 Contributor and GPT-6 Luna through OpenRouter
+are also selectable. Luna disables reasoning. GLM 5.3
+uses low reasoning effort; GLM 4.7 disables optional reasoning. Muse's Contributor
+tier may use prompts and outputs to improve Meta products and can require account
+age confirmation. See the [measured quality and cost limits](../mappings/openrouter-benchmark-proof-2026-10-08.md)
+before choosing a model for automatic support assessments.
+GLM 5.3 calls are restricted to the reviewed DeepInfra endpoint after the
+measured throughput-route failures; GLM 4.7 still prefers throughput. Both keep
+USD 0.15 input/0.50 output per-million price ceilings, strict parameter support
+and disabled fallbacks. Recovery results remain separate from first-pass results.
+These ceilings preserve cheap routing; they do not guarantee availability. Known
+rate-limit failures remain visible and uncertain calls require reconciliation.
+
+Model prices are dated references. OpenRouter route prices can differ; request
+history shows the billed cost when returned, or explicitly marks it unavailable.
+The adapter uses normal synchronous requests; local serving and asynchronous
+Batch are separate work.
+
 ## Policy and connectivity
 
-1. Open **Settings → AI & automation → Edit model policy** as a browser Brain admin.
+1. Open **Settings → AI permissions → Edit AI permissions** as a browser Brain admin.
 2. Enable transmission and keep **Autonomous memory** selected for normal operation.
    Permit extraction, synthesis and claim content, plus the actual source classes
    to learn, such as document. Query permission supports handover titles. The fixed
@@ -222,3 +255,5 @@ import a separate sanitized excerpt if model learning is wanted. Historical
 
 Settings → AI permissions → Processing limits keeps its explanatory text
 behind the info icon next to the heading, accessible by pointer and keyboard.
+
+The first-batch Novita diagnostic failed and is not an accepted product route.

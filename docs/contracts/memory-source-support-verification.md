@@ -150,6 +150,40 @@ wait for a current revision that itself depends on that lineage. Final delivery
 still requires every exact and current dependency to pass. No cyclic exact
 contribution graph may supply usable knowledge.
 
+### Bounded audit discovery — 2026-10-09
+
+Prepare legacy audit candidates in an authenticated repeatable-read, read-only
+transaction outside Brain admission locks. Examine at most 16 missing immutable
+revision identities per pass, start no further qualification after four eligible
+candidates or two seconds, and limit each complete qualification statement to
+one second. An in-flight statement may finish within that final second. A timed-out
+candidate remains unresolved and is revisited on a later walk; it is never
+recorded as unsupported, assessed or permanently excluded. Full target closure,
+exact prerequisites, cycle, review, privacy and retention checks remain intact.
+
+Persist only a UUID keyset boundary and monotonic cursor version, scoped by
+Brain, exact policy generation and verifier version. Walk every missing revision,
+including historical contributors; wrap after the end. Unavailable early rows
+and process restarts cannot permanently hide later candidates. The boundary is
+scheduling metadata, carries no source text or verdict, has no authority to make
+memory supported, and participates in canonical Brain deletion.
+
+Publish through a fresh writer transaction: check enabled actor, current Brain
+writer role/archive state, unchanged standing policy ownership/enablement and
+exact cursor version. Requalify at most four prepared candidates against complete
+current canonical gates, using a 750 ms statement limit and starting no further
+qualification after a one-second pass budget. No stale prepared eligibility
+authorizes enqueue. A changed policy or cursor discards preparation; other
+canonical changes are handled by complete
+fresh qualification. Concurrent progress cannot be overwritten. Commit cursor
+progress and existing audit/retry admission independently from other maintenance
+so an unrelated later failure cannot repeatedly undo discovery progress.
+
+Discovery and timeout handling make no model calls. Keep the existing four-job
+admission bound, capacity, budget, recorded-attempt exclusions and bounded native/
+provider retry rules. Discovery limits bound examined identities, never truncate
+an identity's dependency closure or reinterpret a timeout as a negative verdict.
+
 Audit database/lease exhaustion may resume the same operation at most twice,
 after five/thirty minutes, only with no admitted request or a committed typed
 verdict. Preserve cumulative worker attempts and permit at most three native

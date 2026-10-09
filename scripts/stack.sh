@@ -2,7 +2,19 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+root_compose() {
+  ./scripts/docker.sh compose --project-directory "$PWD" --project-name recollect \
+    --env-file "$PWD/.env" -f "$PWD/compose.yaml" "$@"
+}
+
 case "${1:-status}" in
+  update)
+    if [[ $# -ne 1 ]]; then
+      printf 'Usage: %s update\n' "$0" >&2
+      exit 2
+    fi
+    python3 ./scripts/update-local.py
+    ;;
   up)
     if [[ $# -gt 2 || ( $# -eq 2 && "$2" != --build ) ]]; then
       printf 'Usage: %s up [--build]\n' "$0" >&2
@@ -29,26 +41,30 @@ import shutil
 if shutil.disk_usage('.').free < 12 * 1024**3:
     raise SystemExit('Building requires at least 12 GiB free; no caches or data were deleted.')
 PY
-      ./scripts/docker.sh compose build api
+      revision=$(git rev-parse HEAD)
+      if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then revision="${revision}-dirty"; fi
+      revision="${RECOLLECT_UPDATE_BUILD_REVISION:-$revision}"
+      root_compose build --build-arg "RECOLLECT_BUILD_REVISION=$revision" \
+        --build-arg "RECOLLECT_BUILD_TIME=${RECOLLECT_UPDATE_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" api
     fi
-    ./scripts/docker.sh compose stop --timeout 90 api worker
+    root_compose stop --timeout 90 api worker
     ./scripts/check-local-port.sh
-    ./scripts/docker.sh compose up -d --wait --wait-timeout 300 postgres neo4j
-    ./scripts/docker.sh compose up --no-deps --force-recreate --abort-on-container-exit --exit-code-from migrate migrate
-    ./scripts/docker.sh compose up -d --wait --wait-timeout 300 api worker
+    root_compose up -d --wait --wait-timeout 300 postgres neo4j
+    root_compose up --no-deps --force-recreate --abort-on-container-exit --exit-code-from migrate migrate
+    root_compose up -d --wait --wait-timeout 300 api worker
     printf 'Open http://127.0.0.1:8787. Login credentials are in .env.\n'
     ;;
   stop|down)
-    ./scripts/docker.sh compose "$1" --timeout 90
+    root_compose "$1" --timeout 90
     ;;
   status)
-    ./scripts/docker.sh compose ps --all
+    root_compose ps --all
     ;;
   logs)
-    ./scripts/docker.sh compose logs --follow --tail 100 api worker
+    root_compose logs --follow --tail 100 api worker
     ;;
   *)
-    printf 'Usage: %s {up [--build]|stop|down|status|logs}\n' "$0" >&2
+    printf 'Usage: %s {update|up [--build]|stop|down|status|logs}\n' "$0" >&2
     exit 2
     ;;
 esac

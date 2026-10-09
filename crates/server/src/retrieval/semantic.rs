@@ -243,7 +243,12 @@ pub(super) async fn ranked(
     for row in baseline.iter().take(CANDIDATES) {
         let key = (row.kind.clone(), row.id);
         coverage.examined += 1;
-        if let Some((item, deadline)) = item(state, tx, context, row, coverage).await? {
+        if let Some((mut item, deadline)) = item(state, tx, context, row, coverage).await? {
+            for (matched, channel) in [(row.exact_match, "exact"), (row.lexical_match, "lexical")] {
+                if matched && !item.channels.iter().any(|c| c == channel) {
+                    item.channels.push(channel.into());
+                }
+            }
             if row.lexical_match {
                 lexical_scores
                     .entry(key.clone())
@@ -320,10 +325,14 @@ pub(super) async fn ranked(
             }
             let row = scored.candidate;
             let key = (row.kind.clone(), row.id);
-            if identities
-                .get(&key)
-                .is_some_and(|r| r.semantic_rank.is_some())
-            {
+            if identities.get(&key).is_some_and(|r| {
+                r.semantic_rank.is_some()
+                    && r.alternatives
+                        .iter()
+                        .filter(|(i, _)| i.semantic_similarity.is_some())
+                        .count()
+                        >= 3
+            }) {
                 continue;
             }
             coverage.examined += 1;
@@ -334,6 +343,43 @@ pub(super) async fn ranked(
                 && item.provenance.iter().any(|p| p.availability != "retained")
             {
                 coverage.withheld += 1;
+                continue;
+            }
+            if let Some(ranked) = identities.get_mut(&key)
+                && ranked.semantic_rank.is_some()
+            {
+                if !same_span(&ranked.item, &item) {
+                    item.channels = vec!["semantic".into()];
+                    item.semantic_similarity = Some(similarity);
+                    item.qualifications
+                        .push("semantic_similarity_not_truth".into());
+                    if scored.truncated {
+                        item.qualifications
+                            .push("semantic_representation_truncated".into());
+                        note(coverage, "semantic_representation_truncated");
+                    }
+                    if let Some((other, until)) = ranked
+                        .alternatives
+                        .iter_mut()
+                        .find(|(other, _)| same_span(other, &item))
+                    {
+                        for channel in &other.channels {
+                            if !item.channels.contains(channel) {
+                                item.channels.push(channel.clone());
+                            }
+                        }
+                        *other = item;
+                        *until = [*until, deadline].into_iter().flatten().min();
+                    } else {
+                        ranked.alternatives.push((item, deadline));
+                    }
+                    // Semantic windows must not be crowded out by an earlier
+                    // lexical-only page. Retain their own scores and channels.
+                    ranked
+                        .alternatives
+                        .sort_by_key(|(i, _)| i.semantic_similarity.is_none());
+                    ranked.alternatives.truncate(4);
+                }
                 continue;
             }
             if semantic_rank == CANDIDATES {
@@ -373,8 +419,14 @@ pub(super) async fn ranked(
                             .push("lexical_match_in_another_fragment".into());
                     }
                     item.channels = ranked.item.channels.clone();
-                    ranked.item = item;
-                    ranked.alternatives.clear();
+                    if !same_span(&ranked.item, &item) {
+                        let previous = std::mem::replace(&mut ranked.item, item);
+                        ranked
+                            .alternatives
+                            .retain(|(other, _)| !same_span(other, &ranked.item));
+                        ranked.alternatives.insert(0, (previous, ranked.deadline));
+                        ranked.alternatives.truncate(4);
+                    }
                     ranked.deadline = [ranked.deadline, deadline].into_iter().flatten().min();
                     ranked
                 }
@@ -400,6 +452,15 @@ pub(super) async fn ranked(
     let mut ranked: Vec<Ranked> = identities.into_values().collect();
     sort(&mut ranked, context.input);
     Ok(ranked)
+}
+
+fn same_span(a: &RecallItem, b: &RecallItem) -> bool {
+    a.kind == b.kind
+        && a.revision_id == b.revision_id
+        && a.provenance
+            .iter()
+            .map(|p| (p.id, p.byte_from, p.byte_to))
+            .eq(b.provenance.iter().map(|p| (p.id, p.byte_from, p.byte_to)))
 }
 
 pub(super) fn merge_graph(

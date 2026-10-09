@@ -253,11 +253,11 @@ pub(super) async fn pack(
                 entry
                     .alternatives
                     .iter()
+                    .filter(|_| entry.semantic_rank.is_none())
                     .map(|(item, deadline)| (item, *deadline)),
             );
             for (position, (candidate, deadline)) in candidates.enumerate() {
                 let mut candidate = candidate.clone();
-                candidate.channels = entry.item.channels.clone();
                 if position > 0 {
                     candidate
                         .qualifications
@@ -304,6 +304,71 @@ pub(super) async fn pack(
     }
     packed.context.items.clear();
     packed.context.items = selected.into_values().collect();
+    // Reserve diversity and primary ranks first. Remaining capacity may retain
+    // another exact, nonoverlapping chunk from an already admitted source.
+    // Each chunk remains a separate citation and consumes the caller's limits.
+    for entry in ranked
+        .iter()
+        .filter(|entry| entry.item.kind == "source_version")
+    {
+        let key = (entry.item.kind.clone(), entry.item.id);
+        if !admitted.contains(&key) {
+            continue;
+        }
+        for (candidate, deadline) in std::iter::once((&entry.item, entry.deadline)).chain(
+            entry
+                .alternatives
+                .iter()
+                .map(|(item, deadline)| (item, *deadline)),
+        ) {
+            let same_source: Vec<_> = packed
+                .context
+                .items
+                .iter()
+                .filter(|item| item.kind == candidate.kind && item.id == candidate.id)
+                .collect();
+            if packed.context.items.len() >= input.limit || same_source.len() >= 3 {
+                break;
+            }
+            if same_source
+                .iter()
+                .any(|item| overlapping_windows(item, candidate))
+            {
+                continue;
+            }
+            let mut candidate = candidate.clone();
+            candidate
+                .qualifications
+                .push("additional_source_window".into());
+            packed.context.items.push(candidate);
+            if serde_json::to_vec(&packed.context)
+                .expect("typed recall context")
+                .len()
+                > input.context_bytes
+            {
+                packed.context.items.pop();
+                note(coverage, "context_budget");
+            } else {
+                let current = packed.deadlines.get(&key).copied().flatten();
+                packed
+                    .deadlines
+                    .insert(key.clone(), [current, deadline].into_iter().flatten().min());
+            }
+        }
+    }
     packed.groups = groups;
     Ok(packed)
+}
+
+fn overlapping_windows(a: &RecallItem, b: &RecallItem) -> bool {
+    let span = |item: &RecallItem| {
+        item.provenance
+            .iter()
+            .find(|p| p.kind == "source_version" && p.id == item.revision_id)
+            .and_then(|p| Some((p.byte_from?, p.byte_to?)))
+    };
+    match (span(a), span(b)) {
+        (Some((af, at)), Some((bf, bt))) => a.revision_id == b.revision_id && af < bt && bf < at,
+        _ => true,
+    }
 }

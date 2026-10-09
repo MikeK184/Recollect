@@ -79,6 +79,9 @@ impl Default for GraphSelection {
 pub struct GraphViewRequest {
     pub scope: GraphSelection,
     #[serde(default)]
+    #[schema(required = false)]
+    pub windowed: bool,
+    #[serde(default)]
     pub offset: usize,
 }
 
@@ -116,6 +119,9 @@ pub struct GraphView {
     pub total_nodes: usize,
     pub total_edges: usize,
     pub offset: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schema(required = false)]
+    pub next_offset: Option<usize>,
     pub relations: Vec<String>,
     pub coverage: RecallCoverage,
 }
@@ -151,6 +157,9 @@ pub struct GraphPath {
 #[serde(deny_unknown_fields)]
 pub struct GraphExploreRequest {
     pub scope: GraphSelection,
+    #[serde(default)]
+    #[schema(required = false)]
+    pub windowed: bool,
     pub center: Option<String>,
     pub direction: String,
     pub max_hops: usize,

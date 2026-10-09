@@ -129,7 +129,8 @@ def schema(saved):
 def snapshot(saved, destination):
     with Path(destination).open("xb") as output:
         command(saved, ["run", "--rm", "--no-deps", "-T", "--entrypoint", "tar", "migrate",
-                        "-cf", "-", "-C", "/var/lib/recollect", "."], destination=output)
+                        "-cf", "-", "-C", "/var/lib/recollect"] +
+                        (["artifacts", "credentials.json", "erasure-journal"] if saved.get("root") else ["."]), destination=output)
 
 
 def upload(saved, source, restore_id=None):
@@ -153,6 +154,8 @@ def restore_dump(saved, source, restore_id):
 
 
 def fresh(saved):
+    if saved.get("root"):
+        raise ValueError("Restore requires a fresh named target, never the existing root app")
     # Refuse an existing volume even if containers are stopped. An explicit
     # matching interrupted restore is handled separately by the recovery state.
     result = subprocess.run([str(install.ROOT / "scripts/docker.sh"), "volume", "ls", "--format", "{{.Name}}"],
@@ -169,7 +172,10 @@ def source_stopped(manifest, target=None):
     source = manifest.get("source_installation", {})
     name = source.get("name", "")
     project = source.get("project", "")
-    if not re.fullmatch(r"[a-z][a-z0-9-]{0,39}", name) or project != "recollect-install-" + name:
+    if source.get("root"):
+        import root_installation
+        root_installation.validate(source)
+    elif not re.fullmatch(r"[a-z][a-z0-9-]{0,39}", name) or project != "recollect-install-" + name:
         raise ValueError("Backup source installation identity is invalid")
     projects = {project}
     # A previous restore can be the current writer even while the original

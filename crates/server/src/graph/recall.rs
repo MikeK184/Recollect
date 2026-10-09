@@ -149,6 +149,7 @@ pub(crate) async fn expand(
             for (ordinal, anchor) in anchors.iter().enumerate() {
                 let input = GraphExploreRequest {
                     scope: selected.view.scope.clone(),
+                    windowed: false,
                     center: Some(anchor.clone()),
                     direction: admission.options.direction.clone(),
                     max_hops: admission.options.max_hops,

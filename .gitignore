@@ -6,6 +6,8 @@ __pycache__/
 /crates/*/.cache/
 /.codegraph/
 /.codex/tools/codegraph/node_modules/
+/.codex/tools/graft/node_modules/
+/.codex/tools/rust-analyzer/installed/
 .env
 .env.*
 !.env.example
@@ -21,3 +23,6 @@ __pycache__/
 /site/.vitepress/dist/
 /site/.vitepress/.temp/
 /output/public-site-2026-10-06/
+
+# graft's local repository settings — not committed.
+/.graft/

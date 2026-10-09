@@ -77,6 +77,7 @@ it does not place a selector in the customer workspace.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `evidence-typescript-admission` | shipped | contract-backed | small-fix: distinguish fenced TypeScript type annotations from literal credential assignments | Preserve unchanged history admission while retaining configured-secret, token, URL and literal-value exclusions |
 | `evidence-collections` | shipped | contract-backed | pack | Delivered immutable text/reference sources, durable artifacts, shared collection/area/environment views, provenance, processing and browser proof |
 | `evidence-workspace-scope` | shipped | contract-backed | pack | Delivered nearest/nested discovery, private checkout catalogue, shared repository identities and independent immutable task/subagent operation scope with CLI/browser proof |
 | `evidence-repository-publication` | shipped | adr-backed, contract-backed | pack | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real SWEG proof |
@@ -119,3 +120,10 @@ prior shipped domain records remain historical evidence rather than redesign pro
 ## Final desktop and tooling acceptance — 2026-10-01
 
 The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
+
+The October 8 TypeScript admission correction passes its credential-regression
+fixture and actual unchanged LongMemEval history import. Direct runtime proof
+checks all 2,402 retained conversation sources, including the previously rejected 49-session
+case, byte-for-byte against frozen inputs. See the
+[dated benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md).
+No credential value or source text was sanitized to obtain this result.

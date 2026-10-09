@@ -1,6 +1,6 @@
 # Memory Lifecycle, Learning and Review
 
-Status: complete
+Status: active
 
 [Managed experience](../../contracts/memory-managed-experience.md) governs the 2026-09-28 agent-first setup correction.
 
@@ -98,15 +98,27 @@ complete local acceptance. No running-installation deployment is claimed.
 | `memory-cross-session-reconciliation` | shipped | contract-backed | pack | Post-extraction exact-family replacement/reuse hypotheses with independent support and protected authority |
 | `memory-source-support-verification` | shipped | contract-backed | pack | Whole-assertion assessment, durable staged learning and shared usability guards with automatic audit and privacy/recovery proofs |
 | `memory-support-evaluation-baseline` | shipped | contract-backed | pack | Frozen synthetic corpus, native actual-model measurements, retained failures and independently reviewed receipt/scoring evidence |
+| `brain-openrouter-provider` | shipped | contract-backed | pack | Locally validated per-Brain OpenRouter catalogue, strict-output gateway, Qwen embeddings and live public proof; normal-stack deployment not performed |
+| `brain-openrouter-luna` | shipped | contract-backed | pack | Reviewed GPT-6 Luna option through OpenRouter after GLM timeout diagnostics; same gateway/replay fences, native support diagnostic; full answer campaign remains GLM/Qwen |
+| `brain-openrouter-glm-recovery` | shipped | contract-backed | small-fix: fixed cheap GLM endpoint after measured routing failures and explicit rerun authorization | Pin GLM 5.3 to reviewed DeepInfra endpoint; preserve strict schemas, price ceilings, no fallback and original timeout |
+| `brain-openrouter-glm-throughput` | shipped | contract-backed | small-fix: isolated fixed adapter routing under accepted selection contract | Fixed GLM throughput preference under USD 0.15/0.50 per-million price ceilings; HTTP fixture proves strict schemas/no fallback and existing timeouts; live failures remain benchmark evidence |
 | `brain-model-catalogue-and-selection` | shipped | contract-backed | pack | Account model catalogue, dated prices, per-Brain supported model selection and isolated embedding rebuilds |
 | `memory-claims-and-time` | shipped | adr-backed, contract-backed | pack | Delivered evidence-linked proposals/decisions, independent states, temporal history, selective freshness and canonical eligibility with API/browser/SWEG proof |
 | `memory-review-and-corrections` | shipped | contract-backed | pack | Delivered actionable review/conflicts, rejected-value rules, correction, withdrawal/revalidation and replay with API/browser proof |
 | `memory-retention-and-erasure` | shipped | contract-backed | pack | Delivered class deadlines, exact excerpts, dependency erasure, native cleanup and durable restore replay with API/browser/runtime proof |
 | `memory-provider-policy-and-learning` | shipped | contract-backed | pack | Delivered Luna/embedding-large gateway, policy/usage, canonical source learning and erasure with API/browser/real-model/runtime proof |
+
 | `memory-procedures-and-handovers` | shipped | adr-backed, contract-backed | pack | Delivered typed procedures, governed handovers and autonomous learning/revision/retirement/refresh with API/browser/real-Luna/runtime/erasure proof; human review is optional |
 | `memory-capture-reconciliation` | shipped | contract-backed | pack | Delivered attributed model inputs, bound session reconciliation, maintenance at capacity, recall-feedback exclusions and independent capture/knowledge time with database/native/browser/real-Luna proof |
 | `memory-desktop-workflows` | shipped | adr-backed, contract-backed | pack | Readable memory/handover inspectors and standing settings with literal assertion search and preserved autonomous authority |
 | `memory-managed-experience` | shipped | contract-backed | pack | Managed autonomous defaults, simple Ask/notes and actionable owner MCP setup |
+
+`brain-openrouter-glm-throughput` uses the small-fix exception: the accepted
+selection contract and renewed user GLM/Qwen instruction establish authority;
+this isolated adapter preference adds no storage, API/UI controls, fallback or
+new lifecycle state. Official OpenRouter and Context7 documentation verify
+throughput sorting and the per-million price ceiling; the existing HTTP fixture
+proves the exact fields and unchanged fences before the separately frozen run.
 
 ## Slice Dependencies
 
@@ -161,3 +173,11 @@ The owning desktop/tooling slices are shipped with [current deployed and host ev
 The supported account model catalogue, dated prices, per-Brain model selection and dimension-safe embedding generation/rebuild successor has completed isolated backend and current UI acceptance. Actual metadata availability was refreshed once; no paid model call or real Brain rebuild was performed for screenshots.
 
 [Coordinated delivery, validation and limits](../../mappings/desktop-browser-management-2026-10-05.md). Version N/A; work uncommitted, no push or external release.
+
+The October 8 fixed GLM recovery endpoint passes the native HTTP fixture;
+all 28 original failed LongMemEval cases now have successful answers after two
+explicit recovery waves. Original throughput results and paid failure receipts
+remain retained in the [dated benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md).
+The fixed route preserves strict schemas, no fallback, price ceilings and the
+45-second timeout. This is local implementation/proof; normal-stack deployment
+was not performed.

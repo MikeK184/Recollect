@@ -22,7 +22,9 @@ Status: accepted
   pending. Pending sources cannot be listed under Governing Sources.
 - Each shipped pack records all closeout fields and concrete validation
   evidence. Version/commit may explicitly be N/A or uncommitted.
-- Project Codex configuration contains Context7 and six agent registrations.
+- Project Codex configuration contains Context7, the Rust Analyzer/Graft
+  developer tools of [ADR 0019](../adr/0019-rust-semantic-developer-navigation.md),
+  and six agent registrations.
   Role files define names, descriptions, and instructions. Personal execution
   preferences remain inherited. Delegation requires explicit user request.
 - OpenCode v2 has equivalent repository-local configuration in `opencode.json`
@@ -32,7 +34,9 @@ Status: accepted
   Both hosts use the same root `AGENTS.md`, `.agents/skills/` and CodeGraph CLI.
   The configured development MCPs are Context7 on both hosts plus secret-free
   local stdio chrome-devtools on OpenCode only for browser control. Codex
-  remains Context7-only. Keep credentials and
+  also includes the repository-local Rust Analyzer and Graft stdio servers.
+  Their launchers enforce the [navigation contract](rust-semantic-developer-navigation.md).
+  Keep credentials and
   personal model, provider, permission and UI settings out of project files.
 - Repo-local `recollect-doc-router` and `recollect-doc-maintainer` skills live
   in `.agents/skills/`. The router identifies applicable authority, ownership,

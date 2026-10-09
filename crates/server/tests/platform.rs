@@ -33,6 +33,8 @@ mod managed;
 
 #[path = "platform/graph.rs"]
 mod graph;
+#[path = "platform/knowledge_mapping.rs"]
+mod knowledge_mapping;
 #[path = "platform/mcp.rs"]
 mod mcp;
 #[path = "platform/memory.rs"]

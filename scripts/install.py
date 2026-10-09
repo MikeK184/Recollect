@@ -123,6 +123,10 @@ def load(name):
     path = directory(name)
     try:
         saved = json.loads((path / "installation.json").read_text())
+        if saved.get("root"):
+            import root_installation
+            root_installation.validate(saved)
+            return saved
         if (saved["name"] != name or saved["project"] != f"recollect-install-{name}"
                 or saved["mode"] not in ("personal", "shared")):
             raise ValueError("Saved installation ownership is invalid")
@@ -135,6 +139,9 @@ def load(name):
 
 
 def compose_command(saved):
+    if saved.get("root"):
+        import root_installation
+        return root_installation.compose(saved)
     command = [str(ROOT / "scripts/docker.sh"), "compose", "--project-directory", str(ROOT / "infra/product"),
             "--project-name", saved["project"], "--env-file", str(directory(saved["name"]) / "compose.env"),
             "-f", str(ROOT / "infra/product/compose.yaml"),
@@ -164,6 +171,9 @@ def run(saved, arguments, *, capture=False, timeout=300):
 
 
 def configuration(saved):
+    if saved.get("root"):
+        import root_installation
+        return root_installation.configuration(saved)
     # Parse privately; output only a fixed, secret-free summary of the resolved model.
     resolved = json.loads(run(saved, ["config", "--format", "json"], capture=True, timeout=15))
     services = resolved["services"]

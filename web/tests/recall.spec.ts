@@ -121,8 +121,9 @@ test("recall filters, inert source evidence, context budget and source erasure",
       .click();
   };
   await search("Amber");
-  await expect(panel.getByTestId("recall-result")).toHaveCount(2);
-  await expect(panel.getByText(/Review: proposed/)).toBeVisible();
+  await expect(panel.getByTestId("recall-result")).toHaveCount(1);
+  // An unchecked proposal is withheld. Raw retained evidence remains usable.
+  await expect(panel.getByText(/Review: proposed/)).toHaveCount(0);
   await openDetails(panel, "Refine evidence search");
   await panel.getByLabel("Recall mode", { exact: true }).click();
   await page
@@ -259,16 +260,15 @@ test("recall filters, inert source evidence, context budget and source erasure",
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
   expect(attempts).toHaveLength(1);
   await page.goto(`/brains/${fixture.brain}/settings?tab=ai`);
-  await openDetails(page, "Advanced model controls");
   await page
-    .getByRole("button", { name: "Edit model policy", exact: true })
+    .getByRole("button", { name: "Advanced policy", exact: true })
     .click();
   const modelPolicy = page.getByRole("dialog", {
-    name: "Model policy",
+    name: "AI permissions",
     exact: true,
   });
   await modelPolicy
-    .getByRole("button", { name: "Save model policy", exact: true })
+    .getByRole("button", { name: "Save AI permissions", exact: true })
     .click();
   await expect(modelPolicy).not.toBeVisible();
   await page.goto(`/brains/${fixture.brain}/ask?tab=search`);

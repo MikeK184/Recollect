@@ -996,7 +996,7 @@ fn derivation(run: &LearningRun, request: &ModelRequest, automatic: bool) -> Mod
         run_id: run.id,
         request_id: request.id,
         policy_id: run.policy_id,
-        provider: "openai".into(),
+        provider: request.provider.clone(),
         requested_model: request.model.clone(),
         returned_model: request.returned_model.clone().unwrap_or_default(),
         prompt_label: if automatic {

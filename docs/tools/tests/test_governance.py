@@ -34,6 +34,12 @@ class GovernanceTests(unittest.TestCase):
                 target.write_text("# Fixture document\n")
         for file in ("docs/adr/0001-repository-governance.md", "docs/contracts/repository-governance.md"):
             shutil.copy2(REPO / file, self.root / file)
+        # This single-slice fixture does not import later tooling authority. Keep
+        # its links textual; the real repository validates the actual decisions.
+        governance = "docs/contracts/repository-governance.md"
+        text = (self.root / governance).read_text()
+        text = re.sub(r"\[([^]]+)\]\((?:\.\./adr/0019-rust-semantic-developer-navigation\.md|rust-semantic-developer-navigation\.md)\)", r"\1", text)
+        self.write(governance, text)
         bootstrap = REPO / ARCHIVED if (REPO / ARCHIVED).exists() else REPO / ACTIVE
         shutil.copy2(bootstrap, self.root / ACTIVE)
         self.replace(ACTIVE, "Status: shipped", "Status: in-progress")
@@ -232,6 +238,18 @@ class GovernanceTests(unittest.TestCase):
         path = ".codex/agents/worker.toml"
         self.write(path, (self.root / path).read_text() + '\nmodel = "fixture-model"\n')
         self.reject("inherit personal defaults")
+
+    def test_rust_workspace_rebinding_rejected(self):
+        self.replace(".codex/config.toml", '"rust_analyzer_hover"', '"rust_analyzer_set_workspace"')
+        self.reject("local Rust/Graft navigation")
+
+    def test_global_rust_mcp_launcher_rejected(self):
+        self.replace(".codex/config.toml", '$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp', '/opt/global/rust-analyzer-mcp')
+        self.reject("local Rust/Graft navigation")
+
+    def test_graft_deep_cloud_mode_rejected(self):
+        self.replace(".codex/config.toml", 'graft" mcp .', 'graft" build --deep .')
+        self.reject("local Rust/Graft navigation")
 
     def test_local_link_cannot_read_cognee(self):
         self.replace(ACTIVE, "## Summary", "[Excluded checkout](../../../../cognee/README.md)\n\n## Summary")

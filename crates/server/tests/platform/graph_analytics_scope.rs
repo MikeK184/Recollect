@@ -52,6 +52,12 @@ async fn graph_analytics_materialization_and_withheld_conflict_expiry_invalidate
         proposal(&source_a["version"]["id"], "Service port", "8080"),
     )
     .await;
+    // Source-support-3 requires explicit authority for this manually authored
+    // assertion. This fixture tests incomplete source materialization, not
+    // whether an unassessed proposal can enter the knowledge projection.
+    let claim = ok(&h,"POST",&format!("{base}/claims/{}/review",claim["claim_id"].as_str().unwrap()),&owner,
+        json!({"base_revision":claim["id"],"action":"accept","reason":"Explicit fixture authority for retained but unprocessed source evidence."}))
+        .await["claims"][0]["revision"].clone();
     build(&h, &owner, &base, "knowledge", None).await;
     let scope = json!({"kind":"knowledge","relations":["supported_by"]});
     let r = queue(&h, &owner, &base, &scope, "wcc", "both").await;
@@ -95,7 +101,7 @@ async fn graph_analytics_materialization_and_withheld_conflict_expiry_invalidate
     let fresh = queue(&h, &owner, &base, &scope, "wcc", "both").await;
     let fresh = completed(&h, &owner, &base, &fresh).await;
     assert_eq!(fresh["total"], 4);
-    let accepted=ok(&h,"POST",&format!("{base}/claims/{}/review",claim["claim_id"].as_str().unwrap()),&owner,json!({"base_revision":claim["id"],"action":"accept","reason":"Verified in the synthetic fixture."})).await["claims"][0]["revision"].clone();
+    let accepted = claim.clone();
     let conflict = ok(
         &h,
         "POST",
@@ -104,6 +110,12 @@ async fn graph_analytics_materialization_and_withheld_conflict_expiry_invalidate
         proposal(&source_b["version"]["id"], "Service port", "9090"),
     )
     .await;
+    // Keep an explicitly reviewed contradictory peer eligible. Ordinary
+    // acceptance refuses an overlapping conflict; review correction records
+    // the deliberate fixture authority without bypassing production handlers.
+    let conflict = ok(&h,"POST",&format!("{base}/claims/{}/review",conflict["claim_id"].as_str().unwrap()),&owner,
+        json!({"base_revision":conflict["id"],"action":"revalidate","revalidation_basis":"review_correction","reason":"Retain the contradictory synthetic peer to test clock-based invalidation."}))
+        .await["claims"][0]["revision"].clone();
     let settings = ok(&h, "GET", &format!("{base}/retention"), &owner, Value::Null).await;
     let mut policy = settings["policy"].clone();
     policy["claim_days"] = json!(1);

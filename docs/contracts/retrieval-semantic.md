@@ -99,6 +99,16 @@ canonical inputs, never recovery from an obsolete text/vector export.
 
 ### Durable work and reindex
 
+Discovery first excludes exact input identities already present in the active
+profile, independently of entry state. Materialized missing-input cohorts may
+then undergo the same canonical eligibility checks. Existing entries must not
+be rediscovered or charged merely to recheck support. This is a query-planning
+boundary, not an eligibility cache: missing inputs still require current source,
+claim, snapshot, manifest, retention and model-input-fence qualification. Apply
+the 100-input limit after qualification so unavailable inputs cannot hide later
+eligible ones. A missing profile has no represented identities; historical
+profiles do not suppress discovery in a new profile.
+
 Track per-input pending, queued, running, ready, blocked, failed and removed states,
 with content-free reason codes. Capture/source processing success is distinct from
 embedding readiness. Bounded background discovery and mutation invalidation resume

@@ -153,7 +153,13 @@ def snapshot(saved, temporary):
     destination.mkdir(mode=0o700)
     tar = temporary / "application.tar"
     runtime.snapshot(saved, tar)
-    archive.extract(tar, destination, allowed={"artifacts", "account-credentials.json", "mcp-receipts", "erasure-journal", "recovery"})
+    archive.extract(tar, destination, allowed={"artifacts", "account-credentials.json", "credentials.json", "mcp-receipts", "erasure-journal", "recovery"})
+    if saved.get("root"):
+        if (destination / "credentials.json").is_file():
+            (destination / "credentials.json").rename(destination / "account-credentials.json")
+        receipts = destination / "artifacts/.mcp-receipts"
+        if receipts.is_dir():
+            receipts.rename(destination / "mcp-receipts")
     tar.unlink()
     return destination
 

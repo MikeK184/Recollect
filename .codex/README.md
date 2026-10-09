@@ -57,7 +57,29 @@ governance validation does not establish MCP connectivity.
 
 The Context7 stanza matches both inspected reference repos and the supported
 [stdio MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
-No other MCP integration is included.
+Rust Analyzer and Graft are also registered as described below.
+
+## Rust Analyzer MCP and Graft
+
+Run `./scripts/setup-rust-navigation.sh` for the repository-local installation.
+This setup currently supports Apple Silicon macOS with Rust, rust-src, Node/npm
+and sandbox-exec. It installs a pinned Rust-written MCP bridge and standalone
+rust-analyzer, and npm-locked Graft. Downloads, dependencies, analysis output
+and indexes stay here; there is no home-level MCP installation.
+
+Use Rust Analyzer for Rust definitions, references, types and diagnostics. Use
+Graft for repository context, file APIs and structural call traces. Graft itself
+is an upstream Node developer tool; Recollect's product remains Rust. Both local
+runtime launchers deny networking and writes outside this checkout. Structural
+queries need no model key or paid API call.
+
+The project registrations locate this Git checkout from root or nested launch
+directories. Inspect them with `codex mcp get rust_analyzer` and
+`codex mcp get graft`. A fresh host session may be required to expose newly
+registered tools. The [runbook](../docs/runbooks/rust-semantic-navigation.md)
+contains the actual Rust stdio proof and refresh commands; the
+[dated evidence](../docs/mappings/rust-semantic-navigation-proof-2026-10-09.md)
+separates configuration discovery from successful calls and coverage limits.
 
 ## Local CodeGraph CLI
 

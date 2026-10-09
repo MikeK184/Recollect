@@ -3,7 +3,8 @@
 ## Prerequisites
 
 Start Recollect with `./scripts/dev.sh` and open `http://127.0.0.1:8787`.
-The API, worker, PostgreSQL/pgvector and configured OpenAI key must be available.
+The API, worker, PostgreSQL/pgvector and the selected provider's credential must
+be available. OpenRouter setup is covered in [model policy](provider-learning.md#select-openrouter-per-brain).
 Exact/lexical search remains available without model permission; see
 [canonical recall](exact-lexical-recall.md).
 
@@ -12,7 +13,10 @@ Exact/lexical search remains available without model permission; see
 On a Brain page, open **Edit model policy**. Allow transmission, the embedding
 purpose and the content classes this Brain may send. Enable **Build semantic search
 automatically** and save. Query permission is required for semantic search itself.
-The selected model is `text-embedding-3-large` with 3,072 dimensions. Automatic
+The initial OpenAI model is `text-embedding-3-large` with 3,072 dimensions.
+OpenRouter initially selects Qwen3 Embedding 8B with 1,024 dimensions. Provider
+or dimension changes require **Save and rebuild**; old vectors cannot serve a
+new profile. Automatic
 learning is independent; indexing does not require someone to approve each record.
 
 **Semantic search** in the model panel shows represented, pending, blocked/failed
