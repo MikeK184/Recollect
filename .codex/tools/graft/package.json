@@ -1,0 +1,14 @@
+{
+  "name": "recollect-graft-tooling",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Repository-local structural developer context; no product runtime dependency",
+  "dependencies": {
+    "@nanonets/graft": "0.21.1"
+  },
+  "overrides": {
+    "tree-sitter-swift": {
+      "tree-sitter": "^0.21.1"
+    }
+  }
+}

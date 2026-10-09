@@ -180,6 +180,34 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "040_scoped_project_brief",
         include_str!("../migrations/040_scoped_project_brief.sql"),
     ),
+    (
+        "041_openrouter_provider",
+        include_str!("../migrations/041_openrouter_provider.sql"),
+    ),
+    (
+        "042_support_audit_target_query",
+        include_str!("../migrations/042_support_audit_target_query.sql"),
+    ),
+    (
+        "043_support_predicate_short_circuit",
+        include_str!("../migrations/043_support_predicate_short_circuit.sql"),
+    ),
+    (
+        "044_graph_concurrent_preparation",
+        include_str!("../migrations/044_graph_concurrent_preparation.sql"),
+    ),
+    (
+        "045_knowledge_mapping_candidates",
+        include_str!("../migrations/045_knowledge_mapping_candidates.sql"),
+    ),
+    (
+        "046_exact_memory_deadlines",
+        include_str!("../migrations/046_exact_memory_deadlines.sql"),
+    ),
+    (
+        "047_bounded_support_discovery",
+        include_str!("../migrations/047_bounded_support_discovery.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {
@@ -301,6 +329,46 @@ pub async fn device_tx(
     let mut tx = actor_tx(pool, actor).await?;
     if let Some(device) = device {
         let valid:Option<bool>=sqlx::query_scalar("SELECT d.claimed AND d.revoked_at IS NULL AND d.expires_at>now() AND (a.auth_kind='local' OR a.membership_until>now()) FROM devices d JOIN accounts a ON a.id=d.account_id WHERE d.id=$1 AND d.account_id=$2 FOR SHARE OF d")
+            .bind(device).bind(actor).fetch_optional(&mut *tx).await?;
+        if valid != Some(true) {
+            return Err(crate::error::Error::unauthorized());
+        }
+        sqlx::query("SELECT set_config('recollect.device',$1,true)")
+            .bind(device.to_string())
+            .execute(&mut *tx)
+            .await?;
+    }
+    Ok(tx)
+}
+
+/// Provisional preparation only. Callers must publish through a fresh locked
+/// transaction after checking the exact input epoch and current authorization.
+pub async fn preparation_tx(
+    pool: &PgPool,
+    actor: Uuid,
+    device: Option<Uuid>,
+) -> Result<Transaction<'_, Postgres>> {
+    let mut tx = pool.begin().await?;
+    // Must precede the first SELECT: that statement freezes the MVCC snapshot.
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("SET LOCAL recollect.preparation='on'")
+        .execute(&mut *tx)
+        .await?;
+    let enabled: Option<bool> = sqlx::query_scalar("SELECT enabled FROM accounts WHERE id=$1")
+        .bind(actor)
+        .fetch_optional(&mut *tx)
+        .await?;
+    if enabled != Some(true) {
+        return Err(crate::error::Error::unauthorized());
+    }
+    sqlx::query("SELECT set_config('recollect.actor',$1,true)")
+        .bind(actor.to_string())
+        .execute(&mut *tx)
+        .await?;
+    if let Some(device) = device {
+        let valid:Option<bool>=sqlx::query_scalar("SELECT d.claimed AND d.revoked_at IS NULL AND d.expires_at>clock_timestamp() AND (a.auth_kind='local' OR a.membership_until>clock_timestamp()) FROM devices d JOIN accounts a ON a.id=d.account_id WHERE d.id=$1 AND d.account_id=$2")
             .bind(device).bind(actor).fetch_optional(&mut *tx).await?;
         if valid != Some(true) {
             return Err(crate::error::Error::unauthorized());

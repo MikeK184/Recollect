@@ -354,7 +354,7 @@ export function RecallResults({
     });
   const match = (item: Item) => (
     <Match
-      key={`${item.kind}:${item.id}`}
+      key={`${item.kind}:${item.id}:${item.provenance.map((p) => `${p.byte_from}-${p.byte_to}`).join(":")}`}
       item={item}
       request={request}
       catalogue={catalogue}

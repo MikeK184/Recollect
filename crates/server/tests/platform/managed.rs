@@ -121,9 +121,28 @@ async fn managed_memory_atomic_adoption_preserves_boundaries_and_defaults() {
         .keyed("PUT", &path, Some(&owner), input.clone(), Some(&key))
         .await;
     assert_eq!(status, StatusCode::OK, "{saved}");
-    let (status, replay, _) = h.keyed("PUT", &path, Some(&owner), input, Some(&key)).await;
+    let (status, replay, _) = h
+        .keyed("PUT", &path, Some(&owner), input.clone(), Some(&key))
+        .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(saved, replay);
+    // A receipt written before provider selection has no providers field.
+    // Its replay must remain readable without adopting a second policy.
+    sqlx::query(
+        "UPDATE command_receipts SET response=response #- '{models,providers}' WHERE key=$1",
+    )
+    .bind(&key)
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    let (status, legacy, _) = h.keyed("PUT", &path, Some(&owner), input, Some(&key)).await;
+    assert_eq!(status, StatusCode::OK, "{legacy}");
+    assert_eq!(legacy["models"]["providers"], json!([]));
+    assert_eq!(legacy["models"]["current"], saved["models"]["current"]);
+    assert_eq!(
+        ok(&h, &owner, "GET", &path, Value::Null).await["models"]["current"],
+        saved["models"]["current"]
+    );
     assert_eq!(saved["retention"], before["retention"]);
     assert_eq!(
         saved["capture"]["policy"]["excluded_tools"],

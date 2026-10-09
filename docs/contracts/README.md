@@ -1,5 +1,7 @@
 # Contracts
 
+- [Automatic source-backed knowledge organization](automatic-knowledge-organization.md)
+
 Contracts define deterministic, testable behavior across interfaces, storage,
 integrations, or operator workflows. Copy [template.md](template.md), cite the
 source decision, and state explicit deferrals. Use `proposed`, `accepted`,
@@ -19,6 +21,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Repository governance](repository-governance.md)
 - [Public product and documentation website](public-product-and-docs-site.md)
 - [Local CodeGraph navigation](local-codegraph-navigation.md)
+- [Repository-local Rust Analyzer MCP and Graft](rust-semantic-developer-navigation.md)
 - [Platform bootstrap](platform-bootstrap.md)
 - [Durable commands and workers](platform-durable-work.md)
 - [Team identity and effective access](platform-team-access.md)
@@ -40,6 +43,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Capture provenance and autonomous reconciliation](memory-capture-reconciliation.md)
 - [Governed semantic representations and recall](retrieval-semantic.md)
 - [Canonical graph projection and traversal](graph-projection-and-traversal.md)
+- [Concurrent graph preparation and checked publication](graph-concurrent-preparation.md)
 - [Exact combined repository graphs](graph-cross-repository-views.md)
 - [Bounded canonical graph analytics](graph-analytics.md)
 - [Bounded graph exploration](graph-exploration.md)
@@ -57,7 +61,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Personal/shared installation and diagnostics](operations-local-and-shared.md)
 - [Encrypted backup, upgrade and recovery](operations-recovery-drills.md)
 - [Integrated product acceptance and measured limits](operations-integrated-evaluations.md)
-- [LongMemEval answer-level benchmark protocol](operations-longmemeval-protocol.md) (proposed; not governing until accepted with user cost approval)
+- [LongMemEval answer-level benchmark protocol](operations-longmemeval-protocol.md) (accepted October 8; bounded OpenRouter campaign)
 
 - [Plugin-managed coding-host memory](mcp-plugin-session-memory.md)
 

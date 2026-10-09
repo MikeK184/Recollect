@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+RECOLLECT_GRAFT_TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RECOLLECT_ROOT="$(cd "$RECOLLECT_GRAFT_TOOLS/../../.." && pwd)"
+if [[ ! -f "$RECOLLECT_GRAFT_TOOLS/node_modules/@nanonets/graft/dist/cli.js" ]]; then
+  printf '%s\n' "Graft is not installed here. Run: $RECOLLECT_ROOT/scripts/setup-rust-navigation.sh" >&2
+  exit 1
+fi
+if [[ $# -eq 0 ]]; then set -- map; fi
+case "$1" in
+  build|ask|check|mcp|callers|skeleton|grep|map|version|help|--help|--version) ;;
+  *) printf '%s\n' 'Use this launcher for local structural developer navigation.' >&2; exit 2 ;;
+esac
+for RECOLLECT_GRAFT_ARG in "$@"; do
+  case "$RECOLLECT_GRAFT_ARG" in
+    --deep|--name|--provider*|--api-key*|--base-url*|--model*|--follow-nested-repos|--follow-submodules)
+      printf '%s\n' 'This launcher permits structural local analysis only.' >&2; exit 2 ;;
+  esac
+done
+if [[ "$(uname -s)" != Darwin || ! -x /usr/bin/sandbox-exec ]]; then
+  printf '%s\n' 'This local Graft launcher currently requires verified macOS sandbox-exec isolation.' >&2
+  exit 1
+fi
+export GRAFT_DIR="$RECOLLECT_ROOT/.cache/rust-navigation/graft-graph"
+export GRAFT_NO_GITIGNORE=1 GRAFT_NO_IGNORE=1 GRAFT_NO_SEED=1 DO_NOT_TRACK=1 CI=1
+export DOTENV_CONFIG_PATH=/dev/null
+export TMPDIR="$RECOLLECT_ROOT/.cache/rust-navigation/tmp"
+export CARGO_HOME="$RECOLLECT_ROOT/.cache/rust-navigation/cargo"
+export CARGO_TARGET_DIR="$RECOLLECT_ROOT/.cache/rust-navigation/analysis-target"
+export CARGO_NET_OFFLINE=true
+export PATH="$RECOLLECT_ROOT/.codex/tools/rust-analyzer/installed/bin:$PATH"
+mkdir -p "$GRAFT_DIR" "$TMPDIR" "$CARGO_HOME" "$CARGO_TARGET_DIR"
+unset GRAFT_API_KEY OPENROUTER_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY
+unset GRAFT_BRAIN_TOKEN GRAFT_BRAIN_ID GRAFT_BRAIN_URL
+cd "$RECOLLECT_ROOT"
+# Upstream MCP boot starts update/wiring upkeep. Deny networking and all writes
+# outside this repo, including home configuration; the denied upkeep is fail-soft.
+exec /usr/bin/sandbox-exec \
+  -D "RECOLLECT_ROOT=$RECOLLECT_ROOT" \
+  -f "$RECOLLECT_ROOT/.codex/tools/rust-navigation.sb" \
+  node "$RECOLLECT_GRAFT_TOOLS/node_modules/@nanonets/graft/dist/cli.js" --dir "$GRAFT_DIR" "$@"

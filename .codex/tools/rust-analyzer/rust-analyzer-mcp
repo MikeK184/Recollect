@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+RECOLLECT_RUST_TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RECOLLECT_ROOT="$(cd "$RECOLLECT_RUST_TOOLS/../../.." && pwd)"
+if [[ ! -x "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer-mcp" || ! -x "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer" ]]; then
+  printf '%s\n' "Rust navigation is not installed here. Run: $RECOLLECT_ROOT/scripts/setup-rust-navigation.sh" >&2
+  exit 1
+fi
+if [[ "$(uname -s)" != Darwin || ! -x /usr/bin/sandbox-exec ]]; then
+  printf '%s\n' 'This local Rust MCP launcher currently requires verified macOS sandbox-exec isolation.' >&2
+  exit 1
+fi
+export PATH="$RECOLLECT_RUST_TOOLS/installed/bin:$PATH"
+export TMPDIR="$RECOLLECT_ROOT/.cache/rust-navigation/tmp"
+export CARGO_HOME="$RECOLLECT_ROOT/.cache/rust-navigation/cargo"
+export CARGO_TARGET_DIR="$RECOLLECT_ROOT/.cache/rust-navigation/analysis-target"
+export CARGO_NET_OFFLINE=true
+RECOLLECT_TOOLCHAIN_ID="$(rustc --version --verbose | shasum -a 256 | awk '{print $1}')"
+RECOLLECT_SYSROOT_SOURCE="$RECOLLECT_ROOT/.cache/rust-navigation/sysroot/$RECOLLECT_TOOLCHAIN_ID/library"
+if [[ ! -f "$RECOLLECT_SYSROOT_SOURCE/core/src/lib.rs" ]]; then
+  printf '%s\n' "Rust source cache is missing for this toolchain. Run: $RECOLLECT_ROOT/scripts/setup-rust-navigation.sh" >&2
+  exit 1
+fi
+mkdir -p "$TMPDIR" "$CARGO_HOME" "$CARGO_TARGET_DIR"
+cd "$RECOLLECT_ROOT"
+exec /usr/bin/sandbox-exec \
+  -D "RECOLLECT_ROOT=$RECOLLECT_ROOT" \
+  -f "$RECOLLECT_ROOT/.codex/tools/rust-navigation.sb" \
+  "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer-mcp" \
+  --config checkOnSave=false --config cargo.allTargets=false \
+  --config "cargo.sysrootSrc=$RECOLLECT_SYSROOT_SOURCE" \
+  "$RECOLLECT_ROOT" "$@"

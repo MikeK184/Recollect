@@ -176,3 +176,17 @@ External installation, DNS/certificate issuance, high availability, Kubernetes,
 global telemetry collectors, Windows binary support and automatic updater policy.
 Encrypted off-machine backup/restore and integrated workload/capacity/quality
 proof remain in the named operational successor slices.
+
+## Backup-backed local update — 2026-10-08
+
+The user's update improvement accepts `stack.sh update`: register only this
+repository's owned root Compose configuration for existing encrypted recovery,
+checkpoint the exact currently running image/schema before rebuilding, then run
+the existing migration-gated start and report actual build/schema. Root recovery
+uses the existing checkpoint/journal format and fresh named-target restore; it
+does not adopt unrelated projects or restore over live data. Preserve private
+keys and credentials; an automatically generated local recovery identity stays
+in ignored private storage and is never included in the archive. A local checkpoint
+is not an off-machine backup. Failed checkpoint stops before build/update; failed
+migration keeps app roles stopped. No automatic release, remote pull or deployment
+is implied. Build revision/time are metadata, not exact-content or hash gates.

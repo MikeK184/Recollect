@@ -12,6 +12,8 @@ Rust product, using Cognee and Atlas as reference material.
 - [ADR 0001](../../adr/0001-repository-governance.md)
 - [ADR 0002](../../adr/0002-local-codegraph-navigation.md)
 - [Local navigation contract](../../contracts/local-codegraph-navigation.md)
+- [Rust semantic navigation ADR](../../adr/0019-rust-semantic-developer-navigation.md)
+- [Rust/Graft navigation contract](../../contracts/rust-semantic-developer-navigation.md)
 - [Repository governance contract](../../contracts/repository-governance.md)
 
 ## Dependencies and Boundaries
@@ -36,6 +38,16 @@ skills and MCPs. Use Terme's available pair as reference; keep all writes here.
 | `atlas-reference-checkout` | shipped | contract-backed | small-fix: explicit user-authorized reference clone with isolated ignore/docs changes; no application code or runtime integration | Cloned Agent Memory Atlas and verified the requested pattern/comparison sources and generated HTML against the live pages |
 | `documentation-skills` | shipped | adr-backed, contract-backed | pack | Adapted Terme's router and maintainer to Recollect, verified discovery, and assessed tooling against the accepted stack |
 | `opencode-project-setup` | shipped | adr-backed, contract-backed | pack | Carry the existing project instructions, two skills, six roles and Context7 into OpenCode v2 plus secret-free chrome-devtools browser control and verify host discovery and read-only MCP calls |
+| `rust-semantic-developer-navigation` | shipped | adr-backed, contract-backed | pack | Repository-local Rust Analyzer MCP and Graft structural context with actual calls and isolated runtime footprint |
+
+## Rust semantic navigation closeout
+
+The later [Rust Analyzer/Graft pack](../execution/archive/rust-semantic-developer-navigation.md)
+is locally delivered with a [runbook](../../runbooks/rust-semantic-navigation.md)
+and [actual MCP/isolation evidence](../../mappings/rust-semantic-navigation-proof-2026-10-09.md).
+It preserves existing CodeGraph and keeps product mapping/performance work separate.
+The current host catalog may require a new session. No release, commit, push or
+deployment was performed; version N/A and changes uncommitted.
 
 ## CodeGraph closeout
 

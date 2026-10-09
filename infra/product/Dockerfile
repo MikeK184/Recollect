@@ -1,5 +1,8 @@
 FROM rust:1.94-slim-bookworm AS server
 WORKDIR /build
+ARG RECOLLECT_BUILD_REVISION=development
+ARG RECOLLECT_BUILD_TIME=unknown
+ENV RECOLLECT_BUILD_REVISION=$RECOLLECT_BUILD_REVISION RECOLLECT_BUILD_TIME=$RECOLLECT_BUILD_TIME
 ENV CARGO_INCREMENTAL=0 CARGO_PROFILE_RELEASE_DEBUG=0
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
@@ -15,6 +18,9 @@ COPY --from=server /build/openapi.json /build/.cache/openapi.json
 RUN npm run generate && npm run build
 
 FROM debian:bookworm-slim
+ARG RECOLLECT_BUILD_REVISION=development
+ARG RECOLLECT_BUILD_TIME=unknown
+LABEL org.opencontainers.image.revision=$RECOLLECT_BUILD_REVISION org.opencontainers.image.created=$RECOLLECT_BUILD_TIME
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl openssh-client \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 recollect \

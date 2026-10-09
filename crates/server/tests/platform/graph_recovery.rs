@@ -844,6 +844,11 @@ async fn graph_path_checks_expiry_after_query_and_maintenance_rebuilds_without_e
         ),
     )
     .await;
+    // Keep the assertion independently eligible under source-support-3 so this
+    // remains a retention-expiry test rather than an unsupported-proposal test.
+    let claim = ok(&h,"POST",&format!("{base}/claims/{}/review",claim["claim_id"].as_str().unwrap()),&owner,
+        json!({"base_revision":claim["id"],"action":"accept","reason":"Explicit synthetic authority for retention boundary proof."}))
+        .await["claims"][0]["revision"].clone();
     let retention = ok(&h, "GET", &format!("{base}/retention"), &owner, Value::Null).await;
     let mut policy = retention["policy"].clone();
     policy["document_days"] = json!(1);

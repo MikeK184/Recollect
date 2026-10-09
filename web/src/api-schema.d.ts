@@ -3438,6 +3438,7 @@ export interface components {
             direction: string;
             max_hops: number;
             scope: components["schemas"]["GraphSelection"];
+            windowed?: boolean;
         };
         GraphGeneration: {
             /** Format: uuid */
@@ -3574,6 +3575,7 @@ export interface components {
             link_issues_total: number;
             /** Format: int64 */
             memory_epoch: number;
+            next_offset?: number | null;
             nodes: components["schemas"]["GraphNode"][];
             offset: number;
             relations: string[];
@@ -3587,6 +3589,7 @@ export interface components {
         GraphViewRequest: {
             offset?: number;
             scope: components["schemas"]["GraphSelection"];
+            windowed?: boolean;
         };
         GroupGrant: {
             group_name: string;
@@ -4503,6 +4506,8 @@ export interface components {
             brain_id: string;
             /** Format: int64 */
             charged_tokens: number;
+            /** Format: double */
+            cost_usd?: number | null;
             /** Format: date-time */
             created_at: string;
             detail_expired?: boolean;
@@ -4525,6 +4530,7 @@ export interface components {
             /** Format: uuid */
             policy_id: string;
             prompt_label: string;
+            provider?: string;
             purpose: string;
             /** Format: int64 */
             reserved_tokens: number;
@@ -4538,6 +4544,7 @@ export interface components {
         ModelSettings: {
             current: components["schemas"]["ModelPolicyVersion"];
             installed: components["schemas"]["InstalledModels"];
+            providers?: components["schemas"]["InstalledModels"][];
         };
         ModelUsage: {
             /** Format: int64 */
@@ -7698,7 +7705,9 @@ export interface operations {
     };
     modelCatalogue: {
         parameters: {
-            query?: never;
+            query?: {
+                provider?: string;
+            };
             header?: never;
             path: {
                 brain: string;
@@ -7719,7 +7728,9 @@ export interface operations {
     };
     refreshModelCatalogue: {
         parameters: {
-            query?: never;
+            query?: {
+                provider?: string;
+            };
             header?: never;
             path: {
                 brain: string;

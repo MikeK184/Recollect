@@ -621,7 +621,7 @@ async fn item_with_gates(
         note(coverage, "content_excluded");
         return Ok(None);
     }
-    if clip(&mut result.text, 2048) {
+    if clip(&mut result.text, 4096) {
         result.qualifications.push("fragment_truncated".into());
         note(coverage, "fragment_truncated");
     }

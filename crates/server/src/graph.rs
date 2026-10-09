@@ -82,6 +82,8 @@ impl Entity {
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub(crate) struct Descriptor {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preparation_epoch: Option<i64>,
     pub nodes: Vec<Entity>,
     pub edges: Vec<GraphEdge>,
     pub unresolved: i64,
@@ -91,6 +93,28 @@ pub(crate) struct Descriptor {
     pub issues: Vec<GraphLinkIssue>,
     #[serde(default)]
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+pub(crate) async fn preparation_epoch(tx: &mut Tx<'_>, brain: Uuid) -> Result<i64> {
+    sqlx::query_scalar("SELECT analytics_epoch FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_optional(&mut **tx)
+        .await?
+        .ok_or_else(Error::missing)
+}
+
+pub(crate) async fn preparation_unchanged(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    expected: i64,
+) -> Result<()> {
+    if preparation_epoch(tx, brain).await? != expected {
+        return Err(failure(
+            "graph_preparation_changed",
+            "Graph inputs changed during preparation. Read the current view again.",
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) async fn epoch(tx: &mut Tx<'_>, brain: Uuid) -> Result<i64> {

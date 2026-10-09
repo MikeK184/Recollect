@@ -207,3 +207,14 @@ Semantic embeddings/reindexing, graph fusion, richer investigation UI and MCP ho
 recall belong to their named successor slices. ANN, learned ranking, query expansion
 and model-generated answers are not required by this baseline. No general semantic
 equivalence or universal prompt-injection prevention is claimed.
+
+## Complete source windows — 2026-10-08
+
+The user's improvement request authorizes this bounded first batch. Return whole
+canonical source chunks up to 4,096 bytes rather than clipping at 2,048 bytes while
+retaining a longer citation coordinate. Preserve distinct eligible scoring spans
+as alternatives. After exact priority and source-diversity/global ranking, spare
+context capacity may admit at most three nonoverlapping source windows per source.
+Every window counts against the existing item and serialized byte limits. Each
+retains its exact revision/byte coordinates and is independently revalidated;
+retention deadlines are conservatively combined. No whole-source expansion occurs.

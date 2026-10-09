@@ -28,6 +28,16 @@ test("HotpotQA public pooled-corpus retrieval baseline", async ({
     (r: { row: Row }) => r.row,
   );
   expect(rows).toHaveLength(50);
+  const routed = process.env.RECOLLECT_BENCH_PROVIDER === "openrouter";
+  if (routed) {
+    const account = await fetch("https://openrouter.ai/api/v1/key", {
+      headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}` },
+    });
+    expect(account.ok).toBeTruthy();
+    const key = (await account.json()).data;
+    expect(key.usage).toBeLessThan(8);
+    expect(key.limit_remaining).toBeGreaterThan(2.05);
+  }
   const auth = await request.post("/api/auth/login", {
     data: {
       username: process.env.RECOLLECT_OWNER_USERNAME,
@@ -46,11 +56,15 @@ test("HotpotQA public pooled-corpus retrieval baseline", async ({
       data: body,
       headers: { "x-csrf-token": csrf, "Idempotency-Key": randomUUID() },
     });
-    expect(response.ok(), `${path}: ${response.status()}`).toBeTruthy();
+    if (!response.ok())
+      throw new Error(
+        `${path}: ${response.status()} ${(await response.json()).code}`,
+      );
     return response.json();
   };
   const brain = await api("/api/brains", {
     name: "Public HotpotQA retrieval benchmark",
+    managed_memory: false,
   });
   const base = `/api/brains/${brain.id}`;
   expect((await api(base + "/models/policy")).current.policy.enabled).toBe(
@@ -105,6 +119,13 @@ test("HotpotQA public pooled-corpus retrieval baseline", async ({
         complete: boolean;
       }[],
       model_usage: {} as unknown,
+      model_ledger: [] as {
+        id: string;
+        state: string;
+        cost_usd: number | null;
+      }[],
+      provider: routed ? "openrouter" : "openai",
+      actual_cost_usd: 0,
       semantic_index: {} as unknown,
       limit: 10,
       context_bytes: 16384,
@@ -196,6 +217,22 @@ test("HotpotQA public pooled-corpus retrieval baseline", async ({
     };
     report.model_usage = await api(base + "/models/usage");
     report.model_requests = (report.model_usage as { total: number }).total;
+    for (let offset = 0; offset < report.model_requests; offset += 20) {
+      report.model_ledger.push(
+        ...(await api(`${base}/models/usage?offset=${offset}`)).requests,
+      );
+    }
+    report.actual_cost_usd = report.model_ledger.reduce(
+      (sum, r) => sum + (r.cost_usd ?? 0),
+      0,
+    );
+    if (routed && channels.includes("semantic")) {
+      expect(
+        report.model_ledger.every(
+          (r) => r.state === "succeeded" && r.cost_usd !== null,
+        ),
+      ).toBeTruthy();
+    }
     if (!channels.includes("semantic")) expect(report.model_requests).toBe(0);
     else report.semantic_index = await api(base + "/semantic");
     report.complete = true;
@@ -213,12 +250,29 @@ test("HotpotQA public pooled-corpus retrieval baseline", async ({
   await measure(["exact", "lexical"]);
   if (process.env.RECOLLECT_PUBLIC_SEMANTIC === "1") {
     const current = (await api(base + "/models/policy")).current;
+    if (routed) {
+      const catalogue = await api(
+        base + "/models/catalogue?provider=openrouter",
+        null,
+      );
+      expect(catalogue.error_code, "Live catalogue refresh").toBeNull();
+      expect(catalogue.stale).toBe(false);
+    }
     await api(
       base + "/models/policy",
       {
         base_change: current.change_id,
+        rebuild_embeddings: routed,
         policy: {
           ...current.policy,
+          ...(routed
+            ? {
+                provider: "openrouter",
+                text_model: "z-ai/glm-5.3-flash",
+                embedding_model: "qwen/qwen3-embedding-8b",
+                embedding_dimensions: 1024,
+              }
+            : {}),
           enabled: true,
           automatic_learning: false,
           autonomous_memory: false,

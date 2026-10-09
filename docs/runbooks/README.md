@@ -8,6 +8,7 @@ Copy [template.md](template.md) when adding an operator procedure.
 - [Codex and Context7 setup](../../.codex/README.md)
 - [Development tooling assessment](development-tooling.md)
 - [Local CodeGraph navigation](codegraph.md)
+- [Rust Analyzer MCP and Graft navigation](rust-semantic-navigation.md)
 - [Reference checkout and component update guidance](upstream-sync.md)
 - [Local product development](local-development.md)
 - [Contextual desktop navigation, shared assets and recovery](desktop-experience.md)

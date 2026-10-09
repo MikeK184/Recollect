@@ -59,6 +59,19 @@ pub(crate) fn installed(state: &AppState) -> InstalledModels {
         credentials_present: model.key.is_some(),
     }
 }
+pub(crate) fn providers(state: &AppState) -> Vec<InstalledModels> {
+    vec![
+        installed(state),
+        InstalledModels {
+            provider: "openrouter".into(),
+            endpoint: state.config.models.openrouter_endpoint.clone(),
+            text_model: "z-ai/glm-5.3-flash".into(),
+            embedding_model: "qwen/qwen3-embedding-8b".into(),
+            embedding_dimensions: 1024,
+            credentials_present: state.config.models.openrouter_key.is_some(),
+        },
+    ]
+}
 pub(crate) fn defaults(state: &AppState) -> ModelPolicy {
     let model = &state.config.models;
     ModelPolicy {
@@ -112,12 +125,19 @@ pub(crate) fn identifier(s: &str, max: usize) -> bool {
 }
 pub(crate) fn matches_installation(state: &AppState, policy: &ModelPolicy) -> bool {
     let model = &state.config.models;
-    policy.provider == "openai"
+    (policy.provider == "openai"
         && (catalogue::text_supported(&policy.text_model) || policy.text_model == model.text_model)
         && (catalogue::embedding_supported(&policy.embedding_model, policy.embedding_dimensions)
             || (catalogue::max_dimensions(&policy.embedding_model).is_none()
                 && policy.embedding_model == model.embedding_model
-                && policy.embedding_dimensions == model.embedding_dimensions))
+                && policy.embedding_dimensions == model.embedding_dimensions)))
+        || (policy.provider == "openrouter"
+            && catalogue::text_supported_for("openrouter", &policy.text_model)
+            && catalogue::embedding_supported_for(
+                "openrouter",
+                &policy.embedding_model,
+                policy.embedding_dimensions,
+            ))
 }
 fn values(values: &mut Vec<String>, allowed: &[&str]) -> Result<()> {
     if values.len() > allowed.len() || values.iter().any(|v| !allowed.contains(&v.as_str())) {
@@ -222,7 +242,7 @@ pub(crate) fn permits(
     {
         return Err(denied());
     }
-    if state.config.models.key.is_none() {
+    if state.config.models.key_for(&policy.provider).is_none() {
         return Err(Error(
             StatusCode::SERVICE_UNAVAILABLE,
             "model_credentials_missing",
@@ -243,8 +263,12 @@ pub async fn get(
     let current = current(&state, &mut tx, brain).await?;
     tx.commit().await?;
     Ok(Json(ModelSettings {
+        installed: providers(&state)
+            .into_iter()
+            .find(|p| p.provider == current.policy.provider)
+            .unwrap_or_else(|| installed(&state)),
+        providers: providers(&state),
         current,
-        installed: installed(&state),
     }))
 }
 #[utoipa::path(put,path="/api/brains/{brain}/models/policy",operation_id="updateModelPolicy",params(("brain"=Uuid,Path)),request_body=ModelPolicyUpdate,responses((status=200,body=ModelPolicyVersion)))]
@@ -280,7 +304,8 @@ pub async fn update(
     }
     let previous = current(&state, &mut tx, brain).await?;
     catalogue::validate_selection(&state, &previous.policy, &input.policy).await?;
-    let rebuild = previous.policy.embedding_model != input.policy.embedding_model
+    let rebuild = previous.policy.provider != input.policy.provider
+        || previous.policy.embedding_model != input.policy.embedding_model
         || previous.policy.embedding_dimensions != input.policy.embedding_dimensions;
     if rebuild && !input.rebuild_embeddings {
         return Err(failure(

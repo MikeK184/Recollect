@@ -1,10 +1,10 @@
-WITH captured_sources AS MATERIALIZED (
+WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
   -- Read each authorized capture association once. Expanding these joins for
   -- every candidate repeatedly evaluates event/binding RLS under mixed load.
   SELECT e.source_id,e.source_version_id,e.received_at,b.selection
   FROM capture_events e
   LEFT JOIN capture_bindings b ON b.id=e.binding_id AND b.brain_id=e.brain_id
-  WHERE e.brain_id=$1
+  WHERE e.brain_id=$1 /* graph_window:capture_sources */
 ), source_knowledge AS MATERIALIZED (
   -- Same exact-version knowledge time as recollect_source_knowledge. The
   -- separate source-id join below preserves capture scope for later versions.
@@ -16,15 +16,15 @@ WITH captured_sources AS MATERIALIZED (
   -- fan-out, so scoped RLS is not re-evaluated for every search fragment.
   LEFT JOIN source_import_scopes i ON i.version_id=v.id AND i.brain_id=v.brain_id
   LEFT JOIN automatic_support_excerpts a ON a.version_id=v.id AND a.brain_id=v.brain_id
-  WHERE v.brain_id=$1
+  WHERE v.brain_id=$1 /* graph_window:source_knowledge */
 ), known_claims AS (
   SELECT DISTINCT ON(claim_id) * FROM claim_revisions
-  WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY claim_id,recorded_at DESC
-), selected_claims AS (
+  WHERE brain_id=$1 AND recorded_at<=$2 /* graph_window:claim_histories */ ORDER BY claim_id,recorded_at DESC
+), /* graph_window_ctes */ selected_claims AS (
   -- Apply the same exact manifest boundary as claim_manifest before any
   -- channel ranks or counts claim representations. Keep the canonical view
   -- recheck as well; similarity and projection coverage cannot supply scope.
-  SELECT r.* FROM known_claims r WHERE recollect_memory_supported(r.brain_id,r.id) AND ($6::jsonb IS NULL OR (
+  SELECT r.* FROM /* graph_window:claims */ known_claims r WHERE recollect_memory_supported(r.brain_id,r.id) AND ($6::jsonb IS NULL OR (
     NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(r.revision#>'{content,selection,repository_ids}') repo
       WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements($6->'entries') entry
         WHERE entry->>'repository_id'=repo))
@@ -98,7 +98,7 @@ WITH captured_sources AS MATERIALIZED (
     v.recall_vector || coalesce(c.recall_vector,''::tsvector),
     recollect_retention_deadline(v.brain_id,v.retention_class,v.created_at),
     ($3<>'' AND v.title=$3),true
-  FROM source_knowledge v
+  FROM /* graph_window:sources */ source_knowledge v
   LEFT JOIN source_chunks c ON c.version_id=v.id AND c.brain_id=v.brain_id
   LEFT JOIN captured_sources e ON e.source_id=v.source_id
   WHERE v.brain_id=$1 AND v.recorded_at<=$2 AND $7 IN ('investigation','history')
@@ -125,7 +125,7 @@ WITH captured_sources AS MATERIALIZED (
     NULL,NULL,NULL,NULL,NULL,0,'ready',f.record,f.recall_vector,
     recollect_retention_deadline(s.brain_id,'repository',s.created_at),
     ($3<>'' AND ($3=f.record->>'name' OR $3=coalesce(f.record->>'file',f.record#>>'{source,path}',f.record->>'path'))),true
-  FROM repository_facts f JOIN repository_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
+  FROM /* graph_window:facts */ repository_facts f JOIN repository_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
   WHERE f.brain_id=$1 AND s.created_at<=$2
     AND $5::uuid IS NULL AND $7 IN ('investigation','history')
     AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
@@ -146,7 +146,7 @@ WITH captured_sources AS MATERIALIZED (
       coalesce((SELECT jsonb_agg(e->'repository_id') FROM jsonb_array_elements(r.revision->'entries') e),'[]'::jsonb)),
     NULL,NULL,NULL,r.id::text,NULL,NULL,NULL,NULL,NULL,NULL,0,'ready',r.revision,r.recall_vector,NULL,
     ($3<>'' AND r.revision->>'name'=$3),true
-  FROM manifest_revisions r
+  FROM /* graph_window:manifests */ manifest_revisions r
   WHERE r.brain_id=$1 AND r.created_at<=$2 AND r.privacy_state='active'
     AND $5::uuid IS NULL AND $7 IN ('investigation','history')
     AND ($6::jsonb IS NULL OR $6->>'id'=r.id::text)

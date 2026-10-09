@@ -126,6 +126,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   const [snapshotOffset, setSnapshotOffset] = useState(0);
   const [manifestOffset, setManifestOffset] = useState(0);
   const [start, setStart] = useState("");
+  const [initialExploration, setInitialExploration] = useState<components["schemas"]["GraphExploration"] | undefined>();
   const [end, setEnd] = useState("");
   const [direction, setDirection] = useState("outgoing");
   const [hops, setHops] = useState(6);
@@ -144,6 +145,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   } | null>(null);
   const idem = useIdempotency();
   function clear() {
+    setInitialExploration(undefined);
     setSubmitted(null);
     setPathSubmitted(null);
     setDetail(null);
@@ -313,12 +315,12 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       !status.isError,
     gcTime: 0,
     retry: false,
-    refetchInterval: drawer === "entities" ? 3000 : false,
+    refetchOnWindowFocus: false,
     queryFn: async ({ signal }) =>
       result(
         await client.POST("/api/brains/{brain}/graph/view", {
           params: { path: { brain: brain.id } },
-          body: { scope: submitted!.scope, offset: entityOffset },
+          body: { scope: submitted!.scope, offset: entityOffset, windowed: true },
           signal,
         }),
       ),
@@ -340,7 +342,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         }),
       ),
   });
-  function load(page = 0) {
+  function load(page = 0, center = route.center ?? null) {
     if (missingExactSelection(scope)) return;
     initialRead.current = scopeKey;
     const next = {
@@ -351,19 +353,25 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     setSubmitted(next);
     setPathSubmitted(null);
     setDetail(null);
+    setInitialExploration(undefined);
     void cache
       .fetchQuery({
         queryKey: ["graph-read", brain.id, next],
         retry: false,
         gcTime: 0,
-        queryFn: async ({ signal }) =>
-          result(
-            await client.POST("/api/brains/{brain}/graph/view", {
+        queryFn: async ({ signal }) => {
+          const exploration = result(
+            await client.POST("/api/brains/{brain}/graph/explore", {
               params: { path: { brain: brain.id } },
-              body: { scope: next.scope, offset: page },
+              body: { scope: next.scope, center,
+                direction: route.direction ?? "outgoing", max_hops: route.hops ?? 1,
+                windowed: !center || (route.hops ?? 1) === 1 },
               signal,
             }),
-          ),
+          );
+          if (!signal.aborted) setInitialExploration(exploration);
+          return exploration.view;
+        },
       })
       .catch(() => {});
   }
@@ -701,7 +709,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
             compactControls
             initialCenter={route.center ?? ""}
             initialDirection={route.direction ?? "outgoing"}
-            initialHops={route.hops ?? 2}
+            initialHops={route.hops ?? 1}
+            initialExploration={initialExploration}
             onExplore={(center, direction, hops) =>
               patchRoute({ center, direction, hops })
             }
@@ -933,7 +942,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           <Button
             onClick={() => {
               saveScope();
-              load();
+              load(0, null);
               setDrawer(null);
             }}
             loading={read.isFetching}
@@ -1082,7 +1091,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
               <SimpleGrid cols={{ base: 1, md: 2 }}>
                 {entities.data.nodes.map((n) => node(n, true))}
               </SimpleGrid>
-              {entities.data.total_nodes > 100 && (
+              {(entities.data.next_offset != null || entities.data.offset > 0) && (
                 <Group>
                   <Button
                     disabled={!entities.data.offset}
@@ -1091,18 +1100,13 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                     Previous entities
                   </Button>
                   <Text size="sm">
-                    {entities.data.offset + 1}–
-                    {Math.min(
-                      entities.data.offset + 100,
-                      entities.data.total_nodes,
-                    )}{" "}
-                    of {entities.data.total_nodes}
+                    {entities.data.nodes.length} eligible entities in this page
                   </Text>
                   <Button
                     disabled={
-                      entities.data.offset + 100 >= entities.data.total_nodes
+                      entities.data.next_offset == null
                     }
-                    onClick={() => setEntityOffset(entities.data!.offset + 100)}
+                    onClick={() => setEntityOffset(entities.data!.next_offset!)}
                   >
                     More entities
                   </Button>

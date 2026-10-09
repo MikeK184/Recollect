@@ -607,8 +607,8 @@ async fn brain_deletion_full_closure() {
     assert_eq!(request.0, "pending");
     assert!(!request.1);
     assert_eq!(
-        request.2, 1,
-        "the seeded artifact stays pending physical cleanup"
+        request.2, 2,
+        "the retained artifact and pending excerpt intent both require physical cleanup"
     );
     let audit_rows: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM mutation_audit WHERE action='brain.delete' AND target_id=$1",
@@ -700,7 +700,7 @@ async fn brain_deletion_full_closure() {
     assert_eq!(status["disposition"], "deleted");
     assert_eq!(status["state"], "pending");
     assert_eq!(status["journaled"], false);
-    assert_eq!(status["pending_artifacts"], 1);
+    assert_eq!(status["pending_artifacts"], 2);
     assert_eq!(status["acknowledged_devices"], 0);
 
     // --- Repeat: an already-absent Brain returns NULL and writes nothing. ---

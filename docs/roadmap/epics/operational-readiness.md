@@ -70,11 +70,12 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | --- | --- | --- | --- | --- |
 | `operations-public-benchmark` | shipped | contract-backed | pack | Frozen 50-question lexical/semantic evidence retrieval reports, provider usage and Atlas lifecycle proof; not a universal memory score |
 | `operations-atlas-lifecycle-proof` | shipped | contract-backed | pack | Deterministic Atlas §6 deletion sequence and §7 contradiction matrix as a 40-cell pass/fail matrix through the product API with zero model calls, plus digit-for-digit HotpotQA reproduction |
-| `operations-longmemeval-bench` | blocked | needs-contract | pack | Official LongMemEval-S answer-level run under the [proposed protocol](../../contracts/operations-longmemeval-protocol.md); blocked on user acceptance of that contract with explicit cost approval; three accuracies, pinned judge, frozen dataset hashes |
+| `operations-longmemeval-bench` | shipped | contract-backed | pack | Official LongMemEval-S answer-level run under the [accepted protocol](../../contracts/operations-longmemeval-protocol.md); USD 10 OpenRouter campaign authorized October 8; three accuracies, pinned judge, frozen dataset hashes |
 | `operations-local-and-shared` | shipped | adr-backed, contract-backed | pack | Actual personal/shared UI/API, HTTPS native pairing/MCP, persistent state, migration failure, dependency outage, graceful drain and diagnostics verified |
 | `operations-recovery-drills` | shipped | adr-backed, contract-backed | pack | Actual encrypted SFTP, offline restore, journal continuity, erasure/replay, failed upgrade, interrupted resume, graph/recall and desktop proof |
 | `operations-integrated-evaluations` | shipped | contract-backed | pack | Actual-model quality, seven-capability matrix, unchanged 50-repository/200-document/eight-caller workload, repaired admission/queries, final restore/desktop and normal upgrade verified |
 | `operations-root-compose` | shipped | adr-backed, contract-backed | pack | Root Compose image/browser login, preserved inventory, full stop/start, migration-failure gate and verified fixture shutdown pass |
+| `operations-memory-quality-first-batch` | in-progress | contract-backed | pack | Local migration-047 update and bounded audit/query repairs deployed with preserved inventory; current normal graph reads pass only 35/40, with cumulative digest/handover writer contention measured, so live acceptance remains open |
 | `operations-proof-cleanup` | shipped | contract-backed | small-fix: explicitly authorized removal of verified disposable local fixtures; no product implementation or schema change | Removed 50 containers, 49 volumes, 9 networks and 10 fixture directories; current seven-Brain inventory and readiness preserved |
 | `operations-desktop-activity` | shipped | adr-backed, contract-backed | pack | Authorized bounded Activity feeds and diagnostics with canonical detail/recovery links |
 | `desktop-experience-acceptance` | shipped | adr-backed, contract-backed | pack | Real desktop/API/agent regression, answer quality/privacy, resource measurements and rollout/rollback evidence |
@@ -146,7 +147,7 @@ small-screen and keyboard polish is optional under the [desktop contract](../../
 
 ## Final desktop acceptance — 2026-10-01
 
-Activity and integrated desktop acceptance are shipped with [current deployment, permission, provider and visual proof](../../mappings/desktop-final-acceptance-2026-10-01.md). LongMemEval remains a separate blocked cost/protocol decision; it is not desktop acceptance.
+Activity and integrated desktop acceptance are shipped with [current deployment, permission, provider and visual proof](../../mappings/desktop-final-acceptance-2026-10-01.md). LongMemEval is a separate locally shipped evaluation; its combined recovery has 50 available answers, 40% overall accuracy and a completed 25-question judge audit. See the [report and limits](../../mappings/openrouter-benchmark-proof-2026-10-08.md) and [archived pack](../execution/archive/operations-longmemeval-bench.md). It is not desktop acceptance.
 
 ## Desktop chrome declutter — 2026-10-03
 

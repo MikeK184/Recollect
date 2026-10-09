@@ -1,12 +1,57 @@
 # LongMemEval answer-level benchmark protocol
 
-Status: proposed
+Status: accepted
+
+## Budgeted public evaluation amendment — 2026-10-08
+
+The user explicitly authorizes actual benchmarks using the USD 10 OpenRouter
+key allowance and delegates model/dataset selection. This supersedes the earlier
+no-spend gate. Freeze a stratified 50-question LongMemEval-S cleaned subset,
+including all six types and abstention, before dispatch; preserve full-file hash,
+subset IDs and upstream commit. Run the existing HotpotQA and Atlas lifecycle
+harnesses first. Reserve at most USD 8 for the complete campaign, leaving USD 2
+headroom; record per-call reservations, actual usage and failures without silent
+retry. Pilot before expanding. OpenRouter Muse/GLM/Luna answering and Qwen embeddings
+are permitted; record the exact selected pair. Use the pinned upstream judge
+model/prompt where available and explicitly label any unavailable or diagnostic
+replacement. No replacement may be described as the original official score.
+A matched corpus/settings comparison with Cognee or a reproducible retrieval
+baseline is authorized within the same ceiling; vendor scores remain context
+only. Separate retrieval-only ingestion from autonomous-learning scenarios so
+answer accuracy cannot hide correction/deletion errors. Existing normal Brains
+remain untouched. This amendment authorizes the bounded implementation and
+execution; it does not require another approval step.
+
+## Explicit failure recovery amendment — 2026-10-08
+
+After the original 50-case measurement completed, the user explicitly requested
+rerunning failed questions to obtain answers for all 50 and a full Markdown
+report. This authorizes bounded fresh attempts for known terminal failures;
+uncertain original attempts remain unrepeated. Retain the original run, score,
+request IDs and costs. A separately named recovery report reuses the 22 original
+completed answers and retries the 28 failed cases with fresh identities. Label
+its combined score as recovery, not single-pass performance. Record every
+additional failed attempt and charge; known rate limits may be attempted again
+only as an explicit bounded recovery wave, with no silent gateway retry.
+
+The rejected history may resume canonical import after the confirmed TypeScript
+credential-classifier false positive is fixed and independently tested; do not
+edit or sanitize benchmark histories. Existing compatible indexes are reused.
+GLM endpoint selection may be revised within the delegated model choice and
+existing strict schema/price/timeout fences. Both original and recovered answers
+use the pinned upstream grading rule; the original evaluator accepts bounded
+judge content even with `finish_reason=length`, so the transport must not impose
+an incompatible stop-only rule. Keep incomplete original judge attempts and
+billing, and distinguish newly authorized judge recovery from duplicated success.
+The final Markdown report includes original availability, recovery attempts,
+quality, costs, timings, remaining failures, dataset pins and comparison limits.
+The same USD 8 campaign ceiling and USD 10 key limit apply.
 
 ## Source
 
 The user's 2026-09-29 benchmark request selected this protocol as a draft
-with no spend: it may not dispatch any paid model call until the user
-separately approves its cost budget. The
+with no spend. The October 8 authorization above accepts the protocol and
+resolves that historical gate. The
 [integrated evaluation contract](operations-integrated-evaluations.md)
 defers BEAM/LongMemEval runs to "a separate frozen ingest/learning protocol,
 cost budget, and answer evaluator before dispatch"; this document is that
@@ -46,13 +91,18 @@ the answer-level half.
   session becomes a retained source through the source API and the real
   worker, preserving session timestamps as observed time. No synthetic claims,
   no hand-authored memory, no benchmark-specific prompt or index tuning;
-  extraction/learning settings are the installed defaults and are named in
-  the report.
+  extraction and learning are disabled for this retrieval/answer lane and
+  named in the report. Native support auditing is measured separately.
 - The Brain model policy enables exactly two purposes — embedding for the
   semantic channel and answer generation — under an isolated daily token
   ceiling and concurrency limit recorded in the report before dispatch.
   Request identities persist before dispatch; uncertain attempts stop the run
   rather than resend.
+  A known terminal question failure remains in the full denominator with an
+  empty hypothesis and its exact pipeline failure code; independent subsequent
+  questions continue without retrying the failed one. Report answer availability
+  separately from the harness's completion. Retain reservations for requests
+  whose billed cost is unavailable, even when their failure outcome is known.
 
 ### Answering and judging
 
@@ -81,15 +131,20 @@ the answer-level half.
 
 ### Gate
 
-- The run is dispatched only after the user approves the written cost estimate
-  (tokens × dated rates for ingest, answer, and judge passes) in explicit
-  terms. Approval of this protocol's drafting is not approval to spend.
+- The October 8 user authorization permits dispatch within the USD 10 key
+  limit and USD 8 campaign reservation ceiling. Retain dated rates, bounded
+  token estimates, per-call billed usage and unresolved reservations.
 - If a stage fails mid-run, the owned database and request ledger are retained
   for reconciliation per the public-benchmark precedent; no blind retry.
+- A diagnosed model/configuration change starts a separately named experiment
+  with fresh answer identities and a frozen configuration before dispatch.
+  Existing compatible indexes may be reused; keep original results and costs,
+  exclude their request IDs from incremental new-run accounting, and retain
+  unresolved reservations. Do not replace failed results with the new score.
 
 ## Acceptance
 
-A committed report under `.cache/` plus a dated mapping that: names dataset
+A retained report under ignored `.cache/` plus a tracked dated mapping that: names dataset
 file/hash/commit, reproduces the vendored evaluator's numbers from the raw
 answer file, reports all three accuracies and the per-type table, states
 usage/cost/latency, and declares every untested path. The harness reruns

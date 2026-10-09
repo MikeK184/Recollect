@@ -87,12 +87,21 @@ pub async fn explore(
         if !(1..=8).contains(&input.max_hops)
             || !matches!(input.direction.as_str(), "outgoing" | "incoming" | "both")
             || input.center.as_ref().is_some_and(|k| k.is_empty() || k.len() > 100)
+            || (input.windowed && input.center.is_some() && input.max_hops != 1)
         {
             return Err(Error::invalid("Choose an eligible center or overview, one to eight hops and a supported direction."));
         }
-        let mut tx = auth.tx(&state.pool).await?;
+        let mut tx = auth.preparation_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'").execute(&mut *tx).await?;
-        let selected = read::select(&state, &mut tx, &auth, brain, input.scope.clone(), NODE_LIMIT, EDGE_LIMIT).await?;
+        let mut selected = if input.windowed {
+            let window = match &input.center {
+                Some(center) => read::Window::Neighbors { center:center.clone(),direction:input.direction.clone() },
+                None => read::Window::Page { offset:0,limit:250 },
+            };
+            read::select_windowed(&state, &mut tx, &auth, brain, input.scope.clone(), window).await?
+        } else {
+            read::select(&state, &mut tx, &auth, brain, input.scope.clone(), NODE_LIMIT, EDGE_LIMIT).await?
+        };
         if input.center.as_ref().is_some_and(|k| !selected.nodes.contains_key(k)) {
             return Err(Error::invalid("The center must be an eligible entity in this exact graph view."));
         }
@@ -116,7 +125,10 @@ pub async fn explore(
         if edges.len() > DISPLAY_EDGES {
             return Err(display_limit());
         }
-        read::final_gate(&mut tx, &auth, &selected).await?;
+        tx.commit().await?;
+        let mut tx = auth.publication_tx(&state.pool).await?;
+        sqlx::query("SET LOCAL statement_timeout='2s'").execute(&mut *tx).await?;
+        read::interactive_final_gate(&state, &mut tx, &auth, &mut selected).await?;
         tx.commit().await?;
         Ok(ResponseJson(GraphExploration {
             expires_at: selected.deadline,

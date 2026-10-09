@@ -30,3 +30,17 @@ config_file = "agents/reviewer.toml"
 command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
 env_vars = ["CONTEXT7_API_KEY"]
+
+[mcp_servers.rust_analyzer]
+command = "bash"
+args = ['-c', 'set -e; RECOLLECT_MCP_ROOT="$(git rev-parse --show-toplevel)"; exec "$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp"']
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+enabled_tools = ["rust_analyzer_symbols", "rust_analyzer_definition", "rust_analyzer_references", "rust_analyzer_hover", "rust_analyzer_completion", "rust_analyzer_diagnostics", "rust_analyzer_workspace_diagnostics"]
+
+[mcp_servers.graft]
+command = "bash"
+args = ['-c', 'set -e; RECOLLECT_MCP_ROOT="$(git rev-parse --show-toplevel)"; exec "$RECOLLECT_MCP_ROOT/.codex/tools/graft/graft" mcp . --dir .cache/rust-navigation/graft-graph']
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+enabled_tools = ["graft_find_code", "graft_file_api", "graft_trace_calls", "graft_find_all", "graft_repo_map", "graft_check_freshness"]

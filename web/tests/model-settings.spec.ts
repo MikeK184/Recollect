@@ -29,6 +29,7 @@ test("AI cards edit inline, preserve Cancel and require explicit embedding rebui
   let revision = 0;
   let failNext = false;
   let refreshes = 0;
+  const refreshedProviders: string[] = [];
   const writes: Record<string, unknown>[] = [];
   const models = [
     {
@@ -72,11 +73,47 @@ test("AI cards edit inline, preserve Cancel and require explicit embedding rebui
     pricing_stale: false,
     pricing_tier: "standard",
   }));
-  await page.route(`**${base}/models/catalogue`, async (route) => {
-    if (route.request().method() === "POST") refreshes++;
+  await page.route(`**${base}/models/catalogue*`, async (route) => {
+    const provider = new URL(route.request().url()).searchParams.get(
+      "provider",
+    );
+    if (route.request().method() === "POST") {
+      refreshes++;
+      refreshedProviders.push(provider!);
+    }
     await route.fulfill({
       json: {
-        models,
+        models:
+          provider === "openrouter"
+            ? [
+                {
+                  ...models[0],
+                  id: "z-ai/glm-5.3-flash",
+                  checked_on: "2026-10-08",
+                  source_url: "https://openrouter.ai/z-ai/glm-5.3-flash",
+                  cached_input_usd_per_million: null,
+                  input_usd_per_million: 0.15,
+                  output_usd_per_million: 0.5,
+                },
+                {
+                  ...models[0],
+                  id: "openai/gpt-6-luna",
+                  checked_on: "2026-10-08",
+                  source_url: "https://openrouter.ai/openai/gpt-6-luna",
+                  cached_input_usd_per_million: 0.01,
+                  input_usd_per_million: 0.1,
+                  output_usd_per_million: 0.5,
+                },
+                {
+                  ...models[2],
+                  id: "qwen/qwen3-embedding-8b",
+                  checked_on: "2026-10-08",
+                  source_url: "https://openrouter.ai/qwen/qwen3-embedding-8b",
+                  max_dimensions: 4096,
+                  input_usd_per_million: 0.01,
+                },
+              ]
+            : models,
         observed_at: refreshes ? "2026-10-05T12:00:00Z" : null,
         stale: !refreshes,
         error_code: null,
@@ -103,6 +140,9 @@ test("AI cards edit inline, preserve Cancel and require explicit embedding rebui
         policy: body.policy,
         change_id: `fixture-revision-${++revision}`,
       };
+      saved.installed = saved.providers.find(
+        (p: { provider: string }) => p.provider === body.policy.provider,
+      );
       await route.fulfill({ json: saved.current });
       return;
     }
@@ -135,17 +175,19 @@ test("AI cards edit inline, preserve Cancel and require explicit embedding rebui
   await page
     .getByRole("button", { name: "Edit AI permissions", exact: true })
     .click();
-  await page.getByLabel("Text model", { exact: true }).click();
+  await page.getByRole("textbox", { name: "Text model", exact: true }).click();
   await page.getByRole("option", { name: "gpt-4.1-mini", exact: true }).click();
   await expect(
     page.getByText(/\$0.40 input · \$0.10 cached · \$1.60 output/),
   ).toBeVisible();
-  await page.getByLabel("Embedding model", { exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Embedding model", exact: true })
+    .click();
   await page
     .getByRole("option", { name: "text-embedding-3-small", exact: true })
     .click();
   await expect(
-    page.getByLabel("Embedding dimensions", { exact: true }),
+    page.getByRole("textbox", { name: "Embedding dimensions", exact: true }),
   ).toHaveValue("1,536");
   await expect(
     page.getByText(/Saving rebuilds search embeddings/),
@@ -178,6 +220,77 @@ test("AI cards edit inline, preserve Cancel and require explicit embedding rebui
   ).toBeVisible();
   await page.screenshot({
     path: "../.cache/ui/inline-ai-settings.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await page.getByRole("textbox", { name: "AI provider", exact: true }).click();
+  await page.getByRole("option", { name: "OpenRouter", exact: true }).click();
+  await expect.poll(() => refreshedProviders.at(-1)).toBe("openrouter");
+  await expect(
+    page.getByRole("textbox", { name: "Text model", exact: true }),
+  ).toHaveValue("z-ai/glm-5.3-flash");
+  await expect(
+    page.getByRole("textbox", { name: "Embedding dimensions", exact: true }),
+  ).toHaveValue("1,024");
+  await expect(
+    page.getByRole("button", { name: "Save and rebuild", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(saved.current.policy.provider).toBe("openai");
+  await page
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await page.getByRole("textbox", { name: "AI provider", exact: true }).click();
+  await page.getByRole("option", { name: "OpenRouter", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Save and rebuild", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Edit AI permissions", exact: true }),
+  ).toBeVisible();
+  expect(writes.at(-1)).toMatchObject({
+    rebuild_embeddings: true,
+    policy: { provider: "openrouter", embedding_dimensions: 1024 },
+  });
+  await page
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await page.getByRole("textbox", { name: "Text model", exact: true }).click();
+  await page
+    .getByRole("option", { name: "openai/gpt-6-luna", exact: true })
+    .click();
+  await expect(
+    page.getByText(/\$0.10 input · \$0.01 cached · \$0.50 output/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(saved.current.policy.text_model).toBe("z-ai/glm-5.3-flash");
+  await page
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await page.getByRole("textbox", { name: "Text model", exact: true }).click();
+  await page
+    .getByRole("option", { name: "openai/gpt-6-luna", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Save AI permissions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Edit AI permissions", exact: true }),
+  ).toBeVisible();
+  expect(writes.at(-1)).toMatchObject({
+    rebuild_embeddings: false,
+    policy: {
+      provider: "openrouter",
+      text_model: "openai/gpt-6-luna",
+      embedding_model: "qwen/qwen3-embedding-8b",
+      embedding_dimensions: 1024,
+    },
+  });
+  await page.screenshot({
+    path: "../.cache/ui/openrouter-ai-settings.png",
     fullPage: true,
   });
 });

@@ -10,6 +10,8 @@ mod combined;
 mod exploration;
 #[path = "graph_knowledge.rs"]
 mod knowledge;
+#[path = "graph_preparation.rs"]
+mod preparation;
 #[path = "graph_recovery.rs"]
 pub(crate) mod recovery;
 #[path = "graph_retrieval.rs"]

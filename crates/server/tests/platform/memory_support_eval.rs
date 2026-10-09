@@ -38,6 +38,15 @@ async fn memory_support_installed_provider_baseline_opt_in() {
         eprintln!("Real support evaluation not requested; no external call made.");
         return;
     }
+    let provider =
+        std::env::var("RECOLLECT_REAL_SUPPORT_PROVIDER").unwrap_or_else(|_| "openai".into());
+    assert!(matches!(provider.as_str(), "openai" | "openrouter"));
+    let openrouter_text = std::env::var("RECOLLECT_REAL_SUPPORT_TEXT_MODEL")
+        .unwrap_or_else(|_| "z-ai/glm-4.7-flash".into());
+    assert!(matches!(
+        openrouter_text.as_str(),
+        "z-ai/glm-4.7-flash" | "z-ai/glm-5.3-flash" | "openai/gpt-6-luna"
+    ));
     let partition =
         std::env::var("RECOLLECT_REAL_SUPPORT_PARTITION").unwrap_or_else(|_| "calibration".into());
     assert!(matches!(
@@ -100,21 +109,76 @@ async fn memory_support_installed_provider_baseline_opt_in() {
         let candidate = &case["candidate"];
         let h = Harness::new().await;
         assert!(
-            h.state.config.models.key.is_some(),
+            h.state.config.models.key_for(&provider).is_some(),
             "Installed provider credential required"
         );
-        assert_eq!(h.state.config.models.endpoint, "https://api.openai.com/v1");
+        assert_eq!(
+            h.state.config.models.endpoint_for(&provider),
+            Some(if provider == "openrouter" {
+                "https://openrouter.ai/api/v1"
+            } else {
+                "https://api.openai.com/v1"
+            })
+        );
+        if provider == "openrouter" && spent == 0 {
+            let account: Value = h
+                .state
+                .http
+                .get("https://openrouter.ai/api/v1/key")
+                .bearer_auth(h.state.config.models.key_for(&provider).unwrap())
+                .send()
+                .await
+                .unwrap()
+                .error_for_status()
+                .unwrap()
+                .json()
+                .await
+                .unwrap();
+            assert!(
+                account["data"]["usage"].as_f64().unwrap() + 1.25 <= 8.0,
+                "Reserve the entire 250k-token synthetic audit below the campaign ceiling"
+            );
+            assert!(account["data"]["limit_remaining"].as_f64().unwrap() >= 3.25);
+        }
         let owner = h.login().await;
         let b = ok(
             &h,
             "POST",
             "/api/brains",
             &owner,
-            json!({"name":"Isolated synthetic support baseline"}),
+            json!({"name":"Isolated synthetic support baseline","managed_memory":false}),
         )
         .await;
         let base = format!("/api/brains/{}", b["id"].as_str().unwrap());
         let brain = b["id"].as_str().unwrap().parse::<Uuid>().unwrap();
+        if provider == "openrouter" {
+            let listing = ok(
+                &h,
+                "POST",
+                &format!("{base}/models/catalogue?provider=openrouter"),
+                &owner,
+                Value::Null,
+            )
+            .await;
+            assert!(
+                listing["error_code"].is_null(),
+                "Refresh must succeed before paid dispatch"
+            );
+            let current = ok(
+                &h,
+                "GET",
+                &format!("{base}/models/policy"),
+                &owner,
+                Value::Null,
+            )
+            .await;
+            let mut policy = current["current"]["policy"].clone();
+            policy["provider"] = json!("openrouter");
+            policy["text_model"] = json!(openrouter_text);
+            policy["embedding_model"] = json!("qwen/qwen3-embedding-8b");
+            policy["embedding_dimensions"] = json!(1024);
+            ok(&h,"PUT",&format!("{base}/models/policy"),&owner,json!({"base_change":current["current"]["change_id"],"policy":policy,"rebuild_embeddings":true})).await;
+        }
         let mut ids = std::collections::BTreeMap::new();
         let source_scope = selection(
             &h,
@@ -216,7 +280,13 @@ async fn memory_support_installed_provider_baseline_opt_in() {
             policy["purposes"] = json!(["extraction", "synthesis"]);
             policy["content_classes"] = json!(["document", "raw_session", "tool_output", "claim"]);
             policy["max_input_bytes"] = json!(32768);
-            policy["max_output_tokens"] = json!(1024);
+            policy["max_output_tokens"] = json!(if provider == "openrouter"
+                && openrouter_text == "z-ai/glm-5.3-flash"
+            {
+                4096
+            } else {
+                1024
+            });
             policy["daily_token_limit"] = json!(BUDGET - spent);
             policy["max_concurrent"] = json!(1);
         })
@@ -309,7 +379,10 @@ async fn memory_support_installed_provider_baseline_opt_in() {
             "failed"
         };
         results["observations"].as_array_mut().unwrap().push(json!({"case_id":case["id"],"state":state,"verdict":if complete {assessed["disposition"].clone()} else {Value::Null},"usable":usable,"request_count":requests.len(),"charged_tokens":charge,"latency_ms":latency}));
-        let requested = json!(h.state.config.models.text_model);
+        let requested = requests
+            .first()
+            .map(|r| r["model"].clone())
+            .unwrap_or_else(|| json!(h.state.config.models.text_model));
         assert!(
             results["versions"]["requested_model"] == "pending"
                 || results["versions"]["requested_model"] == requested,
@@ -325,6 +398,16 @@ async fn memory_support_installed_provider_baseline_opt_in() {
             results["versions"]["returned_model"] = json!(returned);
         }
         receipts["cases"][ledger_index] = json!({"case_id":case["id"],"state":"recorded","database":h.database,"brain_id":brain,"source_version":version,"revision_id":revision["id"],"assessment_id":job.target_id,"job_id":job.id,"policy_id":assessed["policy_id"],"request_ids":requests.iter().map(|r|r["id"].clone()).collect::<Vec<_>>(),"gateway_receipts":requests,"assessment_state":assessed["state"],"disposition":assessed["disposition"],"reason":assessed["reason"],"eligibility":claim["selected"]["eligibility"],"delivered_exact_revision":delivered});
+        receipts["provider"] = json!(provider);
+        receipts["actual_cost_usd"] = json!(
+            receipts["cases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|c| c["gateway_receipts"].as_array().into_iter().flatten())
+                .filter_map(|r| r["cost_usd"].as_f64())
+                .sum::<f64>()
+        );
         std::fs::write(&output, serde_json::to_vec_pretty(&results).unwrap()).unwrap();
         std::fs::write(
             output.with_extension("receipts.json"),
@@ -335,6 +418,11 @@ async fn memory_support_installed_provider_baseline_opt_in() {
             "Synthetic case {}: {state}; usable={usable}; calls={}; charged={charge}",
             case["id"],
             requests.len()
+        );
+        assert!(
+            !uncertain,
+            "Uncertain paid attempt retained in owned database {}; reconcile before any retry",
+            h.database
         );
         h.finish().await;
         if BUDGET - spent < 70000 {

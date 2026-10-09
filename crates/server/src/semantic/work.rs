@@ -146,9 +146,17 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             "The batch inputs changed during model execution.",
         ));
     }
-    let usable: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM model_requests WHERE brain_id=$1 AND id=$2 AND state='succeeded' AND NOT suppressed AND policy_id=$3 AND model=$4 AND returned_model=$4 AND dimensions=$5)")
+    let returned: Option<Option<String>> = sqlx::query_scalar("SELECT returned_model FROM model_requests WHERE brain_id=$1 AND id=$2 AND state='succeeded' AND NOT suppressed AND policy_id=$3 AND model=$4 AND dimensions=$5 AND provider=$6")
         .bind(job.brain_id).bind(response.request.id).bind(current.policy_id)
-        .bind(&profile.model).bind(profile.dimensions).fetch_one(&mut *tx).await?;
+        .bind(&profile.model).bind(profile.dimensions).bind(&profile.provider).fetch_optional(&mut *tx).await?;
+    let usable = returned.flatten().is_some_and(|returned| {
+        model_policy::catalogue::returned_model_matches(
+            &profile.provider,
+            &profile.model,
+            &returned,
+            true,
+        )
+    });
     if !usable {
         return Err(model_policy::failure(
             "model_result_not_retained",

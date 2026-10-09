@@ -57,3 +57,13 @@ of their underlying algorithms.
 ## Supersession
 
 N/A: this implements the accepted graph baseline.
+
+## Concurrent preparation amendment — 2026-10-09
+
+The user authorized implementation of automatic mapping and its graph
+performance prerequisite. The [concurrent preparation contract](../contracts/graph-concurrent-preparation.md)
+permits provisional consistent read-only preparation without Brain locks,
+followed by short current-authority, epoch and deadline checks under the existing
+canonical lock before response/staging/readiness commit. PostgreSQL remains
+authoritative and Neo4j remains independently verified. This replaces long lock
+tenure for the declared operations; it does not permit stale evidence publication.

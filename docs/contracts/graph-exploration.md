@@ -166,3 +166,21 @@ The compact inspector shows the full title, real qualification, recorded
 direction and selectable direct connections. Open evidence retains canonical
 lineage/detail reads. Exact IDs, witness and path actions remain secondary and
 reachable. No model calls, new backend read, graph engine or persistent state.
+
+## Progressive first batch — 2026-10-08
+
+Optional `windowed: true` requests provide explicitly partial exploration; false
+remains the compatible complete-overview/reachability API. A null-center window
+selects at most 250 canonical descriptor identities before expensive source
+qualification and physical verification. Centered windows support one hop;
+native Neo4j discovers bounded incident endpoints before exact canonical
+qualification. No forbidden intermediate is traversed. The native reachability
+selector then uses only the qualified window. Scope, required combined inputs,
+corrections, permissions, erasure, deadlines and final gates remain unchanged.
+
+Windowed entity pages qualify/verify only their 100 descriptor identities; their
+offset counts descriptor candidates, including withheld items. Coverage records
+`graph_window` and omitted candidate coverage; counts describe the eligible window,
+not an exhaustive scoped inventory. A partial view cannot prove no path. Complete
+path queries remain unchanged. Descriptor loading remains bounded by the existing
+budget and is not yet an unlimited-capacity reader. Rendering dispatches no models.

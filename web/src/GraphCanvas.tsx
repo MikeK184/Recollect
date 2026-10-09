@@ -193,6 +193,13 @@ function fitGraph(cy: Core, elements = cy.elements(":visible"), padding = 35) {
   });
 }
 
+function overlappingLabels(cy: Core) {
+  const boxes = cy.nodes(":visible").map((node) => node.boundingBox({ includeLabels: true }));
+  return boxes.some((a, index) => boxes.slice(index + 1).some((b) =>
+    a.x1 < b.x2 + 8 && b.x1 < a.x2 + 8 && a.y1 < b.y2 + 8 && b.y1 < a.y2 + 8,
+  ));
+}
+
 export default function GraphCanvas({
   nodes,
   edges,
@@ -220,6 +227,7 @@ export default function GraphCanvas({
     [focused, setFocused] = useState<GraphChoice>(null);
   const [optionsOpened, setOptionsOpened] = useState(false),
     [ready, setReady] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
   const [shown, setShown] = useState({
     nodes: nodes.map((node) => node.key),
     edges: edges.map((edge) => edge.id),
@@ -358,6 +366,7 @@ export default function GraphCanvas({
   useEffect(() => {
     const cy = core.current;
     if (!cy || !ready) return;
+    setLayoutReady(false);
     hovered.current = null;
     setHoverLabel(null);
     const positions = new Map(
@@ -365,6 +374,7 @@ export default function GraphCanvas({
     );
     const viewport = { zoom: cy.zoom(), pan: { ...cy.pan() } },
       layoutChanged = previousLayout.current !== layout;
+    const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
     previousLayout.current = layout;
     cy.batch(() => {
       cy.elements().remove();
@@ -376,8 +386,8 @@ export default function GraphCanvas({
             kind: node.evidence.kind,
           },
           position: positions.get(node.key) ?? {
-            x: (index % 10) * 160,
-            y: Math.floor(index / 10) * 160,
+            x: (index % columns) * 200,
+            y: Math.floor(index / columns) * 140,
           },
         })),
         ...edges.map((edge) => ({
@@ -433,14 +443,33 @@ export default function GraphCanvas({
                 nodeDimensionsIncludeLabels: true,
               },
     );
+    let fallback: cytoscape.Layouts | null = null;
+    const fitted = () => {
+      if (!laidOut.current || layoutChanged) {
+        fitGraph(cy);
+        initialFit.current = cy.width() <= 0 || cy.height() <= 0;
+      } else cy.viewport(viewport);
+      laidOut.current = true;
+      setLayoutReady(true);
+    };
+    const completed = () => {
+      // COSE can settle disconnected, collinear components on top of each
+      // other. Use the library's label-aware grid only when settled bounds
+      // collide; do this before publishing readiness or fitting the viewport.
+      if (layout === "cose" && overlappingLabels(cy)) {
+        fallback = cy.layout({ name: "grid", animate: false, fit: false,
+          avoidOverlap: true, avoidOverlapPadding: 20, nodeDimensionsIncludeLabels: true });
+        fallback.one("layoutstop", fitted);
+        fallback.run();
+      } else fitted();
+    };
+    run.one("layoutstop", completed);
     run.run();
-    if (!laidOut.current || layoutChanged) {
-      fitGraph(cy);
-      initialFit.current = cy.width() <= 0 || cy.height() <= 0;
-    } else cy.viewport(viewport);
-    laidOut.current = true;
     return () => {
+      run.off("layoutstop", completed);
       run.stop();
+      fallback?.off("layoutstop", fitted);
+      fallback?.stop();
     };
   }, [ready, topology, layout]);
   useEffect(() => {
@@ -767,6 +796,7 @@ export default function GraphCanvas({
           aria-label={`Interactive graph: ${shown.nodes.length} of ${nodes.length} loaded entities and ${shown.edges.length} of ${edges.length} directed relationships. Use Find entity for keyboard inspection.`}
           data-testid="graph-canvas"
           data-ready={ready}
+          data-layout-ready={layoutReady}
           data-labels={labels}
         />
         <Group className="graph-canvas-controls" gap={4} data-graph-chrome="">

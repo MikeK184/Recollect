@@ -72,6 +72,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
 | `retrieval-scoped-project-brief` | shipped | contract-backed | pack | Current supported compact context and authenticated continuation |
+| `retrieval-semantic-discovery-plans` | shipped | contract-backed | pack | Missing-input cohorts preserve eligibility/replay, pass native and normal-data equivalence, and are deployed locally; remaining graph failures stay with the graph/operations owners |
 | `retrieval-exact-and-lexical` | shipped | contract-backed | pack | Delivered canonical exact/text candidates, correction-aware bounded context, immutable scope, temporal/manifest filters and browser/native consumers with database/runtime proof |
 | `retrieval-semantic` | shipped | contract-backed | pack | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
 | `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
@@ -85,6 +86,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | Slice ID | Predecessors |
 | --- | --- |
 | `retrieval-exact-and-lexical` | `memory-retention-and-erasure` |
+| `retrieval-semantic-discovery-plans` | `retrieval-semantic` |
 | `retrieval-semantic` | `retrieval-exact-and-lexical`, `memory-provider-policy-and-learning` |
 | `retrieval-graph-fusion` | `retrieval-semantic`, `graph-cross-repository-views` |
 | `retrieval-investigation-ui` | `retrieval-graph-fusion`, `memory-procedures-and-handovers` |

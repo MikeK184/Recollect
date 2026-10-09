@@ -11,6 +11,14 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Rust Analyzer MCP and Graft local proof, 2026-10-09](rust-semantic-navigation-proof-2026-10-09.md)
+
+- [Automatic mapping review, graph preparation and local extraction proof, 2026-10-09](automatic-knowledge-mapping-progress-2026-10-09.md)
+
+- [Memory quality, graph performance and backup-backed local update first-batch proof, 2026-10-08](memory-quality-first-batch-proof-2026-10-08.md)
+
+- [OpenRouter memory benchmarks: 50-answer recovery, official scores, issues and cost, 2026-10-08](openrouter-benchmark-proof-2026-10-08.md)
+
 - [Automatic memory implementation and versioned support evaluation, 2026-10-07](memory-source-support-staging-2026-10-07.md)
 
 - [Muse memory comparison and Recollect implementation audit, 2026-10-07](muse-memory-comparison-2026-10-07.md)

@@ -41,6 +41,7 @@ pub(super) async fn available(tx: &mut Tx<'_>, g: &GraphGeneration) -> Result<()
 }
 pub(super) async fn build(tx: &mut Tx<'_>, g: &GraphGeneration) -> Result<Descriptor> {
     available(tx, g).await?;
+    let prepared_at = preparation_epoch(tx, g.brain_id).await?;
     let mut d = if g.kind == "combined" {
         combined::build(tx, g).await?
     } else if let Some(snapshot) = g.snapshot_id {
@@ -48,6 +49,7 @@ pub(super) async fn build(tx: &mut Tx<'_>, g: &GraphGeneration) -> Result<Descri
     } else {
         knowledge(tx, g.brain_id).await?
     };
+    d.preparation_epoch = Some(prepared_at);
     d.expires_at = sqlx::query_scalar(include_str!("deadline.sql"))
         .bind(g.brain_id)
         .bind(Json(&d.nodes))
@@ -146,13 +148,27 @@ async fn repository(tx: &mut Tx<'_>, brain: Uuid, snapshot: Uuid) -> Result<Desc
     Ok(d)
 }
 
-const CLAIMS: &str="WITH current_claims AS MATERIALIZED (
+const CLAIMS: &str="WITH authority_ids AS MATERIALIZED (
+ SELECT a.revision_id id FROM memory_support_assessments a
+ JOIN model_policy_heads p ON p.brain_id=a.brain_id AND p.policy_id=a.policy_id
+ WHERE a.brain_id=$1 AND a.verifier_version='source-support-3'
+   AND a.state='succeeded' AND a.disposition='supported' AND a.privacy_state='active'
+ UNION
+ SELECT r.id FROM claim_revisions r JOIN memory_decisions d
+   ON d.brain_id=r.brain_id AND d.id=(r.revision->>'review_decision_id')::uuid
+ WHERE r.brain_id=$1 AND r.revision->>'review'='accepted'
+   AND d.decision->>'actor_id'=r.revision->>'reviewer_id'
+   AND EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(d.decision->'transitions','[]')) t
+     WHERE t->>'after_revision'=r.id::text AND t->>'claim_id'=r.claim_id::text)
+), authority_roots AS MATERIALIZED (
  SELECT r.* FROM claims c JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
  WHERE r.brain_id=$1 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
- AND recollect_memory_supported(r.brain_id,r.id)
+ AND r.id IN (SELECT id FROM authority_ids)
  AND r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active'
  AND r.revision#>>'{content,freshness}'<>'superseded'
  AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
+) , current_claims AS MATERIALIZED (
+ SELECT r.* FROM authority_roots r WHERE recollect_memory_supported(r.brain_id,r.id)
 )";
 async fn knowledge(tx: &mut Tx<'_>, brain: Uuid) -> Result<Descriptor> {
     let claims: Vec<(Uuid, Uuid)> = sqlx::query_as(&format!(
@@ -164,6 +180,11 @@ async fn knowledge(tx: &mut Tx<'_>, brain: Uuid) -> Result<Descriptor> {
     if claims.len() > 100000 {
         return Err(capacity());
     }
+    // The same transaction holds the Brain writer lock. Reuse the exact
+    // canonically qualified roots; publication still checks epoch and the
+    // input retention deadlines after native projection I/O. Graph reads
+    // independently revalidate the full canonical dependency gates.
+    let revisions: Vec<Uuid> = claims.iter().map(|(_, revision)| *revision).collect();
     let mut nodes: BTreeMap<String, Entity> = claims
         .iter()
         .map(|(id, revision_id)| {
@@ -175,8 +196,8 @@ async fn knowledge(tx: &mut Tx<'_>, brain: Uuid) -> Result<Descriptor> {
             (e.key(), e)
         })
         .collect();
-    let supports:Vec<(Uuid,i32,String,Uuid)>=sqlx::query_as(&format!("{CLAIMS}, supports AS (
-      SELECT s.* FROM claim_supports s JOIN current_claims c ON c.id=s.revision_id AND c.brain_id=s.brain_id
+    let supports:Vec<(Uuid,i32,String,Uuid)>=sqlx::query_as("WITH supports AS (
+      SELECT s.* FROM claim_supports s WHERE s.brain_id=$1 AND s.revision_id=ANY($2)
     ), edges AS (
       SELECT s.revision_id,s.ordinal,'source_version'::text kind,v.id
       FROM supports s JOIN source_versions v ON v.id=s.source_version_id AND v.brain_id=s.brain_id
@@ -189,14 +210,19 @@ async fn knowledge(tx: &mut Tx<'_>, brain: Uuid) -> Result<Descriptor> {
       UNION ALL
       SELECT s.revision_id,s.ordinal,'manifest_revision',m.id FROM supports s
       JOIN manifest_revisions m ON m.id=s.manifest_revision_id AND m.brain_id=s.brain_id WHERE m.privacy_state='active'
-    ) SELECT * FROM edges ORDER BY revision_id,ordinal LIMIT 250001"))
-        .bind(brain).fetch_all(&mut **tx).await?;
+    ) SELECT * FROM edges ORDER BY revision_id,ordinal LIMIT 250001")
+        .bind(brain).bind(&revisions).fetch_all(&mut **tx).await?;
     if supports.len() > 250000 {
         return Err(capacity());
     }
     let mut d = Descriptor::default();
-    let support_count: i64 = sqlx::query_scalar(&format!("{CLAIMS} SELECT count(*) FROM claim_supports s JOIN current_claims c ON c.id=s.revision_id AND c.brain_id=s.brain_id"))
-        .bind(brain).fetch_one(&mut **tx).await?;
+    let support_count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM claim_supports WHERE brain_id=$1 AND revision_id=ANY($2)",
+    )
+    .bind(brain)
+    .bind(&revisions)
+    .fetch_one(&mut **tx)
+    .await?;
     d.unresolved = support_count - supports.len() as i64;
     for (claim, ordinal, kind, id) in supports {
         let entity = Entity {
@@ -217,14 +243,14 @@ async fn knowledge(tx: &mut Tx<'_>, brain: Uuid) -> Result<Descriptor> {
             evidence_ordinal: ordinal,
         });
     }
-    let contributions:Vec<(Uuid,Uuid,i32)>=sqlx::query_as(&format!("{CLAIMS} SELECT r.id,c.input_revision_id,(requested.ordinality-1)::integer
-      FROM current_claims r JOIN claim_contributions c ON c.brain_id=r.brain_id AND c.revision_id=r.id
-      JOIN current_claims i ON i.id=c.input_revision_id
-      CROSS JOIN LATERAL jsonb_array_elements_text(r.revision#>'{{content,handover,contributions}}') WITH ORDINALITY requested(id,ordinality)
-      WHERE r.revision#>>'{{content,kind}}'='handover'
+    let contributions:Vec<(Uuid,Uuid,i32)>=sqlx::query_as("SELECT r.id,c.input_revision_id,(requested.ordinality-1)::integer
+      FROM claim_revisions r JOIN claim_contributions c ON c.brain_id=r.brain_id AND c.revision_id=r.id
+      CROSS JOIN LATERAL jsonb_array_elements_text(r.revision#>'{content,handover,contributions}') WITH ORDINALITY requested(id,ordinality)
+      WHERE r.brain_id=$1 AND r.id=ANY($2) AND c.input_revision_id=ANY($2)
+        AND r.revision#>>'{content,kind}'='handover'
         AND requested.id=c.input_revision_id::text
-      ORDER BY r.id,c.input_revision_id LIMIT 250001"))
-        .bind(brain).fetch_all(&mut **tx).await?;
+      ORDER BY r.id,c.input_revision_id LIMIT 250001")
+        .bind(brain).bind(&revisions).fetch_all(&mut **tx).await?;
     for (output, input, ordinal) in contributions {
         if d.edges.len() == 250000 {
             return Err(capacity());

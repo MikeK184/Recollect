@@ -227,6 +227,43 @@ pub(crate) async fn verify_nodes(
     let keys: Vec<_> = nodes.iter().map(Entity::key).collect();
     count(state,"MATCH (:RecollectGraphGeneration {brain:$brain,id:$generation})-[r:RECOLLECT_GRAPH_MEMBER {brain:$brain,generation:$generation}]->(n:RecollectGraphEntity {brain:$brain}) WHERE n.key IN $keys RETURN count(DISTINCT n) AS count",json!({"brain":g.brain_id,"generation":g.id,"keys":keys}),keys.len()).await
 }
+
+pub(super) async fn neighbor_keys(
+    state: &AppState,
+    projections: &[(GraphGeneration, Descriptor)],
+    relations: &[String],
+    center: &str,
+    direction: &str,
+    limit: usize,
+) -> Result<BTreeSet<String>> {
+    let generations: Vec<_> = projections.iter().map(|(g, _)| g.id).collect();
+    let edge_ids: Vec<_> = projections
+        .iter()
+        .flat_map(|(_, d)| &d.edges)
+        .filter(|e| relations.is_empty() || relations.contains(&e.relation))
+        .map(|e| e.id)
+        .collect();
+    let pattern = match direction {
+        "outgoing" => "(a)-[r:RECOLLECT_GRAPH_EDGE]->(b)",
+        "incoming" => "(a)<-[r:RECOLLECT_GRAPH_EDGE]-(b)",
+        _ => "(a)-[r:RECOLLECT_GRAPH_EDGE]-(b)",
+    };
+    let rows = query(&state.config, &state.http, &format!(
+        "MATCH (a:RecollectGraphEntity {{brain:$brain,key:$center}}) MATCH {pattern} \
+         WHERE b.brain=$brain AND r.brain=$brain AND r.generation IN $generations AND r.id IN $edges \
+         RETURN DISTINCT b.key AS key ORDER BY key LIMIT $limit"),
+        json!({"brain": projections[0].0.brain_id,"center":center,"generations":generations,"edges":edge_ids,"limit":limit}), &["key"]).await?;
+    rows.into_iter()
+        .map(|row| {
+            row[0].as_str().map(str::to_owned).ok_or_else(|| {
+                failure(
+                    "graph_response_invalid",
+                    "Native neighbor identities are invalid.",
+                )
+            })
+        })
+        .collect()
+}
 pub(crate) async fn verify_generation(state: &AppState, g: &GraphGeneration) -> Result<()> {
     count(
         state,

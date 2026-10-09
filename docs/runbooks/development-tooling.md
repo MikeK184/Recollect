@@ -1,6 +1,6 @@
 # Development Tooling Assessment
 
-Revised: 2026-10-01. The [selected stack](../foundation/techstack.md) is Rust,
+Revised: 2026-10-09. The [selected stack](../foundation/techstack.md) is Rust,
 React/Vite, PostgreSQL/pgvector and Neo4j/GDS Community. The MCP coordinator uses
 rmcp; Cognee remains a reference. Earlier Python/FastMCP/Next.js recommendations
 belonged to the superseded extension baseline.
@@ -17,6 +17,7 @@ product is now implemented and deployed locally; dated acceptance is recorded in
 | --- | --- |
 | Dependency documentation | Repo-local Context7 plus primary official sources; record stale/incomplete lookups |
 | Source structure and callers | Repo-local CodeGraph 1.6.0, with a verified index of the Cognee reference checkout |
+| Rust semantic resolution and repository context | [Rust Analyzer MCP and Graft](rust-semantic-navigation.md), locally installed with actual semantic/structural stdio proof and isolated runtime |
 | Literal/configuration/docs search | rg and targeted file reads |
 | Governance validation | ./scripts/validate.sh using Bash and Python 3.11+ standard library |
 | Documentation routing and maintenance | [recollect-doc-router](../../.agents/skills/recollect-doc-router/SKILL.md) and [recollect-doc-maintainer](../../.agents/skills/recollect-doc-maintainer/SKILL.md), adapted from Terme |
@@ -80,7 +81,9 @@ skills.
 
 No additional development MCP is required to begin the accepted implementation
 sequence beyond the user-authorized OpenCode chrome-devtools browser control.
-Keep the existing Context7 server and CodeGraph CLI. This is a tooling
+Keep the existing Context7 server and CodeGraph CLI. The user's 2026-10-09
+instruction additionally selects repository-local Rust Analyzer MCP and Graft
+under [ADR 0019](../adr/0019-rust-semantic-developer-navigation.md). This is a tooling
 recommendation based on the selected stack and available workflows, not proof
 that future product integrations already work.
 
@@ -89,7 +92,7 @@ that future product integrations already work.
 | Context7 | Keep; real library resolution and documentation queries succeeded in this session. Pair responses with current primary sources when incomplete or inconsistent. |
 | CodeGraph MCP | No additional server now; the pinned local CLI already supplies navigation. Rust source coverage must be checked when Rust code exists. |
 | OpenAI documentation MCP | Optional if sustained OpenAI-specific work warrants it; current official browsing and Context7 cover this assessment. No product model provider is selected merely by using Codex. |
-| Browser/Playwright MCP | OpenCode uses secret-free local `chrome-devtools` (`chrome-devtools-mcp@latest --isolated --no-usage-statistics`) per the 2026-09-29 user request for browser control; Codex remains Context7-only. Add further browser integrations only for a demonstrated missing capability. |
+| Browser/Playwright MCP | OpenCode uses secret-free local `chrome-devtools` (`chrome-devtools-mcp@latest --isolated --no-usage-statistics`) per the 2026-09-29 user request; no Codex browser MCP is selected. |
 | PostgreSQL, Neo4j or Docker MCPs | No extra server for scaffolding; direct clients, Compose and integration fixtures should prove the actual application paths. Client installation alone does not prove service readiness. |
 | GitHub/GitLab or issue-tracker MCPs | Revisit when an actual remote/CI/review workflow needs capabilities beyond Git and the relevant CLI; no remote service was connected here. |
 | Vault, Kubernetes, Terraform, Confluence or customer MCPs | These are possible product-managed connections or integration fixtures. Their presence in the vision does not require developer credentials or registration in this repository. |
@@ -98,8 +101,9 @@ that future product integrations already work.
 Any later Codex development MCP belongs in `.codex/config.toml`, and any later
 OpenCode development MCP belongs in root `opencode.json`, with named environment
 inputs and a successful call recorded before claiming connectivity. The current
-governance checker permits exactly Context7 in `.codex/config.toml`; it does not
-constrain `opencode.json`. A future approved Codex addition must
+governance checker permits exactly Context7 and the authorized Rust Analyzer/Graft
+stanzas in `.codex/config.toml`; it does not constrain `opencode.json`.
+A future approved Codex addition must
 update its configuration contract and focused tests together. Brain-managed
 connections belong to product contracts/runtime rather than these host files.
 

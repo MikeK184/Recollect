@@ -12,6 +12,9 @@ export RECOLLECT_OWNER_PASSWORD="$(python3 -c 'import secrets; print(secrets.tok
 if [[ "${RECOLLECT_TEST_OPENAI:-0}" != 1 ]]; then
   unset OPENAI_API_KEY
 fi
+if [[ "${RECOLLECT_TEST_OPENROUTER:-0}" != 1 ]]; then
+  unset OPENROUTER_API_KEY
+fi
 if [[ $# == 0 ]]; then
   for RECOLLECT_UI_FILE in web/tests/*.spec.ts; do
     ./scripts/test-ui.sh "${RECOLLECT_UI_FILE#web/}"
@@ -29,7 +32,7 @@ for RECOLLECT_UI_SPEC in "$@"; do
     RECOLLECT_UI_MCP_RUNTIME=1
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
-  if [[ "${RECOLLECT_UI_SPEC##*/}" == public-benchmark.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == mcp-direct.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == brain-deletion.spec.ts ]]; then
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == longmemeval.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == public-benchmark.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == mcp-direct.spec.ts || "${RECOLLECT_UI_SPEC##*/}" == brain-deletion.spec.ts ]]; then
     RECOLLECT_UI_NEEDS_WORKER=1
   fi
   # Recall reads processed canonical chunks while the browser test is running.
@@ -43,8 +46,26 @@ if [[ "${RECOLLECT_TEST_DEX:-}" == 1 ]]; then
   export RECOLLECT_OIDC_CLIENT_SECRET="$DEX_CLIENT_SECRET"
   export RECOLLECT_OIDC_SCOPES='profile groups'
 fi
-RECOLLECT_TEST_DB="recollect_ui_$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
-./scripts/docker.sh compose exec -T postgres createdb -U recollect_admin "$RECOLLECT_TEST_DB"
+if [[ -n "${RECOLLECT_TEST_RESUME_DB:-}" ]]; then
+  RECOLLECT_TEST_DB="$RECOLLECT_TEST_RESUME_DB"
+  python3 - "$RECOLLECT_TEST_DB" <<'PY'
+import json, pathlib, re, sys
+db=sys.argv[1]
+assert re.fullmatch(r'recollect_ui_[0-9a-f]{32}',db), 'Invalid owned fixture database'
+receipt=json.loads(pathlib.Path(f'.cache/ui/{db}-owner.json').read_text())
+assert receipt['database']==db and receipt['owner']=='scripts/test-ui.sh', 'Missing fixture ownership receipt'
+PY
+else
+  RECOLLECT_TEST_DB="recollect_ui_$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+  ./scripts/docker.sh compose exec -T postgres createdb -U recollect_admin "$RECOLLECT_TEST_DB"
+  mkdir -p .cache/ui
+  python3 - "$RECOLLECT_TEST_DB" <<'PY'
+import json,pathlib,sys
+db=sys.argv[1]
+pathlib.Path(f'.cache/ui/{db}-owner.json').write_text(json.dumps({'database':db,'owner':'scripts/test-ui.sh'})+'\n')
+PY
+fi
+printf 'Owned UI database: %s\n' "$RECOLLECT_TEST_DB"
 RECOLLECT_UI_PID=''
 RECOLLECT_UI_WORKER_PID=''
 cleanup() {
@@ -64,9 +85,20 @@ cleanup() {
     kill -TERM "$RECOLLECT_UI_PID" 2>/dev/null || true
     wait "$RECOLLECT_UI_PID" 2>/dev/null || true
   fi
-  if [[ "${RECOLLECT_PUBLIC_SEMANTIC:-0}" == 1 && "$RECOLLECT_UI_EXIT_STATUS" != 0 ]]; then
+  if [[ ( "${RECOLLECT_PUBLIC_SEMANTIC:-0}" == 1 || "${RECOLLECT_LONGMEM_BENCHMARK:-0}" == 1 ) && "$RECOLLECT_UI_EXIT_STATUS" != 0 ]]; then
     printf 'Semantic benchmark failed; retained owned database and private artifacts for request reconciliation: %s\n' "$RECOLLECT_TEST_DB" >&2
     return 0
+  fi
+  if [[ "${RECOLLECT_LONGMEM_BENCHMARK:-0}" == 1 ]]; then
+    local RECOLLECT_UI_UNRESOLVED
+    if ! RECOLLECT_UI_UNRESOLVED="$(./scripts/docker.sh compose exec -T postgres psql -U recollect_admin -d "$RECOLLECT_TEST_DB" -Atqc "SELECT count(*) FROM model_requests WHERE state='uncertain' OR (provider='openrouter' AND state IN ('succeeded','failed') AND cost_usd IS NULL)")"; then
+      printf 'Owned benchmark database retained because paid-request reconciliation could not be checked: %s\n' "$RECOLLECT_TEST_DB" >&2
+      return 1
+    fi
+    if [[ "$RECOLLECT_UI_UNRESOLVED" != 0 ]]; then
+      printf 'Benchmark measurements completed; owned database and private artifacts retained for %s unresolved paid receipts: %s\n' "$RECOLLECT_UI_UNRESOLVED" "$RECOLLECT_TEST_DB" >&2
+      return 0
+    fi
   fi
   if ! env -u VAULT_TOKEN target/debug/recollect-server privacy-reconcile >> .cache/ui/cleanup.log 2>&1; then
     printf 'Owned UI database and journals retained because privacy/analytics cleanup is uncertain: %s\n' "$RECOLLECT_TEST_DB" >&2
@@ -81,6 +113,7 @@ cleanup() {
     return 1
   fi
   ./scripts/docker.sh compose exec -T postgres dropdb -U recollect_admin --force "$RECOLLECT_TEST_DB"
+  rm -f ".cache/ui/$RECOLLECT_TEST_DB-owner.json"
   rm -f ".cache/ui/$RECOLLECT_TEST_DB-credentials.json"
   rm -f ".cache/ui/$RECOLLECT_TEST_DB-credentials.mcp-bindings.json"
   rm -f ".cache/ui/$RECOLLECT_TEST_DB-credentials.mcp-secrets.json"
