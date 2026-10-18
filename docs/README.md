@@ -50,6 +50,13 @@ Templates live alongside each document type. Indexes link current records;
 retain superseded decisions with replacement links and shipped packs in the
 archive. Avoid competing current versions of the same specification.
 
+`output/` (browser screenshots, generated imagery and review captures) is
+ignored and no longer tracked. Evidence cited as `output/...` or
+`f2673d7:output/...` in earlier records is the last tracked copy at Git
+revision `f2673d7`: read it with `git show f2673d7:output/<path>` or check it
+out from that revision. Cite new evidence by revision or in a tracked summary,
+not by a link into `output/`.
+
 ## Foundation bootstrap
 
 Foundation documents begin with `Status: pending` and become `Status: accepted`

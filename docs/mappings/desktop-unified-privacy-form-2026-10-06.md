@@ -93,6 +93,6 @@ the latest correction supersedes its separate-card Privacy layout.
 ## Follow-up
 
 Final read/edit screenshots:
-[single form](../../output/browser-review-2026-10-06/privacy-unified.jpg),
-[shared draft](../../output/browser-review-2026-10-06/privacy-unified-edit.jpg).
+single form (`f2673d7:output/browser-review-2026-10-06/privacy-unified.jpg`),
+shared draft (`f2673d7:output/browser-review-2026-10-06/privacy-unified-edit.jpg`).
 Reconciled pack records final independent pixel acceptance and repository checks.

@@ -16,8 +16,8 @@ unchanged using the installed sharp dependency for reference inputs. All edits
 to generated images used built-in `image_gen.imagegen`. The agent/private
 images received targeted logo edits; the environment illustration used the
 approved private-runner composition and actual
-[Tool access badge screenshot](../../output/tool-access-header-badges-2026-10-06/read.png).
-[Prompts and provenance](../../output/imagegen/2026-10-06-readme-branded/prompts.json)
+Tool access badge screenshot (`f2673d7:output/tool-access-header-badges-2026-10-06/read.png`).
+Prompts and provenance (`f2673d7:output/imagegen/2026-10-06-readme-branded/prompts.json`)
 record exact inputs, generation prompts and final source/destination paths.
 
 ## Observations
@@ -39,7 +39,7 @@ diamond and coloured dots, with the approved cream/ink/sage styling. These are
 generated renditions of the supplied identity, not vector masters. All PNGs
 verify as RGB at 1672×941. The local GitHub-style preview loaded all eight images
 without horizontal overflow at the default 1280px viewport. Its
-[environment-section capture](../../output/imagegen/2026-10-06-readme-branded/readme-preview.png)
+environment-section capture (`f2673d7:output/imagegen/2026-10-06-readme-branded/readme-preview.png`)
 shows readable cards/arrows at README size. All 39 local README links/anchors,
 governance lint/32 tests and whitespace checks passed.
 

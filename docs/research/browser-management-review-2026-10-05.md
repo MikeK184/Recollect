@@ -278,7 +278,7 @@ profile/grant mutations are separate transactions: if one Save spans both,
 either add a genuinely atomic command or show partial results and retry only
 unfinished mutations. Never imply all edits saved when only one mutation succeeded.
 
-**Mockup:** [Revised card design image](../../output/browser-review-2026-10-05/tool-groups-cards.jpg).
+**Mockup:** Revised card design image (`f2673d7:output/browser-review-2026-10-05/tool-groups-cards.jpg`).
 The interactive concept uses the current `test` group and Context7 connection
 identity with illustrative grants and an optional example teammate; it is not an
 access audit. It demonstrates editable values, add/remove and separate grants

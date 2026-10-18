@@ -19,10 +19,10 @@ small fix belongs to the repository-governance epic. The
 the product authority.
 
 The built-in `image_gen.imagegen` tool used the approved
-[Private Runners](../../output/imagegen/2026-10-06-private-runners-relationships/view-v2.png)
-and [Tool access](../../output/imagegen/2026-10-06-tool-access-compact/tool-access-v2.png)
+Private Runners (`f2673d7:output/imagegen/2026-10-06-private-runners-relationships/view-v2.png`)
+and Tool access (`f2673d7:output/imagegen/2026-10-06-tool-access-compact/tool-access-v2.png`)
 concepts as visual references. The complete
-[prompt set and source/destination provenance](../../output/imagegen/2026-10-06-readme-concepts/prompts.json)
+prompt set and source/destination provenance (`f2673d7:output/imagegen/2026-10-06-readme-concepts/prompts.json`)
 records all three generations and the private-runner correction. That correction
 removed unrequested coding-host labels and replaced an invented glyph with a
 simple outline icon.
@@ -44,7 +44,7 @@ card headers, scope/count badges, fine dividers and readable identifiers. Pillow
 verified all three RGB PNG files: 1672×941, 1672×940 and 1672×941 respectively.
 The local GitHub-style README preview loaded all eight images at the default
 1280px browser viewport with no horizontal overflow. The
-[preview capture](../../output/imagegen/2026-10-06-readme-concepts/readme-preview.png)
+preview capture (`f2673d7:output/imagegen/2026-10-06-readme-concepts/readme-preview.png`)
 records the new agent illustration in the README. All 39 local README links and
 anchors passed. Governance lint, 32 checker tests and whitespace checks passed.
 

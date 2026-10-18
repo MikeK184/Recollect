@@ -92,18 +92,18 @@ unchanged approved definitions/mutation audit and zero tool dispatches.
 ## Screenshots and independent review
 
 Actual PNGs and invariant ledger are in
-[`output/mcp-inspection-review-2026-10-06/`](../../output/mcp-inspection-review-2026-10-06/):
+`output/mcp-inspection-review-2026-10-06/` (`f2673d7:output/mcp-inspection-review-2026-10-06/`):
 
-- [Connections badges](../../output/mcp-inspection-review-2026-10-06/connections-badges.png)
-  and [user's 2504×1314 layout](../../output/mcp-inspection-review-2026-10-06/connections-wide.png).
-- [Loading](../../output/mcp-inspection-review-2026-10-06/tools-loading.png),
-  [failed read](../../output/mcp-inspection-review-2026-10-06/tools-read-error.png),
-  [Exa check](../../output/mcp-inspection-review-2026-10-06/exa-check-success.png).
-- [Readable Exa descriptions/JSON](../../output/mcp-inspection-review-2026-10-06/exa-tools-pretty.png)
-  and [wide proof](../../output/mcp-inspection-review-2026-10-06/exa-tools-wide.png).
-- [Call summary](../../output/mcp-inspection-review-2026-10-06/recorded-call.png)
-  and [whole call/expiry/capture](../../output/mcp-inspection-review-2026-10-06/recorded-call-wide.png).
-- [Before/after manifest hashes and call count](../../output/mcp-inspection-review-2026-10-06/runtime-invariants.json).
+- Connections badges (`f2673d7:output/mcp-inspection-review-2026-10-06/connections-badges.png`)
+  and user's 2504×1314 layout (`f2673d7:output/mcp-inspection-review-2026-10-06/connections-wide.png`).
+- Loading (`f2673d7:output/mcp-inspection-review-2026-10-06/tools-loading.png`),
+  failed read (`f2673d7:output/mcp-inspection-review-2026-10-06/tools-read-error.png`),
+  Exa check (`f2673d7:output/mcp-inspection-review-2026-10-06/exa-check-success.png`).
+- Readable Exa descriptions/JSON (`f2673d7:output/mcp-inspection-review-2026-10-06/exa-tools-pretty.png`)
+  and wide proof (`f2673d7:output/mcp-inspection-review-2026-10-06/exa-tools-wide.png`).
+- Call summary (`f2673d7:output/mcp-inspection-review-2026-10-06/recorded-call.png`)
+  and whole call/expiry/capture (`f2673d7:output/mcp-inspection-review-2026-10-06/recorded-call-wide.png`).
+- Before/after manifest hashes and call count (`f2673d7:output/mcp-inspection-review-2026-10-06/runtime-invariants.json`).
 
 Independent reviewer inspected final source and actual replacements, including
 widths, the loading/failure states, multiline JSON and recorded-call authority.

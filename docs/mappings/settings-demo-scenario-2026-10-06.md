@@ -7,7 +7,7 @@ Confidence: verified
 
 User requested images first, then selected the General and inline environment
 layouts. Built-in image generation produced three light concepts before runtime
-scenario writes. [Exact prompts and concepts](../../output/imagegen/2026-10-06-settings-refinement/prompts.md)
+scenario writes. Exact prompts and concepts (`f2673d7:output/imagegen/2026-10-06-settings-refinement/prompts.md`)
 are retained; illustrative values are not runtime evidence.
 
 Authority: [desktop amendment](../contracts/desktop-experience.md#bounded-privacy-rows-follow-up--2026-10-06),
@@ -53,11 +53,11 @@ This is new frontend delivery over the existing backend, not a fresh backend bui
   redaction and saved backend rules remain unchanged. No real policy save was
   performed. Brain details, Add, Rename and Privacy editors were all cancelled.
 
-Screenshots: [General](../../output/demo-review-2026-10-06/owner-general.png),
-[inline Add](../../output/demo-review-2026-10-06/owner-environment-add.png),
-[focused Privacy](../../output/demo-review-2026-10-06/privacy-focused.png),
-[wide Privacy](../../output/demo-review-2026-10-06/owner-privacy-wide.png), and
-[reader General](../../output/demo-review-2026-10-06/demo-general.png).
+Screenshots: General (`f2673d7:output/demo-review-2026-10-06/owner-general.png`),
+inline Add (`f2673d7:output/demo-review-2026-10-06/owner-environment-add.png`),
+focused Privacy (`f2673d7:output/demo-review-2026-10-06/privacy-focused.png`),
+wide Privacy (`f2673d7:output/demo-review-2026-10-06/owner-privacy-wide.png`), and
+reader General (`f2673d7:output/demo-review-2026-10-06/demo-general.png`).
 
 ### Limited account and actual agent
 
@@ -87,10 +87,10 @@ preceded its real managed Exa call; no SQL activity/device fabrication was used.
 
 The use-only profile read correctly omits other people's grants/effective
 identities. Owner sees both names with adjacent permissions; reader sees its own
-effective rights. [Owner permissions](../../output/demo-review-2026-10-06/owner-tool-access.png),
-[demo permissions](../../output/demo-review-2026-10-06/demo-tool-access.png),
-[demo Brains](../../output/demo-review-2026-10-06/demo-brains.png), and
-[own agent](../../output/demo-review-2026-10-06/demo-my-agents.png).
+effective rights. Owner permissions (`f2673d7:output/demo-review-2026-10-06/owner-tool-access.png`),
+demo permissions (`f2673d7:output/demo-review-2026-10-06/demo-tool-access.png`),
+demo Brains (`f2673d7:output/demo-review-2026-10-06/demo-brains.png`), and
+own agent (`f2673d7:output/demo-review-2026-10-06/demo-my-agents.png`).
 Owner session was restored; the user's existing Graph tab was preserved and the
 temporary proof tab/viewport cleaned up.
 
@@ -116,7 +116,7 @@ a tool-error flag. It used a public query/objective and no external credential.
 `capture_disposition=knowledge_write_required` correctly prevented a reader from
 writing the result into Brain memory. No paid provider operation was submitted.
 Non-secret identifiers and bounded outcomes are retained in
-[the resource ledger](../../output/demo-review-2026-10-06/resources.json).
+the resource ledger (`f2673d7:output/demo-review-2026-10-06/resources.json`).
 
 One added MCP fulfills the requested 1–2 range. DeepWiki and Microsoft Learn were
 also probed at their official no-auth endpoints; neither was created or reported

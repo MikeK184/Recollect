@@ -294,7 +294,7 @@ record the correction; earlier acceptance below remains superseded history.
 The rebuilt local stack is ready at `http://127.0.0.1:8787`. All 12 focused
 browser cases passed sequentially, with normal Capture clicks, stale/cancel
 recovery, masked config/credential drafts and working inspector actions. The
-[comparison HTML](output/ui-review/2026-10-05-management/comparison/before-vision-after.html)
+comparison HTML (`f2673d7:output/ui-review/2026-10-05-management/comparison/before-vision-after.html`)
 embeds 88 unchanged images, with fresh final captures and rejected states.
 It is served locally at `http://127.0.0.1:8896/before-vision-after.html`.
 
