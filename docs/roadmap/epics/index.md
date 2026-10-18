@@ -9,7 +9,7 @@
 | [product-platform.md](product-platform.md) | complete | Brain deletion and shared Knowledge surface delivered; final backend deployed with preserved local inventory |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Sources, exact versions, publication/manifests and private workspace desktop acceptance passed |
 | [memory-lifecycle.md](memory-lifecycle.md) | active | Five automatic memory phases published at 27bbd00; normal runtime update and uncommitted query repairs have separate dated proof; model policies unchanged |
-| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Semantic discovery query repair deployed with native/normal-data equivalence; remaining graph locks stay with active graph and operations packs |
+| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Set-based recall read path delivered locally (lexical index windows, one candidate pass per transaction, set gating; about 13× fewer statements); semantic discovery repair remains deployed with native/normal-data equivalence |
 | [graph-intelligence.md](graph-intelligence.md) | active | User-authorized automatic entity/topic plan; concurrent graph preparation implementation precedes semantic mapping and populated-runtime acceptance |
 | [mcp-coordination.md](mcp-coordination.md) | active | Supported plugin source workflow, observed roster/hosts, bounded learning recovery and visible limits locally delivered; separate fresh native-host token acceptance remains open |
 | [operational-readiness.md](operational-readiness.md) | active | Complete 40% benchmark baseline retained; local update/evidence repairs deployed, but final populated graph timeout acceptance and new benchmark quality proof remain open |

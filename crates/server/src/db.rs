@@ -208,6 +208,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "047_bounded_support_discovery",
         include_str!("../migrations/047_bounded_support_discovery.sql"),
     ),
+    (
+        "048_set_based_recall",
+        include_str!("../migrations/048_set_based_recall.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

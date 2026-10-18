@@ -193,48 +193,36 @@ pub(crate) async fn qualify(
             .into_iter()
             .map(|id| graph::key("source_version", id)),
     );
-    let blocked = raw_blocked(tx, brain, &input, &rows).await?;
-    // This cache cannot outlive the current canonical Brain lock/qualification.
-    let mut scopes = BTreeMap::new();
-    for (ordinal, row) in rows.into_iter().enumerate() {
-        result.coverage.examined += 1;
-        let key = graph::key(&row.kind, row.revision_id);
-        let scope_key = serde_json::to_string(&row.selection.0)
-            .map_err(|_| Error::invalid("Stored graph scope is invalid."))?;
-        let scope_valid = if let Some(valid) = scopes.get(&scope_key) {
-            *valid
-        } else {
-            let valid = workspace::selection_valid(tx, brain, &row.selection).await?;
-            scopes.insert(scope_key, valid);
-            valid
-        };
-        let entry = item_with_gates(
-            state,
-            tx,
-            &context,
-            &row,
-            &mut result.coverage,
-            Some((scope_valid, blocked.contains(&ordinal))),
-        )
-        .await?;
-        match entry {
-            Some((mut evidence, deadline))
-                if evidence.kind != "source_version"
-                    || evidence
-                        .provenance
-                        .iter()
-                        .all(|p| p.availability == "retained") =>
-            {
-                result.deadline = [result.deadline, deadline].into_iter().flatten().min();
-                evidence.channels = vec!["graph".into()];
-                evidence.score = 0.0;
-                result
-                    .nodes
-                    .entry(key.clone())
-                    .or_insert(GraphNode { key, evidence });
-            }
-            _ => {
-                withheld.insert(key);
+    // Gates load one page at a time, in a fixed number of statements per page.
+    let mut gates = Gates::default();
+    for page in rows.chunks(256) {
+        gates.release();
+        let page_rows: Vec<&Candidate> = page.iter().collect();
+        gates.load(state, tx, &context, &page_rows).await?;
+        for row in page {
+            result.coverage.examined += 1;
+            let key = graph::key(&row.kind, row.revision_id);
+            let entry =
+                item_with(state, tx, &context, row, &mut result.coverage, &mut gates).await?;
+            match entry {
+                Some((mut evidence, deadline))
+                    if evidence.kind != "source_version"
+                        || evidence
+                            .provenance
+                            .iter()
+                            .all(|p| p.availability == "retained") =>
+                {
+                    result.deadline = [result.deadline, deadline].into_iter().flatten().min();
+                    evidence.channels = vec!["graph".into()];
+                    evidence.score = 0.0;
+                    result
+                        .nodes
+                        .entry(key.clone())
+                        .or_insert(GraphNode { key, evidence });
+                }
+                _ => {
+                    withheld.insert(key);
+                }
             }
         }
     }

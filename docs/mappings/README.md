@@ -11,6 +11,8 @@ Redact credentials and private payload details. Recheck drift-prone evidence.
 
 ## Index
 
+- [Set-based recall read path: measurements and plans, 2026-10-19](retrieval-set-based-read-path-2026-10-19.md)
+
 - [Rust Analyzer MCP and Graft local proof, 2026-10-09](rust-semantic-navigation-proof-2026-10-09.md)
 
 - [Automatic mapping review, graph preparation and local extraction proof, 2026-10-09](automatic-knowledge-mapping-progress-2026-10-09.md)

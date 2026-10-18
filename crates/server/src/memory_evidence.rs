@@ -23,7 +23,7 @@ pub(crate) async fn read_tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid) -
     db::require_role(&mut tx, brain, false).await?;
     Ok(tx)
 }
-#[derive(sqlx::FromRow)]
+#[derive(Clone, sqlx::FromRow)]
 pub(crate) struct EvidenceRow {
     pub kind: String,
     pub id: Uuid,
@@ -118,6 +118,64 @@ pub(crate) async fn row(tx: &mut Tx<'_>, brain: Uuid, kind: &str, id: Uuid) -> R
     .fetch_optional(&mut **tx)
     .await?
     .ok_or_else(Error::missing)
+}
+/// Request-local evidence rows and availability choices for set-based gates.
+/// Every entry is read in the caller's transaction and is never reused after it.
+#[derive(Default)]
+pub(crate) struct EvidenceCache {
+    rows: std::collections::HashMap<(String, Uuid), EvidenceRow>,
+    choices: std::collections::HashMap<(String, Uuid), ClaimEvidenceChoice>,
+}
+impl EvidenceCache {
+    /// Fetch every requested support in one statement. Identities that do not
+    /// exist stay absent, exactly as `row` reports them missing.
+    pub async fn load(
+        &mut self,
+        tx: &mut Tx<'_>,
+        brain: Uuid,
+        wanted: impl IntoIterator<Item = (String, Uuid)>,
+    ) -> Result<()> {
+        let missing: std::collections::BTreeSet<_> = wanted
+            .into_iter()
+            .filter(|key| !self.rows.contains_key(key))
+            .collect();
+        if missing.is_empty() {
+            return Ok(());
+        }
+        let kinds: Vec<_> = missing.iter().map(|(k, _)| k.clone()).collect();
+        let ids: Vec<_> = missing.iter().map(|(_, id)| *id).collect();
+        let rows: Vec<EvidenceRow> = sqlx::query_as(&format!(
+            "SELECT * FROM ({EVIDENCE}) e WHERE kind=ANY($2) AND id=ANY($3)"
+        ))
+        .bind(brain)
+        .bind(kinds)
+        .bind(ids)
+        .fetch_all(&mut **tx)
+        .await?;
+        for row in rows {
+            self.rows.insert((row.kind.clone(), row.id), row);
+        }
+        Ok(())
+    }
+    pub fn row(&self, kind: &str, id: Uuid) -> Option<&EvidenceRow> {
+        self.rows.get(&(kind.to_string(), id))
+    }
+    /// Availability is computed once per request for each support identity.
+    pub async fn choice(
+        &mut self,
+        state: &AppState,
+        brain: Uuid,
+        kind: &str,
+        id: Uuid,
+    ) -> Option<ClaimEvidenceChoice> {
+        let key = (kind.to_string(), id);
+        if let Some(choice) = self.choices.get(&key) {
+            return Some(choice.clone());
+        }
+        let choice = self.rows.get(&key)?.choice(state, brain).await;
+        self.choices.insert(key, choice.clone());
+        Some(choice)
+    }
 }
 #[derive(Default, Deserialize)]
 pub struct EvidenceQuery {

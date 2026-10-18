@@ -11,6 +11,7 @@ use axum::{
     http::StatusCode,
 };
 use chrono::{DateTime, Utc};
+use gates::{ClaimGate, Gates};
 use recollect_protocol::*;
 use serde_json::{Value, json};
 use sqlx::types::Json as SqlJson;
@@ -24,7 +25,9 @@ use uuid::Uuid;
 pub(crate) mod answer_bundle;
 mod brief;
 mod context;
+mod gates;
 pub(crate) mod graph;
+mod pool;
 mod semantic;
 
 static RECALL_CAPACITY: Semaphore = Semaphore::const_new(4);
@@ -258,6 +261,7 @@ async fn selected_manifest(
 
 async fn claim_manifest(
     tx: &mut Tx<'_>,
+    gates: &mut Gates,
     brain: Uuid,
     view: &ClaimView,
     manifest: Option<&ManifestRevision>,
@@ -284,7 +288,7 @@ async fn claim_manifest(
         }
     }
     if let Some(id) = view.revision.content.manifest_revision_id {
-        let original = memory::manifest(tx, brain, id).await?;
+        let original = gates.manifest(tx, brain, id).await?;
         for repo in repos {
             if original.entries.iter().find(|e| e.repository_id == *repo)
                 != selected.entries.iter().find(|e| e.repository_id == *repo)
@@ -296,75 +300,68 @@ async fn claim_manifest(
     Ok(true)
 }
 
-/// Check opaque support identities and bounded textual assertion matching. A
-/// re-created source ID cannot by itself evade a durable rejected-value rule.
-async fn raw_rules(
-    tx: &mut Tx<'_>,
-    brain: Uuid,
-    input: &RecallRequest,
-    row: &Candidate,
-) -> Result<Vec<Uuid>> {
-    let query = format!(
-        "SELECT a.id,a.rule#>'{{content,validity}}' FROM jsonb_to_recordset($3) AS r({RAW_COLUMNS}) CROSS JOIN assertion_rules a WHERE {} ORDER BY a.id",
-        include_str!("retrieval_raw_rule_match.sql")
-    );
-    let rules: Vec<(Uuid, SqlJson<FactValidity>)> = sqlx::query_as(&query)
-        .bind(brain)
-        .bind(SqlJson(&input.selection))
-        .bind(SqlJson(json!([raw_input(0, row)])))
-        .fetch_all(&mut **tx)
-        .await?;
-    Ok(rules
-        .into_iter()
-        .filter(|(_, v)| {
-            memory_policy::fact_match(&v.0, input.fact_at) != memory_policy::TimeMatch::Outside
-        })
-        .map(|(id, _)| id)
-        .collect())
-}
 const RAW_COLUMNS: &str =
     "ordinal integer,selection jsonb,text text,kind text,id uuid,line_from integer,line_to integer";
 fn raw_input(ordinal: usize, row: &Candidate) -> Value {
     json!({"ordinal":ordinal,"selection":row.selection.0,"text":memory_policy::assertion_key(&format!("{}\n{}",row.label,row.text),false),"kind":row.kind,"id":row.id,"line_from":row.line_from,"line_to":row.line_to})
 }
-/// Batch the exact shared PostgreSQL predicate. Explicit fact-time queries keep
-/// the established typed validity matcher; no alternate Rust text matcher exists.
+/// Batch the exact shared PostgreSQL predicate over the non-claim rows, which
+/// may mix any number of kinds: opaque support identities and bounded textual
+/// assertion matching, so a re-created source ID cannot by itself evade a
+/// durable rejected-value rule. Explicit fact-time queries keep the established
+/// typed validity matcher; no alternate Rust text matcher exists. The result is
+/// index-aligned with `rows`.
 async fn raw_blocked(
     tx: &mut Tx<'_>,
     brain: Uuid,
     input: &RecallRequest,
-    rows: &[Candidate],
-) -> Result<BTreeSet<usize>> {
-    let mut blocked = BTreeSet::new();
-    if input.fact_at.is_some() {
-        for (ordinal, row) in rows.iter().enumerate().filter(|(_, r)| r.kind != "claim") {
-            if !raw_rules(tx, brain, input, row).await?.is_empty() {
-                blocked.insert(ordinal);
-            }
-        }
-        return Ok(blocked);
-    }
-    for (batch, rows) in rows.chunks(500).enumerate() {
-        let values: Vec<_> = rows
+    rows: &[&Candidate],
+) -> Result<Vec<bool>> {
+    let mut blocked = vec![false; rows.len()];
+    for (batch, chunk) in rows.chunks(500).enumerate() {
+        let values: Vec<_> = chunk
             .iter()
             .enumerate()
             .filter(|(_, r)| r.kind != "claim")
-            .map(|(ordinal, r)| raw_input(batch * 500 + ordinal, r))
+            .map(|(ordinal, r)| raw_input(ordinal, r))
             .collect();
         if values.is_empty() {
             continue;
         }
-        let query = format!(
-            "SELECT r.ordinal FROM jsonb_to_recordset($3) AS r({RAW_COLUMNS}) WHERE EXISTS(SELECT 1 FROM assertion_rules a WHERE {})",
-            include_str!("retrieval_raw_rule_match.sql")
-        );
-        let selected: Vec<i32> = sqlx::query_scalar(&query)
-            .bind(brain)
-            .bind(SqlJson(&input.selection))
-            .bind(SqlJson(values))
-            .fetch_all(&mut **tx)
-            .await?;
-        blocked.extend(selected.into_iter().map(|i| i as usize));
+        let selected: Vec<i32> = if input.fact_at.is_some() {
+            let query = format!(
+                "SELECT r.ordinal,a.rule#>'{{content,validity}}' FROM jsonb_to_recordset($3) AS r({RAW_COLUMNS}) CROSS JOIN assertion_rules a WHERE {} ORDER BY r.ordinal,a.id",
+                include_str!("retrieval_raw_rule_match.sql")
+            );
+            let rules: Vec<(i32, SqlJson<FactValidity>)> = sqlx::query_as(&query)
+                .bind(brain)
+                .bind(SqlJson(&input.selection))
+                .bind(SqlJson(values))
+                .fetch_all(&mut **tx)
+                .await?;
+            rules
+                .into_iter()
+                .filter(|(_, v)| {
+                    memory_policy::fact_match(&v.0, input.fact_at)
+                        != memory_policy::TimeMatch::Outside
+                })
+                .map(|(ordinal, _)| ordinal)
+                .collect()
+        } else {
+            let query = format!(
+                "SELECT r.ordinal FROM jsonb_to_recordset($3) AS r({RAW_COLUMNS}) WHERE EXISTS(SELECT 1 FROM assertion_rules a WHERE {})",
+                include_str!("retrieval_raw_rule_match.sql")
+            );
+            sqlx::query_scalar(&query)
+                .bind(brain)
+                .bind(SqlJson(&input.selection))
+                .bind(SqlJson(values))
+                .fetch_all(&mut **tx)
+                .await?
+        };
+        for ordinal in selected {
+            blocked[batch * 500 + ordinal as usize] = true;
+        }
     }
     Ok(blocked)
 }
@@ -382,28 +379,28 @@ async fn item(
     row: &Candidate,
     coverage: &mut RecallCoverage,
 ) -> Result<Option<(RecallItem, Option<DateTime<Utc>>)>> {
-    item_with_gates(state, tx, context, row, coverage, None).await
+    item_with(state, tx, context, row, coverage, &mut Gates::default()).await
 }
-async fn item_with_gates(
+/// Qualify one candidate through the canonical gates. Callers that handle many
+/// rows load a page of gates first (`Gates::load`); a row whose gates are not
+/// yet loaded is loaded here.
+async fn item_with(
     state: &AppState,
     tx: &mut Tx<'_>,
     context: &ReadContext<'_>,
     row: &Candidate,
     coverage: &mut RecallCoverage,
-    gates: Option<(bool, bool)>,
+    gates: &mut Gates,
 ) -> Result<Option<(RecallItem, Option<DateTime<Utc>>)>> {
     let ReadContext {
         brain,
         input,
-        at,
         manifest,
+        ..
     } = *context;
+    gates.load(state, tx, context, &[row]).await?;
     let mut deadline = row.expires_at;
-    let scope_valid = if let Some((valid, _)) = gates {
-        valid
-    } else {
-        workspace::selection_valid(tx, brain, &row.selection).await?
-    };
+    let scope_valid = gates.scope(row);
     if row.expires_at.is_some_and(|t| t <= Utc::now()) || !scope_valid {
         coverage.withheld += 1;
         return Ok(None);
@@ -441,15 +438,20 @@ async fn item_with_gates(
             .push("historical_evidence_not_current_context".into());
     }
     if row.kind == "claim" {
-        let revision: ClaimRevision = decode(row.data.0.clone())?;
-        let view = match memory::view(state, tx, revision, at, input.fact_at).await {
-            Ok(v) => v,
-            Err(e) if matches!(e.0, StatusCode::NOT_FOUND | StatusCode::GONE) => {
+        let (view, dependency_deadline) = match gates.claim(row.revision_id) {
+            Some(ClaimGate::Ready {
+                view,
+                dependency_deadline,
+            }) => ((**view).clone(), *dependency_deadline),
+            Some(ClaimGate::Failed(e))
+                if matches!(e.0, StatusCode::NOT_FOUND | StatusCode::GONE) =>
+            {
                 coverage.withheld += 1;
                 note(coverage, "support_unavailable");
                 return Ok(None);
             }
-            Err(e) => return Err(e),
+            Some(ClaimGate::Failed(e)) => return Err(*e),
+            None => return Err(Error::missing()),
         };
         let eligible = match input.mode.as_str() {
             "strict_accepted" => view.eligibility.strict_accepted,
@@ -457,7 +459,7 @@ async fn item_with_gates(
             "history" => true,
             _ => view.eligibility.investigation,
         };
-        if !eligible || !claim_manifest(tx, brain, &view, manifest).await? {
+        if !eligible || !claim_manifest(tx, gates, brain, &view, manifest).await? {
             coverage.withheld += 1;
             return Ok(None);
         }
@@ -465,7 +467,10 @@ async fn item_with_gates(
             .qualifications
             .extend(view.eligibility.reasons.clone());
         for (e, s) in view.evidence.iter().zip(&view.revision.content.supports) {
-            let source = memory_evidence::row(tx, brain, &e.kind, e.id).await?;
+            let source = gates
+                .evidence
+                .row(&e.kind, e.id)
+                .ok_or_else(Error::missing)?;
             // An expired support qualifies an independently retained claim; it
             // is not the claim's own TTL. Live support metadata must still not
             // cross its retention boundary during this request.
@@ -499,12 +504,6 @@ async fn item_with_gates(
                 availability: e.availability.clone(),
             });
         }
-        let dependency_deadline: Option<DateTime<Utc>> =
-            sqlx::query_scalar("SELECT recollect_memory_deadline($1,$2)")
-                .bind(brain)
-                .bind(view.revision.id)
-                .fetch_one(&mut **tx)
-                .await?;
         deadline = [deadline, dependency_deadline].into_iter().flatten().min();
         result.claim = Some(RecallClaimState {
             kind: view.revision.content.kind.clone(),
@@ -521,12 +520,7 @@ async fn item_with_gates(
             rule_ids: view.eligibility.rule_ids,
         });
     } else {
-        let blocked = if let Some((_, blocked)) = gates {
-            blocked
-        } else {
-            !raw_rules(tx, brain, input, row).await?.is_empty()
-        };
-        if blocked {
+        if gates.blocked(row) {
             if input.mode != "history" {
                 coverage.withheld += 1;
                 note(coverage, "raw_evidence_blocked_by_review_rule");
@@ -545,12 +539,30 @@ async fn item_with_gates(
         let mut availability = "retained".to_string();
         if row.kind == "source_version" {
             if let Some(artifact) = row.artifact_id {
-                match artifacts::read(&state.config.artifact_dir, brain, artifact, row.byte_length)
+                // Verify the recorded length and only this chunk's bytes; the
+                // artifact is never loaded whole to check one fragment.
+                let (from, to) = match (row.byte_from, row.byte_to) {
+                    (Some(from), Some(to)) => (from, to),
+                    _ => (0, 0),
+                };
+                let checked = if from < 0 || to < from {
+                    Err(artifacts::ReadFailure::Invalid)
+                } else {
+                    artifacts::read_span(
+                        &state.config.artifact_dir,
+                        brain,
+                        artifact,
+                        row.byte_length,
+                        from as usize,
+                        to as usize,
+                    )
                     .await
-                {
-                    Ok(text) => {
-                        if let (Some(from), Some(to)) = (row.byte_from, row.byte_to)
-                            && text.get(from as usize..to as usize) != Some(row.text.as_str())
+                };
+                match checked {
+                    Ok(bytes) => {
+                        if row.byte_from.is_some()
+                            && row.byte_to.is_some()
+                            && bytes != row.text.as_bytes()
                         {
                             availability = "unreadable".into();
                             result.text.clear();
@@ -839,27 +851,35 @@ async fn execute(
     {
         note(&mut coverage, "manifest_snapshot_unavailable");
     }
-    // Reuse the same canonical candidate filters for coverage and ranking so a
-    // no-match response cannot silently claim coverage over unprocessed text.
-    let candidates = include_str!("retrieval_candidates.sql");
+    let read_context = ReadContext {
+        brain,
+        input: &input,
+        at,
+        manifest: manifest.as_ref(),
+    };
+    // One candidate pass for this transaction. Coverage, ranking, semantic
+    // scoring and the project brief all read it, so a no-match response cannot
+    // silently claim coverage over unprocessed text. Only a query-independent
+    // consumer (semantic scoring, the brief) needs more than the lexical window.
+    pool::build(
+        &mut tx,
+        &read_context,
+        pool::Breadth {
+            claims: query_vector.is_some() || brief::requested(&input),
+            rest: query_vector.is_some(),
+        },
+        false,
+    )
+    .await?;
     {
-        let coverage_sql = format!("{candidates} SELECT
-            EXISTS(SELECT 1 FROM candidates WHERE kind='source_version' AND processing<>'ready'),
-            EXISTS(SELECT 1 FROM candidates WHERE kind IN ('repository_fact','manifest_revision') AND length(text)>65536),
-            (SELECT count(*) FROM matched WHERE (exact_match OR lexical_match) AND NOT status_eligible)");
-        let (pending, limited, withheld): (bool, bool, i64) = sqlx::query_as(&coverage_sql)
-            .bind(brain)
-            .bind(at)
-            .bind(&input.query)
-            .bind(SqlJson(&input.selection))
-            .bind(input.collection_id)
-            .bind(manifest.as_ref().map(SqlJson))
-            .bind(&input.mode)
-            .bind(input.exact.as_ref().map(|e| e.kind.as_str()))
-            .bind(input.exact.as_ref().map(|e| e.id))
-            .bind(&input.channels)
-            .fetch_one(&mut *tx)
-            .await?;
+        let (pending, limited, withheld): (bool, bool, i64) = sqlx::query_as(
+            "SELECT
+            EXISTS(SELECT 1 FROM recall_pool WHERE kind='source_version' AND processing<>'ready'),
+            EXISTS(SELECT 1 FROM recall_pool WHERE kind IN ('repository_fact','manifest_revision') AND length(text)>65536),
+            (SELECT count(*) FROM recall_pool WHERE (exact_match OR lexical_match) AND NOT status_eligible)",
+        )
+        .fetch_one(&mut *tx)
+        .await?;
         if pending && input.channels.iter().any(|c| c == "lexical") {
             note(&mut coverage, "source_text_not_fully_indexed");
         }
@@ -871,36 +891,15 @@ async fn execute(
             note(&mut coverage, "known_ineligible_claims_excluded");
         }
     }
-    let ranked_sql = format!("{candidates}, ranked AS (
-        SELECT m.*,row_number() OVER (PARTITION BY kind,id ORDER BY exact_match DESC,rank DESC,chunk_id NULLS FIRST) fragment_rank
-        FROM matched m WHERE (exact_match OR lexical_match) AND status_eligible
-        ) SELECT kind,id,revision_id,chunk_id,label,text,recorded_at,selection,source_id,repository_id,
-        snapshot_id,revision,path,line_from,line_to,byte_from,byte_to,artifact_id,byte_length,
-        processing,data,expires_at,exact_match,lexical_match,rank
-        FROM ranked
-        ORDER BY exact_match DESC,fragment_rank,rank DESC,kind,id,chunk_id NULLS FIRST LIMIT 101");
-    let rows: Vec<Candidate> = sqlx::query_as(&ranked_sql)
-        .bind(brain)
-        .bind(at)
-        .bind(&input.query)
-        .bind(SqlJson(&input.selection))
-        .bind(input.collection_id)
-        .bind(manifest.as_ref().map(SqlJson))
-        .bind(&input.mode)
-        .bind(input.exact.as_ref().map(|e| e.kind.as_str()))
-        .bind(input.exact.as_ref().map(|e| e.id))
-        .bind(&input.channels)
-        .fetch_all(&mut *tx)
-        .await?;
+    let ranked_sql = format!("WITH ranked AS (
+        SELECT p.*,row_number() OVER (PARTITION BY kind,id ORDER BY exact_match DESC,rank DESC,chunk_id NULLS FIRST) fragment_rank
+        FROM recall_pool p WHERE (exact_match OR lexical_match) AND status_eligible
+        ) SELECT {} FROM ranked
+        ORDER BY exact_match DESC,fragment_rank,rank DESC,kind,id,chunk_id NULLS FIRST LIMIT 101", pool::CANDIDATE);
+    let rows: Vec<Candidate> = sqlx::query_as(&ranked_sql).fetch_all(&mut *tx).await?;
     if rows.len() > CANDIDATES {
         note(&mut coverage, "candidate_limit");
     }
-    let read_context = ReadContext {
-        brain,
-        input: &input,
-        at,
-        manifest: manifest.as_ref(),
-    };
     let mut ranked = semantic::ranked(
         state,
         &mut tx,
@@ -1004,6 +1003,17 @@ async fn execute(
         coverage,
         elapsed_ms: started.elapsed().as_millis() as u64,
     })
+}
+
+/// Plan text of the lexical candidate pass for a query (EXPLAIN only); a proof
+/// aid for the populated-Brain index test, not a product surface.
+#[doc(hidden)]
+pub async fn explain_lexical_window(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    brain: Uuid,
+    query: &str,
+) -> Result<Vec<String>> {
+    pool::explain(tx, brain, query).await
 }
 
 #[utoipa::path(post,path="/api/brains/{brain}/recall",operation_id="recall",params(("brain"=Uuid,Path)),request_body=RecallRequest,responses((status=200,body=RecallResponse)))]

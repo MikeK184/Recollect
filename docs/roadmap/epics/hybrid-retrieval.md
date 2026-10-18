@@ -80,6 +80,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `retrieval-ask-experience` | shipped | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
 | `desktop-ask-primary` | shipped | adr-backed, contract-backed | pack | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
 | `ask-chat-conversation` | shipped | contract-backed | pack | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
+| `retrieval-set-based-read-path` | shipped | contract-backed | pack | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
 
 ## Slice Dependencies
 
@@ -93,6 +94,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `retrieval-ask-experience` | `desktop-experience-contracts`, `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows` |
 | `desktop-ask-primary` | `retrieval-ask-experience` |
 | `ask-chat-conversation` | `desktop-ask-primary` |
+| `retrieval-set-based-read-path` | `retrieval-graph-fusion`, `memory-source-support-verification` |
 
 ## Completion Criteria
 

@@ -6,6 +6,7 @@ local capability does not establish a deployed or published service.
 | Pack | Status |
 | --- | --- |
 | [rust-semantic-developer-navigation.md](rust-semantic-developer-navigation.md) | shipped |
+| [retrieval-set-based-read-path.md](retrieval-set-based-read-path.md) | shipped |
 | [retrieval-semantic-discovery-plans.md](retrieval-semantic-discovery-plans.md) | shipped |
 | [operations-longmemeval-bench.md](operations-longmemeval-bench.md) | shipped |
 | [brain-openrouter-provider.md](brain-openrouter-provider.md) | shipped |

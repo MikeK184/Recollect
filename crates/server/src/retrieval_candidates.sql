@@ -52,10 +52,10 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
   WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY source_id,recorded_at DESC,id DESC
 ), known_snapshots AS (
   SELECT DISTINCT ON(repository_id) id FROM repository_snapshots
-  WHERE brain_id=$1 AND created_at<=$2 ORDER BY repository_id,created_at DESC,id DESC
+  WHERE brain_id=$1 AND created_at<=$2 /* recall_window:known_snapshots */ ORDER BY repository_id,created_at DESC,id DESC
 ), known_manifests AS (
   SELECT DISTINCT ON(manifest_id) id FROM manifest_revisions
-  WHERE brain_id=$1 AND created_at<=$2 ORDER BY manifest_id,created_at DESC,id DESC
+  WHERE brain_id=$1 AND created_at<=$2 /* recall_window:known_manifests */ ORDER BY manifest_id,created_at DESC,id DESC
 ), candidates AS (
   SELECT 'claim'::text kind,r.claim_id id,r.id revision_id,NULL::uuid chunk_id,
     r.revision#>>'{content,subject}' label,
@@ -70,17 +70,7 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     'ready'::text processing,r.revision data,r.recall_vector vector,
     recollect_retention_deadline(r.brain_id,'claim',r.recorded_at) expires_at,
     ($3<>'' AND r.revision#>>'{content,subject}'=$3) literal,
-    ($7='history' OR (
-      r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active'
-      AND r.revision#>>'{content,freshness}'<>'superseded'
-      AND ($7='investigation' OR (r.revision->>'review'='accepted'
-        AND (r.revision->>'reviewer_id' IS NOT NULL OR length(btrim(coalesce(r.revision->>'acceptance_policy','')))>0)
-        AND r.revision#>>'{content,freshness}'='current'
-        AND ($7<>'strict_operational' OR (r.revision#>>'{content,operational}'='verified'
-          AND r.revision#>>'{content,observed_at}' IS NOT NULL
-          AND length(btrim(coalesce(r.revision#>>'{content,observation}','')))>0))
-      ))
-    )) status_eligible
+    recollect_claim_status_eligible(r.revision,$7) status_eligible
   FROM selected_claims r
   WHERE recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
     AND recollect_recall_scope(r.revision#>'{content,selection}',$4)
@@ -155,10 +145,14 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     AND ($4->>'environment_id' IS NULL OR r.revision->>'environment_id'=$4->>'environment_id')
     AND recollect_recall_scope(jsonb_build_object('repository_ids',
       coalesce((SELECT jsonb_agg(e->'repository_id') FROM jsonb_array_elements(r.revision->'entries') e),'[]'::jsonb)),$4)
-), matched AS (
+), flagged AS (
   SELECT c.*,
     ('exact'=ANY($10::text[]) AND (coalesce(literal,false) OR coalesce($8=kind AND $9=id,false))) exact_match,
-    ('lexical'=ANY($10::text[]) AND $3<>'' AND vector @@ websearch_to_tsquery('simple',$3)) lexical_match,
-    ts_rank_cd(vector,websearch_to_tsquery('simple',$3),32) rank
+    ('lexical'=ANY($10::text[]) AND $3<>'' AND vector @@ websearch_to_tsquery('simple',$3)) lexical_match
   FROM candidates c
+), matched AS (
+  -- Cover-density rank is only meaningful (and only computed) for matched rows.
+  SELECT f.*,
+    CASE WHEN exact_match OR lexical_match THEN ts_rank_cd(vector,websearch_to_tsquery('simple',$3),32) ELSE 0 END::real rank
+  FROM flagged f
 )

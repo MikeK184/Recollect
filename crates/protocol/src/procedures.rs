@@ -29,7 +29,7 @@ pub struct HandoverContent {
     pub risks: Vec<String>,
     pub contributions: Vec<Uuid>,
 }
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct ClaimContribution {
     pub revision_id: Uuid,
     pub claim_id: Option<Uuid>,

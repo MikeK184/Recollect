@@ -27,15 +27,6 @@ async fn row(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<Assessment> {
     sqlx::query_as("SELECT id,brain_id,revision_id,policy_id,actor_id,job_id,state,privacy_state FROM memory_support_assessments WHERE brain_id=$1 AND id=$2")
         .bind(brain).bind(id).fetch_optional(&mut **tx).await?.ok_or_else(Error::missing)
 }
-pub(crate) async fn eligible(tx: &mut Tx<'_>, brain: Uuid, revision: Uuid) -> Result<bool> {
-    Ok(
-        sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
-            .bind(brain)
-            .bind(revision)
-            .fetch_one(&mut **tx)
-            .await?,
-    )
-}
 pub(crate) async fn record_learning(
     state: &AppState,
     tx: &mut Tx<'_>,
