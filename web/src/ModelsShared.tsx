@@ -1,0 +1,60 @@
+import { Alert, Button, Group, Text } from "@mantine/core";
+
+export const label = (s: string) =>
+  (
+    ({
+      extraction: "Source learning",
+      synthesis: "Memory maintenance",
+      embedding: "Semantic search",
+      reranking: "Result ordering",
+      answering: "Ask answers",
+      document: "Documents",
+      raw_session: "Captured sessions",
+      tool_output: "Tool results",
+      support_excerpt: "Supporting excerpts",
+      repository: "Repository text",
+      claim: "Memory",
+      query: "Questions",
+      provider_incomplete: "The model reached its output limit",
+      provider_shape: "The model returned an invalid structured result",
+      model_input_too_large: "The source exceeds the input byte limit",
+      model_input_sensitive: "The source contains sensitive input",
+      model_budget_exhausted:
+        "The request exceeds the remaining daily token allowance",
+    }) as Record<string, string>
+  )[s] ?? s.replaceAll("_", " ");
+export const time = (s: string) => new Date(s).toLocaleString();
+export function Failure({ error }: { error: Error | null }) {
+  return error ? <Alert color="red">{error.message}</Alert> : null;
+}
+export function Pages({
+  offset,
+  total,
+  change,
+}: {
+  offset: number;
+  total: number;
+  change: (v: number) => void;
+}) {
+  return total > 20 ? (
+    <Group>
+      <Button
+        variant="subtle"
+        disabled={!offset}
+        onClick={() => change(Math.max(0, offset - 20))}
+      >
+        Previous
+      </Button>
+      <Text size="xs">
+        {offset + 1}–{Math.min(total, offset + 20)} of {total}
+      </Text>
+      <Button
+        variant="subtle"
+        disabled={offset + 20 >= total}
+        onClick={() => change(offset + 20)}
+      >
+        Next
+      </Button>
+    </Group>
+  ) : null;
+}
