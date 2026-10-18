@@ -7,8 +7,8 @@ Confidence: observed-once
 
 The user resumed Ask-primary, plugin/OpenCode work and the six older desktop
 acceptance packs, and authorized deployment to the existing local installation.
-This record follows the [four-slice continuation](desktop-continuation-2026-10-01.md)
-and preserves the [September 26 implementation evidence](desktop-experience-implementation-2026-09-26.md)
+This record follows the [four-slice continuation](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-continuation-2026-10-01.md)
+and preserves the [September 26 implementation evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md)
 as dated history. Logs and screenshots are in the ignored, owner-only
 `.cache/final-closeout-20261001/` directory. No credentials belong in this record.
 

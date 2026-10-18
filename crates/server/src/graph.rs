@@ -75,6 +75,9 @@ pub(crate) struct Entity {
     pub id: Uuid,
     pub revision_id: Uuid,
 }
+pub(crate) fn read_capacity() -> &'static tokio::sync::Semaphore {
+    &read::CAPACITY
+}
 impl Entity {
     pub fn key(&self) -> String {
         key(&self.kind, self.revision_id)

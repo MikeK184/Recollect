@@ -9,10 +9,11 @@ use recollect_protocol::*;
 use sqlx::types::Json;
 use uuid::Uuid;
 
+pub mod maintenance;
 pub mod support_discovery;
 
 pub const POLICY: &str = "autonomous-evidence";
-pub const PROMPT: &str = "source-reconciliation-1";
+pub const PROMPT: &str = "source-reconciliation-4";
 
 pub fn maintained(r: &ClaimRevision) -> bool {
     matches!(
@@ -49,7 +50,19 @@ pub async fn targets(
                AND old.source_version_id IS NOT NULL
          ), supported AS MATERIALIZED (
            SELECT DISTINCT cs.revision_id FROM claim_supports cs JOIN lineage l ON l.id=cs.source_version_id
-           WHERE cs.brain_id=$1
+           WHERE cs.brain_id=$1 AND NOT recollect_source_model_fenced(cs.brain_id,cs.source_version_id)
+           UNION
+           SELECT cs.revision_id FROM claim_supports cs
+           JOIN automatic_support_excerpts a ON a.brain_id=cs.brain_id AND a.version_id=cs.source_version_id
+           JOIN source_excerpts e ON e.brain_id=a.brain_id AND e.version_id=a.version_id
+             AND e.parent_version_id=a.parent_version_id AND e.first_line=a.first_line AND e.last_line=a.last_line
+           JOIN source_versions parent ON parent.brain_id=e.brain_id AND parent.id=e.parent_version_id AND parent.source_id=e.parent_source_id
+           JOIN source_versions child ON child.brain_id=a.brain_id AND child.id=a.version_id
+           JOIN lineage l ON l.id=a.parent_version_id
+           WHERE cs.brain_id=$1 AND a.privacy_state='active' AND a.selection=$3
+             AND a.manifest_revision_id IS NOT DISTINCT FROM $4 AND child.retention_class='support_excerpt'
+             AND recollect_content_state(child.brain_id,child.retention_class,child.privacy_state,child.created_at)='active'
+             AND NOT recollect_source_model_fenced(a.brain_id,a.version_id)
          )
          SELECT r.revision FROM supported s JOIN claim_revisions r ON r.id=s.revision_id
          JOIN claims c ON c.current_revision=r.id AND c.brain_id=r.brain_id
@@ -61,7 +74,7 @@ pub async fn targets(
          AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
          AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
          ORDER BY r.recorded_at DESC,r.id LIMIT 500")
-        .bind(run.brain_id).bind(run.source_version_id).bind(Json(&run.selection))
+        .bind(run.brain_id).bind(run.source_version_id).bind(Json(&run.selection)).bind(run.manifest_revision_id)
         .fetch_all(&mut **tx).await?;
     let mut ids = Vec::new();
     for Json(r) in candidates {
@@ -95,6 +108,112 @@ pub async fn targets(
         }
     }
     Ok(ids)
+}
+
+/// Experimental evaluation must not re-admit an old reconciliation output after
+/// its offered memories leave the exact original selector. The persisted run
+/// supplies canonical scope/manifest/lineage, not a caller-built memory view.
+/// Direct extraction-only controls may legitimately leave this run cancelled
+/// or queued; they do not claim that learning/support publication succeeded.
+pub(crate) async fn shadow_offered_current(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    device: Option<Uuid>,
+    operation: Uuid,
+    input0_version: Uuid,
+    offered: &[Uuid],
+) -> Result<bool> {
+    if offered.is_empty()
+        || offered.len() > 12
+        || offered
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != offered.len()
+    {
+        return Ok(false);
+    }
+    let run: Option<Json<LearningRun>> = sqlx::query_scalar(
+        "SELECT to_jsonb(r) FROM learning_runs r WHERE r.brain_id=$1 AND r.id=$2 AND r.actor_id=$3 AND r.source_version_id=$4",
+    )
+    .bind(brain)
+    .bind(operation)
+    .bind(actor)
+    .bind(input0_version)
+    .fetch_optional(&mut **tx)
+    .await?;
+    let Some(Json(run)) = run else {
+        return Ok(false);
+    };
+    if run.device_id != device
+        && !(run.automatic
+            && run.device_id.is_none()
+            && device.is_some()
+            && shadow_source_device(state, &run, device.unwrap()).await?)
+    {
+        return Ok(false);
+    }
+    let policy = model_policy::current(state, tx, brain).await?;
+    if policy.change_id != run.policy_id {
+        return Ok(false);
+    }
+    let current = targets(state, tx, &run, policy.policy.max_input_bytes as usize).await?;
+    Ok(offered.iter().all(|id| current.contains(id)))
+}
+
+/// Standing-policy scheduling legitimately has no device. A tooling-only
+/// extraction may retain the actual input0 device, but only its immutable
+/// source origin can establish that attribution. Read workspace rows as that
+/// already validated producer; never alter the evaluator transaction's actor.
+async fn shadow_source_device(state: &AppState, run: &LearningRun, device: Uuid) -> Result<bool> {
+    // Capture/import origins do not record a selected manifest. They cannot
+    // prove a non-null manifest selected independently by a learning request.
+    if run.manifest_revision_id.is_some() {
+        return Ok(false);
+    }
+    let mut tx = db::preparation_tx(&state.pool, run.actor_id, Some(device)).await?;
+    if !matches!(
+        db::require_role(&mut tx, run.brain_id, false)
+            .await?
+            .as_str(),
+        "writer" | "admin"
+    ) {
+        return Ok(false);
+    }
+    let origins: Vec<(Uuid, Json<ScopeSelection>, String)> = sqlx::query_as(
+        "SELECT b.operation_id,b.selection,'capture'::text FROM capture_events e
+         JOIN capture_bindings b ON b.brain_id=e.brain_id AND b.id=e.binding_id
+         JOIN source_versions v ON v.brain_id=e.brain_id AND v.id=e.source_version_id AND v.source_id=e.source_id
+         WHERE e.brain_id=$1 AND e.source_version_id=$2 AND e.state='accepted' AND e.expires_at>clock_timestamp()
+           AND b.actor_id=$3 AND b.device_id=$4 AND v.created_by=$3
+         UNION ALL
+         SELECT i.operation_id,i.selection,'write'::text FROM source_import_scopes i
+         JOIN source_versions v ON v.brain_id=i.brain_id AND v.id=i.version_id
+         WHERE i.brain_id=$1 AND i.version_id=$2 AND i.operation_id IS NOT NULL AND v.created_by=$3 AND v.device_id=$4",
+    )
+    .bind(run.brain_id)
+    .bind(run.source_version_id)
+    .bind(run.actor_id)
+    .bind(device)
+    .fetch_all(&mut *tx)
+    .await?;
+    if origins.len() != 1 {
+        return Ok(false);
+    }
+    let (operation, Json(selection), kind) = &origins[0];
+    if *selection != run.selection {
+        return Ok(false);
+    }
+    let bound = crate::workspace::bound_operation(&mut tx, run.brain_id, *operation).await?;
+    let valid = bound.actor_id == run.actor_id
+        && bound.device_id == Some(device)
+        && bound.kind == *kind
+        && bound.scope_valid
+        && bound.scope.selection == run.selection;
+    tx.commit().await?;
+    Ok(valid)
 }
 
 pub async fn target(tx: &mut Tx<'_>, run: &LearningRun, id: Uuid) -> Result<ClaimRevision> {
@@ -299,7 +418,7 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
     let mut inv = gateway::extraction(run.id, run.source_version_id);
     let mut schema = gateway::extraction_schema();
     let item = &mut schema["properties"]["claims"]["items"];
-    item["properties"]["kind"] = json!({"type":"string","enum":["claim","decision","procedure"]});
+    item["properties"]["kind"] = json!({"type":"string","enum":["claim","decision","procedure"],"description":"The source-supported assertion kind; preserve the existing kind for an exact offered revision replacement."});
     item["properties"]["procedure"] = json!({"type":["object","null"],"properties":{
         "conditions":{"type":"string","maxLength":2000},"steps":{"type":"array","minItems":1,"maxItems":20,"items":{"type":"string","minLength":1,"maxLength":1000}},
         "expected_outcome":{"type":"string","minLength":1,"maxLength":2000}},"required":["conditions","steps","expected_outcome"],"additionalProperties":false});
@@ -307,7 +426,7 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
         .as_array_mut()
         .unwrap()
         .extend([json!("kind"), json!("procedure")]);
-    item["properties"]["replaces_revision"] = json!({"type":["string","null"]});
+    item["properties"]["replaces_revision"] = json!({"type":["string","null"],"description":"Exact offered revision.id only for an explicitly supported replacement of that assertion; null for a new assertion or an unchanged assertion. Never guess an ID."});
     let mut allowed = vec![serde_json::Value::Null];
     allowed.extend(run.reconciliation_inputs.iter().map(|id| json!(id)));
     item["properties"]["replaces_revision"]["enum"] = json!(allowed);
@@ -316,8 +435,8 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
         .unwrap()
         .push(json!("replaces_revision"));
     schema["properties"]["retirements"] = json!({"type":"array","maxItems":12,"items":{
-        "type":"object","properties":{"revision_id":{"type":"string"},"reason":{"type":"string"},
-        "line_from":{"type":"integer"},"line_to":{"type":"integer"}},
+        "type":"object","description":"Explicit evidence of obsolescence or unsupportedness for an exact offered assertion; omission is never retirement.","properties":{"revision_id":{"type":"string","description":"Exact offered revision.id to retire, never a claim ID or an unoffered revision."},"reason":{"type":"string","description":"Concise explanation of the source evidence explicitly making this assertion obsolete or unsupported."},
+        "line_from":{"type":"integer","minimum":1,"description":"First one-based raw-source line explicitly supporting retirement."},"line_to":{"type":"integer","minimum":1,"description":"Last inclusive one-based raw-source line explicitly supporting retirement."}},
         "required":["revision_id","reason","line_from","line_to"],"additionalProperties":false}});
     schema["required"]
         .as_array_mut()
@@ -337,7 +456,7 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
                 id: *id,
             }),
     );
-    inv.instructions.push_str(" Input 0 is the source to learn now; subsequent inputs are existing machine-maintained memories from the same source lineage or authenticated captured session and exact scope. Being offered is only permission to consider a candidate; it is not equivalence, corroboration or evidence that the newest statement wins. Reconcile meaning against the cited source and canonical provenance, using the exact revision.id as replaces_revision only when new evidence explicitly supports an updated assertion. Preserve subject and predicate when their meaning is unchanged. Use null for a new assertion. Do not revise unrelated facts, assume a newer date makes something true, or treat historical quotations, later mentions, assistant proposals or echoes as current changes. Retire an existing assertion only when exact lines explicitly establish it is obsolete or unsupported; return revision_id, a concise evidence-based reason, and line_from/line_to in retirements. Omission, lack of mention, model confidence and age alone are not grounds for retirement. Leave unresolved alternatives qualified by their wording instead of inventing a winner. Return an empty retirements array when nothing can be retired. One existing revision may be replaced or retired at most once.");
+    inv.instructions.push_str(" Input 0 is the source to learn now; subsequent inputs are existing machine-maintained memories from the same source lineage or authenticated captured session and exact scope. Being offered is only permission to consider a candidate; it is not equivalence, corroboration or evidence that the newest statement wins. Reconcile meaning against the cited source and canonical provenance, using the exact revision.id as replaces_revision only when new evidence explicitly supports an updated assertion. Preserve subject and predicate when their meaning is unchanged. Use null for a new assertion. Do not manufacture a replacement or retirement solely because an unchanged assertion is offered. When input0 independently asserts the same value, you may return that assertion once with replaces_revision=null for native reuse and independent support assessment; retain its genuine new evidence in the run/stage without adding corroboration weight or extending the old claim retention. Omit an unchanged offered assertion when input0 does not assert it. If evidence explicitly updates its actual value, return one replacement assertion with the exact offered revision.id; put the change explanation only in rationale. If evidence explicitly establishes obsolescence without a replacement, return only a retirement of that exact offered revision. These choices are independent of mapping and no missing action may be inferred from omission. Do not revise unrelated facts, assume a newer date makes something true, or treat historical quotations, later mentions, assistant proposals or echoes as current changes. Retire an existing assertion only when exact lines explicitly establish it is obsolete or unsupported; return revision_id, a concise evidence-based reason, and line_from/line_to in retirements. Omission, lack of mention, model confidence and age alone are not grounds for retirement. Leave unresolved alternatives qualified by their wording instead of inventing a winner. Return an empty retirements array when nothing can be retired. One existing revision may be replaced or retired at most once.");
     if run.automatic_attempt > 0 {
         inv.instructions.push_str(" The preceding completed response was rejected. Return at most three concise fully valid candidates; keep all string bounds, use procedure=null for other kinds and exact positive source line numbers. Return an empty claims array rather than fabricate support.");
     }
@@ -371,74 +490,49 @@ async fn brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
 }
 
 async fn maintenance(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
-    let mut tx = db::actor_tx(&state.pool, actor).await?;
-    db::require_writer(&mut tx, brain).await?;
-    let p = model_policy::current(state, &mut tx, brain).await?;
-    if p.created_by != Some(actor)
-        || !p.policy.enabled
-        || !p.policy.autonomous_memory
-        || !model_policy::matches_installation(state, &p.policy)
-    {
-        return Ok(0);
-    }
-    let ids: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT v.id FROM sources s JOIN source_versions v ON v.id=s.current_version
-         WHERE s.brain_id=$1 AND v.processing='ready' AND v.artifact_id IS NOT NULL
-         AND v.retention_class=ANY($2) AND v.byte_length<=$3
-         AND recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active'
-         AND NOT EXISTS(SELECT 1 FROM automatic_support_excerpts a WHERE a.brain_id=v.brain_id AND a.version_id=v.id)
-         AND NOT EXISTS(SELECT 1 FROM model_input_fences f WHERE f.brain_id=v.brain_id AND f.source_version_id=v.id)
-         AND NOT EXISTS(SELECT 1 FROM learning_runs l WHERE l.brain_id=v.brain_id AND l.source_version_id=v.id AND l.policy_id=$4 AND l.automatic)
-         ORDER BY v.created_at,v.id LIMIT 10")
-        .bind(brain).bind(&p.policy.content_classes).bind(p.policy.max_input_bytes).bind(p.change_id)
-        .fetch_all(&mut *tx).await?;
+    // Each phase owns its preparation and commit boundaries. A slow or invalid
+    // candidate cannot roll back unrelated progress or retain one Brain lock.
     let mut queued = 0;
-    for id in ids {
-        crate::jobs::capacity(&mut tx, brain).await?;
-        let selection = crate::capture::source_selection(&mut tx, brain, id).await?;
-        learning::enqueue(
-            &mut tx,
-            brain,
-            actor,
-            None,
-            &LearningInput {
-                source_version_id: id,
-                selection,
-                manifest_revision_id: None,
-                operation_id: None,
-            },
-            p.change_id,
-            learning::QueueMode::Automatic,
-        )
-        .await?;
-        queued += 1;
+    match maintenance::sources(state, brain, actor).await {
+        Ok(count) => queued += count,
+        Err(error) => tracing::debug!(brain_id=%brain,code=error.1,"Source discovery is waiting"),
     }
-    queued +=
-        crate::session_digests::schedule(state, &mut tx, brain, actor, &p, (20 - queued).min(2))
-            .await?;
-    queued +=
-        crate::handovers::refresh(state, &mut tx, brain, actor, &p, (20 - queued).min(5)).await?;
-    queued += retries(&mut tx, brain, actor, &p, 20 - queued).await?;
-    tx.commit().await?;
+    if let Err(error) = maintenance::discover_digests(state, brain, actor).await {
+        tracing::debug!(brain_id=%brain,code=error.1,"Digest identity discovery is waiting");
+    }
+    match maintenance::prepare_digest(state, brain, actor).await {
+        Ok(Some(prepared)) => match maintenance::publish_digest(state, prepared, 2).await {
+            Ok(count) => queued += count,
+            Err(error) => {
+                tracing::debug!(brain_id=%brain,code=error.1,"Digest publication is waiting")
+            }
+        },
+        Ok(None) => {}
+        Err(error) => tracing::debug!(brain_id=%brain,code=error.1,"Digest preparation is waiting"),
+    }
+    match maintenance::prepare_handovers(state, brain, actor).await {
+        Ok(Some(prepared)) => match maintenance::publish_handovers(state, prepared, 5).await {
+            Ok(count) => queued += count,
+            Err(error) => {
+                tracing::debug!(brain_id=%brain,code=error.1,"Handover publication is waiting")
+            }
+        },
+        Ok(None) => {}
+        Err(error) => {
+            tracing::debug!(brain_id=%brain,code=error.1,"Handover preparation is waiting")
+        }
+    }
+    match retry_maintenance(state, brain, actor, 20usize.saturating_sub(queued)).await {
+        Ok(count) => queued += count,
+        Err(error) => tracing::debug!(brain_id=%brain,code=error.1,"Retry maintenance is waiting"),
+    }
     Ok(queued)
 }
 
-async fn retries(
-    tx: &mut Tx<'_>,
-    brain: Uuid,
-    actor: Uuid,
-    p: &ModelPolicyVersion,
-    limit: usize,
-) -> Result<usize> {
-    if limit == 0 {
-        return Ok(0);
-    }
-    let mut queued = crate::handover_support::recover(tx, brain, p.change_id, limit).await?;
-    if queued == limit {
-        return Ok(queued);
-    }
-    let runs:Vec<Json<LearningRun>>=sqlx::query_scalar(
-        "SELECT to_jsonb(r) FROM learning_runs r JOIN sources s ON s.current_version=r.source_version_id
+// The same full retry predicates qualify discovery and each exact fresh
+// publication. A saved run id is never permission to repeat a provider request.
+const LOCAL_RECOVERY_INPUTS: &str = "SELECT r.id,j.id FROM handover_runs r JOIN jobs j ON j.id=r.job_id LEFT JOIN handover_support_stages s ON s.run_id=r.id AND s.brain_id=r.brain_id WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.state='failed' AND j.state='failed' AND j.error_code IN ('database_error','lease_expired') AND r.local_recoveries<2 AND j.updated_at+make_interval(mins=>CASE r.local_recoveries WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp() AND (s.run_id IS NULL OR (s.privacy_state='active' AND (recollect_handover_support_deadline(s.brain_id,s.run_id) IS NULL OR recollect_handover_support_deadline(s.brain_id,s.run_id)>clock_timestamp()))) AND (s.verdict IS NOT NULL OR NOT EXISTS(SELECT 1 FROM model_requests m WHERE m.brain_id=r.brain_id AND m.operation_id=coalesce(s.assessment_operation_id,r.id))) AND ($4::uuid IS NULL OR r.id=$4) ORDER BY j.updated_at,r.id LIMIT $3";
+const LEARNING_RETRY_INPUTS: &str = "SELECT to_jsonb(r) FROM learning_runs r JOIN sources s ON s.current_version=r.source_version_id
          WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.automatic AND r.state='failed'
          AND r.error_code IN ('provider_rate_limited','provider_unavailable','provider_incomplete','provider_shape','model_budget_exhausted') AND r.automatic_attempt<2
          AND CASE WHEN r.error_code='model_budget_exhausted'
@@ -446,64 +540,139 @@ async fn retries(
            ELSE r.finished_at+make_interval(mins=>CASE r.automatic_attempt WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp() END
          AND NOT EXISTS(SELECT 1 FROM learning_runs child WHERE child.retry_of=r.id)
          AND NOT EXISTS(SELECT 1 FROM learning_support_stages stage WHERE stage.run_id=r.id AND stage.brain_id=r.brain_id AND (stage.verdicts IS NOT NULL OR stage.privacy_state<>'active' OR recollect_learning_support_deadline(stage.brain_id,stage.run_id)<=clock_timestamp()))
-         ORDER BY r.finished_at,r.id LIMIT $3")
-        .bind(brain).bind(p.change_id).bind((limit-queued) as i64).fetch_all(&mut **tx).await?;
-    for Json(old) in runs {
-        let run = learning::enqueue(
-            tx,
-            brain,
-            actor,
-            None,
-            &LearningInput {
-                source_version_id: old.source_version_id,
-                selection: old.selection.clone(),
-                manifest_revision_id: old.manifest_revision_id,
-                operation_id: None,
-            },
-            p.change_id,
-            learning::QueueMode::Retry {
-                parent: old.id,
-                attempt: old.automatic_attempt + 1,
-            },
-        )
-        .await?;
-        crate::memory_support::inherit_assessment_retry(tx, &old, &run).await?;
-        queued += 1;
-    }
-    if queued == limit {
-        return Ok(queued);
-    }
-    let runs:Vec<Json<HandoverRun>>=sqlx::query_scalar(
-        "SELECT to_jsonb(r) FROM handover_runs r WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.state='failed'
+         AND ($4::uuid IS NULL OR r.id=$4) ORDER BY r.finished_at,r.id LIMIT $3";
+const HANDOVER_RETRY_INPUTS: &str = "SELECT to_jsonb(r) FROM handover_runs r WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.state='failed'
          AND r.error_code IN ('provider_rate_limited','provider_unavailable','provider_incomplete','provider_shape','model_response_invalid') AND r.automatic_attempt<2
          AND r.finished_at+make_interval(mins=>CASE r.automatic_attempt WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp()
          AND NOT EXISTS(SELECT 1 FROM handover_runs child WHERE child.retry_of=r.id)
          AND NOT EXISTS(SELECT 1 FROM handover_support_stages stage WHERE stage.run_id=r.id AND stage.brain_id=r.brain_id AND (stage.verdict IS NOT NULL OR stage.privacy_state<>'active' OR recollect_handover_support_deadline(stage.brain_id,stage.run_id)<=clock_timestamp()))
          AND EXISTS(SELECT 1 FROM model_requests m LEFT JOIN handover_support_stages stage ON stage.run_id=r.id AND stage.brain_id=r.brain_id WHERE m.brain_id=r.brain_id AND m.operation_id=coalesce(stage.assessment_operation_id,r.id) AND m.state IN ('succeeded','failed') AND NOT m.suppressed)
-         ORDER BY r.finished_at,r.id LIMIT $3")
-        .bind(brain).bind(p.change_id).bind((limit-queued) as i64).fetch_all(&mut **tx).await?;
-    for Json(old) in runs {
-        let id = Uuid::new_v4();
-        let audit = db::audit(tx, actor, brain, "handover.queue", id, "automatic_retry").await?;
-        let job =
-            crate::jobs::enqueue_work(tx, actor, brain, audit, id, "handover.generate", "model")
-                .await?;
-        sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id,retry_of,automatic_attempt) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'queued',true,$9,$10,$11,$12)")
-            .bind(id).bind(brain).bind(&old.title).bind(&old.contributions).bind(Json(&old.selection))
-            .bind(p.change_id).bind(actor).bind(job).bind(old.claim_id).bind(old.base_revision_id)
-            .bind(old.id).bind(old.automatic_attempt+1).execute(&mut **tx).await?;
-        for input in &old.contributions {
-            sqlx::query(
-                "INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)",
-            )
-            .bind(id)
-            .bind(brain)
-            .bind(input)
-            .execute(&mut **tx)
-            .await?;
+         AND ($4::uuid IS NULL OR r.id=$4) ORDER BY r.finished_at,r.id LIMIT $3";
+
+async fn retry_maintenance(
+    state: &AppState,
+    brain: Uuid,
+    actor: Uuid,
+    limit: usize,
+) -> Result<usize> {
+    if limit == 0 {
+        return Ok(0);
+    }
+    let Some((mut tx, p, cursor)) =
+        maintenance::Cursor::snapshot(state, brain, actor, "source").await?
+    else {
+        return Ok(0);
+    };
+    let local: Vec<(Uuid, Uuid)> = sqlx::query_as(LOCAL_RECOVERY_INPUTS)
+        .bind(brain)
+        .bind(p.change_id)
+        .bind(limit as i64)
+        .bind(None::<Uuid>)
+        .fetch_all(&mut *tx)
+        .await?;
+    let learning: Vec<Json<LearningRun>> = sqlx::query_scalar(LEARNING_RETRY_INPUTS)
+        .bind(brain)
+        .bind(p.change_id)
+        .bind(limit.saturating_sub(local.len()) as i64)
+        .bind(None::<Uuid>)
+        .fetch_all(&mut *tx)
+        .await?;
+    let handovers: Vec<Json<HandoverRun>> = sqlx::query_scalar(HANDOVER_RETRY_INPUTS)
+        .bind(brain)
+        .bind(p.change_id)
+        .bind(limit.saturating_sub(local.len() + learning.len()) as i64)
+        .bind(None::<Uuid>)
+        .fetch_all(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    let mut queued = 0;
+    for (id, _) in local {
+        let outcome = maintenance::bounded(async {
+            let Some((mut tx, p)) = cursor.writer(state, true).await? else { return Ok(0); };
+            let fresh: Option<(Uuid, Uuid)> = sqlx::query_as(LOCAL_RECOVERY_INPUTS)
+                .bind(brain).bind(p.change_id).bind(1_i64).bind(Some(id)).fetch_optional(&mut *tx).await?;
+            let Some((run, job)) = fresh else { return Ok(0); };
+            sqlx::query("UPDATE handover_runs SET state='queued',error_code=NULL,finished_at=NULL,local_recoveries=local_recoveries+1 WHERE brain_id=$1 AND id=$2")
+                .bind(brain).bind(run).execute(&mut *tx).await?;
+            sqlx::query("UPDATE jobs SET state='queued',error_code=NULL,max_attempts=max_attempts+3,not_before=clock_timestamp(),updated_at=clock_timestamp() WHERE brain_id=$1 AND id=$2")
+                .bind(brain).bind(job).execute(&mut *tx).await?;
+            tx.commit().await?;
+            Ok(1)
+        }).await;
+        match outcome {
+            Ok(n) => queued += n,
+            Err(e) => tracing::debug!(brain_id=%brain,code=e.1,"Local handover recovery deferred"),
         }
-        crate::handover_support::inherit_retry(tx, &old, id).await?;
-        queued += 1;
+    }
+    for Json(prior) in learning {
+        let outcome = maintenance::bounded(async {
+            let Some((mut tx, p)) = cursor.writer(state, true).await? else {
+                return Ok(0);
+            };
+            let fresh: Option<Json<LearningRun>> = sqlx::query_scalar(LEARNING_RETRY_INPUTS)
+                .bind(brain)
+                .bind(p.change_id)
+                .bind(1_i64)
+                .bind(Some(prior.id))
+                .fetch_optional(&mut *tx)
+                .await?;
+            let Some(Json(old)) = fresh else {
+                return Ok(0);
+            };
+            let run = learning::enqueue(
+                &mut tx,
+                brain,
+                actor,
+                None,
+                &LearningInput {
+                    source_version_id: old.source_version_id,
+                    selection: old.selection.clone(),
+                    manifest_revision_id: old.manifest_revision_id,
+                    operation_id: None,
+                },
+                p.change_id,
+                learning::QueueMode::Retry {
+                    parent: old.id,
+                    attempt: old.automatic_attempt + 1,
+                },
+            )
+            .await?;
+            crate::memory_support::inherit_assessment_retry(&mut tx, &old, &run).await?;
+            tx.commit().await?;
+            Ok(1)
+        })
+        .await;
+        match outcome {
+            Ok(n) => queued += n,
+            Err(e) => tracing::debug!(brain_id=%brain,code=e.1,"Learning retry deferred"),
+        }
+    }
+    for Json(prior) in handovers {
+        let outcome = maintenance::bounded(async {
+            let Some((mut tx, p)) = cursor.writer(state, true).await? else { return Ok(0); };
+            let fresh: Option<Json<HandoverRun>> = sqlx::query_scalar(HANDOVER_RETRY_INPUTS)
+                .bind(brain).bind(p.change_id).bind(1_i64).bind(Some(prior.id)).fetch_optional(&mut *tx).await?;
+            let Some(Json(old)) = fresh else { return Ok(0); };
+            crate::handovers::scope(state, &mut tx, brain, actor, None, &crate::handovers::input(&old)).await?;
+            let id = Uuid::new_v4();
+            let audit = db::audit(&mut tx, actor, brain, "handover.queue", id, "automatic_retry").await?;
+            let job = crate::jobs::enqueue_work(&mut tx, actor, brain, audit, id, "handover.generate", "model").await?;
+            sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id,retry_of,automatic_attempt) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'queued',true,$9,$10,$11,$12)")
+                .bind(id).bind(brain).bind(&old.title).bind(&old.contributions).bind(Json(&old.selection))
+                .bind(p.change_id).bind(actor).bind(job).bind(old.claim_id).bind(old.base_revision_id)
+                .bind(old.id).bind(old.automatic_attempt+1).execute(&mut *tx).await?;
+            for input in &old.contributions {
+                sqlx::query("INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)")
+                    .bind(id).bind(brain).bind(input).execute(&mut *tx).await?;
+            }
+            crate::handover_support::inherit_retry(&mut tx, &old, id).await?;
+            tx.commit().await?;
+            Ok(1)
+        }).await;
+        match outcome {
+            Ok(n) => queued += n,
+            Err(e) => tracing::debug!(brain_id=%brain,code=e.1,"Handover retry deferred"),
+        }
     }
     Ok(queued)
 }

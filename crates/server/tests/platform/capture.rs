@@ -9,6 +9,9 @@ mod pipeline;
 #[path = "capture_reconciliation.rs"]
 mod reconciliation;
 
+#[path = "maintenance_preparation.rs"]
+mod maintenance_preparation;
+
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
 async fn native_setup_uploader_recovers_lost_ack_and_syncs_erasure_before_replay() {

@@ -169,6 +169,10 @@ opt-in automatic strategy; existing explicit API defaults remain compatible.
 
 ## Flat graph correction — 2026-10-03
 
+Historical renderer decision, superseded by the user's October 18 complete graph
+implementation request and [ADR 0021](0021-grouped-spatial-graph-navigation.md).
+The navigation, evidence, contribution and validity boundaries remain accepted.
+
 After seeing the live implementation, the user rejected 3D and requested a
 Graphify assessment. Graph remains a main destination with a flat 2D canvas.
 Use the existing library renderer and retain the exact evidence/contribution

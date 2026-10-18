@@ -68,7 +68,7 @@ prompt injection is supplied by the later MCP integration.
 
 ## Verification
 
-The [retrieval evidence](../mappings/retrieval-baseline-2026-09-15.md) records actual
+The [retrieval evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-baseline-2026-09-15.md) records actual
 database/API, native and browser checks and their runtime boundary. Run the focused
 checks against repository-owned services:
 

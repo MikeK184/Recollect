@@ -82,6 +82,6 @@ Work type: product
   exact/lexical recall took 68/73ms with 1,584-byte context; six Brains and their
   model usage were preserved, with no new model calls or customer-file reads.
   Desktop/mobile screenshots were inspected. Corpus controls and explicit bounds
-  are recorded in the [retrieval mapping](../../../mappings/retrieval-baseline-2026-09-15.md).
+  are recorded in the [retrieval mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-baseline-2026-09-15.md).
 - Version: N/A; no release requested.
 - Commit: Uncommitted.

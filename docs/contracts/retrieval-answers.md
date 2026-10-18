@@ -13,7 +13,7 @@ changes; earlier explicit APIs and stored policies remain compatible.
 ## Source
 
 The user's 2026-09-26 approval and implementation request accepts the
-[Ask design](../roadmap/desktop-experience/agent-and-ask-design.md).
+[Ask design](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/desktop-experience/agent-and-ask-design.md).
 [ADR 0014](../adr/0014-desktop-experience-and-answers.md),
 [canonical recall](retrieval-exact-and-lexical.md),
 [semantic](retrieval-semantic.md), [graph fusion](retrieval-graph-fusion.md),

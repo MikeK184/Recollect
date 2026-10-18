@@ -47,3 +47,12 @@ export async function loadGraph(page: Page) {
     .getByRole("button", { name: "Apply graph filters", exact: true })
     .click();
 }
+
+/** Canonical graph regressions deliberately cover the established 2D adapter. */
+export async function use2DGraph(page: Page) {
+  await page.getByText("2D", { exact: true }).click();
+  await expect(page.getByTestId("graph-canvas")).toHaveAttribute(
+    "data-layout-ready",
+    "true",
+  );
+}

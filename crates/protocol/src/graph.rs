@@ -37,12 +37,35 @@ pub struct GraphGeneration {
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct GraphStatus {
+    #[serde(default)]
+    pub organization_epoch: i64,
     pub generations: Vec<GraphGeneration>,
+    #[serde(default)]
+    #[schema(required = false)]
+    pub tracked_generations: Vec<GraphGeneration>,
+    #[serde(default)]
+    #[schema(required = false)]
+    pub missing_tracked_generation_ids: Vec<Uuid>,
     pub jobs: Vec<Job>,
     pub total: i64,
     pub offset: i64,
     pub memory_epoch: i64,
     pub link_epoch: i64,
+}
+
+#[cfg(test)]
+mod status_tests {
+    use super::*;
+
+    #[test]
+    fn legacy_graph_status_defaults_exact_tracking_to_empty() {
+        let legacy = serde_json::json!({"generations":[],"jobs":[],"total":0,"offset":0,"memory_epoch":4,"link_epoch":7});
+        let status: GraphStatus = serde_json::from_value(legacy).unwrap();
+        assert_eq!(status.organization_epoch, 0);
+        assert!(status.tracked_generations.is_empty());
+        assert!(status.missing_tracked_generation_ids.is_empty());
+        assert_eq!((status.memory_epoch, status.link_epoch), (4, 7));
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]

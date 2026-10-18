@@ -26,3 +26,6 @@ __pycache__/
 
 # graft's local repository settings — not committed.
 /.graft/
+
+# Claude Code personal project settings and approvals.
+/.claude/settings.local.json

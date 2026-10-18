@@ -179,14 +179,17 @@ async fn entries(config: &Config, pool: &PgPool) -> anyhow::Result<Vec<Entry>> {
     result.sort_by_key(|e| (e.deadline, e.id));
     Ok(result)
 }
-pub(super) async fn arm(state: &AppState, tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<Entry> {
+// Persist native ownership before entering a Brain writer transaction. File and
+// optional mirror I/O can block; it must never extend the publication lock.
+pub(super) async fn arm(state: &AppState, job: &ClaimedJob) -> Result<Entry> {
+    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
     let installation: Uuid = sqlx::query_scalar(
         "SELECT id FROM privacy_installation WHERE initialized AND analytics_initialized",
     )
-    .fetch_one(&mut **tx)
+    .fetch_one(&mut *tx)
     .await?;
     let created_at: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
-        .fetch_one(&mut **tx)
+        .fetch_one(&mut *tx)
         .await?;
     let e = Entry {
         installation_id: installation,
@@ -195,11 +198,12 @@ pub(super) async fn arm(state: &AppState, tx: &mut Tx<'_>, job: &ClaimedJob) -> 
         report_id: job.target_id,
         job_id: job.id,
         lease_token: job.lease_token,
-        privacy_sequence: privacy_sequence(tx, job.brain_id).await?,
+        privacy_sequence: privacy_sequence(&mut tx, job.brain_id).await?,
         created_at,
         deadline: created_at + chrono::Duration::seconds(120),
         closed: false,
     };
+    tx.commit().await?;
     let write = async {
         marker(&state.config, installation).await?;
         privacy_journal::durable_write(&e.path(&state.config), &serde_json::to_vec(&e)?).await?;
@@ -224,9 +228,15 @@ pub(super) async fn arm(state: &AppState, tx: &mut Tx<'_>, job: &ClaimedJob) -> 
             "The durable analytical ownership journal could not be recorded.",
         )
     })?;
+    Ok(e)
+}
+
+pub(super) async fn insert(tx: &mut Tx<'_>, e: &Entry) -> Result<()> {
+    deadline(tx, Some(e.deadline)).await?;
+    if privacy_sequence(tx,e.brain_id).await? != e.privacy_sequence { return Err(changed()); }
     sqlx::query("INSERT INTO analytics_attempts(id,brain_id,report_id,job_id,lease_token,created_at,deadline,privacy_sequence) VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
       .bind(e.id).bind(e.brain_id).bind(e.report_id).bind(e.job_id).bind(e.lease_token).bind(e.created_at).bind(e.deadline).bind(e.privacy_sequence).execute(&mut **tx).await?;
-    Ok(e)
+    Ok(())
 }
 pub(super) async fn close(
     config: &Config,

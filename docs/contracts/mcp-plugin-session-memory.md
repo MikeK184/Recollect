@@ -89,6 +89,13 @@ before replay. A detached final drain is bounded; no coding session waits for it
 
 ### Optional execution and other capabilities
 
+[ADR 0023](../adr/0023-agent-to-agent-coordination.md) adds the
+[coordination projection](mcp-agent-coordination.md): plugin-owned background
+presence/SSE/pull and bounded local inbox delivery at supported hooks. Existing
+session/subagent identity, immutable scope and short local tool-hook behavior
+remain in force. Peer messages are attributed advisory data, not human commands
+or managed-tool authorization. Coordination starts no private runner.
+
 `connect --with-runner` explicitly enables a separately supervised local runner;
 `--runner-id UUID` selects an already-authorized private registration. Without the
 flag, the runtime never starts managed local execution. Stopping/disabling affects

@@ -150,8 +150,13 @@ async fn automatic_excerpt_rollback_lease_cleanup_and_erasure_are_durable() {
             );
             privacy_journal::run_once(&h.state).await.unwrap();
             assert!(!path.exists());
-            assert!(sqlx::query_scalar::<_,bool>("SELECT removed_at IS NOT NULL FROM excerpt_artifact_intents WHERE artifact_id=$1")
-                .bind(artifact).fetch_one(&h.admin).await.unwrap());
+            assert!(sqlx::query_scalar::<_, bool>(
+                "SELECT removed_at IS NOT NULL FROM excerpt_artifact_intents WHERE artifact_id=$1"
+            )
+            .bind(artifact)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap());
             sqlx::query(
                 "ALTER TABLE memory_support_assessments DROP CONSTRAINT excerpt_rollback_probe",
             )

@@ -118,7 +118,7 @@ Work type: product
   HotpotQA reproduction on the current build.
 - Shipped: `web/tests/atlas-lifecycle.spec.ts` (16 rows, 40 cells, 0 FAIL,
   6 declared N/A) and the exact HotpotQA reproduction (5%/100% recall,
-  46/0 empty, 97 requests). [Dated evidence](../../../mappings/atlas-lifecycle-proof-2026-09-29.md).
+  46/0 empty, 97 requests). [Dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-lifecycle-proof-2026-09-29.md).
 - Not shipped: §6 steps 11–13, semantic/handover leak probes, answer-level
   §7 A column, LongMemEval/BEAM/LoCoMo (governed by the
   [proposed protocol](../../../contracts/operations-longmemeval-protocol.md)).

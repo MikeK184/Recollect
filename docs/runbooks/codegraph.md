@@ -76,7 +76,7 @@ live permission tests. Repeat setup successfully reused and synced the index.
 A temporary Python source probe verified that `status` detected an addition,
 `sync` made its symbol queryable, and a second sync removed it after deletion.
 The probe was removed and the original file/node/edge counts were restored.
-See [dated evidence](../mappings/codegraph-setup-2026-09-13.md).
+See [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/codegraph-setup-2026-09-13.md).
 
 Treat the graph as a working-tree aid. It can include uncommitted edits and
 incomplete or misleading relationships. Use `rg` for literal values,

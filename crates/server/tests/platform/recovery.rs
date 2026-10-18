@@ -4,6 +4,82 @@ use std::{path::Path, process::Command};
 
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL"]
+async fn recovery_release_rebuilds_statistics_and_keeps_hold_when_analysis_fails() {
+    let h = Harness::new().await;
+    sqlx::raw_sql("CREATE TABLE recovery_statistics_probe(id integer); ALTER TABLE recovery_statistics_probe SET (autovacuum_enabled=false); INSERT INTO recovery_statistics_probe SELECT generate_series(1,256);")
+        .execute(&h.admin).await.unwrap();
+    let rows: f32 = sqlx::query_scalar(
+        "SELECT reltuples FROM pg_class WHERE oid='recovery_statistics_probe'::regclass",
+    )
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(
+        rows, -1.0,
+        "Logical restore fixture starts without statistics"
+    );
+    let installation: Uuid = sqlx::query_scalar("SELECT id FROM privacy_installation")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    let hold = recollect_server::recovery::Hold {
+        restore_id: Uuid::new_v4(),
+        backup_id: Uuid::new_v4(),
+        installation_id: installation,
+        source_origin: h.state.config.public_origin.clone(),
+    };
+    let path = recollect_server::recovery::hold_path(&h.state.config);
+    tokio::fs::write(&path, serde_json::to_vec(&hold).unwrap())
+        .await
+        .unwrap();
+    let release_pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect_with((*h.admin.connect_options()).clone())
+        .await
+        .unwrap();
+    sqlx::query("SET statement_timeout='100ms'")
+        .execute(&release_pool)
+        .await
+        .unwrap();
+    let mut blocker = h.admin.begin().await.unwrap();
+    sqlx::query("LOCK TABLE recovery_statistics_probe IN ACCESS EXCLUSIVE MODE")
+        .execute(&mut *blocker)
+        .await
+        .unwrap();
+    assert!(
+        recollect_server::recovery::release(&release_pool, &h.state.config)
+            .await
+            .is_err(),
+        "A blocked statistics rebuild cannot release restored service"
+    );
+    assert!(path.exists());
+    assert!(!path.with_file_name("recovery-released.json").exists());
+    blocker.rollback().await.unwrap();
+    sqlx::query("SET statement_timeout='0'")
+        .execute(&release_pool)
+        .await
+        .unwrap();
+    recollect_server::recovery::release(&release_pool, &h.state.config)
+        .await
+        .unwrap();
+    assert!(!path.exists());
+    assert!(path.with_file_name("recovery-released.json").exists());
+    let rows: f32 = sqlx::query_scalar(
+        "SELECT reltuples FROM pg_class WHERE oid='recovery_statistics_probe'::regclass",
+    )
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(
+        rows, 256.0,
+        "Released restore has actual populated planner statistics"
+    );
+    release_pool.close().await;
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
 async fn recovery_migrations_forward_only_and_reject_unknown_or_gapped_history() {
     let h = Harness::new().await;
     let owner = h.login().await;

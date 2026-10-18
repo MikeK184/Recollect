@@ -19,9 +19,11 @@ pub mod mcp_host;
 #[cfg(target_os = "macos")]
 pub mod os_store;
 pub mod plugin;
+pub mod plugin_coordination;
 pub mod plugin_migration;
 pub mod plugin_runtime;
 pub mod plugin_session;
+pub mod plugin_skills;
 pub mod plugin_storage;
 pub mod presentation;
 pub mod privacy;

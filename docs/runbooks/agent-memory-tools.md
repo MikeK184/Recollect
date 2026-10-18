@@ -34,7 +34,7 @@ The [capture guide](session-capture.md) explains delivery, expiry and migration.
 Use the packaged executable's `status` command to inspect connection, current
 Brain, pending delivery and detected legacy configuration. Successful tools and
 server-confirmed capture prove functionality; installed files alone do not.
-The current [evidence mapping](../mappings/plugin-session-memory-2026-10-01.md)
+The current [evidence mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/plugin-session-memory-2026-10-01.md)
 records exact native-host versions, verification and deployment boundaries.
 
 ## What happens automatically
@@ -124,20 +124,20 @@ independent Use permission; follow [outcome reconciliation](mcp-runtime.md).
 Actual Codex 0.154.0 and Claude Code 2.1.270, the Linux native bridge, PostgreSQL,
 Neo4j and isolated Secret Service pass the owned fixture. Scope changes reach the
 next model turn; recalled memory is excluded from independently captured evidence.
-See the [dated evidence](../mappings/mcp-tools-2026-09-22.md) for commands and limits.
+See the [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-tools-2026-09-22.md) for commands and limits.
 
 Run `./scripts/test-mcp-hosts.sh` for the isolated installed-host, native capture
 and local/private managed-tool proofs. It uses disposable databases, Secret
 Service and synthetic model responses without a paid model call. To diagnose
 one case, set `RECOLLECT_MCP_HOST_FILTER` to its exact Rust test name. The
-[2026-10-01 continuation evidence](../mappings/desktop-continuation-2026-10-01.md)
+[2026-10-01 continuation evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-continuation-2026-10-01.md)
 records the current rerun separately from the running installation.
 
 Installed macOS Codex 0.157.1 also passed a direct HTTP `workspace.list` call
 against the actual test Brain using its project config and Keychain, without
 token environment injection or the Recollect companion. A loopback synthetic
 model drove only that read; no paid inference or customer content transmission
-was required. See the [credential repair evidence](../mappings/mcp-auth-repair-2026-09-28.md).
+was required. See the [credential repair evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-auth-repair-2026-09-28.md).
 
 ## Failure and Recovery
 

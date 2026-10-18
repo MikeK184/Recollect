@@ -3,9 +3,9 @@
 ## Purpose and prerequisites
 
 This guide describes the implemented contextual desktop UI. The
-[managed setup follow-up](../mappings/managed-memory-experience-2026-09-28.md)
+[managed setup follow-up](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/managed-memory-experience-2026-09-28.md)
 records the simpler agent-first flow deployed on 2026-09-28. The earlier dated
-[implementation evidence](../mappings/desktop-experience-implementation-2026-09-26.md)
+[implementation evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md)
 separates completed checks and the verified final local image from remaining
 domain and integrated acceptance. The final local image is serving this interface
 at port 8787; its recorded Brain data and standing policies were preserved.
@@ -225,7 +225,7 @@ MCP configuration/runtime and the recorded backend/provider checks are verified.
 Some relocated domain workflows still need their final corrected regression run;
 model-policy/autonomous-learning UI and the complete citation/correction/recall
 journey remain part of acceptance. Read the maintained
-[remaining verification list](../mappings/desktop-experience-implementation-2026-09-26.md#remaining-acceptance-and-operating-boundary)
+[remaining verification list](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md#remaining-acceptance-and-operating-boundary)
 before treating the full redesign as closed. Test fixtures and live readiness
 remain separate from general model quality or production-capacity claims.
 

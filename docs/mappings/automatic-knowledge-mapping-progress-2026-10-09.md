@@ -2,13 +2,13 @@
 
 Observed: 2026-10-09 (Europe/Stockholm)
 Confidence: verified source and retained local test receipts; normal-runtime graph acceptance remains open
-Status: implementation paused at user request; partial delivery, acceptance open
+Checkpoint status (2026-10-09): paused at user request; partial delivery, acceptance open
 
 ## Scope and method
 
 The user requested two agents to identify improvements to automatic information
 mapping, entity creation and grouping, and compare Cognee, Graphify and other
-open-source components. The active implementation goal also covers the complete
+open-source components. The approved implementation scope covers the complete
 [dedicated plan](../research/automatic-knowledge-mapping-plan-2026-10-09.md).
 This record separates those reviews, the locally implemented concurrency
 prerequisite and a standalone local model experiment. It is not authority or
@@ -603,5 +603,6 @@ extraction and product import remain untested.
    adopting another code producer. No benchmark superiority is established.
 
 Version: N/A — local development and research; no release requested.
-Commit: user-requested publication checkpoint; identify the actual revision
-from Git. The deployed build identity is recorded separately above.
+Commit: `f2673d71c4b63b536d41b3143eb39c207955b201` was published on 2026-10-09.
+The deployed build identity is recorded separately above; the October 18
+documentation reconciliation does not constitute another deployment.

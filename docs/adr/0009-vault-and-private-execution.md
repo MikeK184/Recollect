@@ -32,7 +32,7 @@ or bounded expiry.
 The user authorized all first-usable slices and routine decisions. Accepted
 foundations require Vault and authenticated private execution. The
 [contract](../contracts/mcp-vault-and-private-runners.md) resolves behavior and
-the [mapping](../mappings/mcp-vault-private-2026-09-22.md) records official and
+the [mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-vault-private-2026-09-22.md) records official and
 Cognee/Atlas evidence. Existing Vault mechanisms already implement workload
 authentication. Narrow lease API use lets Recollect enforce its application
 grants and operation lifetime. Existing pairing avoids another enrollment secret.

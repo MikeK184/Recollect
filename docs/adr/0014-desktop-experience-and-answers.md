@@ -29,7 +29,7 @@ Do not stream unvalidated tokens. Do not execute tools or create memory from Ask
 
 The user accepted the complete reviewed design and asked to implement it all,
 reuse the visual system consistently and add an original SVG logo. The
-[review](../mappings/desktop-experience-review-2026-09-26.md) found that the
+[review](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-review-2026-09-26.md) found that the
 existing single Brain screen exposes functioning backend capabilities as a large
 collection of forms. Contextual navigation and task-oriented views improve that
 presentation without replacing the functioning Rust authority model. Existing

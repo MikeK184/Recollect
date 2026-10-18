@@ -190,34 +190,105 @@ pub(super) async fn schema(config: &Config, http: &reqwest::Client) -> Result<()
     }
     Ok(())
 }
-pub(crate) async fn setup(state: &AppState, g: &GraphGeneration) -> Result<()> {
-    schema(&state.config, &state.http).await?;
-    count(state,&format!("{GUARD} WITH guard WHERE NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:'generation:'+$generation}})}} MERGE (g:RecollectGraphGeneration {{brain:$brain,id:$generation}}) RETURN count(g) AS count"),json!({"brain":g.brain_id,"generation":g.id}),1).await
+/// Native writes are fenced independently of a dropped Rust future. The job's
+/// increasing durable attempt prevents an older delayed setup from reopening a
+/// newer import; its exact token/deadline fence every subsequent batch.
+pub(crate) struct ImportAttempt {
+    pub number: i32,
+    pub token: Uuid,
+    pub deadline: chrono::DateTime<chrono::Utc>,
 }
-pub(crate) async fn nodes(state: &AppState, g: &GraphGeneration, nodes: &[Entity]) -> Result<()> {
+fn import_parameters(g: &GraphGeneration, attempt: &ImportAttempt) -> Value {
+    json!({"brain":g.brain_id,"generation":g.id,"attempt":attempt.number,"token":attempt.token,"deadline":attempt.deadline})
+}
+pub(crate) async fn setup(
+    state: &AppState,
+    g: &GraphGeneration,
+    attempt: &ImportAttempt,
+) -> Result<()> {
+    schema(&state.config, &state.http).await?;
+    count(state,&format!("{GUARD} WITH guard WHERE NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:'generation:'+$generation}})}} AND datetime($deadline)>datetime.realtime()
+      MERGE (g:RecollectGraphGeneration {{brain:$brain,id:$generation}})
+      WITH g WHERE coalesce(g.import_attempt,0)<$attempt
+      SET g.import_attempt=$attempt,g.import_token=$token,g.import_open=true RETURN count(g) AS count"),import_parameters(g,attempt),1).await?;
+    // Never delete another generation or a shared entity. Reset in bounded
+    // transactions, each rechecking the native attempt under the same guard.
+    for members in [false, true] {
+        for _ in 0..=501 {
+            let body = if members {
+                "MATCH (g)-[m:RECOLLECT_GRAPH_MEMBER {brain:$brain,generation:$generation}]->(n:RecollectGraphEntity {brain:$brain}) WITH m,n LIMIT 500 DELETE m WITH n FOREACH (x IN CASE WHEN NOT (n)--() THEN [n] ELSE [] END | DELETE x) RETURN count(n) AS count"
+            } else {
+                "MATCH ()-[r:RECOLLECT_GRAPH_EDGE {brain:$brain,generation:$generation}]->() WITH r LIMIT 500 DELETE r RETURN count(r) AS count"
+            };
+            let statement = format!(
+                "{GUARD} MATCH (g:RecollectGraphGeneration {{brain:$brain,id:$generation,import_attempt:$attempt,import_token:$token}}) WHERE g.import_open AND datetime($deadline)>datetime.realtime() WITH g {body}"
+            );
+            let rows = query(
+                &state.config,
+                &state.http,
+                &statement,
+                import_parameters(g, attempt),
+                &["count"],
+            )
+            .await?;
+            match rows
+                .first()
+                .and_then(|row| row.first())
+                .and_then(Value::as_u64)
+            {
+                Some(0) => break,
+                Some(1..=500) => {}
+                _ => {
+                    return Err(failure(
+                        "graph_response_invalid",
+                        "Native reset did not return a bounded count.",
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+pub(crate) async fn nodes(
+    state: &AppState,
+    g: &GraphGeneration,
+    attempt: &ImportAttempt,
+    nodes: &[Entity],
+) -> Result<()> {
     let keys: Vec<_> = nodes.iter().map(Entity::key).collect();
-    count(state,&format!("{GUARD} MATCH (g:RecollectGraphGeneration {{brain:$brain,id:$generation}})
-      WHERE NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:'generation:'+$generation}})}}
+    let mut parameters = import_parameters(g, attempt);
+    parameters["keys"] = json!(keys);
+    count(state,&format!("{GUARD} MATCH (g:RecollectGraphGeneration {{brain:$brain,id:$generation,import_attempt:$attempt,import_token:$token}})
+      WHERE g.import_open AND datetime($deadline)>datetime.realtime() AND NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:'generation:'+$generation}})}}
       UNWIND $keys AS key WITH g,key WHERE NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:key}})}}
       MERGE (n:RecollectGraphEntity {{brain:$brain,key:key}})
-      MERGE (g)-[:RECOLLECT_GRAPH_MEMBER {{brain:$brain,generation:$generation}}]->(n) RETURN count(n) AS count"),
-      json!({"brain":g.brain_id,"generation":g.id,"keys":keys}),keys.len()).await
+      MERGE (g)-[:RECOLLECT_GRAPH_MEMBER {{brain:$brain,generation:$generation}}]->(n) RETURN count(n) AS count"),parameters,keys.len()).await
 }
 pub(crate) async fn edges(
     state: &AppState,
     g: &GraphGeneration,
+    attempt: &ImportAttempt,
     edges: &[GraphEdge],
 ) -> Result<()> {
-    count(state,&format!("{GUARD} MATCH (g:RecollectGraphGeneration {{brain:$brain,id:$generation}})
-      WHERE NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:'generation:'+$generation}})}}
+    let mut parameters = import_parameters(g, attempt);
+    parameters["edges"] = json!(edges);
+    count(state,&format!("{GUARD} MATCH (g:RecollectGraphGeneration {{brain:$brain,id:$generation,import_attempt:$attempt,import_token:$token}})
+      WHERE g.import_open AND datetime($deadline)>datetime.realtime() AND NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:'generation:'+$generation}})}}
       UNWIND $edges AS edge
       MATCH (g)-[:RECOLLECT_GRAPH_MEMBER]->(a:RecollectGraphEntity {{brain:$brain,key:edge.from}})
       MATCH (g)-[:RECOLLECT_GRAPH_MEMBER]->(b:RecollectGraphEntity {{brain:$brain,key:edge.to}})
       WHERE NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:edge.from}})}}
         AND NOT EXISTS {{MATCH (:RecollectGraphFence {{brain:$brain,key:edge.to}})}}
       MERGE (a)-[r:RECOLLECT_GRAPH_EDGE {{brain:$brain,generation:$generation,id:edge.id}}]->(b)
-      SET r.family=edge.family,r.relation=edge.relation RETURN count(r) AS count"),
-      json!({"brain":g.brain_id,"generation":g.id,"edges":edges}),edges.len()).await
+      SET r.family=edge.family,r.relation=edge.relation RETURN count(r) AS count"),parameters,edges.len()).await
+}
+pub(crate) async fn seal(
+    state: &AppState,
+    g: &GraphGeneration,
+    attempt: &ImportAttempt,
+) -> Result<()> {
+    count(state,&format!("{GUARD} MATCH(g:RecollectGraphGeneration {{brain:$brain,id:$generation,import_attempt:$attempt,import_token:$token}})
+      WHERE g.import_open AND datetime($deadline)>datetime.realtime() SET g.import_open=false RETURN count(g) AS count"),import_parameters(g,attempt),1).await
 }
 pub(crate) async fn verify_nodes(
     state: &AppState,

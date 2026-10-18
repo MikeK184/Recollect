@@ -105,7 +105,7 @@ Work type: product
   native maximum/overflow and hidden-retention proof passed. Renderer-only
   500/2000 case took 1,442 ms. Retained normal test-Brain 99/183 overview and 74/151
   two-hop view passed, with seven Brains and 33 model requests preserved. See
-  the [dated mapping](../../../mappings/graph-exploration-interfaces-2026-09-22.md)
+  the [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-exploration-interfaces-2026-09-22.md)
   for evidence boundaries and retained coverage limits. Governance validation
   and all 32 checker tests passed after lifecycle reconciliation.
 - Version: N/A: no release policy.

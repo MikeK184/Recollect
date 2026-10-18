@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "mcp__rust_analyzer__rust_analyzer_format",
+      "mcp__rust_analyzer__rust_analyzer_code_actions",
+      "mcp__rust_analyzer__rust_analyzer_rename",
+      "mcp__rust_analyzer__rust_analyzer_set_workspace"
+    ]
+  }
+}

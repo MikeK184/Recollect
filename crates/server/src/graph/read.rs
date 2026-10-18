@@ -420,6 +420,88 @@ pub(super) async fn final_gate(
     Ok(now)
 }
 
+/// Classify a completed exact-input replacement, never a policy/correction or
+/// malformed projection, before discarding the entire selection for reprepare.
+/// The caller already holds fresh authenticated fair admission.
+pub(super) async fn replaced(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    auth: &Auth,
+    selection: &Selected,
+) -> Result<bool> {
+    if !selection.windowed || selection.projections.is_empty() {
+        return Ok(false);
+    }
+    let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
+        .fetch_one(&mut **tx)
+        .await?;
+    if selection.deadline.is_some_and(|at| at <= now) {
+        return Ok(false);
+    }
+    let mut changed = false;
+    for (old, descriptor) in &selection.projections {
+        let actual: Option<(Json<GraphGeneration>,bool)> = sqlx::query_as(
+            "SELECT to_jsonb(g)-'descriptor',descriptor @> jsonb_build_object('nodes',$3::jsonb,'edges',$4::jsonb) FROM graph_generations g WHERE brain_id=$1 AND id=$2",
+        )
+        .bind(old.brain_id)
+        .bind(old.id).bind(Json(&descriptor.nodes)).bind(Json(&descriptor.edges))
+        .fetch_optional(&mut **tx)
+        .await?;
+        let Some((Json(mut actual), true)) = actual else {
+            return Ok(false);
+        };
+        if actual.state == "ready" {
+            if serde_json::to_value(&actual).ok() != serde_json::to_value(old).ok() {
+                return Ok(false);
+            }
+            continue;
+        }
+        if actual.state != "superseded" {
+            return Ok(false);
+        }
+        actual.state = "ready".into();
+        if serde_json::to_value(&actual).ok() != serde_json::to_value(old).ok() {
+            return Ok(false);
+        }
+        let replacement:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM graph_generations g WHERE brain_id=$1 AND id<>$2 AND state='ready' AND kind=$3 AND snapshot_id IS NOT DISTINCT FROM $4 AND ($3='repository' OR input_epoch=$5) AND input_snapshot_ids=$6 AND adapter=$7)")
+            .bind(old.brain_id).bind(old.id).bind(&old.kind).bind(old.snapshot_id).bind(old.input_epoch).bind(&old.input_snapshot_ids).bind(&old.adapter).fetch_one(&mut **tx).await?;
+        if !replacement {
+            return Ok(false);
+        }
+        descriptor::available(tx, old).await?;
+        descriptor::retained(tx, descriptor).await?;
+        changed = true;
+    }
+    if !changed {
+        return Ok(false);
+    }
+    // A simultaneous scope/privacy/policy change must not be classified as a
+    // harmless generation replacement. Requalify the complete buffered page.
+    let entities: Vec<_> = selection
+        .projections
+        .iter()
+        .flat_map(|(_, d)| d.nodes.iter().cloned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let mut scope = selection.view.scope.clone();
+    let qualified = retrieval::graph::qualify(
+        state,
+        tx,
+        auth,
+        selection.view.brain_id,
+        &mut scope,
+        &entities,
+        (NODE_LIMIT, None),
+    )
+    .await?;
+    Ok(qualified.scope_id == selection.view.scope_id
+        && serde_json::to_value(&scope).ok() == serde_json::to_value(&selection.view.scope).ok()
+        && serde_json::to_value(&qualified.nodes).ok()
+            == serde_json::to_value(&selection.nodes).ok()
+        && !qualified.deadline.is_some_and(|at| at <= now))
+}
+
 /// Partial pages can survive unrelated captures only after every buffered value
 /// is requalified under the fresh canonical lock. Full reach/path consumers keep
 /// the strict epoch gate: a page cannot prove absence or whole-graph stability.
@@ -530,51 +612,66 @@ pub async fn view(
                 "The graph page offset is outside the supported view.",
             ));
         }
-        let mut tx = auth.preparation_tx(&state.pool).await?;
-        sqlx::query("SET LOCAL statement_timeout='2s'")
-            .execute(&mut *tx)
-            .await?;
-        let mut selected = if input.windowed {
-            select_windowed(
-                &state,
-                &mut tx,
-                &auth,
-                brain,
-                input.scope,
-                Window::Page {
-                    offset: input.offset,
-                    limit: 100,
-                },
-            )
-            .await?
-        } else {
-            select(
-                &state,
-                &mut tx,
-                &auth,
-                brain,
-                input.scope,
-                NODE_LIMIT,
-                EDGE_LIMIT,
-            )
-            .await?
-        };
-        verify(&state, &selected).await?;
-        tx.commit().await?;
-        let mut tx = auth.publication_tx(&state.pool).await?;
-        sqlx::query("SET LOCAL statement_timeout='2s'")
-            .execute(&mut *tx)
-            .await?;
-        interactive_final_gate(&state, &mut tx, &auth, &mut selected).await?;
-        selected.view.nodes = selected
-            .nodes
-            .into_values()
-            .skip(if input.windowed { 0 } else { input.offset })
-            .take(100)
-            .collect();
-        selected.view.offset = input.offset;
-        tx.commit().await?;
-        Ok(ResponseJson(selected.view))
+        let mut pinned_scope = input.scope.clone();
+        for retry in 0..=2 {
+            let mut tx = auth.preparation_tx(&state.pool).await?;
+            sqlx::query("SET LOCAL statement_timeout='2s'")
+                .execute(&mut *tx)
+                .await?;
+            let mut selected = if input.windowed {
+                select_windowed(
+                    &state,
+                    &mut tx,
+                    &auth,
+                    brain,
+                    pinned_scope.clone(),
+                    Window::Page {
+                        offset: input.offset,
+                        limit: 100,
+                    },
+                )
+                .await?
+            } else {
+                select(
+                    &state,
+                    &mut tx,
+                    &auth,
+                    brain,
+                    pinned_scope.clone(),
+                    NODE_LIMIT,
+                    EDGE_LIMIT,
+                )
+                .await?
+            };
+            pinned_scope = selected.view.scope.clone();
+            verify(&state, &selected).await?;
+            tx.commit().await?;
+            let mut tx = auth.publication_tx(&state.pool).await?;
+            sqlx::query("SET LOCAL statement_timeout='2s'")
+                .execute(&mut *tx)
+                .await?;
+            if let Err(error) = interactive_final_gate(&state, &mut tx, &auth, &mut selected).await
+            {
+                if retry < 2
+                    && error.1 == "graph_preparation_changed"
+                    && replaced(&state, &mut tx, &auth, &selected).await?
+                {
+                    tx.rollback().await?;
+                    continue;
+                }
+                return Err(error);
+            }
+            selected.view.nodes = selected
+                .nodes
+                .into_values()
+                .skip(if input.windowed { 0 } else { input.offset })
+                .take(100)
+                .collect();
+            selected.view.offset = input.offset;
+            tx.commit().await?;
+            return Ok(ResponseJson(selected.view));
+        }
+        unreachable!("The final bounded attempt returns its outcome")
     })
     .await
     .map_err(|_| {

@@ -10,7 +10,7 @@ implementation gaps. [ADR 0006](../adr/0006-autonomous-memory.md),
 [session capture](evidence-session-capture.md),
 [claims and time](memory-claims-and-time.md) and
 [retrieval](retrieval-exact-and-lexical.md) govern this bounded follow-up.
-The [Atlas audit](../mappings/atlas-implementation-audit-2026-09-15.md) records
+The [Atlas audit](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-implementation-audit-2026-09-15.md) records
 observations; it does not make every Atlas optimization a product requirement.
 
 ## Contract

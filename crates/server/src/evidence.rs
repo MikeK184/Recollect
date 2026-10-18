@@ -526,7 +526,7 @@ pub async fn remove_group(
         .await?;
     if has_mcp {
         return Err(conflict(
-            "This environment is referenced by MCP configuration. Reassign its connections and profiles before removing it.",
+            "This environment is referenced by MCP configuration or skill history. Preserve the environment while those references exist.",
         ));
     }
     sqlx::query("DELETE FROM evidence_groups WHERE brain_id=$1 AND id=$2")

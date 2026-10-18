@@ -107,7 +107,7 @@ Work type: governance
 - Validation: Both skill-creator quick checks passed; local references/UI metadata
   passed; Codex 0.154.0 catalog discovery resolved both entrypoints from root and
   docs/foundation without an LLM turn. Manual routing and maintenance cases are
-  recorded in the [evidence mapping](../../../mappings/documentation-skills-and-tooling-2026-09-13.md).
+  recorded in the [evidence mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/documentation-skills-and-tooling-2026-09-13.md).
   Governance lint and all 32 existing tests passed; whitespace checks included
   untracked files. Actual Context7 resolve/query and CodeGraph status/sync/node
   calls succeeded. These checks do not establish product or model behavior.

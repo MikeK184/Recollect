@@ -27,7 +27,7 @@ Work type: product
 [answer contract](../../../contracts/retrieval-answers.md),
 [model policy contract](../../../contracts/memory-provider-policy-and-learning.md),
 [epic](../../epics/operational-readiness.md), and the
-[2026-09-29 lifecycle evidence](../../../mappings/atlas-lifecycle-proof-2026-09-29.md)
+[2026-09-29 lifecycle evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-lifecycle-proof-2026-09-29.md)
 that motivates the answer-level complement. The accepted LongMemEval protocol
 linked in the Summary governs the budgeted run.
 

@@ -102,7 +102,7 @@ correction and independent reinspection; prior functional proof remains history.
 - Not shipped: No agreed acceptance deferred.
 - New blockers: None.
 - Docs updated: Desktop/catalogue/runtime/knowledge-surface amendments, design
-  system, provider runbooks, [dated proof](../../../mappings/desktop-management-concepts-2026-10-05.md),
+  system, provider runbooks, [dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-management-concepts-2026-10-05.md),
   epic, archive/active indexes and current handover.
 - Validation: Twelve unique focused browser cases pass; credential owner/admin,
   revision/archive, private file, redaction and rotation platform proof plus runtime
