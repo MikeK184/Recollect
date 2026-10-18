@@ -7,6 +7,7 @@ import { client, result } from "../../api";
 import { useBrain } from "../../app/context";
 import type { BrainSearch } from "../../app/useBrainSearch";
 import "./assurance.css";
+import { usePollInterval } from "../../usePollInterval";
 
 type Exception = {
   id: string;
@@ -18,6 +19,7 @@ type Exception = {
 };
 
 function useAssuranceReads(active: boolean) {
+  const pollNormal = usePollInterval("normal");
   const brain = useBrain();
   const admin = brain.role === "admin";
   // Separate role/revision positions, no payload cache across a changed Brain.
@@ -27,7 +29,7 @@ function useAssuranceReads(active: boolean) {
     gcTime: 0,
     staleTime: 5000,
     enabled: active,
-    refetchInterval: 10_000,
+    refetchInterval: pollNormal,
     retry: false,
   };
   const key = (name: string) => [

@@ -5,6 +5,7 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { McpCatalogue } from "./McpPanel";
 import { ErrorState, LoadingState } from "./components/AsyncState";
+import { usePollInterval } from "./usePollInterval";
 type Detail = components["schemas"]["McpConnectionDetail"];
 type Props = {
   brain: Brain;
@@ -15,6 +16,7 @@ type Props = {
   stale: (message: string) => void;
 };
 export function ConnectionPowerDialog(props: Props) {
+  const pollNormal = usePollInterval("normal");
   const [pending, setPending] = useState(false);
   const query = useQuery({
     queryKey: ["mcp", props.brain.id, "connection", props.id],
@@ -27,7 +29,7 @@ export function ConnectionPowerDialog(props: Props) {
       ),
     retry: false,
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
   });
   const summary = props.catalogue.connections.find((c) => c.id === props.id);
   return (

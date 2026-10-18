@@ -4,6 +4,7 @@ import {
   Suspense,
   useMemo,
   useRef,
+  type MutableRefObject,
   useState,
   type ReactNode,
 } from "react";
@@ -45,15 +46,19 @@ class SpatialGraphBoundary extends Component<
 export function GraphRenderer({
   inspector,
   displayGroups = emptyGroups,
+  session,
   ...props
 }: GraphCanvasProps & {
   inspector?: ReactNode;
   displayGroups?: GraphDisplayGroup[];
+  /** Owned by the caller when the renderer may remount without losing its camera. */
+  session?: MutableRefObject<SpatialSession>;
 }) {
-  const spatialSession = useRef<SpatialSession>({
+  const ownSession = useRef<SpatialSession>({
     value: null,
     invalid: false,
   });
+  const spatialSession = session ?? ownSession;
   const topology = useMemo(
     () => spatialTopology(props.nodes, props.edges, displayGroups),
     [props.nodes, props.edges, displayGroups],
@@ -127,6 +132,7 @@ export function GraphRenderer({
               <Canvas3D
                 {...props}
                 displayGroups={displayGroups}
+                topology={topology}
                 session={spatialSession}
                 onFailure={fallback}
               />

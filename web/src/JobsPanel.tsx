@@ -14,6 +14,7 @@ import { client, result } from "./api";
 import { SkeletonRows } from "./components/Skeleton";
 import { StatusDot } from "./components/StatusDot";
 import { staggerStyle } from "./components/Motion";
+import { usePollInterval } from "./usePollInterval";
 
 const stateLabels: Record<string, string> = {
   current: "Up to date",
@@ -47,6 +48,7 @@ export function JobsPanel({
   admin: boolean;
   selectedJob?: string;
 }) {
+  const pollFast = usePollInterval("fast");
   const focused = useRef<HTMLDivElement>(null);
   const cache = useQueryClient();
   const processing = useQuery({
@@ -57,7 +59,7 @@ export function JobsPanel({
           params: { path: { id } },
         }),
       ),
-    refetchInterval: 1500,
+    refetchInterval: pollFast,
   });
   const jobs = useQuery({
     queryKey: ["jobs", id],
@@ -65,7 +67,7 @@ export function JobsPanel({
       result(
         await client.GET("/api/brains/{id}/jobs", { params: { path: { id } } }),
       ),
-    refetchInterval: 1500,
+    refetchInterval: pollFast,
   });
   const action = useMutation({
     mutationFn: async ({

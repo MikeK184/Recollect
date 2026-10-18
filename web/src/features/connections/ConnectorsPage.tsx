@@ -40,8 +40,10 @@ import {
   LoadingState,
 } from "../../components/AsyncState";
 import { McpConnectorSetup } from "../../McpConnectorSetup";
+import { usePollInterval } from "../../usePollInterval";
 
 export function ConnectorsPage() {
+  const pollNormal = usePollInterval("normal");
   const session = useWorkspace();
   const cache = useQueryClient();
   const [search, setSearch] = useState("");
@@ -55,7 +57,7 @@ export function ConnectorsPage() {
     enabled: session.user.installation_owner,
     gcTime: 0,
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/mcp/definitions", { signal })),
   });

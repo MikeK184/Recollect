@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { iconSize } from "./design/tokens";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./features/feature-views.css";
 import { EraseAction } from "./RetentionPanel";
 import {
@@ -14,9 +14,7 @@ import {
   Loader,
   Modal,
   Select,
-  SegmentedControl,
   Stack,
-  Switch,
   Tabs,
   Text,
   Textarea,
@@ -27,8 +25,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileCode2, GitCommitHorizontal, Plus } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
-import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue } from "./catalogueQueries";
 type Repository = components["schemas"]["Repository"];
 type Manifest = components["schemas"]["ManifestRevision"];
 type Entry = components["schemas"]["ManifestEntry"];
@@ -134,6 +133,7 @@ export function RepositoryDialog({
   repository: Repository;
   onClose: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const snapshots = useQuery({
@@ -150,7 +150,7 @@ export function RepositoryDialog({
           },
         ),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   if (selected)
     return (
@@ -239,6 +239,8 @@ export function SnapshotDialog({
   id: string;
   onClose: () => void;
 }) {
+  const pollFast = usePollInterval("fast");
+  const pollNormal = usePollInterval("normal");
   const [tab, setTab] = useState<string | null>("files");
   const [fileOffset, setFileOffset] = useState(0);
   const [factOffset, setFactOffset] = useState(0);
@@ -254,7 +256,7 @@ export function SnapshotDialog({
           { params: { path, query: { offset: contributorOffset } } },
         ),
       ),
-    refetchInterval: 3000,
+    refetchInterval: pollFast,
   });
   const files = useQuery({
     queryKey: ["repository-files", brain.id, id, fileOffset],
@@ -277,7 +279,7 @@ export function SnapshotDialog({
         ),
       ),
     enabled: tab === "facts",
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const artifactKind = tab === "insights" ? "insights" : "receipt";
   const artifact = useQuery({
@@ -301,7 +303,7 @@ export function SnapshotDialog({
         ),
       ),
     enabled: !!selectedFile && tab === "files",
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const key = useIdempotency();
   const process = useMutation({
@@ -588,21 +590,13 @@ export function PublicationPanel({
   brain: Brain;
   section?: "repositories" | "environments";
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [environment, setEnvironment] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const catalogue = useQuery({
-    queryKey: ["publication-catalogue", brain.id],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-    refetchInterval: 5000,
-  });
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, { poll: "normal" });
   const manifests = useQuery({
     queryKey: ["revision-manifests", brain.id, environment, offset],
     queryFn: async () =>
@@ -614,7 +608,7 @@ export function PublicationPanel({
           },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const refresh = () => {
     void cache.invalidateQueries({
@@ -750,6 +744,7 @@ function ManifestDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [offset, setOffset] = useState(0);
   const [historical, setHistorical] = useState<Manifest | null>(null);
   const [edit, setEdit] = useState<Manifest | null>(null);
@@ -765,7 +760,7 @@ function ManifestDialog({
           },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   if (snapshot)
     return (
@@ -1236,154 +1231,5 @@ function EntryForm({
         />
       </Stack>
     </Card>
-  );
-}
-
-export function RepositoryStoragePolicy({
-  brain,
-  inline = false,
-  readOnly = false,
-  close,
-}: {
-  brain: Brain;
-  inline?: boolean;
-  readOnly?: boolean;
-  close?: () => void;
-}) {
-  const [draft, setDraft] = useState<boolean | null>(null);
-  const [baseline, setBaseline] = useState<boolean | null>(null);
-  const cache = useQueryClient();
-  const policy = useQuery({
-    queryKey: ["repository-policy", brain.id],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/repositories/policy", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
-  useEffect(() => {
-    if (
-      inline &&
-      baseline === null &&
-      policy.data?.allow_file_content !== undefined
-    )
-      setBaseline(policy.data?.allow_file_content!);
-  }, [inline, baseline, policy.data?.allow_file_content]);
-  const changed =
-    inline &&
-    baseline !== null &&
-    policy.data?.allow_file_content !== undefined &&
-    policy.data?.allow_file_content !== baseline;
-  const updatePolicy = useMutation({
-    mutationFn: async (allowed: boolean) => {
-      if (changed || policy.error)
-        throw new Error(
-          "Storage policy changed. Cancel and reopen before saving.",
-        );
-      return result(
-        await client.PUT("/api/brains/{brain}/repositories/policy", {
-          params: { path: { brain: brain.id } },
-          body: { allow_file_content: allowed },
-        }),
-      );
-    },
-    onSuccess: (value) => {
-      cache.setQueryData(["repository-policy", brain.id], value);
-      close?.();
-    },
-  });
-
-  return (
-    <section className={inline ? "privacy-editor" : "feature-setting"}>
-      <Stack gap="md">
-        {changed && (
-          <Alert color="yellow">
-            Storage policy changed elsewhere. Cancel and reopen to edit the
-            current policy.
-          </Alert>
-        )}
-        {!inline && <Title order={3}>Repository file storage</Title>}
-        <Failure error={policy.error} />
-        <Failure error={updatePolicy.error} />
-        {!policy.error &&
-          policy.data &&
-          (brain.role === "admin" && !brain.archived ? (
-            <PolicyRow
-              title={
-                inline
-                  ? "Repository content"
-                  : "Allow explicitly selected repository file text"
-              }
-              description="Source code and repository files; applies to new captures."
-            >
-              {inline ? (
-                <SegmentedControl
-                  className="vision-segment repository-capture-options"
-                  aria-label="Repository content capture"
-                  value={
-                    (
-                      readOnly
-                        ? policy.data.allow_file_content
-                        : (draft ?? baseline ?? policy.data.allow_file_content)
-                    )
-                      ? "text"
-                      : "references"
-                  }
-                  disabled={readOnly || updatePolicy.isPending}
-                  data={[
-                    { value: "references", label: "References only" },
-                    { value: "text", label: "Include file text" },
-                  ]}
-                  onChange={(v) => setDraft(v === "text")}
-                />
-              ) : (
-                <Switch
-                  aria-label="Allow explicitly selected repository file text"
-                  checked={
-                    updatePolicy.isPending
-                      ? updatePolicy.variables
-                      : policy.data.allow_file_content
-                  }
-                  disabled={updatePolicy.isPending}
-                  onChange={(e) => updatePolicy.mutate(e.currentTarget.checked)}
-                />
-              )}
-            </PolicyRow>
-          ) : (
-            <Text size="sm">
-              Repository text capture:{" "}
-              {policy.data.allow_file_content
-                ? "allowed for explicitly selected files"
-                : "disabled"}
-            </Text>
-          ))}
-        {inline &&
-          !readOnly &&
-          !policy.error &&
-          policy.data &&
-          brain.role === "admin" &&
-          !brain.archived && (
-            <Group justify="flex-end">
-              <Button
-                variant="default"
-                disabled={updatePolicy.isPending}
-                onClick={close}
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={changed}
-                loading={updatePolicy.isPending}
-                onClick={() =>
-                  updatePolicy.mutate(draft ?? policy.data!.allow_file_content)
-                }
-              >
-                Save repository storage
-              </Button>
-            </Group>
-          )}
-      </Stack>
-    </section>
   );
 }

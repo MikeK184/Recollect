@@ -46,6 +46,9 @@ import {
   type SceneGenerations,
 } from "./graph-generation-status";
 import { useContentDeadline } from "./useContentDeadline";
+import { feedsGraphScene } from "./features/graph/sceneKeys";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue, useEvidenceList } from "./catalogueQueries";
 
 type Scope = components["schemas"]["GraphSelection"];
 type Node = components["schemas"]["GraphNode"];
@@ -118,6 +121,8 @@ function Failure({ error }: { error: Error | null }) {
   return error ? <Alert color="red">{error.message}</Alert> : null;
 }
 export function GraphPanel({ brain }: { brain: Brain }) {
+  const pollFast = usePollInterval("fast");
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [route, patchRoute] = useBrainSearch();
   const [scope, setScope] = useState(() => scopeFromRoute(route));
@@ -167,7 +172,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     setScene(next);
     setGenerationError(null);
   }, []);
-  function clear() {
+  const clear = useCallback(() => {
     setGenerationError(null);
     sceneRevision.current++;
     acceptedScene.current = null;
@@ -183,7 +188,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     void cache.cancelQueries({
       queryKey: ["graph-generation-status", brain.id],
     });
-  }
+  }, [cache, brain.id]);
   function change(next: Scope) {
     clear();
     setScope(next);
@@ -222,7 +227,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         if (
           event.query.queryKey[1] === brain.id &&
           event.type === "updated" &&
-          (event.action.type === "invalidate" ||
+          ((event.action.type === "invalidate" &&
+            feedsGraphScene(event.query.queryKey)) ||
             (event.action.type === "setState" &&
               event.query.state.data === undefined &&
               ["graph", "graph-read", "graph-path"].includes(
@@ -246,7 +252,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   );
   const status = useQuery({
     queryKey: ["graph", brain.id, offset],
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/graph", {
@@ -260,7 +266,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     enabled: !!scene,
     retry: false,
     gcTime: 0,
-    refetchInterval: 3000,
+    refetchInterval: pollFast,
     refetchOnWindowFocus: false,
     queryFn: async ({ signal }) => {
       const revision = sceneRevision.current;
@@ -305,24 +311,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     )
       clear();
   }, [generationStatus.data]);
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id, "graph"],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
-  const groups = useQuery({
-    queryKey: ["evidence", brain.id, "graph"],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
+  const catalogue = useWorkspaceCatalogue(brain.id);
+  const groups = useEvidenceList(brain.id);
   const repository = (scope.selection.repository_ids ?? [])[0] ?? "";
   const snapshots = useQuery({
     queryKey: ["graph-snapshots", brain.id, repository, snapshotOffset],

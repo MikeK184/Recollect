@@ -16,9 +16,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, Database, Network, Server } from "lucide-react";
 import "./features/workspace/control-panel.css";
 import { client, result } from "./api";
+import { usePollInterval } from "./usePollInterval";
 
 export function OperationsDialog() {
   const [opened, setOpened] = useState(false);
+  const pollNormalWhen0 = usePollInterval("normal", opened);
   const [openedAt, setOpenedAt] = useState(0);
   const query = useQuery({
     queryKey: ["operations"],
@@ -27,14 +29,14 @@ export function OperationsDialog() {
     gcTime: 0,
     retry: false,
     enabled: opened,
-    refetchInterval: opened ? 10_000 : false,
+    refetchInterval: pollNormalWhen0,
   });
   const health = useQuery({
     queryKey: ["diagnostic-status"],
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/status", { signal })),
     enabled: opened,
-    refetchInterval: opened ? 10000 : false,
+    refetchInterval: pollNormalWhen0,
     gcTime: 0,
     retry: false,
   });

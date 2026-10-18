@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
+import { usePollInterval } from "./usePollInterval";
 
 type Scope = components["schemas"]["GraphSelection"];
 type Node = components["schemas"]["GraphNode"];
@@ -38,6 +39,7 @@ export function AnalyticsPanel({
   scope: Scope;
   inspect: (node: Node) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const idem = useIdempotency();
   const [algorithm, setAlgorithm] = useState("pagerank");
@@ -47,7 +49,7 @@ export function AnalyticsPanel({
   const [page, setPage] = useState(0);
   const list = useQuery({
     queryKey: ["analytics", brain.id, offset],
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/graph/analytics", {

@@ -38,6 +38,10 @@ import { AliasReviewPanel } from "./AliasReviewPanel";
 import { FieldOrganizationPanel } from "./FieldOrganizationPanel";
 import { useOrganizationSources } from "./useOrganizationSources";
 import "./organization.css";
+import { usePollInterval } from "../../usePollInterval";
+import { useWorkspaceCatalogue, useEvidenceList } from "../../catalogueQueries";
+import { feedsGraphScene } from "./sceneKeys";
+import { useQualifiedRead } from "./useQualifiedRead";
 
 type Scope = components["schemas"]["GraphSelection"];
 type View = components["schemas"]["OrganizationView"];
@@ -240,6 +244,7 @@ export function OrganizationPanel({
   scope: Scope;
   onScopeChange: (scope: Scope) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const scopeKey = JSON.stringify(scope);
   const [center, setCenter] = useState<Center | null>(null),
@@ -269,7 +274,7 @@ export function OrganizationPanel({
   const status = useQuery({
     queryKey: ["graph", brain.id, 0],
     retry: false,
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/graph", {
@@ -290,12 +295,20 @@ export function OrganizationPanel({
   ]);
   const activeRequest = useRef(requestKey);
   activeRequest.current = requestKey;
-  const [read, setRead] = useState<{
-    key: string;
-    view?: View;
-    error?: Error;
-    pending: boolean;
-  }>({ key: "", pending: true });
+  const [read] = useQualifiedRead<View>({
+    key: requestKey,
+    enabled: !!status.data && !status.isError,
+    initialPending: true,
+    fallback: "Organization could not be read.",
+    read: async (signal) =>
+      result(
+        await client.POST("/api/brains/{brain}/organization/view", {
+          params: { path: { brain: brain.id } },
+          body: { scope, center, cursor, limit: 25 },
+          signal,
+        }),
+      ),
+  });
   const expires = useContentDeadline(
     read.key === requestKey ? read.view?.expires_at : null,
   );
@@ -325,34 +338,6 @@ export function OrganizationPanel({
   const sourcePage = view ? sourceStream.page : undefined;
 
   useEffect(() => {
-    const controller = new AbortController();
-    setRead({ key: requestKey, pending: true });
-    if (!status.data || status.isError) return () => controller.abort();
-    void client
-      .POST("/api/brains/{brain}/organization/view", {
-        params: { path: { brain: brain.id } },
-        body: { scope, center, cursor, limit: 25 },
-        signal: controller.signal,
-      })
-      .then((response) => {
-        const next = result(response);
-        if (!controller.signal.aborted && activeRequest.current === requestKey)
-          setRead({ key: requestKey, view: next, pending: false });
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted && activeRequest.current === requestKey)
-          setRead({
-            key: requestKey,
-            error:
-              error instanceof Error
-                ? error
-                : new Error("Organization could not be read."),
-            pending: false,
-          });
-      });
-    return () => controller.abort();
-  }, [requestKey, status.isError, !!status.data]);
-  useEffect(() => {
     setCenter(null);
     setCursor(null);
     setHistory([]);
@@ -370,7 +355,8 @@ export function OrganizationPanel({
         if (
           event.query.queryKey[1] === brain.id &&
           event.type === "updated" &&
-          event.action.type === "invalidate"
+          event.action.type === "invalidate" &&
+          feedsGraphScene(event.query.queryKey)
         ) {
           setNonce((value) => value + 1);
           setChoice(null);
@@ -384,30 +370,10 @@ export function OrganizationPanel({
     setSourceLimit(20);
     setConnectionLimit(20);
   }, [requestKey]);
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id, "organization"],
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, {
     enabled: filters,
-    retry: false,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
   });
-  const manual = useQuery({
-    queryKey: ["evidence", brain.id, "organization"],
-    enabled: filters,
-    retry: false,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-  });
+  const manual = useEvidenceList(brain.id, undefined, { enabled: filters });
   const manualGroups = !manual.isError ? (manual.data?.groups ?? []) : [];
   const sourceMap = useMemo(
     () =>

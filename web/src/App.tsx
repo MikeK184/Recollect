@@ -33,7 +33,7 @@ import {
   result,
   session,
   setCsrf,
-  RequestError,
+  onUnauthorized,
   type Session,
 } from "./api";
 import { Brand } from "./components/Brand";
@@ -47,6 +47,7 @@ import {
 } from "./app/navigation";
 import { WorkspaceContext } from "./app/context";
 import { OperationsDialog } from "./OperationsDialog";
+import { usePollInterval } from "./usePollInterval";
 
 async function replaceSession(cache: QueryClient, value: Session | null) {
   await cache.cancelQueries();
@@ -58,6 +59,7 @@ async function replaceSession(cache: QueryClient, value: Session | null) {
 }
 
 export function App() {
+  const pollSlow = usePollInterval("slow");
   const cache = useQueryClient();
   const navigate = useNavigate();
   const [invitation, setInvitation] = useState(initialInvitation);
@@ -78,10 +80,17 @@ export function App() {
     window.addEventListener("hashchange", readInvite);
     return () => window.removeEventListener("hashchange", readInvite);
   }, []);
+  useEffect(() => {
+    onUnauthorized(() => {
+      // Any authenticated read that returns 401 ends the session everywhere.
+      if (cache.getQueryData(["session"])) void replaceSession(cache, null);
+    });
+    return () => onUnauthorized(null);
+  }, [cache]);
   const auth = useQuery({
     queryKey: ["session"],
     queryFn: session,
-    refetchInterval: 15_000,
+    refetchInterval: pollSlow,
   });
   useEffect(() => {
     if (!auth.data) return;
@@ -261,6 +270,8 @@ function Login() {
 }
 
 function Workspace({ user }: { user: Session }) {
+  const pollNormal = usePollInterval("normal");
+  const pollSlow = usePollInterval("slow");
   const cache = useQueryClient();
   const navigate = useNavigate();
   const path = useRouterState({ select: (state) => state.location.pathname });
@@ -274,13 +285,13 @@ function Workspace({ user }: { user: Session }) {
     queryKey: ["brains"],
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/brains", { signal })),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
   });
   const health = useQuery({
     queryKey: ["status"],
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/status", { signal })),
-    refetchInterval: 30_000,
+    refetchInterval: pollSlow,
   });
   const logout = useMutation({
     mutationFn: async () => {
@@ -327,12 +338,6 @@ function Workspace({ user }: { user: Session }) {
       ? "Ambient display"
       : (brainNavigation.find((n) => n.section === section)?.label ?? "Ask")
     : (globalNavigation.find((n) => n.to === path)?.label ?? "Workspace");
-  const expired = [brains.error, health.error].some(
-    (e) => e instanceof RequestError && e.status === 401,
-  );
-  useEffect(() => {
-    if (expired) setLastBrain(null);
-  }, [expired]);
   useEffect(() => {
     document.title = `${current ? `${current.name} · ` : ""}${selectedLabel} · Recollect`;
   }, [current?.name, selectedLabel]);
@@ -612,19 +617,7 @@ function Workspace({ user }: { user: Session }) {
           </header>
           <div className="content">
             <Failure error={logout.error} />
-            {expired ? (
-              <Alert color="yellow" title="Your session has expired">
-                <Button
-                  mt="sm"
-                  variant="light"
-                  onClick={() => void replaceSession(cache, null)}
-                >
-                  Sign in again
-                </Button>
-              </Alert>
-            ) : (
-              <PageTransition />
-            )}
+            <PageTransition />
           </div>
           <footer className="footer">
             <span>Recollect · A place for what you know.</span>

@@ -16,6 +16,7 @@ import { useFocusReturn } from "@mantine/hooks";
 import { client, result, type Brain } from "./api";
 import type { McpCatalogue } from "./McpPanel";
 import { McpCallDialog } from "./McpCallDialog";
+import { usePollInterval } from "./usePollInterval";
 
 export const callLabel = (state: string) =>
   ({
@@ -47,6 +48,8 @@ export function McpRuntimePanel({
   session: string;
   released: () => void;
 }) {
+  const pollFast = usePollInterval("fast");
+  const pollNormal = usePollInterval("normal");
   const [cursor, setCursor] = useState<string | undefined>();
   const [releasing, setReleasing] = useState(false);
   const [releaseError, setReleaseError] = useState<string | null>(null);
@@ -81,7 +84,7 @@ export function McpRuntimePanel({
           signal,
         }),
       ),
-    refetchInterval: 2000,
+    refetchInterval: pollFast,
     retry: false,
     gcTime: 0,
   });
@@ -94,7 +97,7 @@ export function McpRuntimePanel({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });

@@ -2,6 +2,7 @@ import { Alert, Button, Group, Text } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result } from "../../api";
 import type { components } from "../../api-schema";
+import { usePollInterval } from "../../usePollInterval";
 type Receipt = components["schemas"]["BrainDeletionResult"];
 export const deletionReceiptKey = ["last-brain-deletion"];
 
@@ -30,6 +31,7 @@ function Progress({
   receipt: Receipt;
   dismiss: () => void;
 }) {
+  const pollFast = usePollInterval("fast");
   const query = useQuery({
     queryKey: ["deletion-status", receipt.request.id],
     queryFn: async ({ signal }) =>
@@ -48,8 +50,7 @@ function Progress({
     staleTime: 0,
     gcTime: 0,
     retry: false,
-    refetchInterval: (query) =>
-      query.state.data?.state === "complete" ? false : 2000,
+    refetchInterval: (query) => query.state.data?.state === "complete" ? false : pollFast,
   });
   const state = query.data;
   return (

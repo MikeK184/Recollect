@@ -46,6 +46,8 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
 import { ClaimDialog } from "./ClaimsPanel";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue, useEvidenceList } from "./catalogueQueries";
 
 type Policy = components["schemas"]["ModelPolicy"];
 type Settings = components["schemas"]["ModelSettings"];
@@ -139,15 +141,7 @@ function PolicyEditor({
   );
   const command = useIdempotency();
   const cache = useQueryClient();
-  const groups = useQuery({
-    queryKey: ["model-collections", brain],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain } },
-        }),
-      ),
-  });
+  const groups = useEvidenceList(brain);
   const patch = (value: Partial<Policy>) => setDraft({ ...draft, ...value });
   const save = useMutation({
     mutationFn: async () => {
@@ -517,15 +511,7 @@ function LearningEditor({
   const [offset, setOffset] = useState(0);
   const cache = useQueryClient();
   const command = useIdempotency();
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain } },
-        }),
-      ),
-  });
+  const catalogue = useWorkspaceCatalogue(brain);
   const manifests = useQuery({
     queryKey: ["learning-manifests", brain, selection.environment_id, offset],
     queryFn: async () =>
@@ -557,8 +543,13 @@ function LearningEditor({
         }),
       );
     },
-    onSuccess: () =>
-      cache.invalidateQueries({ predicate: (q) => q.queryKey.includes(brain) }),
+    onSuccess: () => {
+      // A completed run is spent; a deliberate second run is a new command.
+      command.reset();
+      return cache.invalidateQueries({
+        predicate: (q) => q.queryKey.includes(brain),
+      });
+    },
   });
   return (
     <Modal opened onClose={onClose} title="Learn from source" size="lg">
@@ -659,6 +650,7 @@ function LearningRows({
   brain: Brain;
   onInspect: (id: string) => void;
 }) {
+  const pollFast = usePollInterval("fast");
   const [offset, setOffset] = useState(0);
   const cache = useQueryClient();
   const command = useIdempotency();
@@ -670,7 +662,7 @@ function LearningRows({
           params: { path: { brain: brain.id }, query: { offset } },
         }),
       ),
-    refetchInterval: 2000,
+    refetchInterval: pollFast,
   });
   const retry = useMutation({
     mutationFn: async (run: Run) => {
@@ -790,6 +782,8 @@ export function ModelsPanel({
   brain: Brain;
   section?: "settings" | "activity";
 }) {
+  const pollSlow = usePollInterval("slow");
+  const pollNormal = usePollInterval("normal");
   const [editing, setEditing] = useState(false);
   const [advancedEditing, setAdvancedEditing] = useState(false);
   const [draft, setDraft] = useState<Policy | null>(null);
@@ -809,7 +803,7 @@ export function ModelsPanel({
           params: { path: { brain: brain.id } },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollSlow,
   });
   const usage = useQuery({
     queryKey: ["models-usage", brain.id, offset],
@@ -820,7 +814,7 @@ export function ModelsPanel({
           params: { path: { brain: brain.id }, query: { offset } },
         }),
       ),
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
   });
   const catalogueProvider =
     draft?.provider ?? settings.data?.current.policy.provider ?? "openai";
@@ -879,16 +873,7 @@ export function ModelsPanel({
       });
     },
   });
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id],
-    enabled: !!selected,
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, { enabled: !!selected });
   const check = useMutation({
     mutationFn: async (operation_id: string) =>
       result(

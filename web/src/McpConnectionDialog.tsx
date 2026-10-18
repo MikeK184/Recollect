@@ -31,6 +31,7 @@ import "./features/feature-views.css";
 import { usePrivateRunners } from "./McpPrivateRunners";
 import { CodeBlock } from "./components/CodeBlock";
 import "./features/connections/inline-management.css";
+import { usePollInterval } from "./usePollInterval";
 
 type Detail = components["schemas"]["McpConnectionDetail"];
 type Input = components["schemas"]["McpConnectionInput"];
@@ -60,6 +61,7 @@ type Props = {
 };
 
 export function McpConnectionDialog(props: Props) {
+  const pollNormal = usePollInterval("normal");
   const [formRevision, setFormRevision] = useState(0);
   const query = useQuery({
     queryKey: ["mcp", props.brain.id, "connection", props.id],
@@ -71,7 +73,7 @@ export function McpConnectionDialog(props: Props) {
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });
@@ -118,6 +120,7 @@ function ConnectionForm({
   reload,
   ...props
 }: Props & { detail?: Detail; currentRevision?: string; reload: () => void }) {
+  const pollNormal = usePollInterval("normal");
   const owner = useWorkspace().user.installation_owner;
   const [secrets, setSecrets] = useState<DraftSecret[]>(
     props.initialDraft?.secrets ?? [],
@@ -170,7 +173,7 @@ function ConnectionForm({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });

@@ -17,6 +17,7 @@ import { ClaimDialog, EvidenceDialog } from "../../ClaimsPanel";
 import { GraphRenderer } from "../../GraphRenderer";
 import type { GraphChoice } from "../../GraphCanvas";
 import { useContentDeadline } from "../../useContentDeadline";
+import { useQualifiedRead } from "./useQualifiedRead";
 
 type Scope = components["schemas"]["GraphSelection"];
 type View = components["schemas"]["FieldOrganizationView"];
@@ -62,7 +63,6 @@ export function FieldOrganizationPanel({
   const [entityId, setEntityId] = useState<string | null>(null);
   const [cursor, setCursor] = useState<Cursor | null>(null);
   const [history, setHistory] = useState<(Cursor | null)[]>([]);
-  const [read, setRead] = useState<{ key: string; view?: View }>({ key: "" });
   const [choice, setChoice] = useState<GraphChoice | null>(null);
   const [opened, setOpened] = useState<Node | null>(null);
   const failure = useRef(onFailure);
@@ -70,39 +70,32 @@ export function FieldOrganizationPanel({
   const requestKey = JSON.stringify([qualificationKey, entityId, cursor]);
   const active = useRef(requestKey);
   active.current = requestKey;
+  const [read] = useQualifiedRead<View>({
+    key: requestKey,
+    fallback: "Canonical fields could not be read.",
+    read: async (signal) => {
+      const next = result(
+        await client.POST("/api/brains/{brain}/organization/fields/view", {
+          params: { path: { brain: brain.id } },
+          body: { scope, entity_id: entityId, cursor },
+          signal,
+        }),
+      );
+      if (next.brain_id !== brain.id || next.epoch !== epoch)
+        throw new Error(
+          "Canonical fields changed during this read. Read current organization again.",
+        );
+      return next;
+    },
+    onError: (error) => failure.current(error),
+  });
   const expires = useContentDeadline(
     read.key === requestKey ? read.view?.expires_at : null,
   );
   const view = read.key === requestKey && !expires ? read.view : undefined;
   useEffect(() => {
-    const controller = new AbortController();
-    setRead({ key: requestKey });
     setChoice(null);
     setOpened(null);
-    void client
-      .POST("/api/brains/{brain}/organization/fields/view", {
-        params: { path: { brain: brain.id } },
-        body: { scope, entity_id: entityId, cursor },
-        signal: controller.signal,
-      })
-      .then((response) => {
-        const next = result(response);
-        if (controller.signal.aborted || active.current !== requestKey) return;
-        if (next.brain_id !== brain.id || next.epoch !== epoch)
-          throw new Error(
-            "Canonical fields changed during this read. Read current organization again.",
-          );
-        setRead({ key: requestKey, view: next });
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted && active.current === requestKey)
-          failure.current(
-            error instanceof Error
-              ? error
-              : new Error("Canonical fields could not be read."),
-          );
-      });
-    return () => controller.abort();
   }, [requestKey]);
   useEffect(() => {
     if (expires)

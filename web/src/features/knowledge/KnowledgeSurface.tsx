@@ -73,6 +73,8 @@ import {
   useLineageOverlay,
   type KnowledgeSelection,
 } from "./selection";
+import { usePollInterval } from "../../usePollInterval";
+import { useWorkspaceCatalogue } from "../../catalogueQueries";
 
 // The surface's view value is the contracted route suffix, so `/memory`,
 // `/sources`, `/graph` and `/repositories` stay deep-linkable, reloadable and
@@ -188,12 +190,13 @@ function knowledgeScope() {
 
 /** One bounded read around a graph center; never an unbounded traversal. */
 function useNeighbourhood(brain: Brain, center: string, enabled = true) {
+  const pollNormal = usePollInterval("normal");
   const query = useQuery({
     queryKey: ["lineage-neighbourhood", brain.id, center],
     enabled: enabled && !!center,
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.POST("/api/brains/{brain}/graph/explore", {
@@ -346,12 +349,13 @@ function CanonicalEvidenceRead({
   kind: (typeof canonicalEvidenceKinds)[number];
   id: string;
 }) {
+  const pollNormal = usePollInterval("normal");
   const { select } = useKnowledgeSelection();
   const query = useQuery({
     queryKey: ["lineage-evidence", brain.id, kind, id],
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET(
@@ -433,18 +437,7 @@ function ClaimLineageView({
   const [evidenceItem, setEvidenceItem] = useState<Evidence | null>(null);
   const [reviewing, setReviewing] = useState<View | null>(null);
   const queries = useQueryClient();
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id],
-    enabled: !!reviewing,
-    retry: false,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          signal,
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, { enabled: !!reviewing });
   useLineageOverlay(!!evidenceItem || !!reviewing);
   const r = view.revision;
   const flags: string[] = [];
@@ -562,12 +555,13 @@ function ClaimLineageView({
 
 /** Memory list selection: the id is a claim id. */
 function MemoryLineage({ brain, id }: { brain: Brain; id: string }) {
+  const pollNormal = usePollInterval("normal");
   const [search] = useBrainSearch();
   const query = useQuery({
     queryKey: ["lineage-claim", brain.id, id, search.knowledge, search.fact],
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/claims/{claim}", {
@@ -624,13 +618,14 @@ function GraphClaimLineage({
   brain: Brain;
   nodeKey: string;
 }) {
+  const pollNormal = usePollInterval("normal");
   const revisionId = nodeKey.split(":")[1];
   const query = useQuery({
     queryKey: ["lineage-claim-revision", brain.id, revisionId],
     enabled: !!revisionId,
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/handover-inputs/{revision}", {
@@ -811,6 +806,7 @@ function GraphEdgeLineage({
 }
 
 function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [snapshots, setSnapshots] = useState(false);
@@ -819,7 +815,7 @@ function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
     queryKey: ["repository-identity", brain.id, id],
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET(

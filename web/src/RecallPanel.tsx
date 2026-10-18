@@ -27,6 +27,8 @@ import { useContentDeadline } from "./useContentDeadline";
 import type { components } from "./api-schema";
 import { EvidenceNotes } from "./components/EvidenceNotes";
 import { Search, SlidersHorizontal } from "lucide-react";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue, useEvidenceList } from "./catalogueQueries";
 
 type Request = components["schemas"]["RecallRequest"];
 type Item = components["schemas"]["RecallItem"];
@@ -91,6 +93,7 @@ export function RecallPanel({
   draft?: string;
   setDraft?: (value: string) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [filters, setFilters] = useState(() => ({
     ...initial(),
@@ -170,25 +173,11 @@ export function RecallPanel({
     setNotice(null);
     void cache.cancelQueries({ queryKey: ["recall", brain.id] });
   }
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id, "recall"],
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, {
     enabled: optionsOpen || !!submitted,
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
   });
-  const groups = useQuery({
-    queryKey: ["evidence", brain.id, "recall"],
+  const groups = useEvidenceList(brain.id, undefined, {
     enabled: optionsOpen || !!submitted,
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
   });
   const manifests = useQuery({
     queryKey: [
@@ -316,7 +305,7 @@ export function RecallPanel({
   const graphStatus = useQuery({
     queryKey: ["graph", brain.id, 0],
     enabled: !!answer,
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
     retry: false,
     queryFn: async () =>
       result(

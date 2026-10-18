@@ -19,6 +19,7 @@ import {
 } from "../../components/AsyncState";
 import { HostIcon } from "../../components/HostIcon";
 import { staggerStyle } from "../../components/Motion";
+import { usePollInterval } from "../../usePollInterval";
 
 const hostLabel = (kind?: string | null) =>
   kind === "codex"
@@ -52,13 +53,14 @@ export function AgentsRoster({
   onSelect: (id: string) => void;
   selectedDevice?: string;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [showHidden, setShowHidden] = useState(false);
   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
   const cache = useQueryClient();
   const roster = useQuery({
     queryKey: ["brain-agents", brain.id, showHidden],
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/agents", {

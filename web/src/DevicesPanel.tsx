@@ -31,6 +31,7 @@ import { client, result } from "./api";
 import { StatusBadge } from "./components/StatusBadge";
 import { HostIcon } from "./components/HostIcon";
 import "./features/agents/access-tokens.css";
+import { usePollInterval } from "./usePollInterval";
 
 const date = (value: string) =>
   new Date(value).toLocaleString("en-GB", {
@@ -78,6 +79,7 @@ const order: Record<string, number> = {
 };
 
 export function AgentAccessPanel({ code }: { code?: string }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(
     null,
@@ -89,7 +91,7 @@ export function AgentAccessPanel({ code }: { code?: string }) {
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/devices", { signal })),
     gcTime: 0,
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
   });
   const revoke = useMutation({
     mutationFn: async (id: string) =>
@@ -388,6 +390,7 @@ function DeviceCard({
 }
 
 function PairingApproval({ code }: { code: string }) {
+  const pollFast = usePollInterval("fast");
   const cache = useQueryClient();
   const navigate = useNavigate();
   const pairing = useQuery({
@@ -398,7 +401,7 @@ function PairingApproval({ code }: { code: string }) {
           params: { path: { code } },
         }),
       ),
-    refetchInterval: 2000,
+    refetchInterval: pollFast,
   });
   const decision = useMutation({
     mutationFn: async (approve: boolean) =>

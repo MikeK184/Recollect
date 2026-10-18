@@ -64,6 +64,8 @@ const McpRuntimePanel = lazy(() =>
   import("./McpRuntimePanel").then((m) => ({ default: m.McpRuntimePanel })),
 );
 import { McpPrivateRunners } from "./McpPrivateRunners";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue, workspaceKey } from "./catalogueQueries";
 
 export type McpProfile = components["schemas"]["McpProfile"];
 export type McpCatalogue = components["schemas"]["McpCatalogue"];
@@ -131,6 +133,7 @@ export function McpPanel({
   onManageRunners?: () => void;
   onInspectorChange?: (open: boolean) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const account = useWorkspace();
   const [testing, setTesting] = useState<string | null>(null);
@@ -200,7 +203,7 @@ export function McpPanel({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });
@@ -214,24 +217,14 @@ export function McpPanel({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });
-  const workspace = useQuery({
-    queryKey: ["mcp", brain.id, "environments"],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-    refetchInterval: 5000,
-    retry: false,
-  });
+  const workspace = useWorkspaceCatalogue(brain.id, undefined, { poll: "normal" });
   const refresh = () => {
     void cache.invalidateQueries({ queryKey: ["mcp", brain.id] });
+    void cache.invalidateQueries({ queryKey: workspaceKey(brain.id) });
     void cache.invalidateQueries({ queryKey: ["audit", brain.id] });
   };
   const clear = (message: string) => {
@@ -1499,6 +1492,7 @@ function InspectorToolGroup({
   approved: MetadataRead;
   detailed?: boolean;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [offset, setOffset] = useState(0);
   const selectedEnvironment =
     profile.environment_id ?? connection.environment_id ?? null;
@@ -1543,7 +1537,7 @@ function InspectorToolGroup({
           signal,
         }),
       ),
-    refetchInterval: (query) => (query.state.error ? false : 5000),
+    refetchInterval: (query) => (query.state.error ? false : pollNormal),
     retry: retryMetadataRead,
     retryDelay: metadataRetryDelay,
     gcTime: 0,
@@ -1695,6 +1689,7 @@ function DiscoveryDialog({
   close: () => void;
   run: (tool: McpTool, environment: string | null) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [environment, setEnvironment] = useState(
     profile.environment_id ?? null,
   );
@@ -1714,7 +1709,7 @@ function DiscoveryDialog({
           signal,
         }),
       ),
-    refetchInterval: (query) => (query.state.error ? false : 5000),
+    refetchInterval: (query) => (query.state.error ? false : pollNormal),
     retry: retryMetadataRead,
     retryDelay: metadataRetryDelay,
     gcTime: 0,
@@ -1950,6 +1945,7 @@ function ConnectionTest({
   close: () => void;
   tools: (profile: string) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const summary = catalogue.connections.find((c) => c.id === id)!;
   const definition = catalogue.definitions.find(
     (d) => d.key === summary.definition_key,
@@ -1963,7 +1959,7 @@ function ConnectionTest({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });

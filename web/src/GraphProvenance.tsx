@@ -25,6 +25,7 @@ import type {
 } from "./GraphCanvas";
 import { SnapshotDialog } from "./PublicationPanel";
 import { origin } from "./features/activity/pipelineModel";
+import { usePollInterval } from "./usePollInterval";
 
 type Observation = {
   title: string;
@@ -41,6 +42,8 @@ function localDeadline(observed: string, until: string, started: number) {
 }
 
 export function GraphProvenance({ brain }: { brain: Brain }) {
+  const pollFast = usePollInterval("fast");
+  const pollNormal = usePollInterval("normal");
   const [route, patch] = useBrainSearch();
   const { select } = useKnowledgeSelection();
   const [choice, setGraphChoice] = useState<GraphChoice>(null);
@@ -58,7 +61,7 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
     queryKey: ["graph-provenance", brain.id],
     retry: false,
     gcTime: 0,
-    refetchInterval: 2000,
+    refetchInterval: pollFast,
     queryFn: async ({ signal }) => {
       const started = performance.now();
       const feed = result(
@@ -96,7 +99,7 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
     enabled: !!route.repository,
     retry: false,
     gcTime: 0,
-    refetchInterval: 2000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET(
@@ -157,7 +160,7 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
     enabled: !!feed && !!route.snapshot,
     retry: false,
     gcTime: 0,
-    refetchInterval: 2000,
+    refetchInterval: pollNormal,
     placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const started = performance.now();

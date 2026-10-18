@@ -11,7 +11,7 @@ import {
   TextInput,
   ActionIcon,
 } from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Archive,
@@ -39,6 +39,8 @@ import { ModelsPanel } from "../../ModelsPanel";
 
 import { PrivacyOverview } from "./PrivacyOverview";
 import { deletionReceiptKey } from "./DeletionNotice";
+import { usePollInterval } from "../../usePollInterval";
+import { useWorkspaceCatalogue } from "../../catalogueQueries";
 type DeletionResult = components["schemas"]["BrainDeletionResult"];
 // Carries the API error code so the confirmation flow can tell a mismatched
 // name, a stale preview counter and an already-absent Brain apart.
@@ -558,19 +560,7 @@ function EnvironmentsSettings({
   const cache = useQueryClient();
   const command = useIdempotency();
   const canEdit = brain.role === "admin" && !brain.archived && !blocked;
-  const workspace = useQuery({
-    queryKey: ["workspace", brain.id],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-    refetchInterval: 5000,
-    retry: false,
-    gcTime: 0,
-  });
+  const workspace = useWorkspaceCatalogue(brain.id, undefined, { poll: "normal" });
   useEffect(() => {
     if (workspace.error || !canEdit) {
       setEditing(null);

@@ -6,6 +6,7 @@ import { client, result } from "../api";
 import { BrainContext } from "./context";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { AssuranceProvider } from "../features/activity/Assurance";
+import { usePollInterval } from "../usePollInterval";
 
 export function BrainLayout() {
   const { brainId } = useParams({ strict: false });
@@ -13,6 +14,7 @@ export function BrainLayout() {
 }
 
 function BrainBoundary({ id }: { id: string }) {
+  const pollSlow = usePollInterval("slow");
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ["brain", id],
@@ -23,7 +25,7 @@ function BrainBoundary({ id }: { id: string }) {
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollSlow,
   });
   useEffect(
     () => () => {

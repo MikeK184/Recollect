@@ -22,6 +22,7 @@ import {
   projectMemberPermissions,
 } from "./features/connections/member-permissions";
 import "./features/connections/inline-management.css";
+import { usePollInterval } from "./usePollInterval";
 
 type Detail = components["schemas"]["McpProfileDetail"];
 type Input = components["schemas"]["McpProfileInput"];
@@ -63,6 +64,7 @@ export function McpProfileCard({
   close?: () => void;
   tools: (id: string) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [savedId, setSavedId] = useState(id);
   const [editing, setEditing] = useState(id === "new");
@@ -92,7 +94,7 @@ export function McpProfileCard({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });

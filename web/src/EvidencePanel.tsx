@@ -32,7 +32,6 @@ import {
   MultiSelect,
   Select,
   Stack,
-  Switch,
   Text,
   Textarea,
   TextInput,
@@ -53,17 +52,17 @@ import {
 } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
-import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
 import {
   useKnowledgeSelection,
   useLineageOverlay,
 } from "./features/knowledge/selection";
+import { usePollInterval } from "./usePollInterval";
+import { useEvidenceList } from "./catalogueQueries";
 
 type Source = components["schemas"]["SourceSummary"];
 type View = components["schemas"]["EvidenceGroup"];
 type Content = components["schemas"]["SourceContent"];
-type Catalogue = components["schemas"]["EvidenceCatalogue"];
 const kinds = [
   { value: "collection", label: "Collection" },
   { value: "area", label: "Area" },
@@ -99,6 +98,7 @@ const groupOptions = (views: View[]) =>
   }));
 
 export function EvidencePanel({ brain }: { brain: Brain }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const { select } = useKnowledgeSelection();
   const [route, patchRoute] = useBrainSearch();
@@ -146,7 +146,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           },
         ),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const selectedSourceId =
     selected ??
@@ -167,26 +167,17 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
     content: Content;
   } | null>(null);
   const writable = brain.role !== "reader" && !brain.archived;
-  const catalogue = useQuery({
-    queryKey: ["evidence", brain.id, filters, query, offset],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          signal,
-          params: {
-            path: { brain: brain.id },
-            query: {
-              q: query || undefined,
-              collection: filters.collection ?? undefined,
-              area: filters.area ?? undefined,
-              environment: filters.environment ?? undefined,
-              offset,
-            },
-          },
-        }),
-      ),
-    refetchInterval: 4000,
-  });
+  const catalogue = useEvidenceList(
+    brain.id,
+    {
+      q: query || undefined,
+      collection: filters.collection ?? undefined,
+      area: filters.area ?? undefined,
+      environment: filters.environment ?? undefined,
+      offset,
+    },
+    { poll: "normal" },
+  );
   const refresh = () => {
     for (const key of [
       "evidence",
@@ -1025,6 +1016,7 @@ export function SourceInspector({
   version?: string;
   derived: (version: string) => ReactNode;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [, patch] = useBrainSearch();
   const [editing, setEditing] = useState<Content | null>(null);
@@ -1032,7 +1024,7 @@ export function SourceInspector({
   const identity = useQuery({
     queryKey: ["source-identity", brain.id, id],
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/sources/{source}", {
@@ -1041,17 +1033,7 @@ export function SourceInspector({
         }),
       ),
   });
-  const catalogue = useQuery({
-    queryKey: ["source-inspector-groups", brain.id],
-    gcTime: 0,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-  });
+  const catalogue = useEvidenceList(brain.id);
   if (identity.isError)
     return (
       <Alert color="red">
@@ -1139,6 +1121,7 @@ function SourceViewer({
   refresh: () => void;
   edit: (content: Content) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [offset, setOffset] = useState(0);
   const [organizing, setOrganizing] = useState(false);
   const [groups, setGroups] = useState(source?.group_ids ?? []);
@@ -1151,7 +1134,7 @@ function SourceViewer({
           params: { path: { brain, source: sourceId }, query: { offset } },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const head = useQuery({
     queryKey: ["source-history", brain, sourceId, 0],
@@ -1163,7 +1146,7 @@ function SourceViewer({
           signal,
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const currentVersion = source?.version.id ?? head.data?.versions[0]?.id;
   const version = selectedVersion ?? currentVersion ?? "";
@@ -1177,7 +1160,7 @@ function SourceViewer({
           { params: { path: { brain, source: sourceId, version } }, signal },
         ),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const organize = useMutation({
     mutationFn: async () =>
@@ -1499,134 +1482,5 @@ function SourceViewer({
     >
       {body}
     </DetailInspector>
-  );
-}
-
-export function SourcesStoragePolicy({
-  brain,
-  inline = false,
-  readOnly = false,
-  close,
-}: {
-  brain: Brain;
-  inline?: boolean;
-  readOnly?: boolean;
-  close?: () => void;
-}) {
-  const [draft, setDraft] = useState<boolean | null>(null);
-  const [baseline, setBaseline] = useState<boolean | null>(null);
-  const cache = useQueryClient();
-  const query = useQuery({
-    queryKey: ["evidence", brain.id, "storage-policy"],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          signal,
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-    refetchInterval: 4000,
-  });
-  useEffect(() => {
-    if (
-      inline &&
-      baseline === null &&
-      query.data?.policy.allow_document_content !== undefined
-    )
-      setBaseline(query.data?.policy.allow_document_content!);
-  }, [inline, baseline, query.data?.policy.allow_document_content]);
-  const changed =
-    inline &&
-    baseline !== null &&
-    query.data?.policy.allow_document_content !== undefined &&
-    query.data?.policy.allow_document_content !== baseline;
-  const save = useMutation({
-    mutationFn: async (allow_document_content: boolean) => {
-      if (changed || query.error)
-        throw new Error(
-          "Storage policy changed. Cancel and reopen before saving.",
-        );
-      return result(
-        await client.PUT("/api/brains/{brain}/evidence/policy", {
-          params: { path: { brain: brain.id } },
-          body: { allow_document_content },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      await cache.invalidateQueries({ queryKey: ["evidence", brain.id] });
-      close?.();
-    },
-  });
-  return (
-    <section className={inline ? "privacy-editor" : "feature-setting"}>
-      <Stack gap="md">
-        {changed && (
-          <Alert color="yellow">
-            Storage policy changed elsewhere. Cancel and reopen to edit the
-            current policy.
-          </Alert>
-        )}
-        {!inline && <Title order={3}>Document storage</Title>}
-        {query.error ? (
-          <Alert color="red">{query.error.message}</Alert>
-        ) : query.isPending ? (
-          <Loader size="sm" />
-        ) : (
-          <PolicyRow
-            title="Allow document content retention"
-            description="Applies to new content; existing evidence is preserved."
-          >
-            {readOnly ? (
-              query.data?.policy?.allow_document_content ? (
-                "Retain content"
-              ) : (
-                "References only"
-              )
-            ) : (
-              <Switch
-                aria-label="Allow document content retention"
-
-                checked={
-                  inline
-                    ? (draft ??
-                      baseline ??
-                      query.data?.policy.allow_document_content ??
-                      false)
-                    : save.isPending
-                      ? save.variables
-                      : (query.data?.policy.allow_document_content ?? false)
-                }
-                disabled={
-                  brain.role !== "admin" || brain.archived || save.isPending
-                }
-                onChange={(event) =>
-                  inline
-                    ? setDraft(event.currentTarget.checked)
-                    : save.mutate(event.currentTarget.checked)
-                }
-              />
-            )}
-          </PolicyRow>
-        )}
-        {save.error && <Alert color="red">{save.error.message}</Alert>}
-        {inline && !readOnly && !query.error && query.data && (
-          <Group justify="flex-end">
-            <Button variant="default" disabled={save.isPending} onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              disabled={changed || brain.role !== "admin" || brain.archived}
-              loading={save.isPending}
-              onClick={() =>
-                save.mutate(draft ?? query.data!.policy.allow_document_content)
-              }
-            >
-              Save document storage
-            </Button>
-          </Group>
-        )}
-      </Stack>
-    </section>
   );
 }

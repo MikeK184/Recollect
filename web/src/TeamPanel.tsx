@@ -21,8 +21,10 @@ import { Plus, Users } from "lucide-react";
 import { client, result } from "./api";
 import "./features/workspace/control-panel.css";
 import { ErrorState } from "./components/AsyncState";
+import { usePollInterval } from "./usePollInterval";
 
 export function TeamPanel() {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [opened, setOpened] = useState(false);
   const [username, setUsername] = useState("");
@@ -34,7 +36,7 @@ export function TeamPanel() {
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/team", { signal })),
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
   });
   const options = useQuery({
     queryKey: ["auth-options"],

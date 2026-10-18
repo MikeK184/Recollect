@@ -10,6 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "../../api";
 import { ErrorState } from "../../components/AsyncState";
+import { usePollInterval } from "../../usePollInterval";
 
 export function ManagedMemoryPanel({
   brain,
@@ -18,6 +19,7 @@ export function ManagedMemoryPanel({
   brain: Brain;
   compact?: boolean;
 }) {
+  const pollSlow = usePollInterval("slow");
   const settings = useQuery({
     queryKey: ["automation", brain.id],
     queryFn: async ({ signal }) =>
@@ -27,7 +29,7 @@ export function ManagedMemoryPanel({
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollSlow,
     retry: false,
     gcTime: 0,
   });

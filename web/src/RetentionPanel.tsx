@@ -23,6 +23,7 @@ import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
 import { useLineageOverlay } from "./features/knowledge/selection";
 import { TriangleAlert } from "lucide-react";
+import { usePollInterval } from "./usePollInterval";
 type Policy = components["schemas"]["RetentionPolicy"];
 type Settings = components["schemas"]["RetentionSettings"];
 type Erasure = components["schemas"]["ErasureStatus"];
@@ -595,6 +596,8 @@ export function RetentionPanel({
   selectedRequest?: string;
   onInspectorChange?: (opened: boolean) => void;
 }) {
+  const pollSlow = usePollInterval("slow");
+  const pollNormal = usePollInterval("normal");
   const focused = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   useEffect(() => {
@@ -612,7 +615,7 @@ export function RetentionPanel({
           params: { path: { brain: brain.id } },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollSlow,
     retry: false,
     gcTime: 0,
   });
@@ -629,7 +632,7 @@ export function RetentionPanel({
           params: { path: { brain: brain.id }, query: { offset } },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   useEffect(() => {
     if (selectedRequest && erasures.data)

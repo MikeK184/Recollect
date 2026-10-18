@@ -25,6 +25,7 @@ import type { components } from "./api-schema";
 import type { GraphChoice } from "./GraphCanvas";
 import { useKnowledgeSelection } from "./features/knowledge/selection";
 import { GraphRenderer } from "./GraphRenderer";
+import type { SpatialSession } from "./graph-3d-model";
 import { GraphSelectionPanel } from "./GraphSelectionPanel";
 import type { SceneGenerations } from "./graph-generation-status";
 type Node = components["schemas"]["GraphNode"];
@@ -238,6 +239,21 @@ export function GraphExplorer({
         n.evidence.id === chosenEdge.evidence_id ||
         n.evidence.revision_id === chosenEdge.evidence_id,
     );
+  // The renderer remounts per read, never per path toggle; its camera session
+  // belongs to this key so toggling the path keeps the camera.
+  const rendererKey = JSON.stringify([
+    brain.id,
+    view.scope,
+    request.center,
+    request.direction,
+    request.max_hops,
+  ]);
+  const sessionKey = useRef(rendererKey);
+  const spatialSession = useRef<SpatialSession>({ value: null, invalid: false });
+  if (sessionKey.current !== rendererKey) {
+    sessionKey.current = rendererKey;
+    spatialSession.current = { value: null, invalid: false };
+  }
   const { select, available } = useKnowledgeSelection();
   const ownsSelection = useRef(false);
   const focusInGraph = () => {
@@ -562,14 +578,8 @@ export function GraphExplorer({
         <>
           <div className="graph-stage-area">
             <GraphRenderer
-              key={JSON.stringify([
-                brain.id,
-                view.scope,
-                request.center,
-                request.direction,
-                request.max_hops,
-                inPath,
-              ])}
+              key={rendererKey}
+              session={spatialSession}
               tools={canvasTools}
               inspector={
                 choice && (chosenNode || chosenEdge) ? (

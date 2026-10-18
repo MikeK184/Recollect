@@ -3,8 +3,11 @@ import { client, result, type Brain } from "../../api";
 import { ErrorState, LoadingState } from "../../components/AsyncState";
 import { PrivacyForm } from "./PrivacyForm";
 import type { PrivacySnapshot } from "./privacyDraft";
+import { usePollInterval } from "../../usePollInterval";
+import { evidenceKey, useEvidenceList } from "../../catalogueQueries";
 
 export function PrivacyOverview({ brain }: { brain: Brain }) {
+  const pollSlow = usePollInterval("slow");
   const cache = useQueryClient();
   const path = { brain: brain.id };
   const capture = useQuery({
@@ -16,7 +19,7 @@ export function PrivacyOverview({ brain }: { brain: Brain }) {
           signal,
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollSlow,
     retry: false,
     gcTime: 0,
   });
@@ -29,23 +32,11 @@ export function PrivacyOverview({ brain }: { brain: Brain }) {
           signal,
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollSlow,
     retry: false,
     gcTime: 0,
   });
-  const documents = useQuery({
-    queryKey: ["evidence", brain.id, "storage-policy"],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path },
-          signal,
-        }),
-      ),
-    refetchInterval: 4000,
-    retry: false,
-    gcTime: 0,
-  });
+  const documents = useEvidenceList(brain.id, undefined, { poll: "slow" });
   const repository = useQuery({
     queryKey: ["repository-policy", brain.id],
     queryFn: async ({ signal }) =>
@@ -55,7 +46,7 @@ export function PrivacyOverview({ brain }: { brain: Brain }) {
           signal,
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollSlow,
     retry: false,
     gcTime: 0,
   });
@@ -86,9 +77,9 @@ export function PrivacyOverview({ brain }: { brain: Brain }) {
       if (domain === "capture") cache.setQueryData(["capture-policy", brain.id], value.capture);
       if (domain === "retention") cache.setQueryData(["retention", brain.id], value.retention);
       if (domain === "documents") {
-        cache.setQueryData(["evidence", brain.id, "storage-policy"], (old: typeof documents.data) =>
+        cache.setQueryData(evidenceKey(brain.id), (old: typeof documents.data) =>
           old && ({ ...old, policy: { ...old.policy, allow_document_content: value.documents } }));
-        void cache.invalidateQueries({ queryKey: ["evidence", brain.id], exact: true });
+        void cache.invalidateQueries({ queryKey: evidenceKey(brain.id), exact: true });
       }
       if (domain === "repository") cache.setQueryData(["repository-policy", brain.id], (old: typeof repository.data) =>
         old && ({ ...old, allow_file_content: value.repository }));
