@@ -502,7 +502,8 @@ async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_supp
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    let mapping_context=crate::knowledge_mapping::production::learning_context(state,job,&run).await?;
+    let mapping_context =
+        crate::knowledge_mapping::production::learning_context(state, job, &run).await?;
     let response = gateway::invoke_for_policy(
         state,
         gateway::Context {
@@ -811,7 +812,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
         });
         r.admission = "retired_by_policy".into();
         r.acceptance_policy = Some(format!("{}@{}", autonomous::POLICY, policy.change_id));
-        r.derivation = Some(derivation(&run, &request, true));
+        r.derivation = Some(derivation(&run, &request));
         memory_policy::validate(&mut r.content)?;
         publication::safe_payload(state, &json!(&r.content))?;
         memory::validate_evidence(state, &mut tx, job.brain_id, &r.content).await?;
@@ -892,7 +893,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
             lifecycle: "active".into(),
             review_decision_id: None,
             admission: "proposed".into(),
-            derivation: Some(derivation(&run, &request, policy.policy.autonomous_memory)),
+            derivation: Some(derivation(&run, &request)),
         };
         let rules = memory_rules::matching(&mut tx, &r, false).await?;
         let conflicts = memory_rules::conflicts(&mut tx, &r).await?;
@@ -1019,7 +1020,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     tx.commit().await?;
     Ok(())
 }
-fn derivation(run: &LearningRun, request: &ModelRequest, _automatic: bool) -> ModelDerivation {
+fn derivation(run: &LearningRun, request: &ModelRequest) -> ModelDerivation {
     ModelDerivation {
         run_id: run.id,
         request_id: request.id,

@@ -172,7 +172,7 @@ fn conflict(message: &'static str) -> Error {
 }
 fn name(value: &str) -> Result<String> {
     let value = value.trim();
-    if value.is_empty() || value.chars().count() > 120 || value.chars().any(char::is_control) {
+    if !crate::text_rules::valid(value, 120, true, false) {
         return Err(Error::invalid(
             "Use a name or title between 1 and 120 printable characters.",
         ));
@@ -180,11 +180,7 @@ fn name(value: &str) -> Result<String> {
     Ok(value.into())
 }
 fn description(value: &str) -> Result<()> {
-    if value.chars().count() > 2000
-        || value
-            .chars()
-            .any(|c| c.is_control() && c != '\n' && c != '\t')
-    {
+    if !crate::text_rules::valid(value, 2000, false, true) {
         return Err(Error::invalid(
             "Keep descriptions within 2,000 text characters.",
         ));
@@ -200,6 +196,86 @@ fn offset(value: Option<i64>) -> Result<i64> {
     }
     Ok(n)
 }
+/// Write retained text for a source version the caller's transaction has just
+/// inserted. The content-free artifact identity commits first in its own
+/// transaction, so a failed canonical commit leaves a recorded orphan that
+/// `reconcile_artifacts` sweeps and a Brain erasure still names. The caller's
+/// transaction deletes the intent again, which commits with the source row.
+async fn write_artifact(
+    state: &AppState,
+    tx: &mut Transaction<'_, Postgres>,
+    (actor, device): (Uuid, Option<Uuid>),
+    brain: Uuid,
+    artifact: Uuid,
+    content: &str,
+    unavailable: &'static str,
+) -> Result<()> {
+    let mut intent = db::device_tx(&state.pool, actor, device).await?;
+    let recorded = match sqlx::query(
+        "INSERT INTO evidence_artifact_intents(artifact_id,brain_id) VALUES($1,$2)",
+    )
+    .bind(artifact)
+    .bind(brain)
+    .execute(&mut *intent)
+    .await
+    {
+        Ok(_) => {
+            intent.commit().await?;
+            true
+        }
+        // Only upgrade fixtures run this code against a schema older than the
+        // ledger; a migrated installation always has the table.
+        Err(sqlx::Error::Database(error)) if error.code().as_deref() == Some("42P01") => false,
+        Err(error) => return Err(error.into()),
+    };
+    if let Err(error) = artifacts::write(&state.config.artifact_dir, brain, artifact, content).await
+    {
+        tracing::warn!(%brain, %artifact, %error, "Evidence artifact write failed; its intent remains for cleanup");
+        let _ = crate::privacy_journal::remove_artifact(&state.config, brain, artifact).await;
+        return Err(Error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "artifact_unavailable",
+            unavailable,
+        ));
+    }
+    if recorded {
+        sqlx::query("DELETE FROM evidence_artifact_intents WHERE artifact_id=$1 AND brain_id=$2")
+            .bind(artifact)
+            .bind(brain)
+            .execute(&mut **tx)
+            .await?;
+    }
+    Ok(())
+}
+
+/// Remove files whose canonical source version never committed. Failure keeps
+/// the intent for the next maintenance pass.
+pub(crate) async fn reconcile_artifacts(state: &AppState) -> anyhow::Result<usize> {
+    sqlx::query("SELECT recollect_settle_evidence_intents()")
+        .execute(&state.pool)
+        .await?;
+    let pending: Vec<(Uuid, Uuid)> =
+        sqlx::query_as("SELECT brain_id,artifact_id FROM recollect_pending_evidence_artifacts()")
+            .fetch_all(&state.pool)
+            .await?;
+    let mut count = 0;
+    for (brain, artifact) in pending {
+        if let Err(error) =
+            crate::privacy_journal::remove_artifact(&state.config, brain, artifact).await
+        {
+            tracing::warn!(%brain, %artifact, %error, "Evidence artifact cleanup remains pending");
+            continue;
+        }
+        sqlx::query("SELECT recollect_forget_evidence_artifact($1,$2)")
+            .bind(brain)
+            .bind(artifact)
+            .execute(&state.pool)
+            .await?;
+        count += 1;
+    }
+    Ok(count)
+}
+
 async fn write_tx<'a>(
     state: &'a AppState,
     auth: &Auth,
@@ -684,31 +760,6 @@ async fn save_version(
             .clone()
             .unwrap_or_else(|| "document".into())
     };
-    let input_text = [
-        input.title.as_str(),
-        input.source_uri.as_deref().unwrap_or(""),
-        input.content.as_deref().unwrap_or(""),
-    ]
-    .join("\n");
-    let database = reqwest::Url::parse(&state.config.database_url).ok();
-    let secrets = [
-        Some(state.config.owner_password.as_str()),
-        Some(state.config.neo4j_password.as_str()),
-        database.as_ref().and_then(|url| url.password()),
-        state.config.oidc.as_ref().map(|o| o.client_secret.as_str()),
-    ];
-    if secrets
-        .into_iter()
-        .flatten()
-        .any(|secret| !secret.is_empty() && input_text.contains(secret))
-        || input_text
-            .lines()
-            .any(|line| line.contains("-----BEGIN ") && line.contains("PRIVATE KEY-----"))
-    {
-        return Err(Error::invalid(
-            "Remove credential values or private key material before importing this source.",
-        ));
-    }
     if existing.is_some() && !input.group_ids.is_empty() {
         return Err(Error::invalid(
             "Change existing source associations through Organize.",
@@ -823,15 +874,16 @@ async fn save_version(
         jobs::enqueue(&mut tx, auth.user.id, brain, audit).await?;
     }
     if let (Some(artifact), Some(content)) = (artifact, &input.content) {
-        artifacts::write(&state.config.artifact_dir, brain, artifact, content)
-            .await
-            .map_err(|_| {
-                Error(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "artifact_unavailable",
-                    "Document storage is unavailable. Check the artifact volume and retry.",
-                )
-            })?;
+        write_artifact(
+            state,
+            &mut tx,
+            (auth.user.id, auth.device_id),
+            brain,
+            artifact,
+            content,
+            "Document storage is unavailable. Check the artifact volume and retry.",
+        )
+        .await?;
     }
     let response = summary(state, &mut tx, brain, source).await?;
     commands::finish(&mut tx, key.as_deref(), brain, &response).await?;
@@ -886,15 +938,16 @@ pub(crate) async fn capture_source(
         "capture",
     )
     .await?;
-    artifacts::write(&state.config.artifact_dir, brain, artifact, content)
-        .await
-        .map_err(|_| {
-            Error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "artifact_unavailable",
-                "Captured source storage is unavailable. Retry shortly.",
-            )
-        })?;
+    write_artifact(
+        state,
+        tx,
+        (actor, None),
+        brain,
+        artifact,
+        content,
+        "Captured source storage is unavailable. Retry shortly.",
+    )
+    .await?;
     Ok((source, version))
 }
 
@@ -1017,15 +1070,16 @@ pub async fn excerpt(
         "capture",
     )
     .await?;
-    artifacts::write(&state.config.artifact_dir, brain, artifact, &content)
-        .await
-        .map_err(|_| {
-            Error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "artifact_unavailable",
-                "Excerpt storage is unavailable. Retry shortly.",
-            )
-        })?;
+    write_artifact(
+        &state,
+        &mut tx,
+        (auth.user.id, auth.device_id),
+        brain,
+        artifact,
+        &content,
+        "Excerpt storage is unavailable. Retry shortly.",
+    )
+    .await?;
     let result = summary(&state, &mut tx, brain, source).await?;
     commands::finish(&mut tx, key.as_deref(), brain, &result).await?;
     tx.commit().await?;
@@ -1209,6 +1263,62 @@ pub async fn process(
     Ok(Json(result))
 }
 
+const CHUNK_BATCH: usize = 256;
+
+/// Projected chunks of one version, written with one statement per batch.
+#[derive(Default)]
+struct ChunkBatch {
+    ordinals: Vec<i32>,
+    byte_starts: Vec<i32>,
+    byte_ends: Vec<i32>,
+    line_starts: Vec<i32>,
+    line_ends: Vec<i32>,
+    contents: Vec<String>,
+}
+
+impl ChunkBatch {
+    fn len(&self) -> usize {
+        self.ordinals.len()
+    }
+    fn push(
+        &mut self,
+        ordinal: i32,
+        byte_start: i32,
+        byte_end: i32,
+        line_start: i32,
+        line_end: i32,
+        content: &str,
+    ) {
+        self.ordinals.push(ordinal);
+        self.byte_starts.push(byte_start);
+        self.byte_ends.push(byte_end);
+        self.line_starts.push(line_start);
+        self.line_ends.push(line_end);
+        self.contents.push(content.into());
+    }
+    async fn flush(
+        &mut self,
+        tx: &mut Transaction<'_, Postgres>,
+        brain: Uuid,
+        version: Uuid,
+    ) -> Result<()> {
+        if self.len() == 0 {
+            return Ok(());
+        }
+        let ids: Vec<Uuid> = (0..self.len()).map(|_| Uuid::new_v4()).collect();
+        sqlx::query("INSERT INTO source_chunks(id,brain_id,version_id,ordinal,byte_start,byte_end,line_start,line_end,content)
+            SELECT t.id,$1,$2,t.ordinal,t.byte_start,t.byte_end,t.line_start,t.line_end,t.content
+            FROM UNNEST($3::uuid[],$4::int4[],$5::int4[],$6::int4[],$7::int4[],$8::int4[],$9::text[])
+              AS t(id,ordinal,byte_start,byte_end,line_start,line_end,content)
+            ON CONFLICT(version_id,ordinal) DO UPDATE SET byte_start=excluded.byte_start,byte_end=excluded.byte_end,line_start=excluded.line_start,line_end=excluded.line_end,content=excluded.content")
+            .bind(brain).bind(version).bind(ids).bind(&self.ordinals).bind(&self.byte_starts).bind(&self.byte_ends)
+            .bind(&self.line_starts).bind(&self.line_ends).bind(&self.contents)
+            .execute(&mut **tx).await?;
+        *self = Self::default();
+        Ok(())
+    }
+}
+
 pub async fn project(
     state: &AppState,
     tx: &mut Transaction<'_, Postgres>,
@@ -1239,6 +1349,7 @@ pub async fn project(
     };
     let mut count = 0i32;
     if let Some(text) = text {
+        let mut batch = ChunkBatch::default();
         let mut start = 0;
         let mut line = 1i32;
         while start < text.len() {
@@ -1255,12 +1366,15 @@ pub async fn project(
             let part = &text[start..end];
             let newlines = part.bytes().filter(|c| *c == b'\n').count() as i32;
             let last = (line + newlines - i32::from(part.ends_with('\n'))).max(line);
-            sqlx::query("INSERT INTO source_chunks(id,brain_id,version_id,ordinal,byte_start,byte_end,line_start,line_end,content) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(version_id,ordinal) DO UPDATE SET byte_start=excluded.byte_start,byte_end=excluded.byte_end,line_start=excluded.line_start,line_end=excluded.line_end,content=excluded.content")
-                .bind(Uuid::new_v4()).bind(brain).bind(version).bind(count).bind(start as i32).bind(end as i32).bind(line).bind(last).bind(part).execute(&mut **tx).await?;
+            batch.push(count, start as i32, end as i32, line, last, part);
+            if batch.len() == CHUNK_BATCH {
+                batch.flush(tx, brain, version).await?;
+            }
             line += newlines;
             start = end;
             count += 1;
         }
+        batch.flush(tx, brain, version).await?;
     }
     sqlx::query("DELETE FROM source_chunks WHERE brain_id=$1 AND version_id=$2 AND ordinal >= $3")
         .bind(brain)

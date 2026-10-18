@@ -139,6 +139,24 @@ pub enum CandidateFailure {
     IncompatibleAlias,
 }
 
+impl CandidateFailure {
+    /// Stable static code persisted in coverage rows and logs; never source text.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::InvalidJson => "invalid_json",
+            Self::InvalidSchema => "invalid_schema",
+            Self::ForeignInput => "foreign_input",
+            Self::UnsupportedLanguage => "unsupported_language",
+            Self::InputLimit => "input_limit",
+            Self::InvalidKey => "invalid_key",
+            Self::InvalidSpan => "invalid_span",
+            Self::InvalidConfidence => "invalid_confidence",
+            Self::InvalidEndpoint => "invalid_endpoint",
+            Self::IncompatibleAlias => "incompatible_alias",
+        }
+    }
+}
+
 fn valid_span(source: &str, span: &MentionSpan, mention: bool) -> bool {
     span.byte_start < span.byte_end
         && !span.quote.trim().is_empty()

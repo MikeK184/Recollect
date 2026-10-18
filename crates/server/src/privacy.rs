@@ -291,7 +291,7 @@ pub async fn retry(
     db::require_role(&mut tx, brain, true).await?;
     status(&mut tx, brain, id).await?;
     tx.commit().await?;
-    crate::privacy_journal::maintain(&state)
+    crate::privacy_journal::maintain_scoped(&state, Some(brain))
         .await
         .map_err(|_| {
             Error(

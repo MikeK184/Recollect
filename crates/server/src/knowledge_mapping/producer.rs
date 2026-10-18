@@ -132,7 +132,10 @@ async fn promote(
     let candidate_bytes = serde_json::to_vec(&stage.payload.0)
         .map_err(|_| Error::invalid("Invalid retained mapping stage."))?;
     let candidates = source_candidates(stage.source_version_id, &source.text, &candidate_bytes)
-        .map_err(|_| Error::invalid("Invalid retained mapping source."))?;
+        .map_err(|failure| {
+            tracing::warn!(brain_id=%brain, version_id=%stage.source_version_id, failure=failure.code(), "Retained mapping stage no longer validates");
+            Error::invalid("Invalid retained mapping source.")
+        })?;
     tx.commit().await?;
     let mut tx = db::device_tx(&state.pool, actor, device).await?;
     sqlx::query("SET LOCAL statement_timeout='750ms'")

@@ -195,6 +195,13 @@ async fn revision4_native_current_retention_requires_exact_catalogue_tuple() {
 #[ignore = "Owned PostgreSQL upgrade fixture; controlled loopback, zero paid calls"]
 async fn revision4_upgrade_preserves_adapter2_head_stage_and_rejects_wrong_adapter() {
     let mut h = Harness::new_through(63).await;
+    // Current code runs against the pre-upgrade schema, so give it the two
+    // columns it writes; migration 065 adds them idempotently.
+    sqlx::raw_sql("ALTER TABLE model_requests ADD COLUMN estimated_input_tokens bigint CHECK(estimated_input_tokens>0);
+        ALTER TABLE knowledge_mapping_coverage ADD COLUMN failure text CHECK(failure ~ '^[a-z_]{1,40}$')")
+        .execute(&h.admin)
+        .await
+        .unwrap();
     let (p, server) = configure_provider(&mut h).await;
     let owner = h.login().await;
     let b = ok(

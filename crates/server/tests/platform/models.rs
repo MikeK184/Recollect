@@ -792,7 +792,7 @@ async fn gateway_concurrency_policy_change_failures_and_uncertain_replay() {
         .await
         .unwrap_or_else(|e| panic!("Gateway failed: {}", e.1));
     // Represent an admitted call whose process died before recording a result.
-    sqlx::query("UPDATE model_requests SET state='running',deadline=now()-interval '1 second',finished_at=NULL WHERE id=$1").bind(complete.request.id).execute(&h.admin).await.unwrap();
+    sqlx::query("UPDATE model_requests SET state='running',deadline=now()-interval '1 second',finished_at=NULL,input_tokens=NULL,output_tokens=NULL,total_tokens=NULL,charged_tokens=reserved_tokens WHERE id=$1").bind(complete.request.id).execute(&h.admin).await.unwrap();
     let before = p.calls.load(Ordering::SeqCst);
     assert_eq!(
         gateway::invoke(&h.state, context, gateway::extraction(operation, version))
@@ -809,6 +809,18 @@ async fn gateway_concurrency_policy_change_failures_and_uncertain_replay() {
         .await
         .unwrap();
     assert_eq!(saved, "uncertain");
+    // A timed-out call with no reported usage is charged its estimated input,
+    // not the whole reservation (which includes the maximum output).
+    let (charged, reserved, estimated): (i64, i64, Option<i64>) = sqlx::query_as(
+        "SELECT charged_tokens,reserved_tokens,estimated_input_tokens FROM model_requests WHERE id=$1",
+    )
+    .bind(complete.request.id)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert!(estimated.is_some_and(|e| e > 0));
+    assert_eq!(Some(charged), estimated);
+    assert!(charged < reserved, "{charged} must be below {reserved}");
     p.mode.store(4, Ordering::SeqCst);
     let mut embedding = gateway::extraction(Uuid::new_v4(), version);
     embedding.purpose = "embedding".into();
