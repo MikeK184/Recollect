@@ -107,12 +107,7 @@ pub(super) async fn completed(
     Ok(())
 }
 
-pub(super) async fn page(tx: &mut Tx<'_>, call: Uuid, offset: i64) -> Result<McpObservationPage> {
-    let total = sqlx::query_scalar("SELECT count(*) FROM mcp_observation_outbox WHERE call_id=$1")
-        .bind(call)
-        .fetch_one(&mut **tx)
-        .await?;
-    let items: Vec<DbJson<McpObservation>> = sqlx::query_scalar("SELECT jsonb_build_object(
+const ITEM: &str = "jsonb_build_object(
         'id',o.id,'call_id',o.call_id,'stage',o.stage,'outcome',o.outcome,'code',o.code,
         'state',CASE WHEN e.state IN ('expired','removed') THEN e.state
           WHEN o.state IN ('pending','error','published','filtered') AND deadline.expires_at<=clock_timestamp() THEN 'expired' ELSE o.state END,
@@ -120,17 +115,46 @@ pub(super) async fn page(tx: &mut Tx<'_>, call: Uuid, offset: i64) -> Result<Mcp
         'expires_at',deadline.expires_at,
         'source_id',e.source_id,'source_version_id',e.source_version_id,
         'coverage',CASE WHEN deadline.expires_at>clock_timestamp() AND o.state NOT IN ('expired','removed') AND coalesce(e.state,'accepted')='accepted' THEN o.coverage ELSE '[]'::jsonb END,
-        'attempts',o.attempts,'next_attempt_at',CASE WHEN o.state IN ('pending','error') THEN o.next_attempt_at END,'error_code',o.error_code)
-        FROM mcp_observation_outbox o LEFT JOIN capture_events e ON e.id=o.id
+        'attempts',o.attempts,'next_attempt_at',CASE WHEN o.state IN ('pending','error') THEN o.next_attempt_at END,'error_code',o.error_code)";
+const SOURCE: &str = "FROM mcp_observation_outbox o LEFT JOIN capture_events e ON e.id=o.id
         CROSS JOIN LATERAL (SELECT CASE WHEN e.state='accepted' THEN recollect_retention_deadline(o.brain_id,'tool_output',o.captured_at)
-          WHEN e.id IS NOT NULL THEN e.expires_at ELSE least(o.expires_at,recollect_retention_deadline(o.brain_id,'tool_output',o.captured_at)) END expires_at) deadline
-        WHERE o.call_id=$1 ORDER BY o.captured_at,o.id LIMIT 20 OFFSET $2")
-        .bind(call).bind(offset).fetch_all(&mut **tx).await?;
+          WHEN e.id IS NOT NULL THEN e.expires_at ELSE least(o.expires_at,recollect_retention_deadline(o.brain_id,'tool_output',o.captured_at)) END expires_at) deadline";
+
+pub(super) async fn page(tx: &mut Tx<'_>, call: Uuid, offset: i64) -> Result<McpObservationPage> {
+    let total = sqlx::query_scalar("SELECT count(*) FROM mcp_observation_outbox WHERE call_id=$1")
+        .bind(call)
+        .fetch_one(&mut **tx)
+        .await?;
+    let items: Vec<DbJson<McpObservation>> = sqlx::query_scalar(&format!(
+        "SELECT {ITEM} {SOURCE} WHERE o.call_id=$1 ORDER BY o.captured_at,o.id LIMIT 20 OFFSET $2"
+    ))
+    .bind(call)
+    .bind(offset)
+    .fetch_all(&mut **tx)
+    .await?;
     Ok(McpObservationPage {
         total,
         offset,
         items: items.into_iter().map(|v| v.0).collect(),
     })
+}
+
+/// The first page of observations for many calls in one query.
+pub(super) async fn first_pages(
+    tx: &mut Tx<'_>,
+    calls: &[Uuid],
+) -> Result<HashMap<Uuid, Vec<McpObservation>>> {
+    let rows: Vec<(Uuid, DbJson<McpObservation>)> = sqlx::query_as(&format!(
+        "SELECT call_id,item FROM (SELECT o.call_id,{ITEM} item,row_number() OVER (PARTITION BY o.call_id ORDER BY o.captured_at,o.id) n {SOURCE} WHERE o.call_id=ANY($1)) t WHERE n<=20 ORDER BY call_id,n"
+    ))
+    .bind(calls)
+    .fetch_all(&mut **tx)
+    .await?;
+    let mut pages: HashMap<Uuid, Vec<McpObservation>> = HashMap::new();
+    for (call, item) in rows {
+        pages.entry(call).or_default().push(item.0);
+    }
+    Ok(pages)
 }
 #[utoipa::path(get,path="/api/brains/{brain}/mcp/calls/{id}/observations",operation_id="mcpObservations",params(("brain"=Uuid,Path),("id"=Uuid,Path),("offset"=Option<i64>,Query)),responses((status=200,body=McpObservationPage)))]
 pub async fn list(

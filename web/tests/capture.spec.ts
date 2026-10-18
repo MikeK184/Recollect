@@ -41,6 +41,7 @@ test("capture policy, companion delivery states and retained source erasure", as
     });
     await request(`/api/devices/pairings/${pair.user_code}/approve`, {
       approve: true,
+      confirm: true,
     });
     const poll = await request("/api/devices/pairings/poll", {
       device_code: pair.device_code,

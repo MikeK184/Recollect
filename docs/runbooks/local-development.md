@@ -159,7 +159,10 @@ Optional OIDC signed exchange and its full browser workflow are checked with
 - Graph degraded: confirm the GDS plugin loaded and the configured graph target
   is reachable. Recollect does not label a failed Query API call connected.
 - Login failed: verify local environment names without printing passwords.
-  Ten attempts for one username per minute cause temporary throttling.
+  Ten attempts per minute for one username from one client address cause
+  temporary throttling for that address only. Anonymous pairing and
+  organization sign-in starts allow 30 per address per minute. Behind the
+  bundled proxy the client address comes from its `X-Forwarded-For` header.
 - Owner recovery: stop the API, edit the owner password in the ignored `.env`,
   load the environment as above, run `cargo run -p recollect-server -- recover-owner`,
   and restart. This re-enables the persisted owner and revokes its sessions; it

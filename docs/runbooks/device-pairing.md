@@ -97,7 +97,10 @@ Pairing expires after five minutes. Decline/cancel requires a new request. Up to
 20 live devices may belong to an account; revoke unused devices before adding
 more. Re-pairing with the same device name (case-insensitive, ignoring
 surrounding whitespace) reuses that device record and rotates its credential
-instead of adding a row; the expiry resets to 30 days. A claimed device expires after 30 days and must be paired again.
+instead of adding a row; the expiry resets to 30 days. Because that signs the
+existing host out, the approval page names the device it would replace
+(`reuses_device`) and the API refuses approval until the request carries
+`"confirm": true`. A claimed device expires after 30 days and must be paired again.
 
 Locked/unavailable OS storage fails explicitly. Unlock the store and retry;
 there is no credential-file fallback. Connection errors preserve an existing

@@ -4,7 +4,7 @@ mod dispatch;
 
 use crate::{AppState, auth::Auth, db, error::Error};
 use axum::{
-    Router,
+    Extension, Router,
     extract::{Path, Request, State},
     http::{StatusCode, header},
     response::{IntoResponse, Response},
@@ -36,8 +36,22 @@ struct AgentService {
     routes: Router,
 }
 
+/// The application routes the agent adapter calls in process. Built once by
+/// `app()`; a `Router` is `Arc` backed, so cloning it per tool call is cheap.
+#[derive(Clone)]
+pub struct InternalRoutes(Router);
+
+pub fn internal_routes(state: &AppState) -> InternalRoutes {
+    InternalRoutes(
+        Router::new()
+            .nest("/api", crate::api_routes())
+            .with_state(state.clone()),
+    )
+}
+
 pub async fn serve(
     State(state): State<AppState>,
+    Extension(InternalRoutes(routes)): Extension<InternalRoutes>,
     auth: Auth,
     Path(brain): Path<Uuid>,
     request: Request,
@@ -77,9 +91,7 @@ pub async fn serve(
     };
     let host = host.to_owned();
     let service = AgentService {
-        routes: Router::new()
-            .nest("/api", crate::api_routes())
-            .with_state(state.clone()),
+        routes,
         state: state.clone(),
         auth: Arc::new(auth),
         brain,

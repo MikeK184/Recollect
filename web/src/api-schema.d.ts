@@ -4607,6 +4607,8 @@ export interface components {
         };
         PairingDecision: {
             approve: boolean;
+            /** @description Required when approving a pairing whose `reuses_device` is set. */
+            confirm?: boolean;
         };
         PairingPoll: {
             device?: null | components["schemas"]["Device"];
@@ -4633,6 +4635,9 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             name: string;
+            /** @description Name of the existing active device whose token approval would replace,
+             *     because it matches this pairing's name. */
+            reuses_device?: string | null;
             state: string;
             user_code: string;
         };

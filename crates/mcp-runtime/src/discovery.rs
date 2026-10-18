@@ -11,7 +11,55 @@ use rmcp::{
         },
     },
 };
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{
+    collections::HashSet,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
+
+/// Whether a connection target is a public unicast address. Private, loopback,
+/// link-local, shared, documentation and transition ranges are all refused.
+pub fn is_public_address(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(ip) => {
+            let [a, b, c, _] = ip.octets();
+            !(matches!(a, 0 | 10 | 127 | 224..=255)
+                || (a == 100 && (64..=127).contains(&b))
+                || (a == 169 && b == 254)
+                || (a == 172 && (16..=31).contains(&b))
+                || (a == 192 && (b == 0 || b == 168 || (b == 88 && c == 99)))
+                || (a == 198 && (b == 18 || b == 19 || (b == 51 && c == 100)))
+                || (a == 203 && b == 0 && c == 113))
+        }
+        IpAddr::V6(ip) => {
+            let s = ip.segments();
+            // Accept native global unicast only. Reject mapped/transition,
+            // documentation, special assignments and all local address ranges.
+            (0x2000..=0x3fff).contains(&s[0])
+                && s[0] != 0x2002
+                && s[0] < 0x3ffe
+                && !(s[0] == 0x2001 && (s[1] < 0x200 || s[1] == 0x0db8))
+        }
+    }
+}
+
+/// Resolve a host to addresses that are all public, or none. Callers must
+/// connect to the returned addresses (not re-resolve) to stay rebinding-proof.
+pub async fn resolve_public(host: &str, port: u16) -> Option<Vec<SocketAddr>> {
+    let addresses: Vec<SocketAddr> = match host.trim_matches(['[', ']']).parse::<IpAddr>() {
+        Ok(ip) => vec![SocketAddr::new(ip, port)],
+        Err(_) => tokio::net::lookup_host((host, port))
+            .await
+            .ok()?
+            .take(17)
+            .collect(),
+    };
+    (!addresses.is_empty()
+        && addresses.len() <= 16
+        && addresses.iter().all(|a| is_public_address(a.ip())))
+    .then_some(addresses)
+}
 
 pub async fn inspect_http(target: &str) -> Result<Vec<McpToolDescriptor>> {
     inspect_http_with_headers(target, &std::collections::BTreeMap::new()).await
@@ -77,12 +125,29 @@ pub async fn inspect_http_metadata_with_headers(
                 return Err(RuntimeError("credential_destination_invalid"));
             }
         }
-        let http = reqwest::Client::builder()
+        let mut client = reqwest::Client::builder()
             .default_headers(selected)
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
-            .connect_timeout(Duration::from_secs(5))
+            .connect_timeout(Duration::from_secs(5));
+        if url.scheme() == "https" {
+            // Remote servers must be public. Connect to the addresses that were
+            // checked so a later DNS answer cannot reach a private network.
+            let host = url
+                .host_str()
+                .ok_or(RuntimeError("provider_target_invalid"))?;
+            let port = url
+                .port_or_known_default()
+                .ok_or(RuntimeError("provider_target_invalid"))?;
+            let addresses = resolve_public(host, port)
+                .await
+                .ok_or(RuntimeError("provider_target_invalid"))?;
+            if host.trim_matches(['[', ']']).parse::<IpAddr>().is_err() {
+                client = client.resolve_to_addrs(host, &addresses);
+            }
+        }
+        let http = client
             .build()
             .map_err(|_| RuntimeError("provider_http_unavailable"))?;
         let mut config = StreamableHttpClientTransportConfig::with_uri(target.to_owned())
@@ -164,7 +229,29 @@ pub async fn inspect_http_metadata_with_headers(
 
 #[cfg(test)]
 mod tests {
-    use super::description;
+    use super::{description, inspect_http, is_public_address, resolve_public};
+
+    #[tokio::test]
+    async fn remote_https_targets_must_resolve_to_public_addresses() {
+        for target in [
+            "https://127.0.0.1/mcp",
+            "https://10.1.2.3:8443/mcp",
+            "https://[::1]/mcp",
+            "https://169.254.169.254/latest",
+            "https://192.168.0.10/mcp",
+            "https://localhost/mcp",
+        ] {
+            assert_eq!(
+                inspect_http(target).await.err().map(|e| e.0),
+                Some("provider_target_invalid"),
+                "{target}"
+            );
+        }
+        assert!(resolve_public("8.8.8.8", 443).await.is_some());
+        assert!(resolve_public("127.0.0.1", 443).await.is_none());
+        assert!(is_public_address("2606:4700:4700::1111".parse().unwrap()));
+        assert!(!is_public_address("fd00::1".parse().unwrap()));
+    }
     #[test]
     fn descriptions_preserve_markdown_and_bound_hostile_controls() {
         let source = "# Title\n\n- one\n- two\n\n```json\n{\"a\":1}\n```\n\tend\0\u{1b}";

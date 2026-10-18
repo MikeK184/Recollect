@@ -11,6 +11,7 @@ use crate::publication;
 use axum::extract::Query;
 use serde::Deserialize;
 use serde_json::json;
+use std::collections::HashMap;
 
 #[derive(sqlx::FromRow)]
 pub(super) struct CallRow {
@@ -83,6 +84,40 @@ async fn can_use(tx: &mut Tx<'_>, profile: Uuid) -> Result<bool> {
 }
 async fn dto(tx: &mut Tx<'_>, row: CallRow, include_result: bool) -> Result<McpCall> {
     let permitted = can_use(tx, row.profile_id).await?;
+    let observations = observations::page(tx, row.id, 0).await?.items;
+    build_dto(tx, row, include_result, permitted, observations).await
+}
+/// One page of calls with the per-row permission and first observation page
+/// resolved by a constant number of queries instead of two per row.
+async fn dtos(tx: &mut Tx<'_>, rows: Vec<CallRow>) -> Result<Vec<McpCall>> {
+    let mut profiles: Vec<Uuid> = rows.iter().map(|r| r.profile_id).collect();
+    profiles.sort();
+    profiles.dedup();
+    let permitted: HashMap<Uuid, bool> = sqlx::query_as::<_, (Uuid, bool)>(
+        "SELECT p,recollect_mcp_can(p,'use') FROM unnest($1::uuid[]) p",
+    )
+    .bind(&profiles)
+    .fetch_all(&mut **tx)
+    .await?
+    .into_iter()
+    .collect();
+    let ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
+    let mut observed = observations::first_pages(tx, &ids).await?;
+    let mut calls = Vec::with_capacity(rows.len());
+    for row in rows {
+        let allowed = permitted.get(&row.profile_id).copied().unwrap_or(false);
+        let items = observed.remove(&row.id).unwrap_or_default();
+        calls.push(build_dto(tx, row, false, allowed, items).await?);
+    }
+    Ok(calls)
+}
+async fn build_dto(
+    tx: &mut Tx<'_>,
+    row: CallRow,
+    include_result: bool,
+    permitted: bool,
+    observations: Vec<McpObservation>,
+) -> Result<McpCall> {
     let expired = row.payload_expires_at.is_some_and(|at| at <= Utc::now());
     let output_access = if !permitted {
         "permission_required"
@@ -139,7 +174,7 @@ async fn dto(tx: &mut Tx<'_>, row: CallRow, include_result: bool) -> Result<McpC
         reconciles_call_id: row.reconciles_call_id,
         resolutions,
         capture_disposition: row.capture_disposition,
-        observations: observations::page(tx, row.id, 0).await?.items,
+        observations,
     })
 }
 
@@ -331,6 +366,13 @@ async fn admit(
     if !can_use(tx, input.profile_id).await? {
         return Err(denied());
     }
+    // Serialize concurrent submissions of one request ID so the loser reads the
+    // winner's committed call (the replay path) instead of hitting the unique
+    // index and surfacing as a database outage.
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
+        .bind(format!("mcp-call:{brain}:{actor}:{}", input.request_id))
+        .execute(&mut **tx)
+        .await?;
     let capacity: bool = sqlx::query_scalar("SELECT recollect_mcp_capacity()")
         .fetch_one(&mut **tx)
         .await?;

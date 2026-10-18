@@ -2,11 +2,8 @@
 //! execution authority or connection success.
 use base64::{Engine, engine::general_purpose::STANDARD};
 use image::{ImageFormat, ImageReader, Limits};
-use std::{
-    io::Cursor,
-    net::{IpAddr, SocketAddr},
-    time::Duration,
-};
+use recollect_mcp_runtime::discovery::resolve_public;
+use std::{io::Cursor, time::Duration};
 
 const LIMIT: usize = 256 * 1024;
 const PREFIX: &str = "data:image/png;base64,";
@@ -46,30 +43,6 @@ pub(super) fn valid_cached(value: &str) -> bool {
         return false;
     };
     normalized(&bytes).is_some_and(|png| png == bytes)
-}
-
-fn public(ip: IpAddr) -> bool {
-    match ip {
-        IpAddr::V4(ip) => {
-            let [a, b, c, _] = ip.octets();
-            !(matches!(a, 0 | 10 | 127 | 224..=255)
-                || (a == 100 && (64..=127).contains(&b))
-                || (a == 169 && b == 254)
-                || (a == 172 && (16..=31).contains(&b))
-                || (a == 192 && (b == 0 || b == 168 || (b == 88 && c == 99)))
-                || (a == 198 && (b == 18 || b == 19 || (b == 51 && c == 100)))
-                || (a == 203 && b == 0 && c == 113))
-        }
-        IpAddr::V6(ip) => {
-            let s = ip.segments();
-            // Accept native global unicast only. Reject mapped/transition,
-            // documentation, special assignments and all local address ranges.
-            (0x2000..=0x3fff).contains(&s[0])
-                && s[0] != 0x2002
-                && s[0] < 0x3ffe
-                && !(s[0] == 0x2001 && (s[1] < 0x200 || s[1] == 0x0db8))
-        }
-    }
 }
 
 fn permitted_url(target: &reqwest::Url, source: &str) -> Option<reqwest::Url> {
@@ -119,17 +92,7 @@ async fn candidate(target: &reqwest::Url, source: &str) -> Option<Vec<u8>> {
     }
     let url = permitted_url(target, source)?;
     let host = url.host_str()?;
-    let addresses: Vec<SocketAddr> = match host.trim_matches(['[', ']']).parse::<IpAddr>() {
-        Ok(ip) => vec![SocketAddr::new(ip, url.port_or_known_default()?)],
-        Err(_) => tokio::net::lookup_host((host, url.port_or_known_default()?))
-            .await
-            .ok()?
-            .take(17)
-            .collect(),
-    };
-    if addresses.is_empty() || addresses.len() > 16 || addresses.iter().any(|a| !public(a.ip())) {
-        return None;
-    }
+    let addresses = resolve_public(host, url.port_or_known_default()?).await?;
     let http = reqwest::Client::builder()
         .no_proxy()
         .redirect(reqwest::redirect::Policy::none())
@@ -201,6 +164,7 @@ pub(super) async fn inspect(target: &str, sources: &[String]) -> Option<String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use recollect_mcp_runtime::discovery::is_public_address as public;
     #[test]
     fn private_reserved_and_mapped_addresses_never_fetch() {
         for value in [

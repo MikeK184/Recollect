@@ -329,10 +329,17 @@ pub struct PairingView {
     pub user_code: String,
     pub state: String,
     pub expires_at: DateTime<Utc>,
+    /// Name of the existing active device whose token approval would replace,
+    /// because it matches this pairing's name.
+    #[serde(default)]
+    pub reuses_device: Option<String>,
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct PairingDecision {
     pub approve: bool,
+    /// Required when approving a pairing whose `reuses_device` is set.
+    #[serde(default)]
+    pub confirm: bool,
 }
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct PairingCode {

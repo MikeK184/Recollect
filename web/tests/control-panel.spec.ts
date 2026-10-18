@@ -229,6 +229,7 @@ test("real source projection and global control-panel actions", async ({
   });
   await api(page, `/api/devices/pairings/${pairing.user_code}/approve`, {
     approve: true,
+    confirm: true,
   });
   await page.goto("/agents");
   await expect(

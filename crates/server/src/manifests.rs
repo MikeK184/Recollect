@@ -213,6 +213,17 @@ async fn save(
     let key = commands::key(headers)?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_writer(&mut tx, brain).await?;
+    if let Some(reply) = commands::reserve::<ManifestRevision>(
+        &mut tx,
+        key.as_deref(),
+        "manifest.save",
+        json!({"brain":brain,"manifest":existing,"input":input}),
+    )
+    .await?
+    {
+        tx.commit().await?;
+        return Ok(reply);
+    }
     let environment:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM evidence_groups WHERE brain_id=$1 AND id=$2 AND kind='environment')").bind(brain).bind(input.environment_id).fetch_one(&mut *tx).await?;
     if !environment {
         return Err(Error::missing());
@@ -259,17 +270,6 @@ async fn save(
     } else {
         None
     };
-    if let Some(reply) = commands::reserve::<ManifestRevision>(
-        &mut tx,
-        key.as_deref(),
-        "manifest.save",
-        json!({"brain":brain,"manifest":existing,"input":input}),
-    )
-    .await?
-    {
-        tx.commit().await?;
-        return Ok(reply);
-    }
     let id = if let Some(id) = existing {
         let previous = current(&mut tx, brain, id).await?;
         if input.base_revision != Some(previous.id) {

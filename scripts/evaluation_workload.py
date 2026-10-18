@@ -50,7 +50,7 @@ def device(evaluation, token):
 
 def pair(session, label):
     pending = session.call("POST", "/api/devices/pairings", {"name": label})
-    session.call("POST", "/api/devices/pairings/" + pending["user_code"] + "/approve", {"approve": True})
+    session.call("POST", "/api/devices/pairings/" + pending["user_code"] + "/approve", {"approve": True, "confirm": True})
     result = session.call("POST", "/api/devices/pairings/poll", {"device_code": pending["device_code"]})
     session.call("POST", "/api/devices/pairings/finish", {"device_code": pending["device_code"]}, expected=204)
     return result

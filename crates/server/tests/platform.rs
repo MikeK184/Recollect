@@ -53,6 +53,8 @@ mod retention;
 mod retrieval;
 #[path = "platform/review.rs"]
 mod review;
+#[path = "platform/surface.rs"]
+mod surface;
 #[path = "platform/workspace.rs"]
 mod workspace;
 
@@ -2114,7 +2116,7 @@ impl Harness {
                     start["user_code"].as_str().unwrap()
                 ),
                 Some(login),
-                json!({"approve":true})
+                json!({"approve":true,"confirm":true})
             )
             .await
             .0,
@@ -2168,7 +2170,7 @@ impl Harness {
                     start["user_code"].as_str().unwrap()
                 ),
                 Some(login),
-                json!({"approve":true})
+                json!({"approve":true,"confirm":true})
             )
             .await
             .0,

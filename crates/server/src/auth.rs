@@ -1,6 +1,7 @@
 use crate::{
     AppState, credentials,
     error::{Error, Result},
+    throttle::{self, Peer},
 };
 use axum::{
     Json,
@@ -9,7 +10,17 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use recollect_protocol::{LoginRequest, SessionInfo, User};
+use std::time::Duration;
+use subtle::ConstantTimeEq;
 use uuid::Uuid;
+
+fn throttled() -> Error {
+    Error(
+        StatusCode::TOO_MANY_REQUESTS,
+        "throttled",
+        "Too many sign-in attempts. Try again in a minute.",
+    )
+}
 
 #[derive(Clone)]
 pub struct Auth {
@@ -83,7 +94,15 @@ impl FromRequestParts<AppState> for Auth {
                 .bind(token).fetch_optional(&state.pool).await?;
             let (id, username, installation_owner, device_id) =
                 row.ok_or_else(Error::unauthorized)?;
-            sqlx::query("UPDATE devices SET last_used_at=now() WHERE id=$1 AND (last_used_at IS NULL OR last_used_at<now()-interval '1 minute')").bind(device_id).execute(&state.pool).await?;
+            // The statement below is a no-op within a minute of the last write,
+            // so skip the round trip for a device that was just touched.
+            if throttle::due(&state.device_touched, device_id, Duration::from_secs(60)) {
+                let touched = sqlx::query("UPDATE devices SET last_used_at=now() WHERE id=$1 AND (last_used_at IS NULL OR last_used_at<now()-interval '1 minute')").bind(device_id).execute(&state.pool).await;
+                if let Err(error) = touched {
+                    throttle::forget(&state.device_touched, &device_id);
+                    return Err(error.into());
+                }
+            }
             return Ok(Self {
                 user: User {
                     id,
@@ -144,42 +163,32 @@ fn session_cookie(headers: &HeaderMap) -> Option<Uuid> {
 #[utoipa::path(post, path="/api/auth/login", request_body=LoginRequest, responses((status=200,body=SessionInfo),(status=401,body=recollect_protocol::ApiError),(status=429,body=recollect_protocol::ApiError)))]
 pub async fn login(
     State(state): State<AppState>,
+    Peer(peer): Peer,
     Json(input): Json<LoginRequest>,
 ) -> Result<Response> {
     let username = input.username.trim();
     if username.is_empty() || username.len() > 120 || input.password.len() > 4096 {
         return Err(Error::unauthorized());
     }
+    // Keyed by caller address so one client cannot lock the owner out by
+    // guessing the owner's name; the address-only key bounds name spraying.
+    if !throttle::allow(&state.login_attempts, &format!("ip|{peer}"), 100)
+        || !throttle::allow(&state.login_attempts, &format!("{peer}|{username}"), 10)
     {
-        let mut attempts = state
-            .login_attempts
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
-        let now = std::time::Instant::now();
-        attempts.retain(|_, (at, _)| now.duration_since(*at).as_secs() < 60);
-        if attempts.len() >= 1024 && !attempts.contains_key(username) {
-            return Err(Error(
-                StatusCode::TOO_MANY_REQUESTS,
-                "throttled",
-                "Too many sign-in attempts. Try again in a minute.",
-            ));
-        }
-        let (_, count) = attempts.entry(username.to_string()).or_insert((now, 0));
-        *count += 1;
-        if *count > 10 {
-            return Err(Error(
-                StatusCode::TOO_MANY_REQUESTS,
-                "throttled",
-                "Too many sign-in attempts. Try again in a minute.",
-            ));
-        }
+        return Err(throttled());
     }
     let mut tx = state.pool.begin().await?;
     let account: Option<(Uuid, String, bool, Option<Uuid>)> = sqlx::query_as("SELECT id,username,installation_owner,credential_id FROM accounts WHERE username=$1 AND enabled AND auth_kind='local' FOR SHARE")
         .bind(username).fetch_optional(&mut *tx).await?;
     let (id, username, installation_owner, credential) = account.ok_or_else(Error::unauthorized)?;
     let valid = if installation_owner {
-        username == state.config.owner_username && input.password == state.config.owner_password
+        username == state.config.owner_username
+            && bool::from(
+                input
+                    .password
+                    .as_bytes()
+                    .ct_eq(state.config.owner_password.as_bytes()),
+            )
     } else if let Some(credential) = credential {
         credentials::matches(&state.config.credential_file, credential, &input.password).await?
     } else {

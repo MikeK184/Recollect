@@ -2,6 +2,7 @@
 use crate::error::{Error, Result};
 use axum::http::StatusCode;
 use std::{collections::BTreeMap, io::Write, path::Path, sync::LazyLock};
+use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 static LOCK: LazyLock<tokio::sync::Mutex<()>> = LazyLock::new(|| tokio::sync::Mutex::new(()));
@@ -25,7 +26,9 @@ pub async fn matches(path: &str, id: Uuid, password: &str) -> Result<bool> {
     let (path, password) = (path.to_owned(), password.to_owned());
     let _guard = LOCK.lock().await;
     tokio::task::spawn_blocking(move || {
-        Ok(read(Path::new(&path), false)?.get(&id) == Some(&password))
+        Ok(read(Path::new(&path), false)?
+            .get(&id)
+            .is_some_and(|stored| bool::from(stored.as_bytes().ct_eq(password.as_bytes()))))
     })
     .await
     .map_err(|_| unavailable())?
