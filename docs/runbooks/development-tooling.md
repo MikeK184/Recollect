@@ -1,137 +1,91 @@
-# Development Tooling Assessment
+# Development tooling
 
-Revised: 2026-10-09. The [selected stack](../foundation/techstack.md) is Rust,
-React/Vite, PostgreSQL/pgvector and Neo4j/GDS Community. The MCP coordinator uses
-rmcp; Cognee remains a reference. Earlier Python/FastMCP/Next.js recommendations
-belonged to the superseded extension baseline.
+Reviewed: 2026-10-18 against the current repository configuration.
+Recollect's own product is Rust with React/Vite, PostgreSQL/pgvector and
+Neo4j/GDS. The [technology baseline](../foundation/techstack.md) and accepted
+[runtime ADR](../adr/0003-product-runtime.md) govern implementation.
 
-Governance validation, Context7 calls and local CodeGraph navigation have been
-exercised. The documentation router and maintainer are now repository-local
-skills. Installed Rust/Node/Docker client versions have been inspected; the
-product is now implemented and deployed locally; dated acceptance is recorded in the
-[final desktop evidence](../mappings/desktop-final-acceptance-2026-10-01.md).
+## Repository-local tools
 
-## Available development capabilities
-
-| Capability | Choice and evidence boundary |
+| Task | Tool and boundary |
 | --- | --- |
-| Dependency documentation | Repo-local Context7 plus primary official sources; record stale/incomplete lookups |
-| Source structure and callers | Repo-local CodeGraph 1.6.0, with a verified index of the Cognee reference checkout |
-| Rust semantic resolution and repository context | [Rust Analyzer MCP and Graft](rust-semantic-navigation.md), locally installed with actual semantic/structural stdio proof and isolated runtime |
-| Literal/configuration/docs search | rg and targeted file reads |
-| Governance validation | ./scripts/validate.sh using Bash and Python 3.11+ standard library |
-| Documentation routing and maintenance | [recollect-doc-router](../../.agents/skills/recollect-doc-router/SKILL.md) and [recollect-doc-maintainer](../../.agents/skills/recollect-doc-maintainer/SKILL.md), adapted from Terme |
-| Git review | Git CLI and focused comparisons; preserve dirty work and separate reference checkouts |
-| Browser inspection | Available browser-control tools when a real product UI is running |
+| Rust definitions, references, types and diagnostics | [Rust Analyzer MCP](rust-semantic-navigation.md); allow indexing to finish before interpreting results |
+| Repository context and call traces | [Graft MCP](rust-semantic-navigation.md); automatic refresh is structural, optional compiler edges need explicit LSP refresh |
+| Structural navigation, including Cognee reference code | [CodeGraph CLI](codegraph.md); run status/sync before relying on changed relationships |
+| Literal, configuration and documentation lookup | `rg` and targeted file reads |
+| Current dependency guidance | Context7 and primary official interfaces; record failed or stale lookups |
+| Authority/current-state routing | [recollect-doc-router](../../.agents/skills/recollect-doc-router/SKILL.md) |
+| Documentation edits and lifecycle reconciliation | [recollect-doc-maintainer](../../.agents/skills/recollect-doc-maintainer/SKILL.md) |
+| Browser/native product checks | Existing browser-control tools and the repository's Playwright/native fixtures |
 
-Use the [CodeGraph runbook](codegraph.md) for setup, exact-symbol navigation and
-refresh. Its relationships describe the indexed working tree, not published
-product snapshots or runtime truth. Enola is selected as the first product
-artifact adapter, subject to coverage proof; CodeGraph remains an alternative.
+`.codex/config.toml` owns Codex MCP and six role registrations. `opencode.json`
+and `.opencode/agents/` own OpenCode's equivalent roles, Context7 and isolated
+chrome-devtools. Both use root `AGENTS.md`, the shared repo skills and CodeGraph.
+Personal models, permissions and UI settings stay outside project configuration.
+Specialist agents run only when the user requests delegation.
 
-## Add with the owning implementation slice
+### Claude Code
 
-Pin the Rust toolchain, Cargo dependencies and frontend lockfile during
-scaffolding. Run rustfmt/clippy and focused Rust tests then; select frontend
-checks against the actual React/Vite application. Do not carry Python application
-constraints from Cognee into Recollect's Rust core.
+Start Claude Code from the repository (any nested directory works). Root
+`CLAUDE.md` imports `AGENTS.md`, so instructions stay shared. `.mcp.json`
+registers Context7, Rust Analyzer and Graft with the Codex commands; the
+navigation launchers `cd` to `CLAUDE_PROJECT_DIR` when the host sets it.
+`.claude/settings.json` denies `rust_analyzer_format`, `code_actions`, `rename`
+and `set_workspace`, matching Codex's `enabled_tools`. `.claude/agents/` holds
+explorer, architect, worker, qa and reviewer; explorer and reviewer also
+disallow edit tools. `.claude/skills/` links to the shared skills.
 
-Use rmcp client/server fixtures and disposable PostgreSQL/Neo4j services to prove
-product interfaces, isolation, correction and recovery. Test local and private
-MCP runners against explicit disposable targets, with environment/OS-store/Vault
-credential delivery covered by the relevant contract. No customer service access
-is required simply to author or validate documentation.
+Claude Code asks once to approve the project's `.mcp.json` servers; that
+approval stays personal and is not committed. `CONTEXT7_API_KEY` is optional
+and forwarded by name only. Run `./scripts/setup-rust-navigation.sh` first for
+the navigation servers. Check registrations with `claude mcp list` or `/mcp`,
+loaded instructions with `/memory`, and roles with `/agents`. A listed server
+is not a connection: make a read-only call such as a Context7 library lookup.
+When a Codex role changes, regenerate or compare the matching Claude role body.
 
-The UI uses static assets served by Rust. A Next.js-specific development MCP is
-not selected. Reuse existing browser inspection before adding another integration.
-Codex project development MCP registration belongs in .codex/config.toml;
-OpenCode project development MCP registration belongs in root `opencode.json`;
-product Brain connections and execution profiles belong in Recollect's runtime model.
+A registration or empty index response is not proof of a working or absent
+capability. The [Rust navigation proof](../mappings/rust-semantic-navigation-proof-2026-10-09.md)
+records actual semantic/structural calls and sandbox limits. Current MCP calls
+also resolved the scheduler's Rust definition during the October 18 docs audit.
+Developer graphs do not prove product runtime behavior or create Brain topics.
 
-## Skills assessment
+## Checks for current implementation
 
-Use `$recollect-doc-router` to find authority, current-state evidence and the
-owning slice. Use `$recollect-doc-maintainer` for scoped authoring, audits and
-pack/epic/index closeout. Both support ordinary automatic discovery. Their
-instructions follow the current docs and do not copy the foundation specification.
+Use the existing Cargo/npm manifests and lockfiles; dependency changes belong to
+the owning slice. Typical local checks are:
 
-These two skills are sufficient for the current docs and planning stage. The
-existing architect, worker, qa and reviewer roles already describe their tasks;
-creating equivalent skills would duplicate instructions. No separate doc-writer
-skill is needed: authorized authoring is part of the maintainer's content mode.
+```sh
+cargo fmt --all --check
+cargo check --workspace --all-targets
+cargo test --workspace --lib
+npm --prefix web run typecheck
+./scripts/validate.sh
+```
 
-Consider further skills only after the owning slices establish repeatable,
-tested commands and fixtures:
+After API changes run `./scripts/generate-api.sh` and rebuild the web client.
+Use the [local development runbook](local-development.md) for PostgreSQL/Neo4j
+and focused native/browser tests. Native tests may be ignored by default and
+need explicit disposable fixtures; a fast unit suite does not prove those paths.
 
-| Candidate | When it becomes useful | Required local basis |
-| --- | --- | --- |
-| Rust service implementation | Repeated work after platform-bootstrap and platform-durable-work | Actual crate boundaries, Cargo checks, SQLx migration/metadata procedure and transactional command/outbox fixtures |
-| Memory and graph invariant verification | Evidence, correction, retrieval and graph slices have runnable paths | Paired positive/negative Brain-isolation checks, immutable manifests, reject/rebuild and erase/restore fixtures, analytical eligibility checks |
-| MCP/Vault lifecycle verification | MCP runtime and private-runner slices | Disposable stdio/HTTP targets, startup/lease/reuse/idle tests, rotation/revocation and unknown-outcome fixtures |
-| Product UI workflow verification | Repeatable React/Mantine review, search and graph flows exist | Runnable UI, stable test data, browser checks for loading, error, no-access and actionable review states |
+For documentation/public-guide changes, also run:
 
-These are potential helpers, not new scope or prerequisites. Keep them in
-`.agents/skills/` if later justified. Foundation requirements such as correction,
-isolation, Vault support and negative evaluations still accompany their feature
-slices whether a dedicated skill exists or not. Product procedural memory and
-deferred automatic executable-skill learning are separate from these developer
-skills.
+```sh
+npm --prefix site run build
+npm --prefix site run check
+```
 
-## MCP assessment
+The [Pages workflow](../../.github/workflows/pages.yml) builds/checks the site
+and runs governance validation. It publishes static documentation, not the app.
+Runtime/host tests and paid provider tests remain separate, explicitly scoped work.
 
-No additional development MCP is required to begin the accepted implementation
-sequence beyond the user-authorized OpenCode chrome-devtools browser control.
-Keep the existing Context7 server and CodeGraph CLI. The user's 2026-10-09
-instruction additionally selects repository-local Rust Analyzer MCP and Graft
-under [ADR 0019](../adr/0019-rust-semantic-developer-navigation.md). This is a tooling
-recommendation based on the selected stack and available workflows, not proof
-that future product integrations already work.
+## Scope and recovery
 
-| Integration | Recommendation and trigger |
-| --- | --- |
-| Context7 | Keep; real library resolution and documentation queries succeeded in this session. Pair responses with current primary sources when incomplete or inconsistent. |
-| CodeGraph MCP | No additional server now; the pinned local CLI already supplies navigation. Rust source coverage must be checked when Rust code exists. |
-| OpenAI documentation MCP | Optional if sustained OpenAI-specific work warrants it; current official browsing and Context7 cover this assessment. No product model provider is selected merely by using Codex. |
-| Browser/Playwright MCP | OpenCode uses secret-free local `chrome-devtools` (`chrome-devtools-mcp@latest --isolated --no-usage-statistics`) per the 2026-09-29 user request; no Codex browser MCP is selected. |
-| PostgreSQL, Neo4j or Docker MCPs | No extra server for scaffolding; direct clients, Compose and integration fixtures should prove the actual application paths. Client installation alone does not prove service readiness. |
-| GitHub/GitLab or issue-tracker MCPs | Revisit when an actual remote/CI/review workflow needs capabilities beyond Git and the relevant CLI; no remote service was connected here. |
-| Vault, Kubernetes, Terraform, Confluence or customer MCPs | These are possible product-managed connections or integration fixtures. Their presence in the vision does not require developer credentials or registration in this repository. |
-| Cognee or another memory-engine MCP | Not required by Recollect's independent Rust baseline; reference material does not create a runtime dependency. |
+Keep setup, caches and launchers inside this repository. Use the specific tool
+runbook when caches are missing; do not silently write home-level configuration,
+install a global fallback or enable Graft's paid deep summarization. Preserve
+ignored reference checkouts and unrelated running services.
 
-Any later Codex development MCP belongs in `.codex/config.toml`, and any later
-OpenCode development MCP belongs in root `opencode.json`, with named environment
-inputs and a successful call recorded before claiming connectivity. The current
-governance checker permits exactly Context7 and the authorized Rust Analyzer/Graft
-stanzas in `.codex/config.toml`; it does not constrain `opencode.json`.
-A future approved Codex addition must
-update its configuration contract and focused tests together. Brain-managed
-connections belong to product contracts/runtime rather than these host files.
-
-See [dated sources and verification](../mappings/documentation-skills-and-tooling-2026-09-13.md)
-for the source adaptation, installed-tool snapshot and limits. Reference-repo
-agent files and skills do not govern Recollect. No source checkout was modified.
-
-The Bash/Python governance tools remain valid and independent of the product
-language. Running their checks does not prove Rust, UI, database or MCP behavior.
-
-## OpenCode project startup and verified parity
-
-Start `opencode` from this repository or its `web` directory. Root `opencode.json`
-configures Context7 and secret-free isolated chrome-devtools; `.opencode/agents/`
-defines default, explorer, architect, worker, qa and reviewer with the same role
-bodies as Codex. Root `AGENTS.md` governs both hosts. Invoke a specialist explicitly
-when wanted; there is no automatic delegation requirement. The shared
-`recollect-doc-router` and `recollect-doc-maintainer` skills remain in `.agents/skills/`.
-
-Open a fresh session after changing project configuration and allow host discovery
-to finish. In OpenCode 2.0.21, initial implicit-location debug output could be empty;
-root/nested explicit-location discovery subsequently returned all six roles and
-both skills. Confirm a real MCP call before calling a tool connected: React library
-resolution and chrome-devtools `list_pages` passed through an actual model session.
-
-The current personal default provider tunnel failed DNS during verification. A
-one-off model selection on a dedicated proof server worked; no personal setting
-or provider account was changed. Select an available configured model if that
-personal default remains unavailable. This does not affect project role parity.
-See [host evidence and limits](../mappings/desktop-final-acceptance-2026-10-01.md).
-Product Brain connections and OpenCode capture remain separate from developer MCPs.
+Recollect's product plugins, Brain-managed MCP connections and optional private
+runner are separate from developer MCPs. Customer/cloud credentials are not
+required merely to edit documentation or inspect the source. Add another tool or
+workflow skill only when a concrete task needs it.

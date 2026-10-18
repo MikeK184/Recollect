@@ -22,7 +22,7 @@ pub(crate) use queue::rebuild;
 pub use queue::{
     __path_get, __path_reindex, __path_retry, get, maintain_brain, reindex, retry, run_once,
 };
-pub use work::execute;
+pub use work::{execute, execute_previewed};
 
 #[derive(sqlx::FromRow)]
 pub(crate) struct Entry {

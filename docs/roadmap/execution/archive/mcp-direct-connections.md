@@ -63,7 +63,7 @@ normal MCP the primary connection; capture integration is optional.
 ## Closeout
 
 - Planned: direct MCP setup, anonymous URL form, Context7 proof.
-- Shipped: Direct HTTP Codex/Claude Code configuration and revocable browser-created token; anonymous name/URL form and Context7 preset; locally deployed and inspected. [Dated proof](../../../mappings/mcp-direct-connections-2026-09-28.md).
+- Shipped: Direct HTTP Codex/Claude Code configuration and revocable browser-created token; anonymous name/URL form and Context7 preset; locally deployed and inspected. [Dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-direct-connections-2026-09-28.md).
 - Not shipped: OAuth provider and published plugin.
 - New blockers: None.
 - Docs updated: Governing contracts, setup/catalogue runbooks, dated mapping, handoff, owning epic and indexes.

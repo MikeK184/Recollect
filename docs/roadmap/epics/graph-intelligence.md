@@ -48,15 +48,6 @@ No extra vector/text indexes in Neo4j, paid analytics license, new graph engine
 or promise that all histories fit memory is introduced. Analytics is first-usable
 scope, with queued work and explicit resource limits.
 
-## Decisions Before Implementation
-
-- Specify projection generation/publication, typed relationships, manifest
-  selection, linking evidence and supported traversal/query interfaces.
-- Specify the analytical operations/parameters, meaningful edge families,
-  memory admission, cancellation and result provenance before their slice.
-- Specify correction epochs, aggregate invalidation and historical-result
-  eligibility; test the pinned Query API/server/GDS compatibility.
-
 ## Slice Map
 
 | Slice ID | Status | Evidence | Execution | Summary |
@@ -66,20 +57,14 @@ scope, with queued work and explicit resource limits.
 | `graph-analytics` | shipped | contract-backed | pack | Delivered native GDS reports, complete qualification/invalidation, owned scratch recovery and reader concurrency with normal runtime/browser proof |
 | `graph-exploration` | shipped | contract-backed | pack | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and test-Brain runtime proof |
 | `graph-desktop-workspace` | shipped | adr-backed, contract-backed | pack | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
-| `graph-concurrent-preparation` | in-progress | contract-backed | pack | Consistent off-lock graph preparation with short current-authority/epoch publication gates and populated concurrency proof |
-| `graph-automatic-knowledge-mapping` | in-progress | adr-backed, contract-backed | pack | User-authorized Rust entities, reversible aliases, overlapping topics, progressive graph entry and incremental invalidation; independent candidate work proceeds while populated graph acceptance remains open |
+| `graph-concurrent-preparation` | in-progress | contract-backed | pack | Off-lock preparation and checked publication implemented; mixed 10k and normal-data clone gates pass locally, with normal-installation update and final closeout outstanding |
+| `graph-automatic-knowledge-mapping` | in-progress | adr-backed, contract-backed | pack | Worker, aliases, topics, overlays, navigation and privacy are locally implemented; actual extractor, grouping and canonical quality fail and no producer/recipe is selected |
 
-## Slice Dependencies
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `graph-projection-and-traversal` | `evidence-repository-publication`, `memory-retention-and-erasure` |
-| `graph-cross-repository-views` | `graph-projection-and-traversal` |
-| `graph-analytics` | `graph-cross-repository-views` |
-| `graph-exploration` | `graph-analytics` |
-| `graph-desktop-workspace` | `platform-desktop-shell` |
-| `graph-concurrent-preparation` | `graph-exploration` |
-| `graph-automatic-knowledge-mapping` | `graph-concurrent-preparation` |
+The native qualification setup also corrects the existing selector's exact
+automatic-support-excerpt lineage within `graph-automatic-knowledge-mapping`.
+This isolated small fix follows accepted capture reconciliation and independent
+support contracts: no new schema, interface, semantic match or arbitrary ancestor
+authority. The active pack records the exact gates and focused proof boundary.
 
 ## Completion Criteria
 
@@ -94,15 +79,41 @@ scope, with queued work and explicit resource limits.
 - Resource admission and concurrency limits protect capture/recall. UI progress,
   stale/error states and large-graph limitations match actual job state.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the verified final local image separately
-from remaining current-code domain and integrated acceptance. The
-[desktop guide](../../runbooks/desktop-experience.md) documents the current function
-locations. Product/proof slices stay in progress until their required checks pass;
-prior shipped domain records remain historical evidence rather than redesign proof.
+The complete October 18 graph request is partially delivered locally. The
+normal installation has not been updated and both product packs remain in
+progress. Keep Neo4j/GDS for computation; the locally delivered grouped 3D
+renderer belongs to the desktop epic.
 
-## Final desktop and tooling acceptance — 2026-10-01
+- Implemented and locally validated: short graph/maintenance publication,
+  producer-bound mapping, reversible human alias decisions, weighted topics,
+  stable IDs and edited-topic overlays, qualified navigation, privacy/older-backup
+  replay and browser integration. Mixed 10k reads pass 602/602 at p95 0.460 s;
+  both normal-data clone series pass 40/40 below two seconds.
+- Lease admission is fixed in the main checkout. Six actual-main native tests
+  pass in 5.47 s; cancelled/reclaimed work creates no requests or publications,
+  while healthy work publishes. This is local proof, not deployment or atomic
+  cancellation of an already admitted network call.
+- Actual semantic quality fails. The frozen 105-call current4 campaign yields
+  mention precision/recall 51.67%/8.73% for facts and 40.63%/3.66% for
+  reconciliation. Hybrid pair F1 is 26.36%. Canonical behavior passes 4/6;
+  exact action/citation agreement is 3/6. Earlier failed recipes remain retained.
+- Remaining: source-anchor/endpoint and historical/retirement repairs, a newly
+  frozen extractor/grouping comparison, independent label usefulness, final
+  integrated acceptance and normal-installation verification. No real producer
+  or topic recipe is selected; passing plumbing does not qualify model output.
 
-The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
+The [roadmap delivery summary and next actions](index.md#graph-delivery-status)
+are the concise current entry point. The
+[implementation evidence](../../mappings/graph-organization-implementation-2026-10-18.md)
+retains exact receipts, source/build identities, all 92 observations/460 mode rows
+and 21 unknown topic pairs per producer. Full acceptance stays with the
+[active packs](../execution/active/README.md); version/commit are N/A/uncommitted.
+
+## Delivery evidence
+
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/graph-intelligence.md).
+Dated test/deployment observations are not a current runtime health claim.

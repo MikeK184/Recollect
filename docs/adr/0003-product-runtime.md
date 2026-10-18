@@ -31,7 +31,7 @@ revocation or actual integration proof.
 
 The user authorized all 29 roadmap slices and their routine ADR/contract decisions,
 with no per-slice approval. The [foundations](../foundation/README.md) select the
-architecture; [dependency evidence](../mappings/platform-dependencies-2026-09-13.md)
+architecture; [dependency evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/platform-dependencies-2026-09-13.md)
 records the interfaces used. This decision resolves the current instruction's
 conflict with the earlier strict dependency and hashing posture before coding.
 

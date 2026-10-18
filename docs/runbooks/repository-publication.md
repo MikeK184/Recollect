@@ -84,7 +84,7 @@ Missing file text, missing artifacts, parse gaps, unsupported formats and
 unresolved targets have separate states. A manifest without a snapshot never
 selects the newest publication implicitly.
 
-The [local proof](../mappings/repository-publication-proof-2026-09-14.md) covers
+The [local proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/repository-publication-proof-2026-09-14.md) covers
 native Git/Enola isolation, shared authorization/replay, actual interrupted upload,
 browser history/mobile and a bounded real test-Brain publication. Focused commands:
 

@@ -30,3 +30,6 @@ __pycache__/
 # Local agent transcripts and generated browser/image evidence — not committed.
 /.codex/project-history/
 /output/
+
+# Claude Code personal project settings and approvals.
+/.claude/settings.local.json

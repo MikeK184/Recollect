@@ -95,4 +95,5 @@ is blocked by the sandbox. Do not run upstream `init`, global wiring, hooks,
 `--deep` or cloud attachment for this workflow. Installed dependencies and
 indexes are ignored; source manifests/lockfiles/launchers remain reviewable.
 The [dated proof](../mappings/rust-semantic-navigation-proof-2026-10-09.md)
-records coverage and limitations. Version: N/A; changes are uncommitted.
+records coverage and limitations. The implementation is committed in `f2673d7`;
+there is no application release associated with this developer setup.

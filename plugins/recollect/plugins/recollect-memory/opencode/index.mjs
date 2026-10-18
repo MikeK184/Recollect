@@ -2,12 +2,215 @@
 // Plugin.define is the identity function; a plain definition avoids runtime deps.
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { readFile } from "node:fs/promises";
+import { lstat, open, readFile, realpath } from "node:fs/promises";
+import { dirname, isAbsolute, join, parse, relative, resolve } from "node:path";
+import { homedir } from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
 
 const executable = fileURLToPath(
   new URL("../bin/recollect-plugin", import.meta.url),
 );
+
+const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+const compactUUID = /^[a-f0-9]{32}$/;
+
+function pluginDataRoot() {
+  return process.env.RECOLLECT_PLUGIN_DATA ??
+    (process.platform === "darwin"
+      ? join(homedir(), "Library/Application Support/Recollect/plugin")
+      : join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share"), "recollect/plugin"));
+}
+
+function checkedAbsolute(value) {
+  if (typeof value !== "string" || !isAbsolute(value) || value !== resolve(value) || /[\x00-\x1f]/.test(value)) {
+    throw new Error("invalid_native_path");
+  }
+  return value;
+}
+
+async function checkedDirectory(value) {
+  const path = checkedAbsolute(value);
+  let current = parse(path).root;
+  for (const segment of relative(current, path).split(/[\\/]/).filter(Boolean)) {
+    current = join(current, segment);
+    const info = await lstat(current);
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("unsafe_native_directory");
+  }
+  if (await realpath(path) !== path) throw new Error("noncanonical_native_directory");
+  return path;
+}
+
+async function checkedText(path, limit, privateFile = false) {
+  checkedAbsolute(path);
+  await checkedDirectory(dirname(path));
+  const info = await lstat(path);
+  if (!info.isFile() || info.isSymbolicLink() || info.size > limit || (info.mode & 0o111) || (privateFile && (info.mode & 0o077))) {
+    throw new Error("unsafe_native_file");
+  }
+  // Bound reads even when an owned file grows after stat. Symlink ancestors are
+  // checked before opening and the final open descriptor is compared to lstat.
+  const file = await open(path, "r");
+  try {
+    const opened = await file.stat();
+    if (!opened.isFile() || opened.dev !== info.dev || opened.ino !== info.ino || opened.size > limit) throw new Error("unsafe_native_file");
+    const bytes = Buffer.alloc(limit + 1);
+    const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
+    if (bytesRead > limit) throw new Error("native_file_too_large");
+    const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, bytesRead));
+    if (content.includes("!`")) throw new Error("invalid_native_dynamic_context");
+    return content;
+  } finally {
+    await file.close();
+  }
+}
+
+function provenance(content) {
+  const match = content.match(/^Recollect manager-published guidance, last fetched export\. Provenance: `(\{[^\n]+\})`\.$/m);
+  if (!match) throw new Error("native_provenance_missing");
+  return JSON.parse(match[1]);
+}
+
+function nativeDescription(content, name) {
+  const header = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
+  if (!header) throw new Error("invalid_native_frontmatter");
+  const lines = header.split(/\r?\n/);
+  // The Rust exporter emits exactly these benign JSON-quoted YAML fields.
+  if (lines.length !== 2 || !lines[0].startsWith("name: ") || !lines[1].startsWith("description: ")) throw new Error("invalid_native_frontmatter");
+  const actualName = JSON.parse(lines[0].slice(6));
+  const description = JSON.parse(lines[1].slice(13));
+  if (actualName !== name || typeof description !== "string" || !description.trim() || [...description].length > 1024) throw new Error("invalid_native_frontmatter");
+  return description;
+}
+
+/** One native transform, updated from bounded private runtime snapshots. Calling
+ * this helper requests a registry rebuild; it never claims model consumption. */
+export async function createNativeSkillReload(ctx, { dataRoot = pluginDataRoot() } = {}) {
+  checkedAbsolute(dataRoot);
+  let current = new Map();
+  let currentWorkspace;
+  let currentBrain;
+  let currentScope;
+  let known = new Map();
+  let signature;
+  let tail = Promise.resolve();
+  let needsReload = false;
+  let registration;
+  let registered = false;
+  const transform = (editor) => {
+    for (const candidate of editor.list()) {
+      if (typeof candidate.path !== "string" || !known.has(candidate.path) || typeof candidate.content !== "string") continue;
+      try {
+        const source = provenance(candidate.content);
+        const owner = known.get(candidate.path);
+        if (source.bundle_id !== owner.id || source.brain_id !== owner.brain_id) continue;
+      } catch { continue; }
+      // Deduplicate only recognized generated exports. An unrelated local skill,
+      // even one with a similar name, remains the host's native entry.
+      editor.remove(candidate.id);
+    }
+    for (const skill of current.values()) {
+      const candidate = editor.get(skill.id);
+      if (!candidate) editor.add(skill);
+      // A foreign entry with the same ID is never silently overwritten.
+    }
+  };
+
+  const refresh = (reply) => {
+    const work = tail.then(async () => {
+      const pointer = reply?.recollectNativeSkillsSnapshot ?? reply;
+      if (!pointer || typeof pointer.snapshot !== "string") return { state: "unchanged", changed: false, count: current.size, native_loaded: false };
+      // The registry is location-wide. A conflicting task uses scoped MCP while
+      // the active peer's native catalog keeps its live references.
+      if (["scope_busy", "native_scope_busy"].includes(pointer.state)) return { state: "scope_busy", changed: false, count: current.size, native_loaded: false };
+      let boundary;
+      try {
+        const workspace = await checkedDirectory(pointer.workspace);
+        if (workspace === parse(workspace).root || workspace === homedir()) throw new Error("invalid_native_workspace");
+        const catalogue = join(dataRoot, "native-skills/catalogues");
+        const snapshotPath = checkedAbsolute(pointer.snapshot);
+        const basename = relative(catalogue, snapshotPath);
+        const fileMatch = basename.match(/^([a-f0-9-]{36})-([a-f0-9-]{36})\.json$/);
+        if (!fileMatch || !uuidPattern.test(fileMatch[1]) || !uuidPattern.test(fileMatch[2])) throw new Error("native_snapshot_path_mismatch");
+        const snapshot = JSON.parse(await checkedText(snapshotPath, 1024 * 1024, true));
+        if (snapshot.workspace !== workspace || !uuidPattern.test(snapshot.scope_id) || !uuidPattern.test(snapshot.task_id) || !uuidPattern.test(snapshot.brain_id) || snapshot.task_id !== fileMatch[2] || !Array.isArray(snapshot.entries) || snapshot.entries.length > 64) throw new Error("invalid_native_snapshot");
+        if (currentScope && (currentScope !== snapshot.scope_id || currentBrain !== snapshot.brain_id || currentWorkspace !== workspace)) {
+          boundary = { workspace, brain: snapshot.brain_id, scope: snapshot.scope_id };
+        }
+        const next = new Map();
+        const nextKnown = new Map(known);
+        const ownedExports = snapshot.owned_exports ?? [];
+        if (!Array.isArray(ownedExports) || ownedExports.length > 192) throw new Error("invalid_native_snapshot_ownership");
+        for (const owner of ownedExports) {
+          const host = { codex: [".agents", "codex"], claude_code: [".claude", "claude"], opencode: [".opencode", "opencode"] }[owner.host];
+          if (!host || !uuidPattern.test(owner.id) || owner.brain_id !== snapshot.brain_id || owner.path !== join(workspace, host[0], "skills", `recollect-${host[1]}-${owner.id.replaceAll("-", "")}`, "SKILL.md")) throw new Error("invalid_native_snapshot_ownership");
+          nextKnown.set(owner.path, owner);
+        }
+        for (const entry of snapshot.entries) {
+          if (!uuidPattern.test(entry.id) || entry.brain_id !== snapshot.brain_id || entry.host !== "opencode" || !Number.isInteger(entry.version) || entry.version <= 0 || entry.environment_id != null && !uuidPattern.test(entry.environment_id)) throw new Error("invalid_native_snapshot_entry");
+          const compact = entry.id.replaceAll("-", "");
+          if (!compactUUID.test(compact)) throw new Error("invalid_native_snapshot_entry");
+          const name = `recollect-opencode-${compact}`;
+          const path = join(workspace, ".opencode/skills", name, "SKILL.md");
+          if (entry.native_name !== name || entry.path !== path || next.has(name)) throw new Error("native_snapshot_path_mismatch");
+          const content = await checkedText(path, 132 * 1024);
+          const source = provenance(content);
+          if (source.bundle_id !== entry.id || source.brain_id !== snapshot.brain_id || source.version !== entry.version || source.bundle_environment_id !== (entry.environment_id ?? null)) throw new Error("native_snapshot_provenance_mismatch");
+          const description = nativeDescription(content, name);
+          next.set(name, { id: name, name, description, path, content, autoinvoke: true });
+          nextKnown.set(path, { id: entry.id, brain_id: snapshot.brain_id, host: "opencode", path });
+        }
+        if (nextKnown.size > 4096) throw new Error("native_ownership_limit");
+        const nextSignature = JSON.stringify([workspace, snapshot.brain_id, snapshot.scope_id,
+          [...next.values()].sort((a, b) => a.path.localeCompare(b.path)),
+          ownedExports.toSorted((a, b) => a.path.localeCompare(b.path))]);
+        const changed = signature !== nextSignature;
+        // Only a complete valid snapshot changes the transform. A transport,
+        // permission, malformed or partial-file failure preserves prior state.
+        if (changed) {
+          current = next;
+          currentWorkspace = workspace;
+          currentBrain = snapshot.brain_id;
+          currentScope = snapshot.scope_id;
+          known = nextKnown;
+          signature = nextSignature;
+          needsReload = true;
+        }
+        if (!registered) {
+          // OpenCode 2.0.21 installs its filesystem source after plugin setup.
+          // Register once on the first actual context snapshot, after native
+          // catalog initialization, so this deduplication runs after that source.
+          await ctx.skill.list?.();
+          registration = await ctx.skill.transform(transform);
+          registered = true;
+        }
+        if (needsReload) {
+          await ctx.skill.reload();
+          needsReload = false;
+        }
+        return { state: changed ? "refresh_requested" : "unchanged", changed, count: current.size, brain_id: currentBrain, scope_id: currentScope, native_loaded: false };
+      } catch {
+        if (boundary) {
+          // A verified scope transition withdraws the previous transform even
+          // if a new resource is missing or the subsequent download was partial.
+          current = new Map();
+          currentWorkspace = boundary.workspace;
+          currentBrain = boundary.brain;
+          currentScope = boundary.scope;
+          signature = undefined;
+          needsReload = true;
+          if (registered) {
+            try { await ctx.skill.reload(); needsReload = false; } catch {}
+          }
+        }
+        return { state: "unavailable", changed: Boolean(boundary), count: current.size, native_loaded: false };
+      }
+    });
+    tail = work.catch(() => {});
+    return work;
+  };
+  refresh.dispose = async () => { await tail; await registration?.dispose?.(); };
+  return refresh;
+}
 
 export function invoke(payload, program = executable) {
   return new Promise((resolve) => {
@@ -42,6 +245,7 @@ export function invoke(payload, program = executable) {
 export default {
   id: "recollect-memory",
   async setup(ctx) {
+    const reloadNativeSkills = await createNativeSkillReload(ctx);
     const controller = new AbortController();
     // Per-session queues preserve event order without serializing different sessions.
     const tails = new Map();
@@ -72,7 +276,7 @@ export default {
           ? (sessions.get(session.parentID) ??
             (await ctx.session.get({ sessionID: session.parentID })))
           : null;
-        return invoke({
+        const reply = await invoke({
           hook_event_name: event,
           session_id: id,
           ...(parent
@@ -85,6 +289,8 @@ export default {
           host_version: ctx.app.version,
           ...fields,
         });
+        await reloadNativeSkills(reply);
+        return reply;
       });
     const captureReply = async (id, messages) => {
       const pending = pendingReplies.get(id);
@@ -309,6 +515,7 @@ export default {
       await Promise.allSettled(
         [...sessions.keys()].map((id) => emit(id, "SessionEnd")),
       );
+      await reloadNativeSkills.dispose();
     };
   },
 };

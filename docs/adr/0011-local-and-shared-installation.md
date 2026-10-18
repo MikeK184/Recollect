@@ -33,7 +33,7 @@ selects Compose, native companions, private shared HTTPS and resource limits.
 The owning slice depends only on completed platform work, so implementation may
 proceed independently while later MCP integration tests await Docker recovery.
 Official Compose dependency conditions and Caddy supplied-certificate support
-are verified in the [mapping](../mappings/installation-2026-09-22.md).
+are verified in the [mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/installation-2026-09-22.md).
 
 ## Consequences
 

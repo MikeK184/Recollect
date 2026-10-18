@@ -60,7 +60,7 @@ projected. This workflow makes no model request or customer checkout read.
 ./scripts/validate.sh
 ```
 
-The [dated evidence](../mappings/graph-exploration-interfaces-2026-09-22.md)
+The [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-exploration-interfaces-2026-09-22.md)
 distinguishes actual canonical/native API proof, real browser interactions, and
 the separate synthetic 500-node/2,000-edge renderer stress case. Renderer
 fixtures never establish canonical eligibility or graph completeness.

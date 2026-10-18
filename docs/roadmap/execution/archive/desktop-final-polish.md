@@ -64,7 +64,7 @@ Work type: product
 ## Closeout
 
 - Planned: Authorized Graph, Connections, setup and Privacy polish with measured deferred loading.
-- Shipped: Secondary Graph tools menu; loaded-name/environment connection filtering and compact cards; truthful Brain-wide activity action at setup completion; direct permission-aware Privacy section actions; lazy Knowledge boundary and named heavy presentation imports in the same files. Entry 842,411 → 607,350 bytes; actual Brain chooser 755,589 bytes across 14 chunks. [Dated evidence](../../../mappings/desktop-visual-closeout-2026-10-04.md).
+- Shipped: Secondary Graph tools menu; loaded-name/environment connection filtering and compact cards; truthful Brain-wide activity action at setup completion; direct permission-aware Privacy section actions; lazy Knowledge boundary and named heavy presentation imports in the same files. Entry 842,411 → 607,350 bytes; actual Brain chooser 755,589 bytes across 14 chunks. [Dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-visual-closeout-2026-10-04.md).
 - Not shipped: Equivalent total network/speedup claims, file-size partitioning, new dependencies, new policies and new runtime controls are outside scope.
 - New blockers: None.
 - Docs updated: Desktop contract, this archived pack, epic and indexes, dated evidence and handoff.

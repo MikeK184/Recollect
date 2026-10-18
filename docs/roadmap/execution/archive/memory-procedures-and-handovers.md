@@ -67,7 +67,7 @@ incorporate the user's later clarification before dependent implementation.
 ## Closeout
 
 - Planned: Structured procedures/outcomes, multi-repository handovers, governed synthesis, autonomous learning/revision/maintenance, canonical lifecycle and UI.
-- Shipped: Typed forms and observations, exact contributions, governed synthesis, standing-policy catch-up, policy acceptance, same-identity reconciliation, retirement, handover refresh, bounded retries, erasure/older-restore fences and browser controls. [Dated proof](../../../mappings/procedures-and-handovers-proof-2026-09-14.md) records the actual local runtime and synthetic demo with zero individual review decisions.
+- Shipped: Typed forms and observations, exact contributions, governed synthesis, standing-policy catch-up, policy acceptance, same-identity reconciliation, retirement, handover refresh, bounded retries, erasure/older-restore fences and browser controls. [Dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/procedures-and-handovers-proof-2026-09-14.md) records the actual local runtime and synthetic demo with zero individual review decisions.
 - Not shipped: No unmet slice acceptance. Session capture, retrieval/graphs and session-derived handovers retain their named successor slices. Procedure execution and universal semantic equivalence are explicit non-goals; uncertain provider outcomes remain visible and can require an explicit replacement attempt.
 - New blockers: None.
 - Docs updated: ADR 0006, autonomous/procedure/provider contracts and indexes, foundations, proof mapping, model/procedure/claims/review/local-development runbooks, README, historical Atlas amendment, epic and execution indexes.

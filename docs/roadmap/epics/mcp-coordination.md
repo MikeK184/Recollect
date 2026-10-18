@@ -10,6 +10,13 @@ delivery, local/central/private execution and safe process lifecycle.
 
 ## Governing Sources
 
+- [Agent coordination ADR](../../adr/0023-agent-to-agent-coordination.md)
+- [Brain-scoped coordination contract](../../contracts/mcp-agent-coordination.md)
+
+- [Brain-managed skills ADR](../../adr/0022-brain-managed-skills.md)
+- [Managed skills and instructions contract](../../contracts/mcp-managed-skills.md)
+- [Native skill lifetime and refresh contract](../../contracts/mcp-native-skill-reload.md)
+
 - [Plugin-managed memory ADR](../../adr/0018-plugin-managed-agent-memory.md)
 - [Plugin session contract](../../contracts/mcp-plugin-session-memory.md)
 
@@ -60,19 +67,9 @@ production knowledge or retrieving a runbook does not grant production execution
 No generic shell sandbox, unrestricted arbitrary executable registration or
 universal catalogue of customer connectors is introduced.
 
-## Decisions Before Implementation
-
-- Specify definition/connection/profile ownership, approved schema discovery,
-  permission evaluation and runtime configuration before the catalogue slice.
-- Specify transport authentication, startup/reuse identity, leases, cancellation,
-  idle behavior and unknown-completion reconciliation before execution slices.
-- Specify Vault auth/paths/credential delivery and rotation with explicit test
-  targets; define private-runner trust and supported connector fixtures. Never
-  embed credentials in contracts, model arguments or captured output.
-
 ## Slice Map
 
-The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 proposes automatic digest scheduling and delivery of a compact canonical project
 brief through the supported plugin/recall path. Memory and retrieval retain primary
 ownership; this epic owns host lifecycle, immutable attribution and delivery proof.
@@ -84,6 +81,9 @@ MCP clients is implied.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `mcp-agent-coordination` | shipped | adr-backed, contract-backed | pack | Cross-machine presence, explainable work overlap, durable peer messages, SSE/pull/hooks and narrow A2A 1.0 adapter; synthetic macOS/Ubuntu proof passed 15 checks |
+| `mcp-native-skill-reload` | shipped | adr-backed, contract-backed | pack | Native Codex/Claude/OpenCode exports, cross-host scope leases, temporary/retained lifetime and actual host reload/activation proof |
+| `mcp-managed-skills` | shipped | adr-backed, contract-backed | pack | Brain/environment managed guidance, progressive MCP fetch, plugin cache lifetime and manager UI |
 | `mcp-plugin-workflow-repair` | shipped | contract-backed | pack | Supported evidence tools, observed usage, bounded learning recovery and compact visible policy/token UI |
 | `mcp-ubuntu-private-runner-proof` | shipped | contract-backed | pack | Real Ubuntu filesystem MCP with separate reader caller, permission/boundary denials, offline recovery and fresh OS-store reuse |
 | `mcp-equivalent-http-schema-inspection` | shipped | contract-backed | pack | Bounded equivalent Draft 7 declaration conversion during HTTP inspection; strict manifest approval retained |
@@ -105,28 +105,6 @@ MCP clients is implied.
 | `mcp-brain-agent-roster` | shipped | contract-backed | pack | Per-Brain agent roster (plugin vs MCP-token agents, host kind, brain-scoped last use), Devices out of global nav with hidden pairing deep link, two-integration copy cleanup and the external-MCP-through-Brain proof |
 | `agents-surface-refinement` | shipped | contract-backed | pack | Per-Brain roster shows only agents used on this Brain; new global `/agents` page lists every agent with the Brains it is used in and last use there; account-scoped `GET /api/agents` read |
 
-## Slice Dependencies
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `mcp-plugin-workflow-repair` | `mcp-plugin-session-memory`, `agents-surface-refinement` |
-| `mcp-ubuntu-private-runner-proof` | `mcp-vault-and-private-runners`, `mcp-memory-and-workspace-tools` |
-| `mcp-plugin-session-memory` | `mcp-plugin-direct-auth`, `mcp-codex-plugin`, `evidence-session-capture`, `mcp-vault-and-private-runners` |
-| `mcp-direct-auth-repair` | `mcp-direct-connections` |
-| `mcp-catalogue-and-profiles` | `platform-durable-work`, `evidence-workspace-scope` |
-| `mcp-runtime-and-credentials` | `mcp-catalogue-and-profiles` |
-| `mcp-vault-and-private-runners` | `mcp-runtime-and-credentials` |
-| `mcp-memory-and-workspace-tools` | `mcp-runtime-and-credentials`, `retrieval-graph-fusion`, `memory-procedures-and-handovers`, `evidence-session-capture` |
-| `mcp-observation-capture` | `mcp-vault-and-private-runners`, `mcp-memory-and-workspace-tools` |
-| `mcp-desktop-setup` | `platform-desktop-shell` |
-| `mcp-codex-plugin` | `mcp-memory-and-workspace-tools`, `evidence-session-capture` |
-| `mcp-plugin-direct-auth` | `mcp-memory-and-workspace-tools`, `mcp-runtime-and-credentials` |
-| `mcp-direct-connections` | `mcp-desktop-setup`, `mcp-memory-and-workspace-tools` |
-| `mcp-successor-cleanup` | `mcp-plugin-direct-auth` |
-| `desktop-connection-authority` | `mcp-desktop-setup`, `evidence-desktop-workflows`, `desktop-knowledge-surface` |
-| `mcp-brain-agent-roster` | `desktop-connection-authority` |
-| `agents-surface-refinement` | `mcp-brain-agent-roster` |
-
 ## Completion Criteria
 
 - Discovery lists authorized capabilities without starting dormant backends;
@@ -142,125 +120,36 @@ MCP clients is implied.
 - Codex/Claude memory/workspace integration refreshes applicable context after
   scope changes without relabeling in-flight tasks or inventing missing events.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the final local image separately from
-remaining cross-domain acceptance. The [mcp-desktop-setup closeout](../execution/archive/mcp-desktop-setup.md)
-records this owner’s completed checks. The [desktop guide](../../runbooks/desktop-experience.md)
-documents current function locations. Other owners keep unfinished criteria active;
-prior shipped domain records remain historical evidence rather than redesign proof.
+[Managed skills](../execution/archive/mcp-managed-skills.md) are locally delivered:
+administrator-authored Brain/environment guidance, scoped progressive HTTP/MCP
+fetch, plugin metadata/local-copy lifecycle and the Agents Skills management tab.
+Focused database, real MCP, protocol/plugin, mocked browser and documentation
+proof passed; see the [first evidence](../../mappings/managed-skills-host-consumption-2026-10-18.md).
+The [native successor](../execution/archive/mcp-native-skill-reload.md) adds owned
+Codex/Claude/OpenCode exports, cross-host scope leases, temporary/retained lifetime
+and actual same-process native activation/reload proof for all three hosts.
+Its [evidence](../../mappings/native-skill-reload-host-proof-2026-10-18.md) records
+94 passing agent tests, nine JavaScript adapter tests and isolated installed-host
+results. Updating the user's installed plugin or normal deployment remains separate.
 
-## 2026-09-29 wiring split
+The [agent coordination pack](../execution/archive/mcp-agent-coordination.md) is
+locally delivered. Its shared session projection preserves private workspace
+tasks, finds topic overlap before edits and planned-file overlap, and supports
+durable peer negotiation through SSE/pull, MCP, native hooks/CLI and A2A 1.0.
+The [dated proof](../../mappings/agent-coordination-proof-2026-10-18.md) records
+15 passing macOS/Ubuntu checks and zero canonical model requests. Installed-model
+consumption, a second physical Mac and production deployment remain separate claims.
 
-[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) resolves the
-placement conflict between the desktop contract and the managed-experience
-amendment: Agents becomes the sole incoming-connection home and Connections owns
-outbound Brain-managed MCP only. The `desktop-connection-authority` slice delivers
-it. Device authority, profile grants, runner trust, credential handling and the
-shipped device dedupe behavior are untouched; this is presentation and route
-resolution only.
+Managed connections, independent Use/permission checks, Vault/private runners and plugin source workflows are delivered. The direct-token pack retains final native-host launch acceptance after an OpenCode service timeout; fresh Claude launch and rebuilt-plugin acceptance remain separate from successful HTTP/configuration proof. Preserve the recorded host-specific limits when continuing.
 
-## 2026-10-01 local closeout
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-[desktop-connection-authority](../execution/archive/desktop-connection-authority.md) are locally delivered with [dated validation and runtime limits](../../mappings/desktop-continuation-2026-10-01.md).
-The user prioritizes normal laptop and larger desktop displays; additional
-small-screen and keyboard polish is optional under the [desktop contract](../../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01).
+## Delivery evidence
 
-## Installed-host plugin closeout — 2026-10-01
-
-The [plugin pack](../execution/archive/mcp-codex-plugin.md) is shipped. Actual
-Codex skill use, scoped contribution and fresh HTTP/native recall, OpenCode native
-stdio workspace.list and the CLI collision refusal pass. User-completed Keychain
-approval is followed by successful fresh-process access. The disposable Brain,
-credentials and dedicated host server were cleaned up; original inventory and
-readiness remain intact. See [dated proof and limits](../../mappings/desktop-final-acceptance-2026-10-01.md).
-Marketplace publication, OAuth and OpenCode capture hooks remain separate non-goals.
-
-## Plugin replacement closeout — 2026-10-02
-
-The [complete plugin](../execution/archive/mcp-plugin-session-memory.md) replaces
-separate companion setup with native Codex/Claude/OpenCode installation, OS-store
-connection, automatic capture/learning/cited recall, scope-safe recovery and
-optional `--with-runner` execution. Installed host and bundled checkout-publication
-proofs pass. The local API/worker/UI run migration 030 with original inventory
-preserved. [Final evidence](../../mappings/plugin-session-memory-2026-10-01.md)
-distinguishes Linux/macOS host versions, fresh checks, focused reruns and limits.
-This supersedes the earlier OpenCode-capture deferral; marketplace/OAuth remain
-non-goals. All slices in this epic are delivered locally and uncommitted.
-
-## 2026-10-02 brain agent roster
-
-The user's 2026-10-02 direction governs the reopened slice: exactly two
-integration types (Recollect plugin, direct MCP access token), everything scoped
-to a Brain, the workspace-level Devices page out of the main navigation with
-agent management inside each Brain's Agents surface grouped by user ("mike has N
-agents, active or not"), no `recollect-agent`/companion wording in the UI, and an
-end-to-end proof that a connected host can use an external MCP through the
-Brain's MCP with central or local placement. Shipped 2026-10-02: migration 031,
-issuer markers, the `GET /api/brains/{brain}/agents` roster read, the Devices
-nav removal with the pairing deep link preserved, the two-integration copy
-cleanup, and the live test-Brain host → Brain agent MCP → external Context7 call with
-central placement and retained output. The [archived pack](../execution/archive/mcp-brain-agent-roster.md)
-and [evidence](../../mappings/brain-agent-roster-2026-10-02.md) record the
-checks; contract amendments land in
-[device pairing](../../contracts/platform-device-pairing.md),
-[plugin direct auth](../../contracts/mcp-plugin-direct-auth.md) and the
-[desktop experience](../../contracts/desktop-experience.md). The local-placement
-stdio variant remains configuration-only on this host (no packaged runner
-helper; live bridge runs without `--with-runner`).
-
-## 2026-10-03 agent surface refinement
-
-The user's 2026-10-03 direction refined the roster: a Brain's roster shows only
-agents that have been used on it, and a global `/agents` page (third global-nav
-entry) lists every account agent with the Brains it is used in and last use
-there. Shipped 2026-10-03: the account-scoped `GET /api/agents` read (owner sees
-all account devices, members their own; per-agent brain usage limited to
-accessible Brains), the global Agents page, and the used-only per-Brain roster
-with an "All account agents" link. The [archived
-pack](../execution/archive/agents-surface-refinement.md) and
-[evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md) record
-the checks; the contract amendment lands in
-[plugin direct auth](../../contracts/mcp-plugin-direct-auth.md).
-
-## Browser feedback closeout — 2026-10-05
-
-Direct browser config and Access tokens are implemented; native configuration recognition and real HTTP MCP recall pass. The copy-ready pack stays active because the installed OpenCode background service prevented fresh native launch acceptance. Safe optional icon cache/render acceptance is complete.
-
-[Coordinated delivery, validation and limits](../../mappings/desktop-browser-management-2026-10-05.md). Version N/A; work uncommitted, no push or external release.
-
-## Connection inspection follow-up closeout — 2026-10-06
-
-- Planned: Address marked Connections metadata/loading/formatting and Exa Test concerns.
-- Shipped: Clear actual badges/read states, formatted descriptions and JSON, structured
-  call details and bounded equivalent schema inspection on the ready local stack.
-- Not shipped: Broad schema migration, automatic tool execution or new grants.
-- New blockers: None for this follow-up; existing native-host work stays separate.
-- Docs updated: Contracts, archived packs, indexes, handoff and [current evidence](../../mappings/mcp-inspection-readability-2026-10-06.md).
-- Validation: Pure/owned backend fixtures, build/lint/governance, actual CUA read/check/
-  expiry/width proof, preserved runtime invariants and independent source/pixel review.
-- Version: N/A.
-- Commit: Uncommitted.
-
-## Plugin workflow repair closeout — 2026-10-07
-
-- Planned: Supported source workflow, observed agent identity, bounded learning
-  recovery and visible policy/token management.
-- Shipped: Scoped source import/list/inspect, actual Brain/host usage, invalid
-  candidate and budget-aware recovery, whole reconciliation inputs within bounds,
-  visible Processing limits and compact Access tokens; local ready deployment
-  and installed compatible native workflow verified.
-- Not shipped: Paid completion of test-Brain's budget-blocked runs, OpenCode automatic
-  capture retest and local Keychain trust acceptance of the new native binary.
-- New blockers: None for the delivered compatible workflow. Existing native-token
-  acceptance remains separate; the trusted runtime preserves current connectivity.
-- Docs updated: Contracts, runbooks, plugin guidance, archived pack/index,
-  active/epic/mapping indexes and
-  [dated evidence](../../mappings/plugin-workflow-repair-2026-10-07.md).
-- Validation: Focused source/usage and learning recovery fixtures, library tests,
-  all 19 semantic regressions after fresh-import performance repair, web/API/
-  formatting/governance, real browser Save/Cancel/search/history/revoke-cancel,
-  normal Compose readiness and installed 26-tool source reads.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/mcp-coordination.md).
+Dated test/deployment observations are not a current runtime health claim.

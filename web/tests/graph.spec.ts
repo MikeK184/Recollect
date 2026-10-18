@@ -1,4 +1,9 @@
-import { loadGraph, openGraphDrawer, openDetails } from "./desktop-helpers";
+import {
+  use2DGraph,
+  loadGraph,
+  openGraphDrawer,
+  openDetails,
+} from "./desktop-helpers";
 import { test, expect as baseExpect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 const expect = baseExpect.configure({ timeout: 20_000 });
@@ -75,9 +80,14 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
           ],
         },
       });
-      const reviewed = await post(`/api/brains/${brain.id}/claims/${claim.claim_id}/review`, {
-        base_revision: claim.id, action: "accept", reason: "Synthetic evidence checked by the fixture owner.",
-      });
+      const reviewed = await post(
+        `/api/brains/${brain.id}/claims/${claim.claim_id}/review`,
+        {
+          base_revision: claim.id,
+          action: "accept",
+          reason: "Synthetic evidence checked by the fixture owner.",
+        },
+      );
       claim = reviewed.claims[0].revision;
       rows.push({
         source: source.id,
@@ -108,7 +118,7 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     )
       canonicalView = request.postDataJSON();
   });
-  await page.goto(`/brains/${fixture.brain}/graph`);
+  await page.goto(`/brains/${fixture.brain}/graph?tab=evidence`);
   const panel = page.locator("body");
   await expect(
     page.getByRole("region", { name: "Evidence graphs", exact: true }),
@@ -131,11 +141,7 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     .toBe(true);
   const load = () => loadGraph(page);
   await load();
-  await openGraphDrawer(
-    page,
-    "Entities",
-    "Entities",
-  );
+  await openGraphDrawer(page, "Entities", "Entities");
   await expect(panel.getByTestId("graph-entity")).toHaveCount(4);
   await page.keyboard.press("Escape");
   await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
@@ -147,10 +153,11 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   await page.keyboard.press("Escape");
   const explorer = page.locator("body");
   const canvas = explorer.getByTestId("graph-canvas");
+  await use2DGraph(page);
   await expect(canvas).toHaveAttribute("data-ready", "true");
   await expect(canvas.locator("canvas").first()).toBeVisible();
   await expect(explorer.getByTestId("exploration-counts")).toHaveText(
-    "4 loaded entities · 2 directed relationships",
+    "4 loaded nodes · 2 directed relationships",
   );
   expect(canonicalView).toBeTruthy();
   const graphReads = await page.evaluate(
@@ -189,9 +196,12 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
       page.getByRole("option", { name: /^Amber graph service ·/ }),
     ).toBeVisible();
     await page.getByRole("option", { name: /^Amber graph service ·/ }).click();
-    await expect(explorer.getByRole("complementary", { name: "Selected graph evidence", exact: true })).toContainText(
-      "Amber graph service",
-    );
+    await expect(
+      explorer.getByRole("complementary", {
+        name: "Selected graph evidence",
+        exact: true,
+      }),
+    ).toContainText("Amber graph service");
     graphInspections.push(Math.round((performance.now() - started) * 10) / 10);
     await page.keyboard.press("Escape");
     await expect(
@@ -242,7 +252,10 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   });
   await canvas.click({ position: { x: point.x, y: point.y } });
   await expect(
-    explorer.getByRole("complementary", { name: "Selected graph evidence", exact: true }),
+    explorer.getByRole("complementary", {
+      name: "Selected graph evidence",
+      exact: true,
+    }),
     JSON.stringify(point),
   ).toContainText(point.label);
   await page.keyboard.press("Escape");
@@ -257,20 +270,24 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   await entity.click();
   await entity.fill("Amber graph service");
   await page.getByRole("option", { name: /^Amber graph service ·/ }).click();
-  await expect(explorer.getByRole("complementary", { name: "Selected graph evidence", exact: true })).toContainText(
-    "Amber graph service",
-  );
+  await expect(
+    explorer.getByRole("complementary", {
+      name: "Selected graph evidence",
+      exact: true,
+    }),
+  ).toContainText("Amber graph service");
   await openDetails(explorer, "Details & actions");
   await explorer
     .getByRole("button", { name: "Explore connections", exact: true })
     .click();
   await expect(explorer.getByTestId("exploration-counts")).toHaveText(
-    "2 loaded entities · 1 directed relationships",
+    "2 loaded nodes · 1 directed relationships",
   );
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("dialog", { name: "Knowledge lineage", exact: true }),
   ).not.toBeVisible();
+  await use2DGraph(page);
   await explorer.getByRole("button", { name: "View", exact: true }).click();
   const relationship = explorer.getByRole("textbox", {
     name: "Inspect graph relationship",
@@ -284,9 +301,12 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     })
     .click();
   await page.keyboard.press("Escape");
-  await expect(explorer.getByRole("complementary", { name: "Selected graph evidence", exact: true })).toContainText(
-    "Amber graph service → Amber graph evidence",
-  );
+  await expect(
+    explorer.getByRole("complementary", {
+      name: "Selected graph evidence",
+      exact: true,
+    }),
+  ).toContainText("Amber graph service → Amber graph evidence");
   await openDetails(explorer, "Details & actions");
   await explorer
     .getByRole("button", { name: "Inspect target entity", exact: true })
@@ -302,22 +322,14 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     .getByRole("dialog")
     .getByRole("button", { name: "Back to graph", exact: true })
     .click();
-  await openGraphDrawer(
-    page,
-    "Explore relationships",
-    "Explore",
-  );
+  await openGraphDrawer(page, "Explore relationships", "Explore");
   await explorer
     .getByRole("button", { name: "Show eligible overview", exact: true })
     .click();
   await expect(explorer.getByTestId("exploration-counts")).toHaveText(
-    "4 loaded entities · 2 directed relationships",
+    "4 loaded nodes · 2 directed relationships",
   );
-  await openGraphDrawer(
-    page,
-    "Entities",
-    "Entities",
-  );
+  await openGraphDrawer(page, "Entities", "Entities");
   const amber = panel
     .getByTestId("graph-entity")
     .filter({ has: page.getByText("Amber graph service", { exact: true }) });
@@ -359,8 +371,9 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     .getByRole("button", { name: "Show shortest path on canvas", exact: true })
     .click();
   await expect(explorer.getByTestId("exploration-counts")).toHaveText(
-    "2 loaded entities · 1 directed relationships",
+    "2 loaded nodes · 1 directed relationships",
   );
+  await use2DGraph(page);
   await explorer
     .getByRole("button", { name: "Zoom graph in", exact: true })
     .focus();
@@ -368,11 +381,7 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   await explorer
     .getByRole("button", { name: "Fit graph", exact: true })
     .click();
-  await openGraphDrawer(
-    page,
-    "Entities",
-    "Entities",
-  );
+  await openGraphDrawer(page, "Entities", "Entities");
   await source
     .getByRole("button", { name: "Inspect evidence", exact: true })
     .click();
@@ -391,11 +400,7 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await page.waitForTimeout(3400);
   expect({ paths, views, rebuilds }).toEqual(afterExplicit);
-  await openGraphDrawer(
-    page,
-    "Entities",
-    "Entities",
-  );
+  await openGraphDrawer(page, "Entities", "Entities");
   const cobalt = panel
     .getByTestId("graph-entity")
     .filter({ has: page.getByText("Cobalt graph service", { exact: true }) });
@@ -434,21 +439,14 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     })
     .click();
   await load();
-  await openGraphDrawer(
-    page,
-    "Entities",
-    "Entities",
-  );
+  await openGraphDrawer(page, "Entities", "Entities");
   await expect(panel.getByTestId("graph-entity")).toHaveCount(4);
   await page.keyboard.press("Escape");
+  await use2DGraph(page);
   await expect(canvas).toHaveAttribute("data-ready", "true");
   // An actual invalid center must replace the graph with an error, not retain
   // a formerly successful canvas. A subsequent explicit overview recovers it.
-  await openGraphDrawer(
-    page,
-    "Explore relationships",
-    "Explore",
-  );
+  await openGraphDrawer(page, "Explore relationships", "Explore");
   await explorer
     .getByLabel("Exploration center", { exact: true })
     .fill("claim:invalid");
@@ -462,14 +460,11 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     ),
   ).toBeVisible();
   await expect(canvas).toHaveCount(0);
-  await openGraphDrawer(
-    page,
-    "Explore relationships",
-    "Explore",
-  );
+  await openGraphDrawer(page, "Explore relationships", "Explore");
   await explorer
     .getByRole("button", { name: "Show eligible overview", exact: true })
     .click();
+  await use2DGraph(page);
   await expect(canvas).toHaveAttribute("data-ready", "true");
   await openGraphDrawer(page, "Find an evidence path", "Find path");
   await panel.getByLabel("Path start", { exact: true }).fill("claim:invalid");
@@ -517,17 +512,14 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     await route.fulfill({ json: graph });
   });
   const began = Date.now();
-  await openGraphDrawer(
-    page,
-    "Explore relationships",
-    "Explore",
-  );
+  await openGraphDrawer(page, "Explore relationships", "Explore");
   await explorer
     .getByRole("button", { name: "Show eligible overview", exact: true })
     .click();
   await expect(explorer.getByTestId("exploration-counts")).toHaveText(
-    "500 loaded entities · 2000 directed relationships",
+    "500 loaded nodes · 2000 directed relationships",
   );
+  await use2DGraph(page);
   await expect(canvas).toHaveAttribute("data-ready", "true");
   await expect
     .poll(() =>
@@ -553,9 +545,12 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   ).toEqual(["claim:dense-499"]);
   // Selecting a display record does not establish a canonical identity.
   // Explicitly open evidence; the shared inspector must refuse substitution.
-  await explorer.getByRole("button", { name: "Open evidence", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Knowledge lineage", exact: true }))
-    .toContainText("claim revision that no longer resolves");
+  await explorer
+    .getByRole("button", { name: "Open evidence", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Knowledge lineage", exact: true }),
+  ).toContainText("claim revision that no longer resolves");
   console.info(
     `500-node/2000-edge renderer and pointer selection: ${Date.now() - began} ms`,
   );
@@ -571,14 +566,11 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
     graph.expires_at = new Date(Date.now() + 2000).toISOString();
     await route.fulfill({ json: graph });
   });
-  await openGraphDrawer(
-    page,
-    "Explore relationships",
-    "Explore",
-  );
+  await openGraphDrawer(page, "Explore relationships", "Explore");
   await explorer
     .getByRole("button", { name: "Show eligible overview", exact: true })
     .click();
+  await use2DGraph(page);
   await expect(canvas).toHaveAttribute("data-ready", "true");
   const disposed = await canvas.evaluateHandle(
     (element) =>

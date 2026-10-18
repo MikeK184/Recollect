@@ -79,7 +79,7 @@ Work type: product
 - Not shipped: Backend policy changes and external OIDC live proof.
 - New blockers: None.
 - Docs updated: Contracts, epic/index, archived pack/index, active index, handoff
-  and [dated evidence](../../../mappings/desktop-compact-tool-access-2026-10-06.md).
+  and [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-compact-tool-access-2026-10-06.md).
 - Validation: Eight pure permission checks, web type/design/build, 32 governance
   tests, whitespace and CodeGraph passed. Actual CUA draft/Cancel/Save/partial
   retry, inherited/source and demo reader/two-tool inspection passed. Canonical

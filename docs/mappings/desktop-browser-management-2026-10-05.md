@@ -12,7 +12,7 @@ The accepted [desktop amendment](../contracts/desktop-experience.md),
 [catalogue](../contracts/mcp-catalogue-and-profiles.md),
 [runtime](../contracts/mcp-runtime-and-credentials.md), and
 [model catalogue contract](../contracts/brain-model-catalogue-and-selection.md)
-govern the implementation. The [original investigation](../research/browser-management-review-2026-10-05.md)
+govern the implementation. The [original investigation](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/browser-management-review-2026-10-05.md)
 records the before measurements and external interface research.
 
 Parent and delegated implementation agents reviewed source, canonical API

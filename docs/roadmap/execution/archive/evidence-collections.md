@@ -66,7 +66,7 @@ Work type: product
 - Shipped: Brain-scoped text/reference imports, immutable versions and provenance, retained artifacts, shared collections/areas/environments, policy controls, fenced support-span processing and complete browser flows.
 - Not shipped: N/A within this slice. Repository/workspace/session adapters, semantic memory, erasure and operational restore remain named successors.
 - New blockers: None.
-- Docs updated: Collections contract, [proof mapping](../../../mappings/evidence-collections-proof-2026-09-14.md), [runbook](../../../runbooks/evidence-collections.md), local development, README, environment example and reconciled epic/execution indexes.
+- Docs updated: Collections contract, [proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/evidence-collections-proof-2026-09-14.md), [runbook](../../../runbooks/evidence-collections.md), local development, README, environment example and reconciled epic/execution indexes.
 - Validation: Seven core Rust scenarios and one real OIDC scenario passed; five isolated browser workflows, native capture/restarted workers, inspected desktop/mobile screens, 51 unique API operations, frontend build, Clippy with warnings denied, rustfmt, governance lint and all 32 checker tests passed. Actual local startup, owner login and readiness succeeded. No external deployment is claimed.
 - Version: N/A: no release or strict versioning.
 - Commit: uncommitted.

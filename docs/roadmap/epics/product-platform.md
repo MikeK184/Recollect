@@ -52,15 +52,6 @@ memory semantics and MCP connection/profile resources remain with their epics.
 No mandatory OIDC provider, customer federation, new secret store or replacement
 database engine is introduced.
 
-## Decisions Before Implementation
-
-- Record the selected packaging/storage architecture in an ADR and define the
-  first slice's interfaces, minimal data model, migrations and compatible dependency ranges.
-- Specify owner bootstrap/recovery, sessions, Brain ownership/grants, audit
-  boundaries and non-owner database access before their handlers are implemented.
-- Specify invitation/OIDC mapping, membership refresh and device pairing/revocation
-  before the corresponding slices. These refine the accepted login direction.
-
 ## Slice Map
 
 Small-fix exception, 2026-09-14: claims regression exposed a valid numeric pairing
@@ -81,23 +72,6 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-brain-deletion` | shipped | adr-backed, contract-backed | pack | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
 | `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | pack | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 
-## Slice Dependencies
-
-Only named predecessor slices are required; completion of an entire upstream
-epic is not an implicit prerequisite. Dependency rows across the roadmap form
-one acyclic implementation order.
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `platform-bootstrap` | None |
-| `platform-durable-work` | `platform-bootstrap` |
-| `platform-team-access` | `platform-bootstrap` |
-| `platform-device-pairing` | `platform-bootstrap` |
-| `desktop-experience-contracts` | `operations-integrated-evaluations` |
-| `platform-desktop-shell` | `desktop-experience-contracts` |
-| `platform-brain-deletion` | `platform-bootstrap`, `memory-retention-and-erasure` |
-| `desktop-knowledge-surface` | `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace` |
-
 ## Completion Criteria
 
 - The selected stack builds from resolved compatible dependencies under ADR 0003 and starts through a
@@ -111,32 +85,16 @@ one acyclic implementation order.
 - Publish focused validation and a runnable development procedure. This epic
   completing does not establish memory, graph-analytics or MCP product readiness.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the final local image separately from
-remaining cross-domain acceptance. The [platform-desktop-shell closeout](../execution/archive/platform-desktop-shell.md)
-records this owner’s completed checks. The [desktop guide](../../runbooks/desktop-experience.md)
-documents current function locations. Other owners keep unfinished criteria active;
-prior shipped domain records remain historical evidence rather than redesign proof.
+Accounts, Brain permissions, auditable durable commands, device identity and canonical Brain deletion are delivered. The original platform slices have no unfinished acceptance in this epic. New automatic mapping must extend existing isolation/deletion behavior under the graph organization pack.
 
-## 2026-09-29 deletion and surface amendment
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-The user decided that a Brain must be permanently deletable with total erasure,
-that Memory, Sources and Graph must merge into one improved surface, and that
-Agents and Connections must separate. [ADR 0016](../../adr/0016-brain-deletion.md)
-and [ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) record those
-decisions; [brain deletion](../../contracts/platform-brain-deletion.md) and the
-[tiered surface](../../contracts/desktop-knowledge-surface.md) contracts specify them.
+## Delivery evidence
 
-This epic reopens from complete to active because it owns the deletion command and
-the coordinated presentation layer spanning the memory, evidence and graph domains.
-Domain authority does not move here: each capability keeps its handlers,
-permissions, retention and proof obligations, following the coordination precedent
-`desktop-experience-contracts` already established.
-
-## 2026-10-01 local closeout
-
-[desktop-knowledge-surface](../execution/archive/desktop-knowledge-surface.md), [platform-brain-deletion](../execution/archive/platform-brain-deletion.md) are locally delivered with [dated validation and runtime limits](../../mappings/desktop-continuation-2026-10-01.md).
-The user prioritizes normal laptop and larger desktop displays; additional
-small-screen and keyboard polish is optional under the [desktop contract](../../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01).
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/product-platform.md).
+Dated test/deployment observations are not a current runtime health claim.

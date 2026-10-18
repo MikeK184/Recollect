@@ -5,7 +5,7 @@ Status: accepted
 ## Source
 
 The user's October 7 implement-all instruction accepts the source-support phase
-of the [automatic memory plan](../research/automated-memory-improvement-plan-2026-10-07.md).
+of the [automatic memory plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md).
 This amendment strengthens [autonomous maintenance](memory-autonomous-maintenance.md),
 [provider learning](memory-provider-policy-and-learning.md),
 [claims](memory-claims-and-time.md) and [handovers](memory-procedures-and-handovers.md).

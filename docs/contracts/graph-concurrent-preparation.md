@@ -45,6 +45,17 @@ Non-windowed reads and worker publication retain strict epoch rejection.
 The final lock stays held through commit. Existing request, statement, capacity,
 node/edge and exact projection verification limits remain.
 
+A ready generation can be replaced while its native read is in flight. At most
+two internal full retries may discard that buffer and reprepare against the
+new exact ready generation, under the original 15-second deadline and held read
+permit. Retry only after proving that the old generation was superseded without
+other metadata/descriptor changes and the replacement has equivalent current
+scope, immutable snapshot, canonical payload and eligible input identities.
+Knowledge/combined inputs retain the same semantic epoch; repository inputs
+retain the same immutable snapshot. Pin any originally resolved latest snapshot.
+Corruption, changed scope/support, access loss, expiry and native mismatch keep
+their existing failures and cannot become a replacement retry.
+
 Workers build descriptors outside exclusive Brain locks. Their short staging
 transaction rechecks actor/device writer authority, archive state, exact lease,
 generation identity, snapshot/input availability, preparation epoch and deadlines
@@ -55,6 +66,17 @@ comparison precedes those writes, while existing availability/deadline/lease
 checks follow them. Stale worker preparations are retried under existing bounded
 lease/backoff rules. A saved descriptor is reusable only at its preparation epoch;
 older descriptors without that metadata must be rebuilt.
+
+Each native import is fenced by its exact current lease token and durable native
+attempt ordinal. Reset only that unpublished generation before a newer attempt;
+delayed writes/setup from an older attempt and writes after sealing return zero.
+Never remove shared published entities while resetting an attempt. Persist the
+native phase marker before any native/schema HTTP. An exact live graph.project
+claim may defer pre-import epoch contention at most eight times without consuming
+an actual native attempt; only a claim with no native marker may receive that
+refund. The ninth preparation deferral terminates. The existing three-attempt
+ceiling still applies to actual import/final-publication failures. No timer,
+expired lease, wrong job kind or partial native attempt may refund a claim.
 
 This changes lock tenure, not evidence meaning. Existing provenance, structural
 relationships and canonical qualification remain. Analytics and answer/retrieval
@@ -69,6 +91,26 @@ dependency closure, selected manifest entries, reviewed expired-support rules
 and invoker RLS. A performance change cannot omit an unavailable dependency or
 substitute the current head for an exact historical input.
 
+## Autonomous maintenance amendment — 2026-10-18
+
+The user resumed the complete graph implementation, including the identified
+digest/handover writer-tenure repair. Autonomous scheduling must not combine
+source discovery, digest preparation, handover refresh and retry discovery in
+one long exclusive Brain transaction. Discover candidates and prepare complete
+qualified contributor pages in consistent read-only preparation transactions.
+Publish bounded work in independent short writer transactions, freshly checking
+enabled actor, current role/archive state, standing policy revision, exact input
+identities, privacy fences, retention, conflicts and existing work. A provisional
+selection or epoch is never publication authority.
+
+Discovery is bounded and fair across partitions/candidates, including unavailable
+prefixes. Persist content-free scan progress where needed. Statement timeouts
+defer unresolved candidates; they must not produce successful empty coverage,
+retirement, rejection or omission judgments. Preserve complete supported inputs,
+whole-assertion page budgets, digest settlement, idempotency, human overrides and
+the existing uncertain-provider recovery rules. No provider call occurs during
+scheduling. Record lock wait and transaction age separately from native I/O.
+
 ## Acceptance
 
 - Actual PostgreSQL preparation observes a stable snapshot while a concurrent
@@ -81,6 +123,9 @@ substitute the current head for an exact historical input.
 - Exercise populated overview and centered reads during capture/audits/rebuilds;
   record errors, lock wait and total latency. Synthetic success does not replace
   the recorded normal-installation timeout check.
+- Pause actual digest/handover preparation while a same-Brain writer commits;
+  race correction, access/policy changes, erasure and expiry against publication.
+  Prove restart/wrap fairness and that timeouts cannot erase valid old coverage.
 
 ## Explicit Deferrals
 

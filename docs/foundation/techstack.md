@@ -13,17 +13,17 @@ clarification. Rust is selected for Recollect's own backend and companion.
 The MCP coordinator, Vault integration, collections and graph capabilities
 remain part of the product. This replaces the Cognee/Python extension stack.
 The [vision](vision.md) governs behavior; the
-[research mapping](../mappings/atlas-foundation-decisions-2026-09-13.md) records
-sources, alternatives and limitations. No new application stack is installed
-or measured by this documentation change.
+[research mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-foundation-decisions-2026-09-13.md) records
+sources, alternatives and limitations. Current implementation status is in the [roadmap](../roadmap/epics/index.md);
+this document specifies the architectural baseline.
 
 ## Selected components and packaging
 
-These are selected architectural defaults, not a tested dependency lockfile.
-During scaffolding, choose compatible published releases/features, pin the Rust
-toolchain and container images, and commit Cargo.lock and the frontend lockfile.
-Exact release pins remain implementation work; do not use floating production
-images or claim current package versions form a validated compatibility matrix.
+These are architectural defaults. Current dependency declarations are in
+`Cargo.toml`, `Cargo.lock`, the frontend manifests/lockfile and Compose/Dockerfiles.
+The accepted development override above controls strict pin/hash enforcement;
+change compatible versions through an owning slice and focused proof. The table
+is not a tested compatibility matrix or a current package-version catalogue.
 
 | Responsibility | Selected default |
 | --- | --- |
@@ -196,6 +196,14 @@ rules. Check each component's own license; the Atlas license does not license
 the systems it describes.
 
 ## Identity, workspace and MCP coordination
+
+[ADR 0022](../adr/0022-brain-managed-skills.md) adds canonical PostgreSQL skill/
+instruction bundles and immutable revision history to Brain coordination. Existing
+HTTP/MCP and native plugin adapters deliver scoped metadata and on-demand text;
+explicit local copies remain plugin-owned. The native extension adds owned
+workspace skill exports, shared cross-host scope/lease receipts and host-specific
+refresh adapters without changing server authority. Guidance associations confer no MCP
+execution grant and introduce no new service/provider dependency.
 
 The proposed .recollect/workspace.toml selects a Brain at the workspace root;
 nearest-parent discovery and nested-workspace boundaries apply. Task scope is

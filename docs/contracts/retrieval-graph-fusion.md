@@ -10,7 +10,7 @@ The accepted [retrieval baseline](retrieval-exact-and-lexical.md),
 [combined graph](graph-cross-repository-views.md),
 [retention](memory-retention-and-erasure.md) and
 [engineering principles](../foundation/engineering-principles.md#combine-retrieval-methods-under-one-contract)
-govern. The [dated reference audit](../mappings/retrieval-fusion-2026-09-22.md)
+govern. The [dated reference audit](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-fusion-2026-09-22.md)
 records Atlas, Cognee and native interface evidence. Desktop acceptance follows
 the user's 2026-09-22 instruction; mobile work is deferred.
 

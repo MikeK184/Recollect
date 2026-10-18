@@ -1,6 +1,8 @@
 # Documentation Governance and Lifecycle
 
-Start here before meaningful implementation, debugging, or architecture work.
+Start with the [current product status and remaining features](roadmap/epics/index.md)
+for implementation state and priorities, and [runbooks](runbooks/README.md) for
+operating the product. This guide governs documentation and implementation work.
 
 For product setup and operator guides, use the
 [public documentation website](https://mikek184.github.io/Recollect/docs/).
@@ -50,34 +52,36 @@ Templates live alongside each document type. Indexes link current records;
 retain superseded decisions with replacement links and shipped packs in the
 archive. Avoid competing current versions of the same specification.
 
+## Current baseline and documentation maintenance
+
+The [foundations](foundation/README.md) are accepted and the Rust product is
+implemented. Use accepted ADRs/contracts for behavior, active packs for unfinished
+work and dated evidence for test/deployment observations. A document's old date
+does not by itself make an architecture rule obsolete.
+
+Keep one current status entry point: the [roadmap](roadmap/epics/index.md).
+Do not append chronological handoffs or repeat a completed feature as a proposal.
+When behavior is corrected, update current guidance and remove the superseded
+proposal, duplicate report or unused illustration. Preserve necessary historical
+citations as links to an exact Git revision. Shipped packs retain scope and
+acceptance history; accepted decisions/contracts, frozen evaluation inputs,
+current baselines and unresolved failures remain accessible. Never remove a
+failure to make a remaining slice appear complete.
+
+The 2026-10-18 cleanup follows the user's explicit request. It does not implement
+product features, change product decisions or refresh runtime/benchmark
+measurements. The earlier snapshot is available at
+[checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
+
 `output/` (browser screenshots, generated imagery and review captures) is
-ignored and no longer tracked. Evidence cited as `output/...` or
-`f2673d7:output/...` in earlier records is the last tracked copy at Git
-revision `f2673d7`: read it with `git show f2673d7:output/<path>` or check it
-out from that revision. Cite new evidence by revision or in a tracked summary,
-not by a link into `output/`.
+ignored and no longer tracked. Where earlier records cite `output/...`, the last
+tracked copy is at Git revision `f2673d7`: read it with
+`git show f2673d7:output/<path>`. Cite new evidence by revision or in a tracked
+summary, not by a link into `output/`.
 
-## Foundation bootstrap
-
-Foundation documents begin with `Status: pending` and become `Status: accepted`
-when the user's decisions are established. A non-empty draft remains pending
-until then. The current three documents contain the accepted independent Rust
-product baseline, superseding the initial mandatory Cognee extension direction.
-Read their selected behavior and detailed implementation boundaries. The
-[research mapping](mappings/atlas-foundation-decisions-2026-09-13.md) records the
-evidence and confirmed decisions. Earlier mappings and closeouts retain their
-historical context.
-
-The user's sequence is foundations first, then product epics derived from them,
-then detailed contracts and execution packs before dependent product code.
-Foundation authoring does not itself require speculative product epics or packs.
-
-Repository governance, docs, and developer-tool configuration can proceed from
-the accepted bootstrap ADR/contract. Product packs can be planned or blocked,
-but cannot enter `in-progress` or `shipped` while foundation documents are
-pending. Pending documents may be named as blockers, never governing sources.
-Do not use the small-fix exception to bypass this boundary. An accepted
-foundation does not remove the need for detailed governing ADRs/contracts.
+New foundation decisions remain pending until accepted. Pending foundations
+cannot govern dependent implementation; the small-fix exception does not bypass
+that rule. Foundation authoring does not require speculative product epics.
 
 ## Before implementation
 

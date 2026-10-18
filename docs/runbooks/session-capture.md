@@ -19,7 +19,7 @@ Install the complete plugin, connect once, approve the host's hook trust, then s
 Codex, Claude Code or OpenCode normally. This path uses the bundled
 `recollect-plugin`; it needs no separate companion or `capture run` command.
 Native-host acceptance and remaining limits are recorded in the
-[plugin mapping](../mappings/plugin-session-memory-2026-10-01.md).
+[plugin mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/plugin-session-memory-2026-10-01.md).
 
 The plugin establishes the session's Brain/task scope, captures permitted events
 locally, and uploads through an independent worker. The standing Brain capture
@@ -179,5 +179,5 @@ child exit-status preservation. `./scripts/test-platform.sh` covers native
 setup/delivery, scope, policy, replay and deletion against the real API/database.
 `./scripts/test-ui.sh tests/capture.spec.ts tests/retention.spec.ts` exercises
 browser delivery states, canonical source erasure and lost-response recovery.
-See the [dated integration evidence](../mappings/session-capture-interfaces-2026-09-14.md)
+See the [dated integration evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/session-capture-interfaces-2026-09-14.md)
 for measured results and coverage limits.

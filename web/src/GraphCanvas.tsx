@@ -194,10 +194,20 @@ function fitGraph(cy: Core, elements = cy.elements(":visible"), padding = 35) {
 }
 
 function overlappingLabels(cy: Core) {
-  const boxes = cy.nodes(":visible").map((node) => node.boundingBox({ includeLabels: true }));
-  return boxes.some((a, index) => boxes.slice(index + 1).some((b) =>
-    a.x1 < b.x2 + 8 && b.x1 < a.x2 + 8 && a.y1 < b.y2 + 8 && b.y1 < a.y2 + 8,
-  ));
+  const boxes = cy
+    .nodes(":visible")
+    .map((node) => node.boundingBox({ includeLabels: true }));
+  return boxes.some((a, index) =>
+    boxes
+      .slice(index + 1)
+      .some(
+        (b) =>
+          a.x1 < b.x2 + 8 &&
+          b.x1 < a.x2 + 8 &&
+          a.y1 < b.y2 + 8 &&
+          b.y1 < a.y2 + 8,
+      ),
+  );
 }
 
 export default function GraphCanvas({
@@ -457,8 +467,14 @@ export default function GraphCanvas({
       // other. Use the library's label-aware grid only when settled bounds
       // collide; do this before publishing readiness or fitting the viewport.
       if (layout === "cose" && overlappingLabels(cy)) {
-        fallback = cy.layout({ name: "grid", animate: false, fit: false,
-          avoidOverlap: true, avoidOverlapPadding: 20, nodeDimensionsIncludeLabels: true });
+        fallback = cy.layout({
+          name: "grid",
+          animate: false,
+          fit: false,
+          avoidOverlap: true,
+          avoidOverlapPadding: 20,
+          nodeDimensionsIncludeLabels: true,
+        });
         fallback.one("layoutstop", fitted);
         fallback.run();
       } else fitted();
@@ -764,7 +780,7 @@ export default function GraphCanvas({
           role="status"
           data-testid="graph-local-counts"
         >
-          {mode} · {shown.nodes.length} of {nodes.length} loaded entities ·{" "}
+          {mode} · {shown.nodes.length} of {nodes.length} loaded nodes ·{" "}
           {shown.edges.length} of {edges.length} relationships
         </Text>
         {localView && (
@@ -793,7 +809,7 @@ export default function GraphCanvas({
           ref={container}
           className="graph-canvas"
           role="img"
-          aria-label={`Interactive graph: ${shown.nodes.length} of ${nodes.length} loaded entities and ${shown.edges.length} of ${edges.length} directed relationships. Use Find entity for keyboard inspection.`}
+          aria-label={`Interactive graph: ${shown.nodes.length} of ${nodes.length} loaded nodes and ${shown.edges.length} of ${edges.length} directed relationships. Use Find entity for keyboard inspection.`}
           data-testid="graph-canvas"
           data-ready={ready}
           data-layout-ready={layoutReady}

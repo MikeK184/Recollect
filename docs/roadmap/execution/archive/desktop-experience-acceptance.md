@@ -16,7 +16,7 @@ Work type: product
 - [Desktop contract](../../../contracts/desktop-experience.md) and [answers](../../../contracts/retrieval-answers.md)
 - [Integrated evaluations](../../../contracts/operations-integrated-evaluations.md)
 - [Installation](../../../contracts/operations-local-and-shared.md)
-- [Approved journeys](../../desktop-experience/README.md#acceptance-journeys)
+- [Approved journeys](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/desktop-experience/README.md#acceptance-journeys)
 - [Owning epic](../../epics/operational-readiness.md)
 
 ## Scope

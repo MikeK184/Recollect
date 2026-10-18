@@ -32,3 +32,7 @@ pending foundation documents as accepted authority.
 - [0018: Plugin-managed automatic agent memory](0018-plugin-managed-agent-memory.md)
 - [0019: Rust semantic navigation and Graft developer context](0019-rust-semantic-developer-navigation.md)
 - [0020: Automatic knowledge organization in Rust](0020-automatic-knowledge-organization.md)
+- [0021: Grouped spatial graph navigation](0021-grouped-spatial-graph-navigation.md)
+
+- [0022: Brain-managed skills and shared guidance](0022-brain-managed-skills.md)
+- [0023: Brain-scoped agent-to-agent coordination](0023-agent-to-agent-coordination.md)

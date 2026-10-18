@@ -86,8 +86,12 @@ idempotency fields are explicit. The catalogue describes these operations:
 | `memory.graph_explore`, `memory.graph_path` | Existing bounded native graph handlers under an immutable operation |
 | `mcp.profiles`, `mcp.discover` | Current profile rights and approved cached schemas without starting providers |
 | `mcp.call`, `mcp.status`, `mcp.cancel`, `mcp.reconcile`, `mcp.resolve`, `mcp.release` | Existing managed-call admission, history, cancellation, receipt/evidence reconciliation and session release |
+| `coordination.announce`, `coordination.heartbeat`, `coordination.peers`, `coordination.inbox`, `coordination.ack`, `coordination.send`, `coordination.close` | [Shared session projection and peer coordination](mcp-agent-coordination.md), with own-session mutation and durable recipient inbox; no raw task sharing |
 
 Brain readers may discover read/binding operations; writes require writer/admin.
+Coordination's own-session presence and peer messages are working-context
+operations available to every current Brain member; they do not write memory
+evidence or confer writer/admin rights.
 Profile discovery/calls continue to enforce independent Use even for admins.
 Discovering a connector does not start it or fetch credentials. There is no
 arbitrary shell, URL forwarding, executable configuration, grant administration,

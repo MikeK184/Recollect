@@ -47,18 +47,9 @@ Codex/Claude adapters sanitize before local persistence, retain event/scope/host
 identity and expose incomplete or ambiguous capture. MCP execution observations
 later enter this same pipeline through the coordinator.
 
-## Decisions Before Implementation
-
-- Specify source/version/collection identities, capture policy and removal
-  semantics using the shared mutation/audit path.
-- Specify workspace discovery, task/subagent scope and exact manifest/publication
-  contracts; decide supported fixture coverage without promising universal parsers.
-- Specify host event compatibility, inbox/retry protocol and the retention handoff
-  before enabling automatic capture. Exact endpoint names remain pack work.
-
 ## Slice Map
 
-The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 proposes session-derived handovers with original capture attribution and native
 minimal supporting excerpts under both existing content/retention permissions.
 Memory lifecycle owns synthesis; this epic owns exact source/excerpt lineage,
@@ -84,16 +75,6 @@ it does not place a selector in the customer workspace.
 | `evidence-session-capture` | shipped | contract-backed | pack | Delivered actual Codex/Claude hooks, native setup/launch and durable delivery, original-scope learning, browser coverage/source controls and local/central retention with replay proof |
 | `evidence-desktop-workflows` | shipped | adr-backed, contract-backed | pack | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
 
-## Slice Dependencies
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `evidence-collections` | `platform-durable-work` |
-| `evidence-workspace-scope` | `evidence-collections`, `platform-device-pairing` |
-| `evidence-repository-publication` | `evidence-workspace-scope` |
-| `evidence-session-capture` | `evidence-workspace-scope`, `memory-retention-and-erasure` |
-| `evidence-desktop-workflows` | `platform-desktop-shell` |
-
 ## Completion Criteria
 
 - Collections organize sources without duplicated authority or accidental
@@ -108,22 +89,16 @@ it does not place a selector in the customer workspace.
   persistence. The 30-day default, Brain override and supporting-excerpt policy
   work locally and centrally; erasure fences queued publication.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the verified final local image separately
-from remaining current-code domain and integrated acceptance. The
-[desktop guide](../../runbooks/desktop-experience.md) documents the current function
-locations. Product/proof slices stay in progress until their required checks pass;
-prior shipped domain records remain historical evidence rather than redesign proof.
+Versioned source collections, manual area/environment grouping, task scope, committed repository publication and sanitized session capture are delivered. Automatic topic memberships are still absent and belong to the active graph organization pack; they must preserve these manual memberships and source identities.
 
-## Final desktop and tooling acceptance — 2026-10-01
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
+## Delivery evidence
 
-The October 8 TypeScript admission correction passes its credential-regression
-fixture and actual unchanged LongMemEval history import. Direct runtime proof
-checks all 2,402 retained conversation sources, including the previously rejected 49-session
-case, byte-for-byte against frozen inputs. See the
-[dated benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md).
-No credential value or source text was sanitized to obtain this result.
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/evidence-and-workspaces.md).
+Dated test/deployment observations are not a current runtime health claim.

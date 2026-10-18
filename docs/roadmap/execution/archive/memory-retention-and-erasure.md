@@ -67,6 +67,6 @@ Work type: product
 - Not shipped: Future host/model/vector/graph/backup consumers remain owned by their named slices; arbitrary external copies are outside controlled erasure.
 - New blockers: None.
 - Docs updated: Retention contract, owning epic, execution pack, runbook, dated proof and indexes.
-- Validation: Nineteen core scenarios, native extraction, Clippy, three browser workflows and final erased-history checks passed. Normal runtime migration 010, authenticated UI/readiness and test-Brain preservation passed; see [dated proof](../../../mappings/retention-and-erasure-proof-2026-09-14.md). Governance and all 32 checker tests passed.
+- Validation: Nineteen core scenarios, native extraction, Clippy, three browser workflows and final erased-history checks passed. Normal runtime migration 010, authenticated UI/readiness and test-Brain preservation passed; see [dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retention-and-erasure-proof-2026-09-14.md). Governance and all 32 checker tests passed.
 - Version: N/A; no release requested.
 - Commit: Uncommitted.

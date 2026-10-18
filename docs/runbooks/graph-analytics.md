@@ -48,7 +48,7 @@ are not a convergence guarantee. Partial extraction remains explicitly partial.
 ## Verification
 
 The [contract](../contracts/graph-analytics.md) defines the complete behavior and
-the [evidence mapping](../mappings/graph-analytics-interfaces-2026-09-15.md)
+the [evidence mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-analytics-interfaces-2026-09-15.md)
 records executed results and limitations. With repository-owned services running:
 
 ```sh

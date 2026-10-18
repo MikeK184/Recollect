@@ -78,7 +78,7 @@ Work type: product
 - Not shipped: Unrelated direct-token native-host acceptance remains separately open.
 - New blockers: None.
 - Docs updated: Desktop, managed and semantic amendments, epic and active/archive
-  indexes, [dated evidence](../../../mappings/desktop-visible-management-settings-2026-10-06.md),
+  indexes, [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-visible-management-settings-2026-10-06.md),
   mappings index, this archived pack and handoff.
 - Validation: Two pure formatting tests, production build/type/design, final
   governance/whitespace and CodeGraph checks; CUA actual seven surfaces, cancelled

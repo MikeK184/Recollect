@@ -39,7 +39,7 @@ Do not widen grants, revision applicability or provider permissions to improve r
 
 User-selected provider input, 2026-09-14: use `text-embedding-3-large`, paired with
 `gpt-5.6-luna` for text operations through the memory epic's gateway. A real
-[provider probe](../../mappings/openai-provider-preflight-2026-09-14.md) returned
+[provider probe](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/openai-provider-preflight-2026-09-14.md) returned
 the embedding model's default 3,072 dimensions. Preserve that selection when
 specifying representation and indexing; do not silently substitute the small
 model or reduce dimensions. Exact eligible-vector search remains the baseline.
@@ -51,18 +51,9 @@ these same application operations rather than a second retrieval implementation.
 Scope-change events must support immediate newly applicable recall when the
 host bridge is integrated.
 
-## Decisions Before Implementation
-
-- Specify public retrieval inputs/results, eligibility modes, temporal/manifest
-  selection, cache invalidation and context-budget behavior.
-- Specify embedding identity/dimensions and reindexing; select/test ranking and
-  fusion on representative questions before introducing approximate indexes.
-- Define quality baselines and acceptable failure/latency behavior for each slice;
-  exact API names and numerical tuning belong in its execution pack.
-
 ## Slice Map
 
-The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 authorizes a canonical scoped project brief alongside query recall within existing
 plugin limits. The [accepted contract](../../contracts/retrieval-scoped-project-brief.md)
 and archived pack govern deterministic selection, authenticated continuation and
@@ -71,6 +62,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `retrieval-attributed-feedback` | shipped | contract-backed | pack | Explicit scoped utility signals, privacy/recovery and frozen zero-call comparison locally delivered; two bad promotions retained, production RRF stays fixed |
 | `retrieval-scoped-project-brief` | shipped | contract-backed | pack | Current supported compact context and authenticated continuation |
 | `retrieval-semantic-discovery-plans` | shipped | contract-backed | pack | Missing-input cohorts preserve eligibility/replay, pass native and normal-data equivalence, and are deployed locally; remaining graph failures stay with the graph/operations owners |
 | `retrieval-exact-and-lexical` | shipped | contract-backed | pack | Delivered canonical exact/text candidates, correction-aware bounded context, immutable scope, temporal/manifest filters and browser/native consumers with database/runtime proof |
@@ -80,19 +72,6 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `retrieval-ask-experience` | shipped | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
 | `desktop-ask-primary` | shipped | adr-backed, contract-backed | pack | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
 | `ask-chat-conversation` | shipped | contract-backed | pack | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
-
-## Slice Dependencies
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `retrieval-exact-and-lexical` | `memory-retention-and-erasure` |
-| `retrieval-semantic-discovery-plans` | `retrieval-semantic` |
-| `retrieval-semantic` | `retrieval-exact-and-lexical`, `memory-provider-policy-and-learning` |
-| `retrieval-graph-fusion` | `retrieval-semantic`, `graph-cross-repository-views` |
-| `retrieval-investigation-ui` | `retrieval-graph-fusion`, `memory-procedures-and-handovers` |
-| `retrieval-ask-experience` | `desktop-experience-contracts`, `platform-desktop-shell`, `evidence-desktop-workflows`, `memory-desktop-workflows` |
-| `desktop-ask-primary` | `retrieval-ask-experience` |
-| `ask-chat-conversation` | `desktop-ask-primary` |
 
 ## Completion Criteria
 
@@ -108,41 +87,16 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 - Host-facing retrieval can react to scope changes and preserve concurrent task
   isolation. End-to-end host proof is completed with the MCP epic.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the verified final local image separately
-from remaining current-code domain and integrated acceptance. The
-[desktop guide](../../runbooks/desktop-experience.md) documents the current function
-locations. Product/proof slices stay in progress until their required checks pass;
-prior shipped domain records remain historical evidence rather than redesign proof.
+The original exact/lexical/semantic/graph consumers and cited Ask are delivered. Source-window/history corrections and semantic discovery query repair are committed in f2673d7. The measured discovery query improved from about 18–20 s to 225–334 ms on the retained fixture; this is not an end-to-end quality score. The October 18 attributed-feedback slice is locally delivered: current native qualification/privacy cases and the frozen zero-call comparison pass. The toy comparison retains two bad promotions; it does not demonstrate real helpfulness or qualify the failed organization model. Production ranking activation, typed-time and ANN changes remain separate decisions.
 
-## 2026-09-29 Ask default
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) makes the
-question composer the default Ask view, amending the search-first landing recorded
-in the shipped [successor cleanup pack](../execution/archive/mcp-successor-cleanup.md).
-The `desktop-ask-primary` slice owns the change and follows `retrieval-ask-experience`,
-because the accepted plan keeps the default-Ask cutover behind real answer
-acceptance. Answer semantics, citation enforcement and conversation temporariness
-are unchanged.
+## Delivery evidence
 
-The user resumed Ask-primary and its remaining answer acceptance on 2026-10-01,
-together with the final local deployment and desktop acceptance closeout.
-
-## Final desktop and tooling acceptance — 2026-10-01
-
-The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
-
-## Ask as a chat conversation — 2026-10-03
-
-The user's 2026-10-03 direction asked for Ask to read like a chat with the
-Brain rather than a form. The model-grounded answer backend already synthesizes
-from retrieved evidence; the gap was presentation. Shipped 2026-10-03: the Ask
-landing centers the prompt in the conversation area with the composer beneath
-it (single-line start, growing with input), and the existing thread — question
-bubbles, cited answer turns, inline follow-ups, per-turn failure states — is
-retained. The [archived pack](../execution/archive/ask-chat-conversation.md)
-and [evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md)
-record the live test Brain question-and-answer check; the contract amendment
-lands in the [desktop experience](../../contracts/desktop-experience.md).
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/hybrid-retrieval.md).
+Dated test/deployment observations are not a current runtime health claim.

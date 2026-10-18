@@ -3,6 +3,7 @@
 Status: in-progress
 Owning epic: `docs/roadmap/epics/graph-intelligence.md`
 Work type: product
+Implementation: resumed 2026-10-18 by the user's complete graph implementation request
 
 ## Summary
 
@@ -26,10 +27,14 @@ Work type: product
 - In scope: Read-only preparation transaction, fair final publication, epoch
   invalidation coverage, interactive graph and generation worker integration;
   exact-identity canonical deadline/window query plans with unchanged RLS.
+  Includes bounded off-lock digest/handover discovery and complete contributor
+  preparation, independent short publication transactions, restart-safe fair
+  cursors and model-free concurrency/recovery proof under the October 18 contract.
 - Out of scope: Automatic entity/topic schema and optional extractors (next
   dedicated slice); generalized answer/model admission changes.
-- Blockers: None for this contract-backed implementation. Existing normal-runtime
-  timeout remains an acceptance failure until measured repair passes.
+- Blockers: No unresolved implementation decision. Local mixed-workload and
+  normal-data clone performance gates pass; normal-installation update and
+  final integrated acceptance remain outstanding.
 
 ## Surface and Interface Changes
 
@@ -49,9 +54,9 @@ Work type: product
   descriptors, exact native generations and lease state.
 - Authority: Final fresh authenticated transaction with fair Brain lock,
   epoch/scope/deadline and lease checks. Snapshots are never acceptance.
-- Blind spots: Native snapshot/I/O and populated 10k capture controls pass;
-  audit/rebuild concurrency and normal-runtime graph proof remain open.
-  No general performance claim follows.
+- Blind spots: Revised populated 10k capture/audit/rebuild controls and both
+  normal-data clone gates pass. The original installation runtime has not been
+  updated; local proof does not establish deployed health.
 
 ## States and Edge Cases
 
@@ -84,35 +89,40 @@ Work type: product
 
 ## Closeout
 
-- Planned: Two-phase graph preparation, checked publication and concurrency proof.
-- Shipped: N/A — implementation in progress.
-- Not shipped: Populated audit/rebuild concurrency and normal-runtime timeout repair proof;
-  complete stale-input/revocation acceptance and final closeout.
-- New blockers: None beyond open acceptance; trace other background lock holders
-  if this change does not resolve the populated-runtime timeout.
-- Docs updated: Contract, ADR amendment, epic/pack/index, approved plan status and
-  [dated progress](../../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md).
-- Validation: PostgreSQL preparation/write/bypass proof and paused actual-Neo4j
-  scope/session checks passed with zero model requests. Native graph suite had
-  35/38 pass initially; the current complete native suite passes 40/40, including
-  the stronger collection-membership control. The 10k fixture passes 40/40 reads
-  during 32 captures at p95 0.513 seconds with zero model requests. Formatting,
-  focused server compile and documentation validation passed. This is local
-  proof; audit/rebuild and normal-runtime acceptance remain open.
-  The subsequent complete suite passes 41/41, including old/new app-role
-  deadline/support equivalence and foreign-Brain isolation. Five focused support
-  regression controls pass. The new capture run passes 40/40 at p95 0.519 seconds.
-  Normal migration-045 reads still fail in 2–15 seconds. Rolled-back normal-data
-  probes return the identical revised deadline in 4–4.5 ms. The normal update to
-  migration 046 completed with checkpoint and exact data-ID preservation. Two
-  runtime probe rounds include one failed view, three successful overview reads
-  at 2.35–4.79 seconds and two centered reads at 0.27–0.74 seconds. Background
-  admission waits/ten-second discovery work remain, so runtime acceptance is
-  still open. The dated mapping records every outcome and the next repair seam.
-  The later semantic-discovery query repair is deployed at the same migration
-  with build time 13:07:42Z and exact data-ID preservation. Initial normal reads
-  pass; the longer series passes 37/40 with three retained database failures and
-  p95 3.520 seconds. Support-audit discovery still times out; this pack remains
-  in progress, including the forced audit/rebuild workload gate.
-- Version: N/A — local development.
-- Commit: uncommitted.
+- Planned: Two-phase graph preparation, checked publication and populated concurrency proof.
+- Shipped: N/A for the complete slice. Checkpoint f2673d7 contains earlier partial preparation; the October 18 local implementation adds bounded off-lock maintenance, short checked publication and fair restart-safe discovery. Full slice acceptance remains open.
+- Not shipped: A reviewed normal-runtime update and final integrated closeout. Local mixed 10k and both normal-data clone gates pass; these results do not establish updated installed behavior.
+- New blockers: None for independent local implementation; normal-runtime state remains unchanged.
+- Docs updated: Accepted graph contract/ADR amendment, owning epic/pack/index, [historical progress](../../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md) and [current local evidence](../../../mappings/graph-organization-implementation-2026-10-18.md).
+- Validation: October 18 migration-063 mixed 10k proof passes 602/602 reads with zero errors and p95 0.459626 seconds during captures, audits, native import and two ready rebuilds. Both normal-data clone series pass 40/40 with the same hydrated payload, at p95 1.629 and 0.951 seconds. Four focused maintenance cases pass. The October 9 normal-installation failure (35/40, p95 4.027 seconds), earlier capture-only 40/40 proof and prior fixture failures remain retained; they are not the latest local repair result. Detailed workload versions and limits follow below.
+- Version: N/A — local development; no release.
+- Commit: Original checkpoint `f2673d7`; the October 18 implementation and documentation reconciliation are uncommitted.
+
+October 18 local evidence: all four focused autonomous maintenance cases pass.
+The final migration-061 sustained mixed 10k workload completed 600/600 requests
+with zero errors at all-outcome p95 0.450670 seconds, 16 actual audit completions,
+64 durable cursor steps and 63 actual native import windows. Thirty-four import
+windows overlap 61 read-window events. Both requested rebuilds reached ready
+(97.836 and 138.781 seconds), and reads continued through 139.209 seconds.
+The workload used 34 controlled loopback calls and zero paid calls. Eight focused
+generation/read/deferral controls passed in the full series; the remaining
+delayed-I/O fixture passed after fixing its missing proxy response counter.
+Earlier non-overlapping and one-error workload receipts are retained. These
+are disposable-database/native proofs, separate from the October 9
+normal-runtime observation. Current normal-data template and logical-restore
+clones each pass 40/40 reads with identical 60-node hydrated payloads at p95
+1.629 and 0.951 seconds respectively; only the destination of the logical restore
+is analyzed. Original data/schema and normal API/worker state stay unchanged.
+The [dated ledger](../../../mappings/graph-organization-implementation-2026-10-18.md)
+records the complete objective and remaining gates.
+
+The later migration-063 regression passes 602/602 reads, zero errors and p95
+0.459626 seconds during eight captures, sixteen forced audit completions and two
+completed rebuilds. Of 63 native import windows, 32 overlap 55 read-window events.
+Both generations reach ready at 100.420 and 141.747 seconds, with reads through
+142.157 seconds. The 187.27-second test makes 34 controlled loopback requests and
+zero paid calls. The exact fixture database, four native Brain/fence rows and
+private paths are verified absent in its separate cleanup receipt. This fixture
+has no edited human groups; the subsequent transitive-split bound and migration
+extension have separate focused proof in the ledger. Neither run updates the
+normal installation or replaces the retained October 9 failure observation.

@@ -1,15 +1,17 @@
 # Automatic entity mapping, topics and usable graphs
 
-Status: approved for implementation; staged work in progress, successor features not yet delivered
-Observed: 2026-10-09 (Europe/Stockholm)
+Status: approved; partial checkpoint committed, implementation and acceptance open
+Source comparison: 2026-10-09; implementation status reconciled 2026-10-18
 Confidence: source-verified design comparison; separate local implementation/prototype evidence below, normal-runtime acceptance open
 Owner: graph intelligence, with evidence and memory lifecycle dependencies
 
 Implementation authorization: the user requested the full dedicated plan on
 2026-10-09. Stage 0 is owned by the active
 [concurrent preparation pack](../roadmap/execution/active/graph-concurrent-preparation.md).
-The full entity/alias/topic/navigation/invalidation objective remains active;
-completion of the prerequisite alone will not complete this plan.
+The full entity/alias/topic/navigation/invalidation objective remains unfinished.
+It was paused on 2026-10-09 and resumed in a separate implementation task on
+2026-10-18. Follow the [current roadmap](../roadmap/epics/index.md) and active
+packs for that work; this retained plan is not new acceptance evidence.
 
 The user's subsequent instruction requires product implementation in Rust.
 The Python GLiNER prototype remains development evidence. It does not select a
@@ -35,9 +37,10 @@ database, native clustering algorithms and a renderer. Installing another graph
 package would not supply that missing product behavior by itself.
 
 Keep PostgreSQL/Rust as the canonical boundary and Neo4j/GDS as the graph engine.
-Prototype standalone GLiNER2.5 for local extraction, reuse Cognee's entity/chunk
-organization and extraction-derived summary patterns, and reuse established
-grouping algorithms. Compare Graphify with Enola on repository extraction before
+The standalone GLiNER2.5 prototype failed the development quality gate; improve
+or replace the extraction candidate before production selection. Cognee's
+entity/chunk organization, extraction-derived summaries and established grouping
+algorithms remain useful design references. Compare Graphify with Enola on repository extraction before
 choosing another adapter. Graphiti is a later candidate for temporal relationships
 and entity resolution, rather than the first dependency to introduce.
 
@@ -103,7 +106,7 @@ checkout is an older September snapshot; conclusions below use current source.
   matching ideas while retaining reversible aliases and original supporting
   mentions. Similar names alone must not collapse separate environments.
 
-Current Cognee also has a [local GLiNER demo](https://github.com/topoteretes/cognee/blob/0ec7a9fa61c9ff04bf7e02e0d57af363a993a5e1/examples/guides/gliner_demo_llm_free_cognify.py).
+Cognee at the inspected revision also has a [local GLiNER demo](https://github.com/topoteretes/cognee/blob/0ec7a9fa61c9ff04bf7e02e0d57af363a993a5e1/examples/guides/gliner_demo_llm_free_cognify.py).
 It extracts with bounded schemas and deterministic summaries; embeddings remain
 a separate operation. Cognee labels this bundled extractor a demo and distinguishes
 its separately licensed production offering. We should evaluate independently
@@ -111,7 +114,7 @@ licensed GLiNER rather than assume the demo is the production pipeline.
 The inspected [Cognee core license](https://github.com/topoteretes/cognee/blob/0ec7a9fa61c9ff04bf7e02e0d57af363a993a5e1/LICENSE)
 is Apache-2.0; that does not confer rights to separate enterprise components.
 
-### GLiNER2.5: first local extraction candidate
+### GLiNER2.5: tested candidate, quality gate failed
 
 The [standalone library](https://github.com/fastino-ai/GLiNER2) and
 [base model](https://huggingface.co/fastino/gliner2.5-base-v1) are Apache-2.0.
@@ -122,9 +125,12 @@ ontology. Domain recall and multilingual behavior need fixture proof.
 
 Proposed seam: a bounded local extractor returns candidates with exact spans,
 confidence, model revision and schema version to Rust. Rust validates input
-identity and publishes eligible derived navigation records. No package or model
-was installed or run in this study. AMD/ROCm compatibility and the user's LAN
-deployment have not been verified; CPU is the first portability baseline.
+identity and publishes eligible derived navigation records. The local CPU
+prototype was installed and run on 30 development fixtures: precision 71.26%,
+recall 78.48%, p95 inference 44.1 ms. It failed the required 95% precision / 80%
+recall gate and is not selected for production. Ten held-out fixtures remain
+untouched. AMD/ROCm and the user's LAN deployment remain unverified. See the
+[full experiment and limits](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md#local-gliner-development-experiment).
 
 ### Graphify: useful structural producer and navigation patterns
 
@@ -192,7 +198,7 @@ identified. Topic membership does not grant access.
 
 ## Implementation sequence
 
-| Stage | Concrete outcome | Reuse and implementation seam | Required decisions before product code |
+| Stage | Concrete outcome | Reuse and implementation seam | Contract and proof boundaries |
 | --- | --- | --- | --- |
 | 0. Graph availability | Populated overview/neighborhood reads work during capture, audits and rebuilds | Profile `graph/read.rs`, `graph/work.rs`, `graph/queue.rs` and `db.rs`; expensive preparation outside long locks, short checked publication | Consistent snapshot, authority/epoch/deadline checks and invalidation guarantees; current first-batch acceptance stays open |
 | 1. Entity mentions | Automatically map explicit claim subjects, repository metadata and document entities to typed source-linked mentions | Existing learning output plus optional local GLiNER; deterministic import adapter | Model/schema version, exact span coordinates, coverage, failures and supported languages |
@@ -302,8 +308,11 @@ extraction, embedding, answer or judge calls.
 - A local Python extractor is a proposed optional component. The accepted GDS
   analytics contract excludes Python from its current implementation; this
   proposal does not silently change that contract or make Cognee mandatory.
-- No package installs, model downloads, reference edits, deployments, commits,
-  provider selection changes or new benchmark claims occurred in this study.
+- Development installed a repository-owned GLiNER environment/model and committed
+  the candidate/concurrency foundation in `f2673d7`. The local installation was
+  updated through migration 047 with preserved data. No production extractor was
+  enabled and no new comparable answer-quality score was established. Reference
+  checkouts and normal Brain model choices were preserved.
 
 ## Ownership, source method and outstanding proof
 
@@ -321,25 +330,28 @@ It is design evidence; older system reports are not current package proof.
 
 The graph epic owns derived entities/topics/navigation. Evidence owns source and
 manual grouping semantics; memory lifecycle owns correction and erasure effects.
-Detailed entity/alias/topic contracts are still needed (`needs-contract`), as is
-product protocol and qualification for the new semantic node kinds. The accepted
+[ADR 0020](../adr/0020-automatic-knowledge-organization.md) and the
+[organization contract](../contracts/automatic-knowledge-organization.md) are
+accepted, and the [organization pack](../roadmap/execution/active/graph-automatic-knowledge-mapping.md)
+exists. Rust parsing and source-bound candidate storage are implemented; automatic
+publication, semantic node qualification, aliases, topics and UI remain open.
+The accepted
 [concurrent preparation contract](../contracts/graph-concurrent-preparation.md)
 now governs the graph read/publication prerequisite; normal-runtime acceptance
 has not passed.
 An optional Python extraction service also needs an explicit adapter/runtime
 decision (`needs-adr`); it does not replace native GDS or become a mandatory
 Cognee runtime through this proposal.
-Create decision-complete successor slices/packs before implementing these schema
-and cross-module changes. This research document itself is not an execution pack.
+Continue under the existing accepted pack and reconcile any scope expansion
+before implementation. This research document is not an execution pack.
 
-Unproved: local model domain recall, multilingual coverage, actual Mac/AMD
-inference throughput, candidate adapter compatibility, semantic-topic usefulness,
-Graphify coverage gains over Enola, and any answer-score improvement. Those are
-the specific reasons for the small fixture comparison and staged gates above.
+Remaining proof: held-out/domain extraction quality, Unicode and long-input model
+behavior, relation/alias accuracy, semantic-topic usefulness, incremental privacy
+and restore closure, full populated concurrent graph acceptance, Graphify coverage
+gains over Enola, and comparable answer-score improvement. Short CPU NER and
+candidate-parser tests do not establish those outcomes.
 
-Validation: `./scripts/validate.sh` passed governance lint, 32 governance tests,
-the zero-provider-call support corpus check and 10 baseline tests. `git diff
---check` passed; both agents reviewed this proposal and their corrections were
-incorporated. All three reference checkouts remained clean. These checks do not
-establish new product runtime acceptance. Version: N/A (research only).
-Commit: uncommitted.
+The [current checkpoint](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
+retains native checks, failed normal graph reads, model results and publication
+identity. Version: N/A; implementation checkpoint `f2673d7`. This status cleanup
+is documentation only and remains uncommitted.
