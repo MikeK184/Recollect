@@ -233,7 +233,9 @@ pub(super) async fn arm(state: &AppState, job: &ClaimedJob) -> Result<Entry> {
 
 pub(super) async fn insert(tx: &mut Tx<'_>, e: &Entry) -> Result<()> {
     deadline(tx, Some(e.deadline)).await?;
-    if privacy_sequence(tx,e.brain_id).await? != e.privacy_sequence { return Err(changed()); }
+    if privacy_sequence(tx, e.brain_id).await? != e.privacy_sequence {
+        return Err(changed());
+    }
     sqlx::query("INSERT INTO analytics_attempts(id,brain_id,report_id,job_id,lease_token,created_at,deadline,privacy_sequence) VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
       .bind(e.id).bind(e.brain_id).bind(e.report_id).bind(e.job_id).bind(e.lease_token).bind(e.created_at).bind(e.deadline).bind(e.privacy_sequence).execute(&mut **tx).await?;
     Ok(())

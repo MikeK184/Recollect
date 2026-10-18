@@ -211,7 +211,13 @@ async fn lexical_window_reaches_rows_through_the_recall_vector_gin_indexes() {
     let mut waited = 0;
     loop {
         let after = scans(&h).await;
-        let unused: Vec<_> = GIN.iter().filter(|i| after[**i] <= before[**i]).collect();
+        // Claim and chunk windows always drive the pass; the fact and manifest
+        // windows are skipped by the join when the other side is empty (seeded
+        // facts have no snapshots), so only their plans are asserted above.
+        let unused: Vec<_> = ["claim_recall_lexical", "source_recall_lexical"]
+            .iter()
+            .filter(|i| after[**i] <= before[**i])
+            .collect();
         if unused.is_empty() {
             break;
         }
@@ -241,5 +247,100 @@ async fn lexical_window_reaches_rows_through_the_recall_vector_gin_indexes() {
         assert!(plan.contains(window), "{window} is not used:\n{plan}");
     }
     tx.rollback().await.unwrap();
+    h.finish().await;
+}
+
+/// Mode eligibility is decided after SQL paging; an all-ineligible first page
+/// must not hide the eligible claims behind it, and `kind` is a bound value.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn claim_list_keeps_paging_past_pages_the_mode_excludes() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let brain = ok(
+        &h,
+        "POST",
+        "/api/brains",
+        &owner,
+        json!({"name":"Claim paging corpus"}),
+    )
+    .await;
+    let base = format!("/api/brains/{}", brain["id"].as_str().unwrap());
+    let version =
+        source(&h, &base, &owner, "Paging evidence", "Synthetic values.\n").await["version"]["id"]
+            .clone();
+    while worker::run_once(&h.state, "capture").await.unwrap() {}
+    let accept = |claim: &Value| json!({"base_revision":claim["id"],"action":"accept","reason":"Synthetic evidence reviewed by the signed-in account.","content":null,"revalidation_basis":null});
+    // Oldest: the only strictly operational claim. Newest 22: declared only.
+    let mut verified = super::super::review::proposal(&version, "Verified subject", "value");
+    verified["content"]["operational"] = json!("verified");
+    verified["content"]["observed_at"] = json!("2026-01-05T00:00:00Z");
+    verified["content"]["observation"] = json!("Observed in the synthetic fixture.");
+    let mut inputs = vec![verified];
+    for i in 0..22 {
+        inputs.push(super::super::review::proposal(
+            &version,
+            &format!("Declared subject {i}"),
+            "value",
+        ));
+    }
+    let mut verified_id = Value::Null;
+    for (i, input) in inputs.into_iter().enumerate() {
+        let proposed = ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+        ok(
+            &h,
+            "POST",
+            &format!(
+                "{base}/claims/{}/review",
+                proposed["claim_id"].as_str().unwrap()
+            ),
+            &owner,
+            accept(&proposed),
+        )
+        .await;
+        if i == 0 {
+            verified_id = proposed["claim_id"].clone();
+        }
+    }
+    let page = ok(
+        &h,
+        "GET",
+        &format!("{base}/claims?mode=strict_operational"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    let ids: Vec<_> = page["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v["revision"]["claim_id"].clone())
+        .collect();
+    assert_eq!(ids, vec![verified_id], "{page}");
+    assert!(page["next_offset"].is_null(), "{page}");
+    assert_eq!(page["total_candidates"], 23);
+    // A declared-only page remains reachable through next_offset in the default mode.
+    let first = ok(&h, "GET", &format!("{base}/claims"), &owner, Value::Null).await;
+    assert_eq!(first["items"].as_array().unwrap().len(), 20, "{first}");
+    assert_eq!(first["next_offset"], 20);
+    // The kind filter is bound, not interpolated.
+    let none = ok(
+        &h,
+        "GET",
+        &format!("{base}/claims?kind=decision"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert!(none["items"].as_array().unwrap().is_empty());
+    let (status, _, _) = h
+        .call(
+            "GET",
+            &format!("{base}/claims?kind=x%27%20OR%20%271%27%3D%271"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await;
+    assert!(status.is_client_error());
     h.finish().await;
 }

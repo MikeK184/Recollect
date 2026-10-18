@@ -2,18 +2,18 @@
 //! still qualifies their exact immutable sources, contexts and authority.
 use super::source_features::{self, Features, SourceInput};
 use crate::{
+    AppState,
     auth::Auth,
     db,
     error::{Error, Result},
     graph,
     memory_evidence::Tx,
-    AppState,
 };
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use recollect_protocol::{GraphSelection, TopicOverride};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::types::Json;
 use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;

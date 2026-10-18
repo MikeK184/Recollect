@@ -46,7 +46,7 @@ GRANT EXECUTE ON FUNCTION recollect_claim_status_eligible(jsonb,text),recollect_
 -- can narrow the scan but never widen what a caller can see. A NULL argument
 -- disables that branch.
 CREATE FUNCTION recollect_window_claims(b uuid, q tsquery, literal text, exact uuid) RETURNS SETOF uuid
-LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 10 SET search_path=public,pg_temp AS $$
 BEGIN
   IF recollect_role(b) IS NULL THEN RETURN; END IF;
   RETURN QUERY
@@ -55,7 +55,7 @@ BEGIN
     UNION SELECT exact WHERE exact IS NOT NULL;
 END $$;
 CREATE FUNCTION recollect_window_sources(b uuid, q tsquery, literal text, exact uuid) RETURNS SETOF uuid
-LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 10 SET search_path=public,pg_temp AS $$
 DECLARE rq tsquery := recollect_lexical_prefilter(q);
 BEGIN
   IF recollect_role(b) IS NULL THEN RETURN; END IF;
@@ -69,7 +69,7 @@ BEGIN
     UNION SELECT source_id FROM source_versions WHERE brain_id=b AND processing<>'ready';
 END $$;
 CREATE FUNCTION recollect_window_facts(b uuid, q tsquery, literal text, exact uuid) RETURNS SETOF uuid
-LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 10 SET search_path=public,pg_temp AS $$
 BEGIN
   IF recollect_role(b) IS NULL THEN RETURN; END IF;
   RETURN QUERY
@@ -80,7 +80,7 @@ BEGIN
     UNION SELECT id FROM repository_facts WHERE brain_id=b AND length(record::text)>65536;
 END $$;
 CREATE FUNCTION recollect_window_manifests(b uuid, q tsquery, literal text, exact uuid) RETURNS SETOF uuid
-LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER ROWS 10 SET search_path=public,pg_temp AS $$
 BEGIN
   IF recollect_role(b) IS NULL THEN RETURN; END IF;
   RETURN QUERY

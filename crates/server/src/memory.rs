@@ -620,6 +620,8 @@ pub(crate) async fn view(
     crate::procedures::assess(state, tx, &mut view, at, fact_at).await?;
     Ok(view)
 }
+const PAGE: i64 = 20;
+const MAX_SCANNED_PAGES: usize = 25;
 fn include(view: &ClaimView, mode: Option<&str>) -> bool {
     match mode.unwrap_or("investigation") {
         "strict_accepted" => view.eligibility.strict_accepted,
@@ -653,13 +655,8 @@ pub async fn list(
     } else {
         "AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'"
     };
-    let kind_filter = query
-        .kind
-        .as_ref()
-        .map(|kind| format!("AND r.revision#>>'{{content,kind}}'='{kind}'"))
-        .unwrap_or_default();
     let filtered = format!(
-        "FROM (SELECT DISTINCT ON(claim_id) * FROM claim_revisions WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY claim_id,recorded_at DESC) r WHERE ($3::uuid IS NULL OR r.revision#>>'{{content,selection,environment_id}}' IS NULL OR r.revision#>>'{{content,selection,environment_id}}'=$3::text) AND ($4::uuid IS NULL OR r.revision#>'{{content,selection,repository_ids}}'='[]'::jsonb OR r.revision#>'{{content,selection,repository_ids}}' ? $4::text) AND ($5::uuid IS NULL OR r.revision#>'{{content,selection,area_ids}}'='[]'::jsonb OR r.revision#>'{{content,selection,area_ids}}' ? $5::text) {privacy_filter} {kind_filter}"
+        "FROM (SELECT DISTINCT ON(claim_id) * FROM claim_revisions WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY claim_id,recorded_at DESC) r WHERE ($3::uuid IS NULL OR r.revision#>>'{{content,selection,environment_id}}' IS NULL OR r.revision#>>'{{content,selection,environment_id}}'=$3::text) AND ($4::uuid IS NULL OR r.revision#>'{{content,selection,repository_ids}}'='[]'::jsonb OR r.revision#>'{{content,selection,repository_ids}}' ? $4::text) AND ($5::uuid IS NULL OR r.revision#>'{{content,selection,area_ids}}'='[]'::jsonb OR r.revision#>'{{content,selection,area_ids}}' ? $5::text) {privacy_filter} AND ($8::text IS NULL OR r.revision#>>'{{content,kind}}'=$8)"
     );
     let filtered = format!(
         "{filtered} AND ($6::jsonb IS NULL OR (r.revision#>'{{content,selection}}' IS NOT NULL
@@ -680,38 +677,71 @@ pub async fn list(
         .bind(query.area_id)
         .bind(scope.as_ref().map(SqlJson))
         .bind(&search)
+        .bind(&query.kind)
         .fetch_one(&mut *tx)
         .await?;
-    let revisions: Vec<PrivateRevision> = sqlx::query_as(&format!(
-        "SELECT r.id,r.claim_id,r.recorded_at,recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at) AS state,CASE WHEN recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' THEN r.revision END AS revision {filtered} ORDER BY recorded_at DESC,id LIMIT 20 OFFSET $8"
-    ))
-    .bind(brain)
-    .bind(at)
-    .bind(query.environment_id)
-    .bind(query.repository_id)
-    .bind(query.area_id)
-    .bind(scope.as_ref().map(SqlJson))
-    .bind(&search)
-    .bind(offset)
-    .fetch_all(&mut *tx)
-    .await?;
+    let sql = format!(
+        "SELECT r.id,r.claim_id,r.recorded_at,recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at) AS state,CASE WHEN recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' THEN r.revision END AS revision {filtered} ORDER BY recorded_at DESC,id LIMIT {PAGE} OFFSET $9"
+    );
+    // Eligibility for the requested mode is canonical Rust policy over each view,
+    // so it cannot move into the paging SQL. A page of candidates that are all
+    // ineligible would otherwise be empty while more remain: keep reading
+    // candidate pages (bounded) until something can be shown, and advance
+    // `next_offset` past everything examined.
+    let mut cache = evidence::EvidenceCache::default();
     let mut items = Vec::new();
     let mut unavailable = Vec::new();
-    for r in revisions {
-        if let Some(revision) = r.revision {
-            let view = view(&state, &mut tx, revision.0, at, query.fact_at).await?;
+    let mut scanned = offset;
+    for _ in 0..MAX_SCANNED_PAGES {
+        let revisions: Vec<PrivateRevision> = sqlx::query_as(&sql)
+            .bind(brain)
+            .bind(at)
+            .bind(query.environment_id)
+            .bind(query.repository_id)
+            .bind(query.area_id)
+            .bind(scope.as_ref().map(SqlJson))
+            .bind(&search)
+            .bind(&query.kind)
+            .bind(scanned)
+            .fetch_all(&mut *tx)
+            .await?;
+        let fetched = revisions.len() as i64;
+        let mut live = Vec::new();
+        for r in revisions {
+            if let Some(revision) = r.revision {
+                live.push(revision.0);
+            } else {
+                unavailable.push(UnavailableClaim {
+                    claim_id: r.claim_id,
+                    revision: UnavailableRevision {
+                        id: r.id,
+                        recorded_at: r.recorded_at,
+                        state: r.state,
+                    },
+                });
+            }
+        }
+        // Unless history is requested the SQL above already required support.
+        let presupported = query.mode.as_deref() != Some("history");
+        for view in views(
+            &state,
+            &mut tx,
+            &mut cache,
+            live,
+            at,
+            query.fact_at,
+            presupported,
+        )
+        .await?
+        {
+            let view = view?;
             if include(&view, query.mode.as_deref()) {
                 items.push(view);
             }
-        } else {
-            unavailable.push(UnavailableClaim {
-                claim_id: r.claim_id,
-                revision: UnavailableRevision {
-                    id: r.id,
-                    recorded_at: r.recorded_at,
-                    state: r.state,
-                },
-            });
+        }
+        scanned += PAGE;
+        if !items.is_empty() || !unavailable.is_empty() || fetched < PAGE || scanned >= total {
+            break;
         }
     }
     // The page includes claim bodies and supporting-evidence labels. Advertise
@@ -759,7 +789,7 @@ pub async fn list(
         unavailable,
         total_candidates: total,
         offset,
-        next_offset: (offset + 20 < total).then_some(offset + 20),
+        next_offset: (scanned < total).then_some(scanned),
         knowledge_at: at,
     }))
 }

@@ -154,6 +154,14 @@ exact/lexical baseline (retained at checkpoint f2673d7 as `docs/mappings/retriev
   Statements per recall with 100 candidates: 350/351 before, 26/27 after (about 13×,
   fixed per request rather than per candidate). Plans and index scans are recorded in
   the measurements below.
+- Also shipped (follow-up on main's checkpoint f1b6bb3, migration renumbered 065):
+  claim list paging now keeps reading candidate pages (at most 25) until the mode
+  yields something, using the batched views, and `next_offset` advances past
+  everything examined; the `kind` filter is a bound parameter; the fact-time raw-rule
+  check was already batched with the other raw-rule checks. Window functions declare
+  `ROWS 10`: main's new `source_versions` RLS policy made the planner scan the whole
+  table (4.3 s for 20,000 rows) when it assumed 100 identifiers, and 13 ms with 10.
+  Test: `claim_list_keeps_paging_past_pages_the_mode_excludes`.
 - Not shipped: A literal NOT EXISTS over `assertion_rules` for conflicts (validity
   and scope overlap stay in `memory_rules::overlaps`, so candidates and their
   matching rules are fetched in sets and filtered there); an expression GIN index for
@@ -167,7 +175,10 @@ exact/lexical baseline (retained at checkpoint f2673d7 as `docs/mappings/retriev
   usable support, plus capture/learning and MCP cases) need their own repair.
 - Docs updated: hybrid-retrieval epic and index, active/archive indexes, this pack,
   measurements below.
-- Validation: `cargo fmt`; Clippy (no new warnings in changed files); unit test for
+- Validation: after merging main (`1e83b6b`), the same suites were re-run: the failing
+  set is unchanged apart from main's own organization tests (two stack-overflow aborts in
+  `models::organization_*`, not exercised by this slice; their remaining cases were not
+  run); the three new tests in `retrieval::statements` pass. Earlier: `cargo fmt`; Clippy (no new warnings in changed files); unit test for
   span reads; `retrieval::statements` (statement counts and populated-table index
   proof) pass; `retrieval::` 9 pass/3 fail, `models::` 99 pass/4 fail, `memory::`,
   `review::`, `retention::`, `mcp::`, `capture`, `graph::` with only failures that
