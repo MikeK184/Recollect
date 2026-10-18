@@ -38,6 +38,14 @@ Status: accepted
   Their launchers enforce the [navigation contract](rust-semantic-developer-navigation.md).
   Keep credentials and
   personal model, provider, permission and UI settings out of project files.
+- Claude Code has equivalent repository-local configuration: root `CLAUDE.md`
+  imports `AGENTS.md`; `.mcp.json` carries the Codex Context7, Rust Analyzer
+  and Graft stanzas; `.claude/agents/` holds the five specialist roles with the
+  `.codex/agents/` descriptions and instructions, invoked only at the user's
+  request; the main session is `default`. `.claude/skills/` links to the shared
+  `.agents/skills/` entrypoints instead of copying them. `.claude/settings.json`
+  only denies the Rust Analyzer tools Codex omits from `enabled_tools`; project
+  MCP approval and other permissions remain the user's.
 - Repo-local `recollect-doc-router` and `recollect-doc-maintainer` skills live
   in `.agents/skills/`. The router identifies applicable authority, ownership,
   current evidence and decision gaps. The maintainer audits or updates affected
@@ -45,8 +53,14 @@ Status: accepted
   Both use the existing documentation lifecycle and templates, preserve normal
   implicit invocation, and require no new MCP or home-level configuration.
 - Secrets are inherited via named environment variables, not checked-in values.
-- `/cognee/` stays ignored by the parent repo. Validation must not traverse or
-  modify that checkout or execute its tests.
+- `references/cognee/`, `references/agent-memory-atlas/` and
+  `references/claude-mem/` stay separate and ignored. Documentation maintenance
+  must not modify those checkouts or execute their tests.
+- Current status belongs in the roadmap and operating behavior in runbooks.
+  Remove superseded proposals, duplicate reports and unused illustrations when
+  their selected behavior is recorded in current authority/delivery records.
+  Historical citations use exact Git revisions; preserve accepted authority,
+  required shipped packs, frozen baselines and unfinished acceptance.
 - `./scripts/validate.sh` runs offline using Bash and Python 3.11+, validates
   governance, and tests the checker against disposable fixtures. A failed
   check exits nonzero with the offending file and reason.
@@ -60,6 +74,8 @@ separately; network verification is not part of the offline validation command.
 Compare Cognee's Git state and tracked-file content before and after setup.
 For OpenCode setup, verify role parity, project configuration/agent/skill
 discovery and a read-only Context7 call through the installed host separately.
+For Claude Code setup, verify the same role parity and successful read-only
+calls through each `.mcp.json` server separately from host discovery.
 Neither configuration discovery nor tool listing alone proves a successful call.
 For skill changes, validate the entrypoints and their local references, check
 Codex discovery separately, and exercise routing/maintenance against actual
@@ -67,6 +83,7 @@ governing documents. Structural validation does not prove model behavior.
 
 ## Explicit Deferrals
 
-Detailed product contracts, application code, CI hosting, release/version policy,
-additional custom skills, external remotes, publishing, and deployment are deferred.
+Automatic release/version policy and speculative new developer integrations
+remain deferred. The Rust product, Git remote and GitHub Pages workflow already
+exist; changing their runtime or publishing is outside a documentation cleanup.
 The checker enforces structure and consistency, not the truth of prose or runtime.

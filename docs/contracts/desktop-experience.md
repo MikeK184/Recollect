@@ -166,7 +166,7 @@ redaction stays enabled and excluded values are never discarded by presentation.
 ### Browser feedback implementation — 2026-10-05
 
 The user approved implementation of all ten items in the
-[browser review](../research/browser-management-review-2026-10-05.md), with the
+[browser review](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/browser-management-review-2026-10-05.md), with the
 revised Connections-style tool-group cards replacing the rejected list/inspector
 concept. All routes share the existing 248px shell, 14px navigation and compact
 Newsreader page-heading scale; route-specific management styles must not enlarge

@@ -8,7 +8,7 @@ The desktop Brain catalogue configures approved tools and independent Use, Manag
 and Share rights. It reads cached schemas without launching a provider, opening
 its target or resolving credentials. Actual execution follows in the runtime
 slice. See the [contract](../contracts/mcp-catalogue-and-profiles.md) and
-[local proof](../mappings/mcp-catalogue-2026-09-22.md).
+[local proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-catalogue-2026-09-22.md).
 
 Start the local Compose service with `./scripts/stack.sh up` and open
 `http://127.0.0.1:8787`. The operator needs the existing migration credentials

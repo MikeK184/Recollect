@@ -81,7 +81,7 @@ Work type: product
 - New blockers: None.
 - Docs updated: ADR, contract, owning epic, execution/indexes, interface/reuse and
   validation mappings, graph runbook and local-development navigation.
-- Validation: [Executed proof](../../../mappings/graph-validation-2026-09-15.md):
+- Validation: [Executed proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-validation-2026-09-15.md):
   73 platform tests, ten ordinary workspace tests, Clippy, desktop/mobile graph UI
   and 32 governance checks passed. Normal runtime through migration 018 proved
   exact test-Brain snapshot/manifest selection, 99 entities/183 relationships, path UI,

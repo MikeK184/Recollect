@@ -56,13 +56,13 @@ Provider input, 2026-09-14: the user supplied `OPENAI_API_KEY` in Recollect's ig
 text model and embedding model behind the shared gateway. The opt-in synthetic
 `scripts/probe-openai.mjs` checks external connectivity; it does not enable
 Brain enrichment or replace the provider-policy contract and retention dependency.
-The [connection proof](../../mappings/openai-provider-preflight-2026-09-14.md)
+The [connection proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/openai-provider-preflight-2026-09-14.md)
 records the initially usable GPT-4.1 mini/embedding-3-small pair. After completing
 organization verification, the user selected `gpt-5.6-luna` as the text model;
 that exact model passed structured extraction and is now the probe's default.
 The user subsequently selected `text-embedding-3-large` for embeddings, verified
 at its default 3,072 dimensions. Use Luna with that embedding model when implementing the
-gateway. The delivered [provider-learning proof](../../mappings/provider-learning-proof-2026-09-14.md)
+gateway. The delivered [provider-learning proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/provider-learning-proof-2026-09-14.md)
 records actual browser calls and local runtime. The earlier GPT-5 mini verification denial is historical, not a current
 blocker for the selected model.
 
@@ -72,20 +72,9 @@ operations proves restore behavior. This epic does not wait for every consumer
 to exist before delivering its canonical rules, and consumers cannot ship without
 testing those rules through their own paths.
 
-## Decisions Before Implementation
-
-- Specify claim/evidence/time identities, validity precision, allowed mutations,
-  expected-version checks and actor/reviewer authority.
-- Specify assertion rejection/applicability and explicit revalidation, conflict
-  dispositions and current/historical eligibility without a universal semantic
-  matching or newest-wins assumption.
-- Specify per-class retention, minimal audit/deletion metadata and restore
-  enforcement beyond the settled 30-day raw default; define model adapters,
-  policy rules and budgets before enabling automatic learning.
-
 ## Slice Map
 
-The [automated memory improvement plan](../../research/automated-memory-improvement-plan-2026-10-07.md)
+The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 authorizes source-support verification, automatic session-derived handovers with
 permitted minimal excerpts, and bounded cross-session correction. These slices
 are locally delivered under accepted contracts and archived execution packs.
@@ -120,19 +109,6 @@ new lifecycle state. Official OpenRouter and Context7 documentation verify
 throughput sorting and the per-million price ceiling; the existing HTTP fixture
 proves the exact fields and unchanged fences before the separately frozen run.
 
-## Slice Dependencies
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `memory-claims-and-time` | `evidence-repository-publication` |
-| `memory-review-and-corrections` | `memory-claims-and-time` |
-| `memory-retention-and-erasure` | `memory-review-and-corrections` |
-| `memory-provider-policy-and-learning` | `memory-retention-and-erasure` |
-| `memory-procedures-and-handovers` | `memory-review-and-corrections` |
-| `memory-capture-reconciliation` | `memory-procedures-and-handovers`, `evidence-session-capture` |
-| `memory-desktop-workflows` | `platform-desktop-shell` |
-| `memory-managed-experience` | `platform-desktop-shell`, `memory-capture-reconciliation`, `mcp-desktop-setup` |
-
 ## Completion Criteria
 
 - Evidence, claim and synthesis views distinguish origin, review, freshness and
@@ -147,37 +123,16 @@ proves the exact fields and unchanged fences before the separately frozen run.
 - Unapproved model transmission/fallback is denied. Automatic acceptance records
   its policy instead of inventing human review. Procedures do not grant execution.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the verified final local image separately
-from remaining current-code domain and integrated acceptance. The
-[desktop guide](../../runbooks/desktop-experience.md) documents the current function
-locations. Product/proof slices stay in progress until their required checks pass;
-prior shipped domain records remain historical evidence rather than redesign proof.
+Automatic learning, source-support verification, settled-session digests, exact-family cross-session reconciliation, review and erasure/recovery are implemented. This epic remains active as a dependency of organization privacy and incremental correction: ancestor model-input fences do not yet cover every descendant mapping input. The graph organization pack owns that unfinished integration; automatic learning itself is not a missing feature.
 
-## Managed experience follow-up, 2026-09-28
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-The [managed setup slice](../execution/archive/memory-managed-experience.md) is
-delivered locally with native/browser proof and preserved existing Brain data.
-The [dated mapping](../../mappings/managed-memory-experience-2026-09-28.md) records
-the operating defaults, initial failures, completed reruns and limits. The epic
-remains active for the separate desktop workflow and integrated acceptance scope.
+## Delivery evidence
 
-## Final desktop and tooling acceptance — 2026-10-01
-
-The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
-
-## Browser feedback closeout — 2026-10-05
-
-The supported account model catalogue, dated prices, per-Brain model selection and dimension-safe embedding generation/rebuild successor has completed isolated backend and current UI acceptance. Actual metadata availability was refreshed once; no paid model call or real Brain rebuild was performed for screenshots.
-
-[Coordinated delivery, validation and limits](../../mappings/desktop-browser-management-2026-10-05.md). Version N/A; work uncommitted, no push or external release.
-
-The October 8 fixed GLM recovery endpoint passes the native HTTP fixture;
-all 28 original failed LongMemEval cases now have successful answers after two
-explicit recovery waves. Original throughput results and paid failure receipts
-remain retained in the [dated benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md).
-The fixed route preserves strict schemas, no fallback, price ceilings and the
-45-second timeout. This is local implementation/proof; normal-stack deployment
-was not performed.
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/memory-lifecycle.md).
+Dated test/deployment observations are not a current runtime health claim.

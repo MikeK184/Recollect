@@ -35,18 +35,27 @@ fn changed() -> Error {
     )
 }
 
-async fn input_gate(tx: &mut Tx<'_>, brain: Uuid, version: Uuid) -> Result<Option<DateTime<Utc>>> {
+pub(super) async fn input_gate(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    version: Uuid,
+) -> Result<Option<DateTime<Utc>>> {
     let deadline: Option<(Option<DateTime<Utc>>,)> = sqlx::query_as(
         "SELECT recollect_retention_deadline(v.brain_id,v.retention_class,v.created_at)
          FROM recollect_source_knowledge v JOIN sources s ON s.brain_id=v.brain_id AND s.current_version=v.id
          WHERE v.brain_id=$1 AND v.id=$2 AND v.processing='ready'
           AND recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active'
-          AND NOT EXISTS(SELECT 1 FROM model_input_fences f WHERE f.brain_id=v.brain_id AND f.source_version_id=v.id)",
+          AND NOT recollect_source_model_fenced(v.brain_id,v.id)",
     ).bind(brain).bind(version).fetch_optional(&mut **tx).await?;
     deadline.map(|d| d.0).ok_or_else(retention::unavailable)
 }
 
-async fn context(tx: &mut Tx<'_>, brain: Uuid, version: Uuid, source: Uuid) -> Result<Value> {
+pub(super) async fn context(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    version: Uuid,
+    source: Uuid,
+) -> Result<Value> {
     let Json(context): Json<Value> = sqlx::query_scalar(
         "SELECT jsonb_build_object(
           'selection',coalesce((SELECT selection FROM source_import_scopes WHERE brain_id=$1 AND version_id=$2),'{}'::jsonb),
@@ -56,14 +65,21 @@ async fn context(tx: &mut Tx<'_>, brain: Uuid, version: Uuid, source: Uuid) -> R
     Ok(context)
 }
 
-fn realm(kind: &EntityKind, source: Uuid, context: Uuid) -> Value {
+fn realm(
+    kind: &EntityKind,
+    source: Uuid,
+    context: Uuid,
+    version: Uuid,
+    span: &super::MentionSpan,
+) -> Value {
     if matches!(kind, EntityKind::Technology | EntityKind::Concept) {
         return json!({"kind":"brain_term"});
     }
-    // A canonical origin remains part of an instance realm even when context
-    // exists: context similarity is not equivalence proof. Reconciliation can
-    // later link independently retained originals with explicit support.
-    json!({"kind":"source_instance","source_id":source,"context_id":context})
+    // Unknown prose instances remain occurrence-scoped until equivalence is
+    // supported. Repeated DEV/PROD or same-name people in one input cannot merge
+    // just because the document shares canonical context.
+    json!({"kind":"source_occurrence","source_id":source,"context_id":context,
+        "version_id":version,"byte_start":span.byte_start,"byte_end":span.byte_end})
 }
 
 /// No Brain lock is held while loading/parsing immutable text. Only signed-in
@@ -130,64 +146,15 @@ pub async fn stage_source(state: &AppState, auth: &Auth, prepared: PreparedSourc
     {
         return Err(retention::unavailable());
     }
-    let payload = serde_json::to_value(&prepared.candidates).map_err(|_| changed())?;
-    // Canonical context equality is resolved inside the Brain writer boundary.
-    // Never index arbitrarily large JSON values or use a hash as identity.
-    let context_id: Option<Uuid> = sqlx::query_scalar("SELECT id FROM knowledge_mapping_contexts WHERE brain_id=$1 AND source_id=$2 AND context=$3 ORDER BY id LIMIT 1")
-        .bind(prepared.brain).bind(prepared.source_id).bind(Json(&prepared.context)).fetch_optional(&mut *tx).await?;
-    let context_id = if let Some(id) = context_id {
-        id
-    } else {
-        let id = Uuid::new_v4();
-        sqlx::query("INSERT INTO knowledge_mapping_contexts(id,brain_id,source_id,context) VALUES($1,$2,$3,$4)")
-            .bind(id).bind(prepared.brain).bind(prepared.source_id).bind(Json(&prepared.context)).execute(&mut *tx).await?;
-        id
-    };
-    let previous: Option<(Uuid, Json<Value>)> = sqlx::query_as(
-        "SELECT id,payload FROM knowledge_mapping_inputs WHERE brain_id=$1 AND source_version_id=$2 AND schema_revision=$3 AND adapter_revision=$4 AND context_id=$5",
-    ).bind(prepared.brain).bind(prepared.candidates.source_version_id).bind(&prepared.candidates.schema).bind(&prepared.candidates.adapter_revision).bind(context_id).fetch_optional(&mut *tx).await?;
-    if let Some((id, Json(previous))) = previous {
-        if previous != payload {
-            return Err(changed());
-        }
-        tx.commit().await?;
-        return Ok(id);
-    }
-    let id = Uuid::new_v4();
-    sqlx::query("INSERT INTO knowledge_mapping_inputs(id,brain_id,source_version_id,schema_revision,adapter_revision,preparation_epoch,payload,created_by,context_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)")
-        .bind(id).bind(prepared.brain).bind(prepared.candidates.source_version_id).bind(&prepared.candidates.schema).bind(&prepared.candidates.adapter_revision).bind(prepared.epoch).bind(Json(&payload)).bind(auth.user.id).bind(context_id).execute(&mut *tx).await?;
-    let mut mentions = BTreeMap::new();
-    for mention in &prepared.candidates.mentions {
-        let entity: Uuid = sqlx::query_scalar("INSERT INTO knowledge_entities(id,brain_id,kind,realm,normalized_label) VALUES($1,$2,$3,$4,$5) ON CONFLICT(brain_id,kind,realm,normalized_label) DO UPDATE SET normalized_label=excluded.normalized_label RETURNING id")
-            .bind(Uuid::new_v4()).bind(prepared.brain).bind(mention.kind.as_str()).bind(Json(realm(&mention.kind,prepared.source_id,context_id))).bind(mention.kind.normalized_label(&mention.span.quote)).fetch_one(&mut *tx).await?;
-        let mention_id = Uuid::new_v4();
-        sqlx::query("INSERT INTO knowledge_mentions(id,brain_id,input_id,entity_id,local_key,byte_start,byte_end,quote,confidence) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)")
-            .bind(mention_id).bind(prepared.brain).bind(id).bind(entity).bind(&mention.key).bind(mention.span.byte_start as i32).bind(mention.span.byte_end as i32).bind(&mention.span.quote).bind(mention.confidence).execute(&mut *tx).await?;
-        mentions.insert(mention.key.as_str(), mention_id);
-    }
-    let relations = prepared
-        .candidates
-        .relations
-        .iter()
-        .map(|r| (r.from.as_str(), r.to.as_str(), r.relation.as_str(), &r.span))
-        .chain(
-            prepared
-                .candidates
-                .aliases
-                .iter()
-                .map(|r| (r.left.as_str(), r.right.as_str(), "alias", &r.span)),
-        );
-    for (from, to, relation, span) in relations {
-        sqlx::query("INSERT INTO knowledge_relation_candidates(id,brain_id,input_id,from_mention,to_mention,relation,byte_start,byte_end,quote) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)")
-            .bind(Uuid::new_v4()).bind(prepared.brain).bind(id).bind(mentions[from]).bind(mentions[to]).bind(relation).bind(span.byte_start as i32).bind(span.byte_end as i32).bind(&span.quote).execute(&mut *tx).await?;
-    }
-    db::audit(
+    let id = stage_validated(
         &mut tx,
-        auth.user.id,
         prepared.brain,
-        "knowledge.mapping.stage",
-        id,
-        "source_validated_candidates",
+        auth.user.id,
+        prepared.source_id,
+        prepared.epoch,
+        &prepared.context,
+        &prepared.candidates,
+        None,
     )
     .await?;
     input_gate(
@@ -197,5 +164,92 @@ pub async fn stage_source(state: &AppState, auth: &Auth, prepared: PreparedSourc
     )
     .await?;
     tx.commit().await?;
+    Ok(id)
+}
+
+/// Internal typed boundary. `Some` binds server-owned production provenance;
+/// neither the HTTP staging command nor the candidate JSON supplies this tuple.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn stage_validated(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    source: Uuid,
+    epoch: i64,
+    canonical_context: &Value,
+    candidates: &SourceCandidates,
+    producer: Option<(Uuid, Uuid, Uuid)>,
+) -> Result<Uuid> {
+    let payload = serde_json::to_value(candidates).map_err(|_| changed())?;
+    let existing_context: Option<Uuid> = sqlx::query_scalar("SELECT id FROM knowledge_mapping_contexts WHERE brain_id=$1 AND source_id=$2 AND context=$3 ORDER BY id LIMIT 1")
+        .bind(brain).bind(source).bind(Json(canonical_context)).fetch_optional(&mut **tx).await?;
+    let context_id = if let Some(id) = existing_context {
+        id
+    } else {
+        let id = Uuid::new_v4();
+        sqlx::query("INSERT INTO knowledge_mapping_contexts(id,brain_id,source_id,context) VALUES($1,$2,$3,$4)")
+            .bind(id).bind(brain).bind(source).bind(Json(canonical_context)).execute(&mut **tx).await?;
+        id
+    };
+    let (request, policy, change) =
+        producer.map_or((None, None, None), |(r, p, c)| (Some(r), Some(p), Some(c)));
+    type Previous = (Uuid, Json<Value>, Option<Uuid>, Option<Uuid>);
+    let previous:Option<Previous>=sqlx::query_as("SELECT id,payload,producer_policy_id,producer_change_id FROM knowledge_mapping_inputs WHERE brain_id=$1 AND source_version_id=$2 AND schema_revision=$3 AND adapter_revision=$4 AND context_id=$5 AND producer_request_id IS NOT DISTINCT FROM $6")
+        .bind(brain).bind(candidates.source_version_id).bind(&candidates.schema).bind(&candidates.adapter_revision).bind(context_id).bind(request).fetch_optional(&mut **tx).await?;
+    if let Some((id, Json(old), old_policy, old_change)) = previous {
+        if old != payload || old_policy != policy || old_change != change {
+            return Err(changed());
+        }
+        return Ok(id);
+    }
+    let id = Uuid::new_v4();
+    sqlx::query("INSERT INTO knowledge_mapping_inputs(id,brain_id,source_version_id,schema_revision,adapter_revision,preparation_epoch,payload,created_by,context_id,producer_request_id,producer_policy_id,producer_change_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)")
+        .bind(id).bind(brain).bind(candidates.source_version_id).bind(&candidates.schema).bind(&candidates.adapter_revision).bind(epoch).bind(Json(&payload)).bind(actor).bind(context_id).bind(request).bind(policy).bind(change).execute(&mut **tx).await?;
+    let mut mention_ids = BTreeMap::new();
+    let rows:Vec<Value>=candidates.mentions.iter().map(|m| {
+        let mention_id=Uuid::new_v4(); mention_ids.insert(m.key.as_str(),mention_id);
+        json!({"id":mention_id,"kind":m.kind.as_str(),"realm":realm(&m.kind,source,context_id,candidates.source_version_id,&m.span),
+            "normalized_label":m.kind.normalized_label(&m.span.quote),"local_key":m.key,
+            "byte_start":m.span.byte_start,"byte_end":m.span.byte_end,"quote":m.span.quote,"confidence":m.confidence})
+    }).collect();
+    // Three bounded bulk statements replace hundreds of writer round trips.
+    sqlx::query("INSERT INTO knowledge_entities(id,brain_id,kind,realm,normalized_label)
+        SELECT gen_random_uuid(),$1,kind,realm,normalized_label FROM (
+         SELECT DISTINCT kind,realm,normalized_label FROM jsonb_to_recordset($2) AS x(kind text,realm jsonb,normalized_label text)) x
+        ON CONFLICT(brain_id,kind,realm,normalized_label) DO NOTHING")
+        .bind(brain).bind(Json(&rows)).execute(&mut **tx).await?;
+    sqlx::query("INSERT INTO knowledge_mentions(id,brain_id,input_id,entity_id,local_key,byte_start,byte_end,quote,confidence)
+        SELECT x.id,$1,$2,e.id,x.local_key,x.byte_start,x.byte_end,x.quote,x.confidence
+        FROM jsonb_to_recordset($3) AS x(id uuid,kind text,realm jsonb,normalized_label text,local_key text,byte_start integer,byte_end integer,quote text,confidence float8)
+        JOIN knowledge_entities e ON e.brain_id=$1 AND e.kind=x.kind AND e.realm=x.realm AND e.normalized_label=x.normalized_label")
+        .bind(brain).bind(id).bind(Json(&rows)).execute(&mut **tx).await?;
+    let relations: Vec<Value> = candidates
+        .relations
+        .iter()
+        .map(|r| (r.from.as_str(), r.to.as_str(), r.relation.as_str(), &r.span))
+        .chain(
+            candidates
+                .aliases
+                .iter()
+                .map(|r| (r.left.as_str(), r.right.as_str(), "alias", &r.span)),
+        )
+        .map(|(a, b, kind, span)| {
+            json!({"id":Uuid::new_v4(),"a":mention_ids[a],"b":mention_ids[b],"relation":kind,
+            "byte_start":span.byte_start,"byte_end":span.byte_end,"quote":span.quote})
+        })
+        .collect();
+    sqlx::query("INSERT INTO knowledge_relation_candidates(id,brain_id,input_id,from_mention,to_mention,relation,byte_start,byte_end,quote)
+        SELECT id,$1,$2,a,b,relation,byte_start,byte_end,quote FROM jsonb_to_recordset($3)
+         AS x(id uuid,a uuid,b uuid,relation text,byte_start integer,byte_end integer,quote text)")
+        .bind(brain).bind(id).bind(Json(&relations)).execute(&mut **tx).await?;
+    db::audit(
+        tx,
+        actor,
+        brain,
+        "knowledge.mapping.stage",
+        id,
+        "source_validated_candidates",
+    )
+    .await?;
     Ok(id)
 }

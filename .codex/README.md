@@ -29,7 +29,7 @@ and current user scope. They do not import Terme's docsctl or lifecycle schema.
 Codex discovers `.agents/skills/` between the current directory and the repository
 root. Changes are detected automatically; reopen Codex if the skills do not
 appear in its skill list. See [official skill guidance](https://learn.chatgpt.com/docs/build-skills)
-and the [local assessment and verification](../docs/mappings/documentation-skills-and-tooling-2026-09-13.md).
+and the [current tooling guide and verification links](../docs/runbooks/development-tooling.md).
 
 ## Context7
 
@@ -99,4 +99,4 @@ checkout and leaves its source/Git state untouched. The runtime, caches, and ind
 local and ignored; source manifests and settings remain reviewable. Refresh
 with `sync` after source changes. See the
 [runbook](../docs/runbooks/codegraph.md) and
-[verification evidence](../docs/mappings/codegraph-setup-2026-09-13.md).
+[verification evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/codegraph-setup-2026-09-13.md).

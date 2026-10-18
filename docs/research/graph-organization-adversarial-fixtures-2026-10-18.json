@@ -1,0 +1,1130 @@
+{
+  "name": "graph-organization-adversarial-v1",
+  "version": 1,
+  "created": "2026-10-18",
+  "source": "Independently authored synthetic documents and manual gold; no customer data or extractor outputs.",
+  "span_coordinates": "half-open UTF-8 bytes into exact text",
+  "mention_columns": [
+    "key",
+    "kind",
+    "byte_start",
+    "byte_end",
+    "quote"
+  ],
+  "alias_columns": [
+    "left",
+    "right",
+    "status",
+    "byte_start",
+    "byte_end",
+    "quote"
+  ],
+  "relation_columns": [
+    "from",
+    "to",
+    "relation",
+    "status",
+    "byte_start",
+    "byte_end",
+    "quote"
+  ],
+  "evaluation_policy": {
+    "freeze_before_tuning": true,
+    "held_out": "Tune development only; evaluate held-out once after recipe freeze and retain every outcome.",
+    "mentions": "History, negation and hypothesis still contain mentions; relation/alias dispositions are separate.",
+    "metrics": "Report English exact span/type micro and macro precision/recall plus all-corpus outcomes; failures/truncations retain expected mentions as FN. h07 must report unsupported_language and remain in the outcome denominator.",
+    "topics": "Manual topic categories evaluate membership/pair quality, not exact generated names. Compare metadata-only, entity-overlap and eligible-vector baselines.",
+    "truth": "No grouping, score, click or feedback promotes claims or operational truth."
+  },
+  "scope_policy": {
+    "scope": "Harness-created canonical Brain/repository/environment; unknown is absent context. Text labels never grant authorization.",
+    "instances": "Known canonical realms distinguish DEV/PROD/repositories; unknown instances remain source-scoped.",
+    "normalization": "Only technology/concept normalize case and whitespace; preserve accents, punctuation and meaningful prefixes.",
+    "aliases": "Reversible links preserve originals and support. Negative, ambiguous, hypothetical or retracted equivalence never currently equates identities."
+  },
+  "identity_pairs": [
+    [
+      "d02.app",
+      "d03.app",
+      "distinct_DEV_PROD"
+    ],
+    [
+      "d02.pg",
+      "d03.pg",
+      "same_Brain_technology"
+    ],
+    [
+      "d02.app",
+      "d10.app",
+      "distinct_Brain"
+    ],
+    [
+      "d02.pg",
+      "d10.pg",
+      "distinct_Brain"
+    ],
+    [
+      "d09.upper",
+      "d09.lower",
+      "distinct_case_punctuation"
+    ],
+    [
+      "d09.underscore",
+      "d09.hyphen",
+      "distinct_setting"
+    ],
+    [
+      "d06.full",
+      "d06.short",
+      "distinct_originals_reversible_alias"
+    ],
+    [
+      "h05.repo",
+      "h05.app",
+      "distinct_kind"
+    ],
+    [
+      "h04.prod_name",
+      "h04.dev_name",
+      "never_infer_cross_environment_equivalence"
+    ]
+  ],
+  "topic_pairs": [
+    [
+      "d01",
+      "d11",
+      "related_pki"
+    ],
+    [
+      "d02",
+      "d03",
+      "related_databases_deployment_without_instance_merge"
+    ],
+    [
+      "d02",
+      "d11",
+      "unrelated"
+    ],
+    [
+      "d11",
+      "h08",
+      "related_pki_with_identity_overlap"
+    ],
+    [
+      "h01",
+      "h06",
+      "related_databases"
+    ],
+    [
+      "d12",
+      "d11",
+      "unrelated_empty"
+    ],
+    [
+      "d02",
+      "d10",
+      "cross_Brain_no_membership_or_count"
+    ]
+  ],
+  "special_controls": {
+    "d05": "2021 use is historical, not current truth; text environments do not create canonical instances.",
+    "h03": "Earlier equivalence is explicitly corrected; no current accepted alias.",
+    "h04": "Unbound text environment is not canonical scope equivalence proof.",
+    "h06": "All expected entities occur after byte5000; truncation must be explicit.",
+    "h07": "V1 unsupported_language, no fabricated completed English extraction."
+  },
+  "documents": [
+    {
+      "id": "d01",
+      "partition": "development",
+      "scope": "alpha/infra/PROD",
+      "language": "en",
+      "text": "🔐 Zoë configured HashiCorp Vault for certificate renewal in PROD.",
+      "mentions": [
+        [
+          "zoe",
+          "person",
+          5,
+          9,
+          "Zoë"
+        ],
+        [
+          "vault",
+          "technology",
+          21,
+          36,
+          "HashiCorp Vault"
+        ],
+        [
+          "renewal",
+          "concept",
+          41,
+          60,
+          "certificate renewal"
+        ],
+        [
+          "prod",
+          "environment",
+          64,
+          68,
+          "PROD"
+        ]
+      ],
+      "topics": [
+        "pki",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": []
+    },
+    {
+      "id": "d02",
+      "partition": "development",
+      "scope": "alpha/infra/DEV",
+      "language": "en",
+      "text": "The billing-api service uses PostgreSQL in DEV.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          15,
+          "billing-api"
+        ],
+        [
+          "pg",
+          "technology",
+          29,
+          39,
+          "PostgreSQL"
+        ],
+        [
+          "dev",
+          "environment",
+          43,
+          46,
+          "DEV"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "app",
+          "pg",
+          "uses",
+          "supported_navigation",
+          0,
+          47,
+          "The billing-api service uses PostgreSQL in DEV."
+        ]
+      ]
+    },
+    {
+      "id": "d03",
+      "partition": "development",
+      "scope": "alpha/infra/PROD",
+      "language": "en",
+      "text": "The billing-api service uses PostgreSQL in PROD.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          15,
+          "billing-api"
+        ],
+        [
+          "pg",
+          "technology",
+          29,
+          39,
+          "PostgreSQL"
+        ],
+        [
+          "prod",
+          "environment",
+          43,
+          47,
+          "PROD"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "app",
+          "pg",
+          "uses",
+          "supported_navigation",
+          0,
+          48,
+          "The billing-api service uses PostgreSQL in PROD."
+        ]
+      ]
+    },
+    {
+      "id": "d04",
+      "partition": "development",
+      "scope": "alpha/infra/DEV",
+      "language": "en",
+      "text": "The billing-api in DEV does not use Redis.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          15,
+          "billing-api"
+        ],
+        [
+          "dev",
+          "environment",
+          19,
+          22,
+          "DEV"
+        ],
+        [
+          "redis",
+          "technology",
+          36,
+          41,
+          "Redis"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "app",
+          "redis",
+          "uses",
+          "rejected_negated",
+          0,
+          42,
+          "The billing-api in DEV does not use Redis."
+        ]
+      ]
+    },
+    {
+      "id": "d05",
+      "partition": "development",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "In 2021, queue-api used RabbitMQ in DEV. Today queue-api uses NATS in PROD.",
+      "mentions": [
+        [
+          "old_app",
+          "service",
+          9,
+          18,
+          "queue-api"
+        ],
+        [
+          "rabbit",
+          "technology",
+          24,
+          32,
+          "RabbitMQ"
+        ],
+        [
+          "dev",
+          "environment",
+          36,
+          39,
+          "DEV"
+        ],
+        [
+          "new_app",
+          "service",
+          47,
+          56,
+          "queue-api"
+        ],
+        [
+          "nats",
+          "technology",
+          62,
+          66,
+          "NATS"
+        ],
+        [
+          "prod",
+          "environment",
+          70,
+          74,
+          "PROD"
+        ]
+      ],
+      "topics": [
+        "messaging",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "old_app",
+          "rabbit",
+          "uses",
+          "historical_navigation_only",
+          0,
+          40,
+          "In 2021, queue-api used RabbitMQ in DEV."
+        ],
+        [
+          "new_app",
+          "nats",
+          "uses",
+          "supported_navigation",
+          41,
+          75,
+          "Today queue-api uses NATS in PROD."
+        ]
+      ]
+    },
+    {
+      "id": "d06",
+      "partition": "development",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "In this document, HashiCorp Vault is also called Vault.",
+      "mentions": [
+        [
+          "full",
+          "technology",
+          18,
+          33,
+          "HashiCorp Vault"
+        ],
+        [
+          "short",
+          "technology",
+          49,
+          54,
+          "Vault"
+        ]
+      ],
+      "topics": [
+        "pki"
+      ],
+      "aliases": [
+        [
+          "full",
+          "short",
+          "supported_equivalence",
+          18,
+          55,
+          "HashiCorp Vault is also called Vault."
+        ]
+      ],
+      "relations": []
+    },
+    {
+      "id": "d07",
+      "partition": "development",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "HashiCorp Vault and OpenBao are not the same product.",
+      "mentions": [
+        [
+          "vault",
+          "technology",
+          0,
+          15,
+          "HashiCorp Vault"
+        ],
+        [
+          "bao",
+          "technology",
+          20,
+          27,
+          "OpenBao"
+        ]
+      ],
+      "topics": [
+        "pki"
+      ],
+      "aliases": [
+        [
+          "vault",
+          "bao",
+          "rejected_negated",
+          0,
+          53,
+          "HashiCorp Vault and OpenBao are not the same product."
+        ]
+      ],
+      "relations": []
+    },
+    {
+      "id": "d08",
+      "partition": "development",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "The name gateway may mean edge-gateway or api-gateway.",
+      "mentions": [
+        [
+          "name",
+          "service",
+          9,
+          16,
+          "gateway"
+        ],
+        [
+          "edge",
+          "service",
+          26,
+          38,
+          "edge-gateway"
+        ],
+        [
+          "api",
+          "service",
+          42,
+          53,
+          "api-gateway"
+        ]
+      ],
+      "topics": [
+        "deployment"
+      ],
+      "aliases": [
+        [
+          "name",
+          "edge",
+          "ambiguous",
+          9,
+          54,
+          "gateway may mean edge-gateway or api-gateway."
+        ],
+        [
+          "name",
+          "api",
+          "ambiguous",
+          9,
+          54,
+          "gateway may mean edge-gateway or api-gateway."
+        ]
+      ],
+      "relations": []
+    },
+    {
+      "id": "d09",
+      "partition": "development",
+      "scope": "alpha/infra/PROD",
+      "language": "en",
+      "text": "Checkout.API is configured by timeout_ms, while checkout-api is configured by timeout-ms in PROD.",
+      "mentions": [
+        [
+          "upper",
+          "service",
+          0,
+          12,
+          "Checkout.API"
+        ],
+        [
+          "underscore",
+          "setting",
+          30,
+          40,
+          "timeout_ms"
+        ],
+        [
+          "lower",
+          "service",
+          48,
+          60,
+          "checkout-api"
+        ],
+        [
+          "hyphen",
+          "setting",
+          78,
+          88,
+          "timeout-ms"
+        ],
+        [
+          "prod",
+          "environment",
+          92,
+          96,
+          "PROD"
+        ]
+      ],
+      "topics": [
+        "configuration",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "upper",
+          "underscore",
+          "configured_by",
+          "supported_navigation",
+          0,
+          40,
+          "Checkout.API is configured by timeout_ms"
+        ],
+        [
+          "lower",
+          "hyphen",
+          "configured_by",
+          "supported_navigation",
+          48,
+          97,
+          "checkout-api is configured by timeout-ms in PROD."
+        ]
+      ]
+    },
+    {
+      "id": "d10",
+      "partition": "development",
+      "scope": "beta/infra/DEV",
+      "language": "en",
+      "text": "The billing-api service uses PostgreSQL in DEV.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          15,
+          "billing-api"
+        ],
+        [
+          "pg",
+          "technology",
+          29,
+          39,
+          "PostgreSQL"
+        ],
+        [
+          "dev",
+          "environment",
+          43,
+          46,
+          "DEV"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": []
+    },
+    {
+      "id": "d11",
+      "partition": "development",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "The infra-vault repository configures certificate renewal with Vault and cert-manager.",
+      "mentions": [
+        [
+          "repo",
+          "repository",
+          4,
+          15,
+          "infra-vault"
+        ],
+        [
+          "renewal",
+          "concept",
+          38,
+          57,
+          "certificate renewal"
+        ],
+        [
+          "vault",
+          "technology",
+          63,
+          68,
+          "Vault"
+        ],
+        [
+          "cm",
+          "technology",
+          73,
+          85,
+          "cert-manager"
+        ]
+      ],
+      "topics": [
+        "pki",
+        "gitops"
+      ],
+      "aliases": [],
+      "relations": []
+    },
+    {
+      "id": "d12",
+      "partition": "development",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "At noon, rain crossed the quiet field and the observer closed the notebook.",
+      "mentions": [],
+      "topics": [],
+      "aliases": [],
+      "relations": []
+    },
+    {
+      "id": "h01",
+      "partition": "held_out",
+      "scope": "alpha/audit/STAGING",
+      "language": "en",
+      "text": "🧭 李娜 compared PostgreSQL and SQLite for audit-service in STAGING.",
+      "mentions": [
+        [
+          "person",
+          "person",
+          5,
+          11,
+          "李娜"
+        ],
+        [
+          "pg",
+          "technology",
+          21,
+          31,
+          "PostgreSQL"
+        ],
+        [
+          "sqlite",
+          "technology",
+          36,
+          42,
+          "SQLite"
+        ],
+        [
+          "app",
+          "service",
+          47,
+          60,
+          "audit-service"
+        ],
+        [
+          "stage",
+          "environment",
+          64,
+          71,
+          "STAGING"
+        ]
+      ],
+      "topics": [
+        "databases"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "app",
+          "pg",
+          "uses",
+          "ambiguous_not_asserted",
+          5,
+          72,
+          "李娜 compared PostgreSQL and SQLite for audit-service in STAGING."
+        ]
+      ]
+    },
+    {
+      "id": "h02",
+      "partition": "held_out",
+      "scope": "alpha/infra/PROD",
+      "language": "en",
+      "text": "If prod-worker migrates to Redis, we will retire Memcached.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          3,
+          14,
+          "prod-worker"
+        ],
+        [
+          "redis",
+          "technology",
+          27,
+          32,
+          "Redis"
+        ],
+        [
+          "mem",
+          "technology",
+          49,
+          58,
+          "Memcached"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "app",
+          "redis",
+          "uses",
+          "rejected_hypothetical",
+          0,
+          59,
+          "If prod-worker migrates to Redis, we will retire Memcached."
+        ]
+      ]
+    },
+    {
+      "id": "h03",
+      "partition": "held_out",
+      "scope": "alpha/infra/DEV",
+      "language": "en",
+      "text": "Morgan wrote: “payments is an alias of payroll-api in DEV.” Morgan later corrected: “payments is not payroll-api.”",
+      "mentions": [
+        [
+          "person_old",
+          "person",
+          0,
+          6,
+          "Morgan"
+        ],
+        [
+          "pay_old",
+          "service",
+          17,
+          25,
+          "payments"
+        ],
+        [
+          "api_old",
+          "service",
+          41,
+          52,
+          "payroll-api"
+        ],
+        [
+          "dev",
+          "environment",
+          56,
+          59,
+          "DEV"
+        ],
+        [
+          "person_new",
+          "person",
+          64,
+          70,
+          "Morgan"
+        ],
+        [
+          "pay_new",
+          "service",
+          91,
+          99,
+          "payments"
+        ],
+        [
+          "api_new",
+          "service",
+          107,
+          118,
+          "payroll-api"
+        ]
+      ],
+      "topics": [
+        "deployment"
+      ],
+      "aliases": [
+        [
+          "pay_old",
+          "api_old",
+          "historical_retracted",
+          17,
+          60,
+          "payments is an alias of payroll-api in DEV."
+        ],
+        [
+          "pay_new",
+          "api_new",
+          "rejected_negated",
+          91,
+          119,
+          "payments is not payroll-api."
+        ]
+      ],
+      "relations": []
+    },
+    {
+      "id": "h04",
+      "partition": "held_out",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "For PROD, kube-ledger refers to ledger-api. For DEV, kube-ledger refers to ledger-sim.",
+      "mentions": [
+        [
+          "prod",
+          "environment",
+          4,
+          8,
+          "PROD"
+        ],
+        [
+          "prod_name",
+          "service",
+          10,
+          21,
+          "kube-ledger"
+        ],
+        [
+          "prod_api",
+          "service",
+          32,
+          42,
+          "ledger-api"
+        ],
+        [
+          "dev",
+          "environment",
+          48,
+          51,
+          "DEV"
+        ],
+        [
+          "dev_name",
+          "service",
+          53,
+          64,
+          "kube-ledger"
+        ],
+        [
+          "dev_api",
+          "service",
+          75,
+          85,
+          "ledger-sim"
+        ]
+      ],
+      "topics": [
+        "deployment"
+      ],
+      "aliases": [
+        [
+          "prod_name",
+          "prod_api",
+          "ambiguous_scope_unproven",
+          0,
+          43,
+          "For PROD, kube-ledger refers to ledger-api."
+        ],
+        [
+          "dev_name",
+          "dev_api",
+          "ambiguous_scope_unproven",
+          44,
+          86,
+          "For DEV, kube-ledger refers to ledger-sim."
+        ]
+      ],
+      "relations": []
+    },
+    {
+      "id": "h05",
+      "partition": "held_out",
+      "scope": "alpha/unknown/unknown",
+      "language": "en",
+      "text": "The 📚 Café.API repository and Café API service are different assets.",
+      "mentions": [
+        [
+          "repo",
+          "repository",
+          9,
+          18,
+          "Café.API"
+        ],
+        [
+          "app",
+          "service",
+          34,
+          43,
+          "Café API"
+        ]
+      ],
+      "topics": [
+        "software-design"
+      ],
+      "aliases": [
+        [
+          "repo",
+          "app",
+          "rejected_incompatible_kind",
+          9,
+          73,
+          "Café.API repository and Café API service are different assets."
+        ]
+      ],
+      "relations": []
+    },
+    {
+      "id": "h06",
+      "partition": "held_out",
+      "scope": "alpha/infra/PROD",
+      "language": "en",
+      "text": "Archived inspection notes. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The observer recorded a routine interval and moved to the next page. The archival-worker service uses PostgreSQL in PROD. The archival-worker service does not use Redis.",
+      "mentions": [
+        [
+          "app_positive",
+          "service",
+          5551,
+          5566,
+          "archival-worker"
+        ],
+        [
+          "pg",
+          "technology",
+          5580,
+          5590,
+          "PostgreSQL"
+        ],
+        [
+          "prod",
+          "environment",
+          5594,
+          5598,
+          "PROD"
+        ],
+        [
+          "app_negative",
+          "service",
+          5604,
+          5619,
+          "archival-worker"
+        ],
+        [
+          "redis",
+          "technology",
+          5641,
+          5646,
+          "Redis"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "operations"
+      ],
+      "aliases": [],
+      "relations": [
+        [
+          "app_positive",
+          "pg",
+          "uses",
+          "supported_navigation",
+          5547,
+          5599,
+          "The archival-worker service uses PostgreSQL in PROD."
+        ],
+        [
+          "app_negative",
+          "redis",
+          "uses",
+          "rejected_negated",
+          5600,
+          5647,
+          "The archival-worker service does not use Redis."
+        ]
+      ]
+    },
+    {
+      "id": "h07",
+      "partition": "held_out",
+      "scope": "alpha/infra/PROD",
+      "language": "de",
+      "text": "Der cache-service nutzt Redis in PROD.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          17,
+          "cache-service"
+        ],
+        [
+          "redis",
+          "technology",
+          24,
+          29,
+          "Redis"
+        ],
+        [
+          "prod",
+          "environment",
+          33,
+          37,
+          "PROD"
+        ]
+      ],
+      "topics": [
+        "databases",
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": []
+    },
+    {
+      "id": "h08",
+      "partition": "held_out",
+      "scope": "alpha/identity/PROD",
+      "language": "en",
+      "text": "The auth-api service handles authentication with Keycloak; its runbook also documents certificate renewal using Vault.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          12,
+          "auth-api"
+        ],
+        [
+          "auth",
+          "concept",
+          29,
+          43,
+          "authentication"
+        ],
+        [
+          "keycloak",
+          "technology",
+          49,
+          57,
+          "Keycloak"
+        ],
+        [
+          "renewal",
+          "concept",
+          86,
+          105,
+          "certificate renewal"
+        ],
+        [
+          "vault",
+          "technology",
+          112,
+          117,
+          "Vault"
+        ]
+      ],
+      "topics": [
+        "identity",
+        "pki"
+      ],
+      "aliases": [],
+      "relations": []
+    }
+  ]
+}

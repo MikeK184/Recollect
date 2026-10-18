@@ -1,0 +1,3657 @@
+{
+  "name": "attributed-utility-offline-v1",
+  "created": "2026-10-18",
+  "source": "Manually specified synthetic relevance, exact ID/scope boundaries and explicit feedback controls; no customer data or model outputs. This is an algorithm experiment, not independently proven real utility.",
+  "recipe": "explicit-task-utility-cap-0.05-rrf60-v1",
+  "production_rrf_k": 60,
+  "queries": [
+    {
+      "id": "utility-01",
+      "task_id": "5347cf62-73f4-5ed6-b389-6a7eab12fcde",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "dde2a100-80b3-57af-a4dc-09f941ce7be8",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "ffb7ff03-be34-518b-b245-850cc00afbe0",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "ffb7ff03-be34-518b-b245-850cc00afbe0": 1,
+        "dde2a100-80b3-57af-a4dc-09f941ce7be8": 0
+      },
+      "control": "historical explicit utility"
+    },
+    {
+      "id": "utility-02",
+      "task_id": "ec2393e6-919c-5977-ad76-6629cdbdf18c",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "433bd5be-50e0-5052-be83-5425d656e5a1",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "6ed568f3-e972-5b79-83f4-bac169903ac1",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "6ed568f3-e972-5b79-83f4-bac169903ac1": 1,
+        "433bd5be-50e0-5052-be83-5425d656e5a1": 0
+      },
+      "control": "historical explicit utility"
+    },
+    {
+      "id": "utility-03",
+      "task_id": "a949aa40-9c62-5c52-a283-e6411e1518c2",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "5423d9c0-69d2-5a7e-b929-7c70d4db4830",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "d8bc438f-1456-581b-aad5-90a03af656e1",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "d8bc438f-1456-581b-aad5-90a03af656e1": 1,
+        "5423d9c0-69d2-5a7e-b929-7c70d4db4830": 0
+      },
+      "control": "historical explicit utility"
+    },
+    {
+      "id": "utility-04",
+      "task_id": "d8aa3d7f-7e4a-5dc4-a0c7-f494bab2014c",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "34e881e4-97f6-50a9-9ba5-738fc4327d3b",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "ce7dd0e3-1bae-596a-aa93-a660d12cca75",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "ce7dd0e3-1bae-596a-aa93-a660d12cca75": 1,
+        "34e881e4-97f6-50a9-9ba5-738fc4327d3b": 0
+      },
+      "control": "historical explicit utility"
+    },
+    {
+      "id": "utility-05",
+      "task_id": "43811718-354a-5df8-b4c3-ccdb068d6eb3",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "03412004-d22a-5a73-a4de-a6335ee88c72",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "efb4d265-e437-5689-8b52-768b93cab2db": 1,
+        "03412004-d22a-5a73-a4de-a6335ee88c72": 0
+      },
+      "control": "repeated deliveries/earlier votes cannot multiply reward"
+    },
+    {
+      "id": "utility-06",
+      "task_id": "7de662cd-e34a-593b-971c-b6abcaeb410c",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "ff61df21-0359-5db7-9e15-7471a110fac6",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "00e00928-e7c9-5a1e-896b-06565ee57123",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "00e00928-e7c9-5a1e-896b-06565ee57123": 1,
+        "ff61df21-0359-5db7-9e15-7471a110fac6": 0
+      },
+      "control": "current/evaluation-task self feedback excluded"
+    },
+    {
+      "id": "utility-07",
+      "task_id": "5228f178-e56f-5e31-b8a7-4403045a1b5d",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "07dcb084-fd2d-5e8f-9c34-07be43927ac0",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "23ad1f6f-5e79-578e-a9a7-c4232927d4f5",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "23ad1f6f-5e79-578e-a9a7-c4232927d4f5": 1,
+        "07dcb084-fd2d-5e8f-9c34-07be43927ac0": 0
+      },
+      "control": "held-out feedback excluded"
+    },
+    {
+      "id": "utility-08",
+      "task_id": "3189329e-d824-53b3-86d9-5e400bc33a8b",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "62e969e8-dba9-510d-a814-fda374e6cd53",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "69d0319a-cfea-56c3-a7d3-674c48c51722",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "69d0319a-cfea-56c3-a7d3-674c48c51722": 1,
+        "62e969e8-dba9-510d-a814-fda374e6cd53": 0
+      },
+      "control": "foreign Brain utility cannot match"
+    },
+    {
+      "id": "utility-09",
+      "task_id": "5a6ff570-e063-56b3-b1dd-7a39aea752aa",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "1e99b5f8-f729-5050-88da-fe71f9ebc8b8",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "1a9ac5d4-e59e-534e-985d-25c4c0883f00",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "1a9ac5d4-e59e-534e-985d-25c4c0883f00": 1,
+        "1e99b5f8-f729-5050-88da-fe71f9ebc8b8": 0
+      },
+      "control": "cold start"
+    },
+    {
+      "id": "utility-10",
+      "task_id": "04ed1d08-6a82-5e8f-a90e-ab251294da07",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "a4be9628-15f6-5ae6-ada3-8fd5090a6b1a",
+          "baseline_score": 0.01639344262295082,
+          "eligible": false
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "4452414c-d3ae-5dfa-8b16-75da61bb78e0",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "4452414c-d3ae-5dfa-8b16-75da61bb78e0": 1,
+        "a4be9628-15f6-5ae6-ada3-8fd5090a6b1a": 0
+      },
+      "control": "erased/corrected utility and ineligible candidate excluded"
+    },
+    {
+      "id": "utility-11",
+      "task_id": "80f49ab2-2b41-58b2-b020-c2c205737604",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "unavailable",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "7b2450e4-3d72-598b-bbb1-eee983e5cc05",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "e6740e81-88a1-5ce7-b114-ddc643dd36ac",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "e6740e81-88a1-5ce7-b114-ddc643dd36ac": 1,
+        "7b2450e4-3d72-598b-bbb1-eee983e5cc05": 0
+      },
+      "control": "failed query retained in denominator"
+    },
+    {
+      "id": "utility-12",
+      "task_id": "ccd51309-5faa-53de-867a-7c91ca4ad0d8",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "development",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "11e8308d-e74e-574d-9d42-a310b9cbe169",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "35b34a59-f0dc-5dae-9cca-2b3837dacdbd",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "35b34a59-f0dc-5dae-9cca-2b3837dacdbd": 1,
+        "11e8308d-e74e-574d-9d42-a310b9cbe169": 0
+      },
+      "control": "mistaken explicit utility can hurt ranking within the fixed5percent cap"
+    },
+    {
+      "id": "utility-13",
+      "task_id": "42e1a5c2-bb35-5865-98e9-f89e67c5827e",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "bf82a2ed-264f-5bcb-80b0-98c79cb8d287",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "6ed5cfaf-fcfe-5231-bb6c-dd593fa99ac9",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "6ed5cfaf-fcfe-5231-bb6c-dd593fa99ac9": 1,
+        "bf82a2ed-264f-5bcb-80b0-98c79cb8d287": 0
+      },
+      "control": "current/evaluation-task self feedback excluded"
+    },
+    {
+      "id": "utility-14",
+      "task_id": "398ec900-f9b8-5e1c-98aa-efaa758141dd",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "461430b4-d57d-5436-9fc6-3d9ec24ffc52",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "ad0f1294-5953-5a3c-b99c-2b889b25efa2",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "ad0f1294-5953-5a3c-b99c-2b889b25efa2": 1,
+        "461430b4-d57d-5436-9fc6-3d9ec24ffc52": 0
+      },
+      "control": "held-out feedback excluded"
+    },
+    {
+      "id": "utility-15",
+      "task_id": "5a4baa5b-1c60-5543-a7c1-1756fea6c8fa",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "c86152d9-96ee-550a-b200-16005fe5c82c",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "43765a5e-1b65-5236-b8a4-5ece394019c7": 1,
+        "c86152d9-96ee-550a-b200-16005fe5c82c": 0
+      },
+      "control": "repeated deliveries/earlier votes cannot multiply reward"
+    },
+    {
+      "id": "utility-16",
+      "task_id": "e47be3f9-705d-5753-927d-b7638b059b30",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "ca3102a8-b4c9-54fd-98d7-96640d131bed",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "576279dc-8710-50d9-8bf0-501d36ad25db",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "576279dc-8710-50d9-8bf0-501d36ad25db": 1,
+        "ca3102a8-b4c9-54fd-98d7-96640d131bed": 0
+      },
+      "control": "cold start"
+    },
+    {
+      "id": "utility-17",
+      "task_id": "6a7db783-fc03-5574-9e27-86a02a948ffe",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "b840d955-7f95-507a-a7f6-a8d38bc63f52",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "713f880e-959d-5f91-be4b-085a26019af8",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "713f880e-959d-5f91-be4b-085a26019af8": 1,
+        "b840d955-7f95-507a-a7f6-a8d38bc63f52": 0
+      },
+      "control": "foreign Brain utility cannot match"
+    },
+    {
+      "id": "utility-18",
+      "task_id": "703b60d6-e718-50f7-85ed-37c26ce99da2",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "d8bc74e2-cb73-54bb-9b27-8aa3507eac26",
+          "baseline_score": 0.01639344262295082,
+          "eligible": false
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "e6a42f8f-77e1-5fe1-b62c-c018750c520a",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "e6a42f8f-77e1-5fe1-b62c-c018750c520a": 1,
+        "d8bc74e2-cb73-54bb-9b27-8aa3507eac26": 0
+      },
+      "control": "erased/corrected utility and ineligible candidate excluded"
+    },
+    {
+      "id": "utility-19",
+      "task_id": "3a978b81-62db-513a-b94c-3f2ede1072ff",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "unavailable",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "dfddbe04-f6ae-5c5a-9aed-88fadec26cf4",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "3997d628-a25d-57df-b669-119b89e8853e",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "3997d628-a25d-57df-b669-119b89e8853e": 1,
+        "dfddbe04-f6ae-5c5a-9aed-88fadec26cf4": 0
+      },
+      "control": "failed query retained in denominator"
+    },
+    {
+      "id": "utility-20",
+      "task_id": "7488c28a-d9ac-5f99-bb83-dda18e4353a3",
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "partition": "held_out",
+      "outcome": "completed",
+      "candidates": [
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "60f0ef40-759a-56de-988d-782782eb7f72",
+          "baseline_score": 0.016129032258064516,
+          "eligible": true
+        },
+        {
+          "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+          "scope": {
+            "repository_ids": [
+              "d34ff162-bb72-5e65-a233-270d3d619230"
+            ],
+            "area_ids": [],
+            "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+          },
+          "input_kind": "source_version",
+          "revision_id": "ebceee15-ee6d-5c9f-ac2b-63aaa86cae16",
+          "baseline_score": 0.01639344262295082,
+          "eligible": true
+        }
+      ],
+      "cutoff": 1,
+      "relevance": {
+        "ebceee15-ee6d-5c9f-ac2b-63aaa86cae16": 1,
+        "60f0ef40-759a-56de-988d-782782eb7f72": 0
+      },
+      "control": "mistaken explicit utility can hurt ranking within the fixed5percent cap"
+    }
+  ],
+  "feedback": [
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "ffb7ff03-be34-518b-b245-850cc00afbe0",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "7a1e9c47-0300-56f9-be00-c38c4d51105f",
+      "query_context_id": "b159c1bf-9c35-5e69-90da-0428c5fa92b3",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "6ed568f3-e972-5b79-83f4-bac169903ac1",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "c9c1320a-7b10-5d04-991d-b5396164b6b7",
+      "query_context_id": "6869f13c-a4d9-500e-93c2-54c94a615be8",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "d8bc438f-1456-581b-aad5-90a03af656e1",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "26a2604d-5899-52bb-85d7-b558c0c00777",
+      "query_context_id": "8efc50fc-23cf-5a92-a2af-a68b36769b7d",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "ce7dd0e3-1bae-596a-aa93-a660d12cca75",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "24ca62f1-4f13-5e3f-b23f-2222c06675f0",
+      "query_context_id": "1189d6c3-9629-59db-a9c3-823cf757a4b3",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "dfe5d7d3-6dde-53c1-bfa8-b3ed9afc0922",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "68fc0f5a-4623-5c1c-8192-71988a3e2870",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "9dffb497-9744-5a86-80b3-53d093f805e0",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "4a79a6e8-498d-5647-96ee-b6cbc0a4c3d1",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "8135af7c-53d0-5860-b205-4e8e13744d0c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "90eb1fab-ba25-54c2-b9ef-a9e3f9719fd0",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "eb875369-c5ad-5a70-8fd0-51c1358c2de5",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "514f1f17-8331-5172-9603-011293eeb630",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "812b4e9a-f554-5515-af5b-addc78932b33",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "5e938e49-efb0-51fb-b847-af7e75f2dcf0",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "ca0abc25-7aae-594a-850e-d40bfb908071",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "ec70f2b0-5b77-5996-989d-8e125c913fa2",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "b06dc48d-83cf-5f65-ad53-737d2b55eb2c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "1cce6264-39db-500c-b2fa-baef65b5b5bc",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "ffe5e649-1b99-5734-92af-253646996aaf",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "efc3b058-6caa-5f5b-96af-c1b35b749b88",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "e082aad5-5cbf-5095-9e70-24e7729f92b1",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "5acb515b-31ad-5025-86e8-0eadb8732dc3",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "9715d592-b5ac-59ed-ae35-1053975bb062",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "995c7ce9-384b-55c7-97b1-a0c33ed2b731",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "9b332cfb-ee37-55c7-953e-c3a5788a5493",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "ac7b6fec-3727-59e5-8883-dc506fffa106",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "28f340f2-419a-5f18-951c-6854a3916b9a",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "c0d92598-5819-53ad-96ef-50727cccd9b7",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "c1ae5476-dd5a-5b2c-b21c-7c3e0e6ce223",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "f5ad62d6-5a93-5d6a-bc24-cefdeacee4f3",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "50932b8f-1931-58ad-9ee6-70de62472351",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "528b606b-a635-5b34-96e1-718e8c7d6267",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "bc09ac4a-9b0d-5bab-b5b4-6fc7c7379c2b",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "2c26d81e-5697-59cd-ab23-1cf68c938933",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "257794b0-3490-5b9a-bb5d-47e4ccf7368d",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "199ad95c-3541-52c1-ae3f-cfb90ce2fe63",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "e1dbdc28-0cb3-54ff-b39e-a9e1fd875629",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "1b8819de-8b32-577b-8282-b788164afbaa",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "e1dabffa-8506-5577-b0f4-532bd2cd64be",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "63a67519-ccb2-5268-97d5-15b653fc5374",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "8596f667-9bdb-530a-a135-4d4ccde92656",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "3ac5bfc3-1783-5883-a1ab-d5092289adcb",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "c89cb3f9-65ec-59f8-bd3d-6099b612dc42",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "3b360475-caa4-546c-aa1e-9910ec9e7b4c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "070fe504-3e65-52ec-ac6d-7dc22fa4a6eb",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "931fa024-f794-50ad-a1d0-7096c589d55a",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "5850e62b-65a9-5c90-ac72-3d7f69ba38cf",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "d2e1b37c-e3c3-5932-bb6b-f2fe2c03aa58",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "10b62cc7-19b3-5639-994d-3180b483363e",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "cc7d34c9-7655-5246-8e24-27a8198ad7f7",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "38605b4b-f72e-5a01-adfb-a653a8cbff5c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "af0c147e-a8b6-5c4c-9b58-95e1ce0dbcbd",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "b258ddfb-ce0e-536f-928b-21d9d143f4c2",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "63d4c636-6e5d-5ab2-8a60-82b0a4a412d1",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "f87e0afa-ecf0-5f61-bb02-e4c73a750b19",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "efb4d265-e437-5689-8b52-768b93cab2db",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "b906d575-16de-5155-8af3-8a91f5d8dbe6",
+      "query_context_id": "dfe5d7d3-6dde-53c1-bfa8-b3ed9afc0922",
+      "vote": "unhelpful",
+      "sequence": 1,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "00e00928-e7c9-5a1e-896b-06565ee57123",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "fe289b6b-0a7f-59ae-ba68-4074ee0a005b",
+      "query_context_id": "02693061-e2fc-5bc7-9b41-45e4623bc983",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "ff61df21-0359-5db7-9e15-7471a110fac6",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "7de662cd-e34a-593b-971c-b6abcaeb410c",
+      "query_context_id": "02693061-e2fc-5bc7-9b41-45e4623bc983",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "23ad1f6f-5e79-578e-a9a7-c4232927d4f5",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "11da6018-d3ca-5866-bf95-72782a255731",
+      "query_context_id": "30577cc5-72b1-5938-af96-235b371a55af",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "07dcb084-fd2d-5e8f-9c34-07be43927ac0",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "11da6018-d3ca-5866-bf95-72782a255731",
+      "query_context_id": "30577cc5-72b1-5938-af96-235b371a55af",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "held_out"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "69d0319a-cfea-56c3-a7d3-674c48c51722",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "e30a84c2-12ef-5342-ba79-c6c92766b83b",
+      "query_context_id": "17e4faaf-b803-5b6a-ba7a-a6136e0d0088",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "907f8641-8660-5968-9403-a55f2e868742",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "62e969e8-dba9-510d-a814-fda374e6cd53",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "e30a84c2-12ef-5342-ba79-c6c92766b83b",
+      "query_context_id": "17e4faaf-b803-5b6a-ba7a-a6136e0d0088",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "4452414c-d3ae-5dfa-8b16-75da61bb78e0",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "1d7b58db-afd0-5e28-8f75-106b6f2c86b0",
+      "query_context_id": "302e7341-009f-54b5-a147-474918dad077",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "a4be9628-15f6-5ae6-ada3-8fd5090a6b1a",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "1d7b58db-afd0-5e28-8f75-106b6f2c86b0",
+      "query_context_id": "302e7341-009f-54b5-a147-474918dad077",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": false,
+      "eligible": false,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "11e8308d-e74e-574d-9d42-a310b9cbe169",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "9c430087-eab6-5042-b870-6ac7df3fd299",
+      "query_context_id": "8f4063e6-3f01-58d7-b2a9-76c9e5669e2a",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "6ed5cfaf-fcfe-5231-bb6c-dd593fa99ac9",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "43847d1a-6fb6-50d9-b263-1f767c760853",
+      "query_context_id": "b74c6608-b939-5453-b8af-40ba16f34b1c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "bf82a2ed-264f-5bcb-80b0-98c79cb8d287",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "42e1a5c2-bb35-5865-98e9-f89e67c5827e",
+      "query_context_id": "b74c6608-b939-5453-b8af-40ba16f34b1c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "ad0f1294-5953-5a3c-b99c-2b889b25efa2",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "f2f29f0c-722b-5419-a78e-654f4a684d38",
+      "query_context_id": "507fde43-ab38-5136-b6f0-774cd74a53bb",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "461430b4-d57d-5436-9fc6-3d9ec24ffc52",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "f2f29f0c-722b-5419-a78e-654f4a684d38",
+      "query_context_id": "507fde43-ab38-5136-b6f0-774cd74a53bb",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "held_out"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "b299e9e1-8112-5f5e-a25a-10056d1956bd",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "248e68eb-5988-533f-b779-00f008f6b153",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "1b52ab12-3d7f-586a-975f-968e1ddb05fe",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "0af1738d-4d58-524a-823d-70c2a9ab5b5c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "23e984b8-c63e-5d41-83de-eee93d2e87d3",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "f310fd83-e6df-56e3-afa4-c9af5bb7eff7",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "78189243-8bf5-5df4-81f1-06c7203084f6",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "527e4dc0-59c5-5300-83b3-aeda512ba1a2",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "059f50ab-2e4e-5429-bfe3-927081d81605",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "9d1db97e-599d-5eee-a8d6-f481c5309e62",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "333390cb-6dcb-5e27-802b-0f5db04c5fa7",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "54d6d19e-562c-5a5f-b406-6e3ce1ea4f48",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "0385ce89-7a6f-5352-b578-687f34e687f8",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "3925d69d-dd80-53a0-b785-53dbedb18f98",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "a28c00b1-17f5-5172-a8f6-0c0e8c0fb8d6",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "d50a4d0e-ded1-5cbd-9080-b22d5243941c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "20b1fd56-533d-5660-9c60-7555bd38d563",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "81a9772d-5277-577c-8004-fde4c45aadcc",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "1e549386-dd0d-5289-a39c-7b9112311c94",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "381da03f-391b-5181-ad27-eaf3a8af9a5f",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "82954cce-562d-5dd6-ba89-05fe5e058990",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "236e878a-5e9d-5483-a857-5ae1a73ccecd",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "70377ce6-f61c-580e-b589-d0bec3802308",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "3dd8c0d7-d014-594c-be60-c2a3affc9707",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "cff4bd0a-9bca-50f9-b536-1d7c506b5015",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "7e32a6bc-5b2a-570d-8a78-6a2b94037d6f",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "87c1ba2e-60b9-563a-a188-af3cd9a09b51",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "01719304-a6e7-5374-a69d-9cf5d7e270e3",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "b52bf9be-8b8c-5f27-bade-2f83bb6fa395",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "90377fe4-7d25-5065-ab15-3dafc074bec0",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "4ea4ca29-303b-550e-9911-7a14ee6e01fa",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "351f30c3-6471-519e-9ebe-e5e0b0708a3e",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "c9d58a7d-cdd3-5b89-8194-03018cd61d7a",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "df722ec6-57d2-51e5-b7f9-b9a922747a9c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "6b1207d1-4cca-5407-a28f-db4d2ab9bd16",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "dc1cdccd-8255-52d6-9e74-41c138abd672",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "24101108-1c4c-5bda-a835-a11813dbc10c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "bf270f28-4920-5b33-a0aa-c05a99027290",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "1affe867-ac4e-540f-8453-6a3ef2a84be8",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "a344ae28-07e1-5d4e-a153-0f6d8d13214c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "6dd72504-6cca-5772-ab0e-2211e60392ee",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "ed6ed61e-9c90-5c66-bf10-d3908a898686",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "f5fdc4cc-b504-506d-9c88-3943512ec3db",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "614096b6-509e-5606-b05e-4e74fa2288dc",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "9a07b683-fbdd-55a1-afe8-d6801cf8cc54",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "a168a77e-a933-52ea-b226-8ad8427c720e",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "ffe36fd1-d360-5bf6-9aac-90182dfa48d5",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "f6483689-0d02-5a7a-820a-8941bf6054f6",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "d3bfe7e3-d5ea-5e3f-bbb0-5868293a2f35",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "c4258126-09eb-5d98-aadb-65b27dc6d9d9",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "b046c8bc-b32b-54d5-816e-1f26ba8bf4bc",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "43765a5e-1b65-5236-b8a4-5ece394019c7",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "4bf48559-144a-5e16-beed-496f8846dae5",
+      "query_context_id": "b299e9e1-8112-5f5e-a25a-10056d1956bd",
+      "vote": "unhelpful",
+      "sequence": 1,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "713f880e-959d-5f91-be4b-085a26019af8",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "2d977f96-f027-51d8-bda3-2beb0131788e",
+      "query_context_id": "5b6aab81-ecf4-57c6-a4b8-837ae87e203c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "907f8641-8660-5968-9403-a55f2e868742",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "b840d955-7f95-507a-a7f6-a8d38bc63f52",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "2d977f96-f027-51d8-bda3-2beb0131788e",
+      "query_context_id": "5b6aab81-ecf4-57c6-a4b8-837ae87e203c",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "e6a42f8f-77e1-5fe1-b62c-c018750c520a",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "85a2631d-9b37-5b7c-a49b-c2d495328c98",
+      "query_context_id": "d6fb11fc-be12-53f2-b03d-db8c62f85175",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "d8bc74e2-cb73-54bb-9b27-8aa3507eac26",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "85a2631d-9b37-5b7c-a49b-c2d495328c98",
+      "query_context_id": "d6fb11fc-be12-53f2-b03d-db8c62f85175",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": false,
+      "eligible": false,
+      "partition": "training"
+    },
+    {
+      "brain_id": "b8b92e81-c564-5f84-9954-2b4c9b54fc0f",
+      "scope": {
+        "repository_ids": [
+          "d34ff162-bb72-5e65-a233-270d3d619230"
+        ],
+        "area_ids": [],
+        "environment_id": "5a9dbf2f-b962-514a-8a71-5c39a7423978"
+      },
+      "input_kind": "source_version",
+      "revision_id": "60f0ef40-759a-56de-988d-782782eb7f72",
+      "actor_id": "24153ed7-b7e6-509c-8e26-d14d2037f1b0",
+      "task_id": "c793cbb8-4f7f-5353-883e-630c303c33ef",
+      "query_context_id": "3ad07523-aeac-5067-8e5a-0b30431070a8",
+      "vote": "helpful",
+      "sequence": 2,
+      "explicit": true,
+      "current": true,
+      "eligible": true,
+      "partition": "training"
+    }
+  ]
+}

@@ -26,6 +26,7 @@ pub(crate) mod answer_bundle;
 mod brief;
 mod context;
 mod gates;
+pub mod feedback;
 pub(crate) mod graph;
 mod pool;
 mod semantic;

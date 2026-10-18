@@ -13,7 +13,7 @@ Work type: product
 ## Governing Sources
 
 - [Desktop contract](../../../contracts/desktop-experience.md) (amended 2026-10-03: ambient mode rules)
-- [claude-mem study, 2026-10-03](../../../research/claude-mem-study-2026-10-03.md) (tv.html ambient cycling pattern as visual reference)
+- [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (tv.html ambient cycling pattern as visual reference)
 - [Owning epic](../../epics/desktop-visual-experience.md)
 
 ## Scope
@@ -29,7 +29,7 @@ content on failed refresh and canonical expiry, preserves exact revision identit
 and shows all review/freshness/operational and conflict qualifications. Focus is
 contained in the ambient surface and returns on exit. The existing claim-page
 read advertises a canonical content deadline; no new endpoint or store was added.
-See the [final dated evidence](../../../mappings/desktop-visual-closeout-2026-10-04.md).
+See the [final dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-visual-closeout-2026-10-04.md).
 
 ## Surface and Interface Changes
 
@@ -70,7 +70,7 @@ See the [final dated evidence](../../../mappings/desktop-visual-closeout-2026-10
 ## Closeout
 
 - Planned: Hidden ambient route, recent-memory cycling, Activity entry and safe content lifecycle.
-- Shipped: Light fullscreen presentation, exact revision selection, current/outgoing/footer clearing on failure or canonical deadline, qualifications, hidden-tab pause, reduced motion, focus containment and explicit/keyboard exit. Rebuilt locally; [dated evidence](../../../mappings/desktop-visual-closeout-2026-10-04.md).
+- Shipped: Light fullscreen presentation, exact revision selection, current/outgoing/footer clearing on failure or canonical deadline, qualifications, hidden-tab pause, reduced motion, focus containment and explicit/keyboard exit. Rebuilt locally; [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-visual-closeout-2026-10-04.md).
 - Not shipped: Interval settings, multi-screen sync, audio, exhaustive playback and the separate research/benchmark backlog are outside scope.
 - New blockers: None.
 - Docs updated: Desktop contract, this archived pack, epic and indexes, dated evidence and handoff.

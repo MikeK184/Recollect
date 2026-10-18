@@ -222,7 +222,11 @@ Compare approximate vector recall against exact eligible search. Isolate Brain
 ANN indexes when approximation is introduced; a metadata filter alone does not
 prevent other Brains' vectors from influencing approximate recall or speed.
 
-Keep recalled documents, memory and tool output as data rather than instructions.
+Keep recalled documents, memory and ordinary tool output as data rather than
+instructions. [ADR 0022](../adr/0022-brain-managed-skills.md) permits a separate,
+typed administrator-published skills/instructions channel, subordinate to current
+human, host and local repository instructions. Its publication/access policy is
+independent of learned memory and never grants tool execution rights.
 Formatting is one measure; test whether hostile recalled content changes actual
 agent behavior. Remembering a procedure or retrieving a runbook does not authorize
 execution or establish that it is safe for a different environment.

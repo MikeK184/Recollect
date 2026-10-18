@@ -26,6 +26,7 @@ import type { GraphChoice } from "./GraphCanvas";
 import { useKnowledgeSelection } from "./features/knowledge/selection";
 import { GraphRenderer } from "./GraphRenderer";
 import { GraphSelectionPanel } from "./GraphSelectionPanel";
+import type { SceneGenerations } from "./graph-generation-status";
 type Node = components["schemas"]["GraphNode"];
 type View = components["schemas"]["GraphView"];
 type Path = components["schemas"]["GraphPath"];
@@ -45,6 +46,8 @@ export function GraphExplorer({
   initialExploration,
   compactControls = false,
   expectedMemoryEpoch,
+  onReadStarted,
+  onViewAccepted,
   onExplore,
 }: {
   brain: Brain;
@@ -60,6 +63,8 @@ export function GraphExplorer({
   initialExploration?: components["schemas"]["GraphExploration"];
   compactControls?: boolean;
   expectedMemoryEpoch?: number;
+  onReadStarted?: () => void;
+  onViewAccepted?: (scene: SceneGenerations) => void;
   onExplore?: (center: string | null, direction: string, hops: number) => void;
 }) {
   const [center, setCenter] = useState(initialCenter);
@@ -72,6 +77,12 @@ export function GraphExplorer({
     direction: initialDirection,
     max_hops: initialHops,
   });
+  const startedRequest = useRef<string | null>(null);
+  function beginRead(next: typeof request) {
+    onReadStarted?.();
+    startedRequest.current = next.nonce;
+    setRequest(next);
+  }
   useEffect(() => {
     if (
       request.center === (initialCenter || null) &&
@@ -83,7 +94,7 @@ export function GraphExplorer({
     setDirection(initialDirection);
     setHops(initialHops);
     setExpired(false);
-    setRequest({
+    beginRead({
       nonce: crypto.randomUUID(),
       center: initialCenter || null,
       direction: initialDirection,
@@ -100,11 +111,16 @@ export function GraphExplorer({
   const [coverageOpen, setCoverageOpen] = useState(false);
   const initialNonce = useRef(request.nonce);
   const read = useQuery({
-    initialData: request.nonce === initialNonce.current &&
-      JSON.stringify(initialExploration?.view.scope) === JSON.stringify(view.scope) &&
+    initialData:
+      request.nonce === initialNonce.current &&
+      JSON.stringify(initialExploration?.view.scope) ===
+        JSON.stringify(view.scope) &&
       initialExploration?.view.generation.id === view.generation.id &&
-      initialExploration.center === request.center && initialExploration.direction === request.direction &&
-      initialExploration.max_hops === request.max_hops ? initialExploration : undefined,
+      initialExploration.center === request.center &&
+      initialExploration.direction === request.direction &&
+      initialExploration.max_hops === request.max_hops
+        ? initialExploration
+        : undefined,
     queryKey: [
       "graph-explore",
       brain.id,
@@ -138,6 +154,12 @@ export function GraphExplorer({
     setCoverageOpen(false);
   }, [request, path]);
   useEffect(() => {
+    if (startedRequest.current !== request.nonce) {
+      startedRequest.current = request.nonce;
+      onReadStarted?.();
+    }
+  }, [request.nonce, onReadStarted]);
+  useEffect(() => {
     const deadline = read.data?.expires_at;
     if (!deadline) return;
     let timer: ReturnType<typeof setTimeout>;
@@ -153,16 +175,16 @@ export function GraphExplorer({
     return () => clearTimeout(timer);
   }, [read.data, onExpired]);
   function load(from: string | null) {
-    onExplore?.(from, direction, hops);
-    setChoice(null);
-    setShowPath(false);
-    setExpired(false);
-    setRequest({
+    beginRead({
       nonce: crypto.randomUUID(),
       center: from,
       direction,
       max_hops: hops,
     });
+    onExplore?.(from, direction, hops);
+    setChoice(null);
+    setShowPath(false);
+    setExpired(false);
   }
   const changed =
     expectedMemoryEpoch !== undefined &&
@@ -174,6 +196,21 @@ export function GraphExplorer({
   const data = !read.isError && !expired && !changed ? read.data : undefined;
   const inPath = showPath && path?.status === "path";
   const shownView = inPath ? path.view : data?.view;
+  useEffect(() => {
+    if (shownView)
+      onViewAccepted?.({
+        generation: shownView.generation,
+        inputs: shownView.inputs,
+        memory_epoch: shownView.memory_epoch,
+        state: shownView.state,
+        scope: shownView.scope,
+        total_nodes: shownView.total_nodes,
+        total_edges: shownView.total_edges,
+        coverage: shownView.coverage,
+        link_issues: shownView.link_issues,
+        link_issues_total: shownView.link_issues_total,
+      });
+  }, [shownView, onViewAccepted]);
   const matchingPath =
     path?.view.generation.id === data?.view.generation.id &&
     path?.view.memory_epoch === data?.view.memory_epoch;
@@ -428,11 +465,20 @@ export function GraphExplorer({
   );
   const coverageIndicator = shownView?.coverage.partial ? (
     <span className="graph-coverage">
-      <button type="button" className="graph-coverage-toggle" aria-expanded={coverageOpen}
-        onClick={() => setCoverageOpen((value) => !value)}>
-        <TriangleAlert size={iconSize.small} />Coverage limits
+      <button
+        type="button"
+        className="graph-coverage-toggle"
+        aria-expanded={coverageOpen}
+        onClick={() => setCoverageOpen((value) => !value)}
+      >
+        <TriangleAlert size={iconSize.small} />
+        Coverage limits
       </button>
-      {coverageOpen && <span className="graph-coverage-reasons">{shownView.coverage.reasons.map(label).join(" · ")}</span>}
+      {coverageOpen && (
+        <span className="graph-coverage-reasons">
+          {shownView.coverage.reasons.map(label).join(" · ")}
+        </span>
+      )}
     </span>
   ) : null;
   const canvasTools = (
@@ -481,10 +527,16 @@ export function GraphExplorer({
       {data && nodes.length === 0 && (
         <EmptyState
           icon={Network}
-          title={data.view.coverage.reasons.includes("graph_window") ? "No eligible entities in this window" : "No eligible entities"}
-          description={data.view.coverage.reasons.includes("graph_window")
-            ? "Other pages may contain evidence. Browse entities in Graph tools, choose an entity, or adjust the filters."
-            : "This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."}
+          title={
+            data.view.coverage.reasons.includes("graph_window")
+              ? "No eligible entities in this window"
+              : "No eligible entities"
+          }
+          description={
+            data.view.coverage.reasons.includes("graph_window")
+              ? "Other pages may contain evidence. Browse entities in Graph tools, choose an entity, or adjust the filters."
+              : "This selection has no graph evidence to display. Adjust the filters or add permitted evidence to this Brain."
+          }
         />
       )}
       {/* When the bounded read has no data to display (an error such as an
@@ -635,7 +687,7 @@ export function GraphExplorer({
             data-graph-chrome=""
           >
             <Text size="xs" c="dimmed" data-testid="exploration-counts">
-              {nodes.length} loaded entities · {edges.length} directed
+              {nodes.length} loaded nodes · {edges.length} directed
               relationships
             </Text>
             <Badge variant="light">
@@ -648,7 +700,8 @@ export function GraphExplorer({
             {coverageIndicator}
             <Text size="xs" c="dimmed" className="graph-display-note">
               Blue repository · amber memory · sage source; recorded edges
-              describe this evidence only. {shownView!.coverage.reasons.includes("graph_window")
+              describe this evidence only.{" "}
+              {shownView!.coverage.reasons.includes("graph_window")
                 ? "Window limit: 250 entities, 1,000 relationships."
                 : "Limit: 500 entities, 2,000 relationships."}
             </Text>
@@ -691,7 +744,10 @@ export function GraphExplorer({
           {data && (
             <Text size="xs" className="feature-meta">
               Generation {shownView!.generation.id} · {label(shownView!.state)}{" "}
-              · {shownView!.total_nodes} eligible entities in this {shownView!.coverage.reasons.includes("graph_window") ? "window" : "selection"}
+              · {shownView!.total_nodes} eligible entities in this{" "}
+              {shownView!.coverage.reasons.includes("graph_window")
+                ? "window"
+                : "selection"}
             </Text>
           )}
         </Stack>

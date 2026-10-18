@@ -3,6 +3,7 @@
 Status: in-progress
 Owning epic: `docs/roadmap/epics/mcp-coordination.md`
 Work type: product
+Implementation: paused; status reviewed 2026-10-18 against checkpoint f2673d7
 
 ## Summary
 
@@ -109,4 +110,4 @@ Work type: product
   service starts; retain this pack in active until that acceptance is recorded.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
 - Version: N/A; no release requested.
-- Commit: Uncommitted.
+- Commit: Implementation included in `f2673d7`; this documentation reconciliation is uncommitted.

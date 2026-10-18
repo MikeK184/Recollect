@@ -9,8 +9,7 @@ Scope: desktop browser UI, light theme only; implementation follows the
 desktop contract.
 
 The [desktop contract](../../contracts/desktop-experience.md) makes these tokens
-and shared visual rules authoritative for the redesign. Add the user's requested
-original Recollect SVG mark/wordmark/favicon, inspired by gathering memories again.
+and shared visual rules authoritative for the redesign. Use the original Recollect SVG mark/wordmark/favicon in `web/public/brand/`.
 Use one Lucide size/stroke convention and shared icon map; generated concept icons
 are illustrative and do not justify per-page variants.
 
@@ -184,7 +183,7 @@ target generated Mantine class names. Buttons, inputs, selects, menus, dialogs,
 drawers, tabs and tables share defaults. The implemented [theme](../../../web/src/design/theme.ts),
 [tokens](../../../web/src/design/tokens.ts) and development-only
 [component entry](../../../web/design.html) replace the former thin teal/Inter theme.
-The [dated asset evidence](../../mappings/desktop-experience-implementation-2026-09-26.md)
+The [dated asset evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md)
 records actual fonts, licenses, SVGs and validation limits.
 
 TanStack Router provides parent layouts and `Outlet`. Each Brain page is a real
@@ -244,32 +243,8 @@ Package required fonts locally with their SIL OFL notices:
 [Newsreader](https://github.com/google/fonts/blob/main/ofl/newsreader/OFL.txt),
 [Manrope](https://github.com/google/fonts/blob/main/ofl/manrope/OFL.txt),
 [DM Mono](https://github.com/google/fonts/blob/main/ofl/dmmono/OFL.txt).
-Record actual asset versions/licenses during implementation. Load only needed
+Retain the shipped asset licenses in `web/public/licenses/`. Load only needed
 weights, use explicit fallbacks/font-display, and test offline/missing fonts.
-
-## Competitor/research conclusions
-
-Local Cognee was inspected at
-`c0d18c80e24b7b78918e7642c03f6f128fdd2aee`; no Cognee runtime was tested.
-Its [navigation](https://github.com/topoteretes/cognee/blob/c0d18c80e24b7b78918e7642c03f6f128fdd2aee/cognee-frontend/src/ui/layout/Navbar/CustomAppShellNavbar.tsx)
-separates data, exploration and connections. Its
-[Search page](https://github.com/topoteretes/cognee/blob/c0d18c80e24b7b78918e7642c03f6f128fdd2aee/cognee-frontend/src/app/%28app%29/search/SearchPage.tsx)
-(408–413, 637) uses a question input, Brain selector and conversation history.
-The [recall client](https://github.com/topoteretes/cognee/blob/c0d18c80e24b7b78918e7642c03f6f128fdd2aee/cognee-frontend/src/modules/datasets/recallKnowledge.ts)
-(25–47) defaults to HYBRID_COMPLETION; ordinary users need not choose algorithms.
-Its integration UI separates agents, automation and sources.
-
-Official Hindsight documentation distinguishes
-[Reflect](https://docs.hindsight.vectorize.io/reflect/) (synthesized cited answers)
-from [Recall](https://docs.hindsight.vectorize.io/recall/) (retrieval/debugging).
-This supports Ask as the human entry point with an evidence-search inspector.
-It does not prove Recollect already implements generated answers.
-
-Atlas patterns
-[evidence before belief](https://github.com/neoneye/agent-memory-atlas/blob/7eca7f7abd934c2e44bc096fc1dd0cbf94275b99/content/patterns/evidence-before-belief.md)
-and [memory editing](https://github.com/neoneye/agent-memory-atlas/blob/7eca7f7abd934c2e44bc096fc1dd0cbf94275b99/content/patterns/memory-as-an-editing-surface.md)
-support keeping sources and effective correction reachable. They are research,
-not replacements for Recollect's contracts or a reason to require manual review.
 
 ## Token enforcement and acceptance
 

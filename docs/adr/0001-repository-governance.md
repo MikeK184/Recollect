@@ -6,7 +6,7 @@ Status: accepted
 
 Create Recollect as an independent Git repository with documentation authority,
 epics, decision-complete execution packs, active/archive closeout, validation,
-six repo-local Codex roles, and Context7. The existing `cognee/` checkout stays
+six repo-local Codex roles, and Context7. The existing `references/cognee/` checkout stays
 separate, ignored, and untouched. Use the
 [governance contract](../contracts/repository-governance.md) for exact rules.
 
@@ -21,13 +21,16 @@ requirements, automatic releases, or integrations beyond Context7.
 
 ## Consequences
 
-The user's same-day follow-up supplies the initial Cognee extension design and
-adds foundation authoring plus upstream/tooling assessment to this bootstrap.
-Application implementation and detailed runtime contracts stay deferred.
-Bootstrap work may proceed from this accepted decision. Documentation tooling uses Bash and the
-Python 3.11+ standard library independently of future application technology.
-Keep project configuration secret-free and personal defaults outside this repo.
-Remote creation, publishing, and automatic commits remain deferred.
+The accepted foundations and later ADRs define the independent Rust product;
+the initial Cognee extension proposal is superseded. Documentation tooling uses
+Bash and Python 3.11+ independently of the product runtime. Keep project
+configuration secret-free and personal defaults outside this repository.
+Commits, publishing and deployments require task authorization; they are not
+automatically implied by a documentation change.
+
+The user's 2026-10-18 cleanup instruction removes superseded studies and concepts
+from current documentation. Exact Git references retain required historical
+evidence; current authority, shipped packs and unfinished acceptance remain.
 
 The user's 2026-09-13 follow-up authorizes repository-local documentation router
 and maintainer skills, adapting the existing Terme workflows to Recollect's

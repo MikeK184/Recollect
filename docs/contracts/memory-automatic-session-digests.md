@@ -4,7 +4,7 @@ Status: accepted
 
 ## Source
 
-The full user-authorized [automated memory plan](../research/automated-memory-improvement-plan-2026-10-07.md)
+The full user-authorized [automated memory plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 governs this amendment. Existing capture, provider, support, human-review and
 privacy contracts retain their authority.
 

@@ -59,7 +59,7 @@ protocol. The [agent-memory-atlas benchmarks page](https://neoneye.github.io/age
 supplies the failure modes this protocol must repair: LongMemEval publishes
 three different accuracies from one run, pins none of its data, and its
 published scores are a six-stage pipeline measurement of which the memory
-layer is one stage. The [2026-09-29 lifecycle evidence](../mappings/atlas-lifecycle-proof-2026-09-29.md)
+layer is one stage. The [2026-09-29 lifecycle evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-lifecycle-proof-2026-09-29.md)
 shows the deterministic half is already measured; this contract governs only
 the answer-level half.
 

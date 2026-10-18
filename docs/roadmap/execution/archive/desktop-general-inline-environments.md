@@ -90,7 +90,7 @@ Work type: product
 - Not shipped: New APIs, schema or revised scope/grants.
 - New blockers: None.
 - Docs updated: Contract, epic, archived pack/index, dated settings/demo mapping
-  and handoff. [Evidence](../../../mappings/settings-demo-scenario-2026-10-06.md).
+  and handoff. [Evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/settings-demo-scenario-2026-10-06.md).
 - Validation: Type/design/production build, four pure Privacy checks, affected
   regression selector discovery, 32 governance tests, whitespace, CodeGraph;
   local frontend-only deployment over the existing backend and readiness.

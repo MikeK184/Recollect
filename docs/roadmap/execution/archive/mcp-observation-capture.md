@@ -90,6 +90,6 @@ Work type: product
   Normal migration 024/readiness/desktop checks preserve seven Brains, 33 model
   requests and existing profiles/grants; actual test-Brain exact recall returns one item,
   1,630 bytes in 50 ms without new model requests or customer repository reads.
-  Evidence and limits are in the [dated mapping](../../../mappings/mcp-observations-2026-09-26.md).
+  Evidence and limits are in the [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-observations-2026-09-26.md).
 - Version: N/A: no release policy.
 - Commit: Uncommitted.

@@ -67,10 +67,13 @@ plugin includes Enola; source-checkout developers install the adapter with
 `python3 scripts/setup-enola.py` before publishing.
 An optional [OpenAI connection probe](provider-preflight.md) uses the user's
 environment key with fixed synthetic text. The delivered [Brain model policy and
-autonomous maintenance](provider-learning.md) use the selected Luna/embedding-large
-pair through a shared gateway. Each Brain starts with transmission disabled. Once
-configured, the native worker learns permitted sources, revises machine-maintained
-memory and refreshes [handovers](procedures-and-handovers.md) without individual review.
+autonomous maintenance](provider-learning.md) use the selected text/embedding
+pair through the shared OpenAI/OpenRouter gateway. API-created Brains default to
+transmission disabled unless managed setup is requested; the browser includes
+the managed autonomous preset. Existing Brains retain their policies. Once
+configured, the native worker learns permitted sources, revises
+machine-maintained memory and refreshes
+[handovers](procedures-and-handovers.md) without individual review.
 The [graph panel](graph-projection-and-traversal.md) shows automatically built
 repository/knowledge projections, exact inputs, evidence and bounded paths.
 Use [combined repository graphs](graph-cross-repository-views.md) for exact

@@ -14,7 +14,7 @@ Work type: product
 
 - [Desktop contract](../../../contracts/desktop-experience.md) (amended 2026-10-03: terminal-style surfaces)
 - [MCP plugin direct auth contract](../../../contracts/mcp-plugin-direct-auth.md) (runner behavior unchanged; presentation only)
-- [claude-mem study, 2026-10-03](../../../research/claude-mem-study-2026-10-03.md) (TerminalPreview traffic-light chrome + ANSI rendering pattern; banner.ts offline frame/truecolor/NO_COLOR fallback interaction design)
+- [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (TerminalPreview traffic-light chrome + ANSI rendering pattern; banner.ts offline frame/truecolor/NO_COLOR fallback interaction design)
 - [Owning epic](../../epics/desktop-visual-experience.md)
 
 ## Scope

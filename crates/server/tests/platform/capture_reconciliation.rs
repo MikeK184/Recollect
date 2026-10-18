@@ -119,6 +119,21 @@ fn provider_inputs(p: &Provider) -> Vec<Value> {
         .map(|line| serde_json::from_str(line).unwrap())
         .collect()
 }
+fn reconciliation_provider_inputs(p: &Provider) -> Vec<Value> {
+    // Independent support assessment follows extraction. Inspect the exact
+    // extraction request rather than whichever provider call happened last.
+    let bodies = p.bodies.lock().unwrap();
+    bodies
+        .iter()
+        .rev()
+        .find(|body| body["text"]["format"]["name"] == "source_reconciliation")
+        .expect("The actual reconciliation extraction request was sent")["input"]
+        .as_str()
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect()
+}
 async fn learn_capture(h: &Harness, owner: &Login, base: &str, token: &str, input: Value) -> Value {
     device_ok(h, "POST", &format!("{base}/capture/events"), token, input).await;
     process(h).await;
@@ -130,7 +145,14 @@ async fn learn_capture(h: &Harness, owner: &Login, base: &str, token: &str, inpu
         1
     );
     let restarted = AppState::new(h.state.pool.clone(), (*h.state.config).clone()).unwrap();
-    assert!(worker::run_once(&restarted, "model").await.unwrap());
+    // Production lanes run as independent Tokio tasks. Keep the large test
+    // caller's debug poll frame outside the actual model worker poll chain.
+    assert!(
+        tokio::spawn(async move { worker::run_once(&restarted, "model").await })
+            .await
+            .unwrap()
+            .unwrap()
+    );
     let result = runs(h, owner, base).await["items"][0].clone();
     assert_eq!(result["state"], "succeeded", "{result}");
     result
@@ -140,6 +162,7 @@ async fn learn_capture(h: &Harness, owner: &Login, base: &str, token: &str, inpu
 #[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
 async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_erasure() {
     let (h, owner, base, p, server) = setup().await;
+    eprintln!("Bound capture phase: setup_ready");
     capture_policy(&h, &owner, &base, true).await;
     allow(&h, &owner, &base, |policy| {
         policy["autonomous_memory"] = json!(true);
@@ -154,11 +177,12 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
     *p.candidates.lock().unwrap() = extracted("Amber", "8080", Value::Null, 1);
     let initial_event = event(&bound, "first", "Amber.port = 8080\n");
     let initial = learn_capture(&h, &owner, &base, &token, initial_event.clone()).await;
+    eprintln!("Bound capture phase: prior_learning_ready");
     let id = initial["claim_ids"][0].as_str().unwrap();
     let claim_url = format!("{base}/claims/{id}");
     let first =
         ok(&h, "GET", &claim_url, &owner, Value::Null).await["selected"]["revision"].clone();
-    let input = &provider_inputs(&p)[0];
+    let input = &reconciliation_provider_inputs(&p)[0];
     assert_eq!(input["data"], "Amber.port = 8080\n");
     assert_eq!(input["provenance"]["role"], "user_assertion");
     assert_eq!(
@@ -225,7 +249,7 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
                 .is_empty(),
             "{turn}: {result}"
         );
-        assert_eq!(provider_inputs(&p).len(), 1);
+        assert_eq!(reconciliation_provider_inputs(&p).len(), 1);
     }
     for (turn, role, content) in [
         (
@@ -247,7 +271,7 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
         *p.candidates.lock().unwrap() = json!({"claims":[],"retirements":[]});
         let result = learn_capture(&h, &owner, &base, &token, ambiguous).await;
         assert_eq!(result["reconciliation_inputs"], json!([first["id"]]));
-        let inputs = provider_inputs(&p);
+        let inputs = reconciliation_provider_inputs(&p);
         assert_eq!(inputs[0]["data"], content);
         assert_eq!(
             inputs[0]["provenance"]["role"],
@@ -276,9 +300,10 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
         + 1;
     *p.candidates.lock().unwrap() = extracted("Amber", "9090", first["id"].clone(), line);
     let result = learn_capture(&h, &owner, &base, &token, correction).await;
+    eprintln!("Bound capture phase: supported_correction_ready");
     assert_eq!(result["claim_ids"], json!([id]));
     assert_eq!(result["revised"], 1);
-    let inputs = provider_inputs(&p);
+    let inputs = reconciliation_provider_inputs(&p);
     assert_eq!(inputs[0]["data"], tool_text);
     assert_eq!(inputs[0]["provenance"]["role"], "reported_tool_observation");
     assert_eq!(inputs[0]["provenance"]["capture"]["outcome"], "reported");
@@ -324,8 +349,10 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
     let state = h.state.clone();
     let work = tokio::spawn(async move { worker::run_once(&state, "model").await });
     wait_calls(&p, next_call).await;
+    eprintln!("Bound capture phase: before_human_override");
     let override_result = ok(&h, "POST", &format!("{claim_url}/review"), &owner,
         json!({"base_revision":second["id"],"action":"revalidate","revalidation_basis":"review_correction","reason":"Optional synthetic human override."})).await;
+    eprintln!("Bound capture phase: after_human_override");
     work.await.unwrap().unwrap();
     p.delay.store(0, Ordering::SeqCst);
     assert_eq!(runs(&h, &owner, &base).await["items"][0]["state"], "failed");
@@ -467,7 +494,7 @@ async fn bound_capture_reconciliation_preserves_provenance_scope_overrides_and_e
             .is_empty()
     );
     assert!(
-        !provider_inputs(&p)
+        !reconciliation_provider_inputs(&p)
             .iter()
             .any(|input| input.to_string().contains(erase_id))
     );

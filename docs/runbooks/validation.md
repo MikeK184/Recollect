@@ -45,6 +45,8 @@ For only the current documentation/configuration check:
 ./docs/tools/lint_agent_governance.sh
 ```
 
-There is no CI host or remote configured yet. This local command is the future
-CI entrypoint. Verify Context7 separately using the
+The [GitHub Pages workflow](../../.github/workflows/pages.yml) runs this command
+alongside the public site build/check. For guide changes, also run
+`npm --prefix site run build` and `npm --prefix site run check` locally. Verify
+Context7 separately using the
 [Codex setup procedure](../../.codex/README.md).

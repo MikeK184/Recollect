@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY:-}"
+      }
+    },
+    "rust_analyzer": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "set -e; if [ -n \"$CLAUDE_PROJECT_DIR\" ]; then cd \"$CLAUDE_PROJECT_DIR\"; fi; RECOLLECT_MCP_ROOT=\"$(git rev-parse --show-toplevel)\"; exec \"$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp\""
+      ]
+    },
+    "graft": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "set -e; if [ -n \"$CLAUDE_PROJECT_DIR\" ]; then cd \"$CLAUDE_PROJECT_DIR\"; fi; RECOLLECT_MCP_ROOT=\"$(git rev-parse --show-toplevel)\"; exec \"$RECOLLECT_MCP_ROOT/.codex/tools/graft/graft\" mcp . --dir .cache/rust-navigation/graft-graph"
+      ]
+    }
+  }
+}

@@ -7,12 +7,48 @@ mod autonomous;
 mod capture;
 #[path = "models_catalogue.rs"]
 mod catalogue;
+#[path = "extractor_revision4.rs"]
+mod extractor_revision4;
+#[path = "mapping_contract.rs"]
+mod mapping_contract;
 #[path = "mcp_memory.rs"]
 mod mcp_memory;
+#[path = "model_preview.rs"]
+mod model_preview;
 #[path = "openrouter.rs"]
 mod openrouter;
+#[path = "organization.rs"]
+mod organization;
+#[path = "organization_browser.rs"]
+mod organization_browser;
+#[path = "organization_hybrid.rs"]
+mod organization_hybrid;
+#[path = "organization_intent_privacy.rs"]
+mod organization_intent_privacy;
+#[path = "organization_labels.rs"]
+mod organization_labels;
+#[path = "organization_overlays.rs"]
+mod organization_overlays;
+#[path = "organization_pin_fairness.rs"]
+mod organization_pin_fairness;
+#[path = "organization_shadow.rs"]
+mod organization_shadow;
+#[path = "organization_shadow_privacy.rs"]
+mod organization_shadow_privacy;
+#[path = "organization_source_api.rs"]
+mod organization_source_api;
+#[path = "organization_source_expiry.rs"]
+mod organization_source_expiry;
+#[path = "organization_upper_bound.rs"]
+mod organization_upper_bound;
+#[path = "organization_weighted.rs"]
+mod organization_weighted;
 #[path = "procedures.rs"]
 mod procedures;
+#[path = "production_mapping.rs"]
+mod production_mapping;
+#[path = "production_retention.rs"]
+mod production_retention;
 #[path = "semantic.rs"]
 mod semantic;
 #[path = "memory_support.rs"]

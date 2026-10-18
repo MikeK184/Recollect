@@ -146,7 +146,7 @@ Direct MCP uses a host configuration and access token; it does not install the
 plugin's automatic session-capture hooks.
 
 For reproducible quality evidence, see the [public retrieval benchmark](docs/runbooks/public-memory-benchmark.md)
-and its [measured results and limits](docs/mappings/public-memory-benchmark-2026-09-28.md).
+and its [latest measured results and limits](docs/mappings/openrouter-benchmark-proof-2026-10-08.md).
 
 ## Environments and tool access
 

@@ -81,7 +81,7 @@ Work type: product
   record fixed synthetic channel/diversity ablations with actual model evidence
   where semantic quality is claimed. Preserve existing Brains/data/services.
 - Acceptance: All contract cases and measured limitations recorded in the
-  [dated mapping](../../../mappings/retrieval-fusion-2026-09-22.md).
+  [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-fusion-2026-09-22.md).
 
 ## Closeout
 

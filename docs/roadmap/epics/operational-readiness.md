@@ -54,16 +54,6 @@ SaaS federation, universal capacity guarantees and a paid database license remai
 outside scope. Actual deployment targets and credentials require the later
 assignment's authorized inputs; this roadmap does not select or access them.
 
-## Decisions Before Implementation
-
-- Specify supported host/runtime versions, packaging, volumes, operating inputs,
-  shared HTTPS configuration and diagnostic/resource limits before deployment.
-- Specify backup retention/expiry, recovery objectives, deletion-ledger recovery,
-  migration compatibility and rollback before data-bearing shared operation.
-- Specify representative corpus/workload and measurable quality/latency/cost
-  acceptance before integrated evaluation. Preserve evidence boundaries and
-  compare methods under equivalent models and context budgets.
-
 ## Slice Map
 
 | Slice ID | Status | Evidence | Execution | Summary |
@@ -75,29 +65,13 @@ assignment's authorized inputs; this roadmap does not select or access them.
 | `operations-recovery-drills` | shipped | adr-backed, contract-backed | pack | Actual encrypted SFTP, offline restore, journal continuity, erasure/replay, failed upgrade, interrupted resume, graph/recall and desktop proof |
 | `operations-integrated-evaluations` | shipped | contract-backed | pack | Actual-model quality, seven-capability matrix, unchanged 50-repository/200-document/eight-caller workload, repaired admission/queries, final restore/desktop and normal upgrade verified |
 | `operations-root-compose` | shipped | adr-backed, contract-backed | pack | Root Compose image/browser login, preserved inventory, full stop/start, migration-failure gate and verified fixture shutdown pass |
-| `operations-memory-quality-first-batch` | in-progress | contract-backed | pack | Local migration-047 update and bounded audit/query repairs deployed with preserved inventory; current normal graph reads pass only 35/40, with cumulative digest/handover writer contention measured, so live acceptance remains open |
+| `operations-memory-quality-first-batch` | in-progress | contract-backed | pack | The dated installed migration-047 proof passed only 35/40 normal reads. Latest October 18 local repairs pass sustained mixed 10k reads 602/602 and both normal-data clone variants below two seconds; normal installation update and comparable post-repair memory-quality run remain open |
 | `operations-proof-cleanup` | shipped | contract-backed | small-fix: explicitly authorized removal of verified disposable local fixtures; no product implementation or schema change | Removed 50 containers, 49 volumes, 9 networks and 10 fixture directories; current seven-Brain inventory and readiness preserved |
+| `operations-restore-statistics` | shipped | adr-backed, contract-backed | small-fix: authorized restore-readiness correction within the existing explicit recovery hold; no new interface or product decision | Explicit release rebuilds planner statistics after privacy reconciliation; native blocked-analysis/hold/retry proof and four recovery operator tests pass locally (2026-10-18), with no deployment |
 | `operations-desktop-activity` | shipped | adr-backed, contract-backed | pack | Authorized bounded Activity feeds and diagnostics with canonical detail/recovery links |
 | `desktop-experience-acceptance` | shipped | adr-backed, contract-backed | pack | Real desktop/API/agent regression, answer quality/privacy, resource measurements and rollout/rollback evidence |
 | `desktop-assurance-pulse` | shipped | adr-backed, contract-backed | pack | Exception-first assurance band over existing authorized feeds, with Activity reordered as its drill-down |
 | `desktop-chrome-declutter` | shipped | contract-backed | pack | Assurance band hidden on a healthy Brain (renders only while something needs attention); the four Knowledge pages drop the horizontal tab strip that duplicates the contextual sidebar |
-
-## Slice Dependencies
-
-| Slice ID | Predecessors |
-| --- | --- |
-| `operations-local-and-shared` | `platform-durable-work`, `platform-team-access`, `platform-device-pairing` |
-| `operations-recovery-drills` | `operations-local-and-shared`, `evidence-session-capture`, `graph-exploration`, `retrieval-investigation-ui`, `mcp-observation-capture` |
-| `operations-integrated-evaluations` | `operations-recovery-drills`, `memory-capture-reconciliation` |
-| `operations-public-benchmark` | `operations-integrated-evaluations` |
-| `operations-atlas-lifecycle-proof` | `operations-public-benchmark` |
-| `operations-longmemeval-bench` | `operations-atlas-lifecycle-proof` |
-| `operations-root-compose` | `operations-local-and-shared` |
-| `operations-proof-cleanup` | `operations-root-compose` |
-| `operations-desktop-activity` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup` |
-| `desktop-assurance-pulse` | `operations-desktop-activity`, `desktop-knowledge-surface` |
-| `desktop-experience-acceptance` | `evidence-desktop-workflows`, `memory-desktop-workflows`, `graph-desktop-workspace`, `mcp-desktop-setup`, `retrieval-ask-experience`, `operations-desktop-activity`, `platform-brain-deletion`, `desktop-knowledge-surface`, `desktop-ask-primary`, `desktop-connection-authority`, `desktop-assurance-pulse` |
-| `desktop-chrome-declutter` | `desktop-assurance-pulse`, `desktop-knowledge-surface` |
 
 ## Completion Criteria
 
@@ -118,46 +92,25 @@ assignment's authorized inputs; this roadmap does not select or access them.
   remaining limits and any external operator inputs. No incomplete required
   capability is relabeled as shipped to close the epic.
 
-## Desktop implementation evidence, 2026-09-26
+## Current status
 
-The [dated implementation mapping](../../mappings/desktop-experience-implementation-2026-09-26.md)
-records implemented routes/assets and the verified final local image separately
-from remaining current-code domain and integrated acceptance. The
-[desktop guide](../../runbooks/desktop-experience.md) documents the current function
-locations. Product/proof slices stay in progress until their required checks pass;
-prior shipped domain records remain historical evidence rather than redesign proof.
+Installation, recovery, checkpointed local updates and the completed 50-question
+benchmark baseline are delivered. New local mixed-workload and normal-data clone
+reliability gates pass; a reviewed normal installation update and comparable
+post-repair quality run remain open. The latest official LongMemEval result is
+still 20/50 (40%), not a score for the later repair set. The separate real
+current4 campaign fails real extractor/grouping qualification, with canonical
+behavior 4/6. It does not qualify automatic semantic publication. The separate
+main semantic lease repair passes six native tests; deployment remains open.
+The [graph delivery summary](index.md#graph-delivery-status) distinguishes
+implemented plumbing, failed quality and unperformed rollout.
 
-## 2026-09-29 assurance band and deletion restore proof
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-[ADR 0017](../../adr/0017-desktop-knowledge-and-ask-experience.md) adds the
-exception-first assurance band, delivered by `desktop-assurance-pulse` over
-existing authorized feeds only; any figure without a verified response field is
-omitted and recorded rather than estimated. [ADR 0016](../../adr/0016-brain-deletion.md)
-extends this epic's integrated acceptance obligation with a new negative evaluation:
-a deleted Brain must stay absent from every listing, retrieval, graph, audit and MCP
-path, and must not reappear after restore from an older backup with the retained
-journal applied. `desktop-experience-acceptance` now names all five successor slices
-as predecessors.
+## Delivery evidence
 
-## 2026-10-01 local closeout
-
-[desktop-assurance-pulse](../execution/archive/desktop-assurance-pulse.md) are locally delivered with [dated validation and runtime limits](../../mappings/desktop-continuation-2026-10-01.md).
-The user prioritizes normal laptop and larger desktop displays; additional
-small-screen and keyboard polish is optional under the [desktop contract](../../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01).
-
-## Final desktop acceptance — 2026-10-01
-
-Activity and integrated desktop acceptance are shipped with [current deployment, permission, provider and visual proof](../../mappings/desktop-final-acceptance-2026-10-01.md). LongMemEval is a separate locally shipped evaluation; its combined recovery has 50 available answers, 40% overall accuracy and a completed 25-question judge audit. See the [report and limits](../../mappings/openrouter-benchmark-proof-2026-10-08.md) and [archived pack](../execution/archive/operations-longmemeval-bench.md). It is not desktop acceptance.
-
-## Desktop chrome declutter — 2026-10-03
-
-The user's 2026-10-03 screenshot direction removed two chrome elements that
-added no information: the assurance band now renders only while something
-needs attention (a healthy Brain shows no strip at all), and the four Knowledge
-pages dropped the horizontal Memory/Sources/Graph/Repositories switcher — the
-contextual sidebar is the sole navigation, while intra-page sub-tabs and the
-inspector's "Show in…" links are untouched. Shipped 2026-10-03 with live browser
-proof on the healthy test Brain; the [archived pack](../execution/archive/desktop-chrome-declutter.md)
-and [evidence](../../mappings/agents-ask-chrome-refinements-2026-10-03.md) record
-the checks. The contract amendment lands in the
-[desktop experience](../../contracts/desktop-experience.md).
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/operational-readiness.md).
+Dated test/deployment observations are not a current runtime health claim.

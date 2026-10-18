@@ -62,7 +62,7 @@ Work type: product
 ## Closeout
 
 - Planned: Compact runner cards, inline add/edit and explicit setup copy.
-- Shipped: Compact cards, inline Add/Edit, locked device/status badges, explicit setup copy and guarded canonical saves on the ready local stack; see [evidence](../../../mappings/desktop-inline-private-runners-2026-10-06.md).
+- Shipped: Compact cards, inline Add/Edit, locked device/status badges, explicit setup copy and guarded canonical saves on the ready local stack; see [evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-inline-private-runners-2026-10-06.md).
 - Not shipped: Backend/runtime startup changes and real runner connectivity.
 - New blockers: None.
 - Docs updated: Contract, archived pack, owning epic/index, active/archive indexes, evidence/index and handoff.

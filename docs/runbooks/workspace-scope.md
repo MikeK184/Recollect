@@ -94,7 +94,7 @@ cargo test -p recollect-protocol -p recollect-agent --lib
 ```
 
 These tests use isolated Git/worktree fixtures, real PostgreSQL/RLS, native
-paired processes and the browser. See the [proof mapping](../mappings/workspace-scope-proof-2026-09-14.md).
+paired processes and the browser. See the [proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/workspace-scope-proof-2026-09-14.md).
 
 ## Failure and Recovery
 
@@ -140,5 +140,5 @@ cargo run -p recollect-agent --example workspace_probe -- \
 This test path always marks the refresh partial. It neither replaces normal
 selector discovery nor establishes that the supplied list includes every checkout.
 Revoke/remove the probe's own credential with `recollect-agent unpair` when done.
-The [test-Brain smoke mapping](../mappings/workspace-smoke-2026-09-14.md) records
+The [test-Brain smoke mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/workspace-smoke-2026-09-14.md) records
 actual native/browser results and the retained local test Brain.

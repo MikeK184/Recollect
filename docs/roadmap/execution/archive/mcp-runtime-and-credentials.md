@@ -80,7 +80,7 @@ Work type: product
 - Manual: Inspect desktop runtime views and normal-data preservation; no customer
   provider writes or paid model calls are needed by the synthetic fixtures.
 - Acceptance: Full [contract](../../../contracts/mcp-runtime-and-credentials.md)
-  evidence in the [mapping](../../../mappings/mcp-runtime-2026-09-22.md) before archive.
+  evidence in the [mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-runtime-2026-09-22.md) before archive.
 
 ## Closeout
 

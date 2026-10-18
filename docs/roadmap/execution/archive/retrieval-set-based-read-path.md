@@ -30,7 +30,7 @@ Work type: product
 [engineering principles](../../../foundation/engineering-principles.md),
 [technology stack](../../../foundation/techstack.md),
 [epic](../../epics/hybrid-retrieval.md). Evidence only (not authority): the
-[exact/lexical baseline](../../../mappings/retrieval-baseline-2026-09-15.md).
+exact/lexical baseline (retained at checkpoint f2673d7 as `docs/mappings/retrieval-baseline-2026-09-15.md`).
 
 ## Scope
 
@@ -63,7 +63,7 @@ Work type: product
 
 - Interfaces: None. `RecallRequest`/`RecallResponse`, error codes and coverage
   reason strings are unchanged.
-- Storage: Migration 048 adds `recollect_claim_status_eligible(jsonb,text)` (the
+- Storage: Migration 065 adds `recollect_claim_status_eligible(jsonb,text)` (the
   single definition of the claim status predicate used by candidate SQL and the
   project brief) and `recollect_lexical_prefilter(tsquery)` (a monotone relaxation
   of a web-search query used only to find source versions whose title or any chunk
@@ -133,7 +133,7 @@ Work type: product
 ## Closeout
 
 - Planned: Items 1–3 above with the proof listed.
-- Shipped: (1) Lexical window: migration 048 adds `recollect_window_*` functions
+- Shipped: (1) Lexical window: migration 065 adds `recollect_window_*` functions
   (`SECURITY DEFINER`, membership test first, identifiers only) because the app
   role's row-level security makes `@@`/jsonb extraction non-leakproof and so
   ineligible for the GIN and literal indexes; they return the identifiers reachable
@@ -153,7 +153,7 @@ Work type: product
   raw-rule blocks per page of rows; chunk bytes use a bounded `artifacts::read_span`.
   Statements per recall with 100 candidates: 350/351 before, 26/27 after (about 13×,
   fixed per request rather than per candidate). Plans and index scans are recorded in
-  the [measurement mapping](../../../mappings/retrieval-set-based-read-path-2026-10-19.md).
+  the measurements below.
 - Not shipped: A literal NOT EXISTS over `assertion_rules` for conflicts (validity
   and scope overlap stay in `memory_rules::overlaps`, so candidates and their
   matching rules are fetched in sets and filtered there); an expression GIN index for
@@ -166,7 +166,7 @@ Work type: product
   before and after this change (stale fixtures that use unreviewed proposals as
   usable support, plus capture/learning and MCP cases) need their own repair.
 - Docs updated: hybrid-retrieval epic and index, active/archive indexes, this pack,
-  [measurement mapping](../../../mappings/retrieval-set-based-read-path-2026-10-19.md).
+  measurements below.
 - Validation: `cargo fmt`; Clippy (no new warnings in changed files); unit test for
   span reads; `retrieval::statements` (statement counts and populated-table index
   proof) pass; `retrieval::` 9 pass/3 fail, `models::` 99 pass/4 fail, `memory::`,
@@ -175,3 +175,73 @@ Work type: product
   `./scripts/validate.sh` passes.
 - Version: N/A: no release policy.
 - Commit: Committed on the worktree branch only (not pushed); see the branch tip.
+
+## Measurements and plans (2026-10-19)
+
+Observed: 2026-10-19
+Confidence: observed-once
+
+### Sources and Method
+
+Local PostgreSQL 17 (pgvector image used by the repository compose stack) and the
+platform test harness, run against disposable databases created by
+`crates/server/tests/platform.rs`. The previous code was built from the checked-out
+parent commit in a separate worktree and run with the same test file. Statements are
+counted by a tracing layer on the `sqlx::query` target
+(`crates/server/tests/platform/retrieval/statements.rs`); counts include
+transaction control statements. Plans come from `EXPLAIN` of the window queries and
+`pg_stat_user_indexes.idx_scan` deltas around a real HTTP recall. Nothing here was
+run against the installed normal-data Brain, and no release or deployment occurred.
+
+### Observations
+
+- Statements per recall with 100 candidates (85 source fragments and 15 accepted
+  claims, one lexical query): previous code **350 lexical / 351 automatic**; set-based
+  code **26 / 27**, about 13× fewer. The previous count grows with every candidate
+  (per-claim support, rule, conflict, deadline and scope statements plus per-row
+  raw-rule and scope statements); the new count is fixed by the number of gate
+  categories, not by the candidate count.
+- Row-level security (the app role) makes `tsvector @@ tsquery` and jsonb literal
+  extraction non-leakproof barrier quals, so the `recall_vector` GIN indexes cannot
+  be index conditions on the app role's own scans even when the predicate is moved
+  into `WHERE`: the planner showed a sequential scan with a filter on a 6,000-row
+  claim table while the same predicate as the migration role used the GIN index.
+  Migration 065 therefore resolves candidate identifiers in `SECURITY DEFINER`
+  window functions (membership test first, identifiers only) and the candidate
+  chain re-reads those rows through RLS.
+- With 20,000 padded rows per table, the window queries plan as bitmap scans on
+  `claim_recall_lexical`, `source_recall_lexical`, `fact_recall_lexical` and
+  `manifest_recall_lexical`; `source_recall_title` is eligible (chosen with
+  sequential scans disabled) but a narrow table with short high-cardinality title
+  vectors is legitimately cheaper to scan. A recall through the HTTP API as the app
+  role incremented `idx_scan` of the four indexes above.
+- `recollect_memory_supported` costs about 25–50 ms per revision for the app role
+  (about 0.8 ms as the migration role) on the test database. A 60-claim recall took
+  over the 2-second statement limit with the previous code (the Brain-wide chain ran
+  several times) and with a single pass; the 15-claim fixture is the largest that
+  fits comfortably. The single pass evaluates it once per windowed claim; it is no
+  longer re-asked by the claim gate or the conflict query.
+- Existing platform results (new code vs. parent commit, same database host):
+  `retrieval::` 9 pass / 3 fail on both; `models::` 99 pass / 4 fail on both;
+  `memory::`, `review::`, `retention::` the same 5 failures on both. Every failing
+  test fails at the same line on both builds (earlier fixtures that treat unreviewed
+  proposals as usable support, which the source-support gate no longer allows).
+
+### Translation and Limits
+
+- The failing tests above are not caused by this slice, and they do not exercise
+  claim eligibility through recall, so conflict and rule equivalence rests on the
+  passing support, handover, autonomous and procedure suites plus code review; there
+  is no stored differential fixture for `conflicts_many`.
+- The windows cover the lexical-only request. Semantic scoring and the project brief
+  need query-independent populations and use the full candidate pass (once per
+  transaction; a semantic request has two transactions).
+- Larger populations of claims remain bound by `recollect_memory_supported` per claim;
+  that function is outside this slice.
+
+### Follow-up
+
+- Refresh stale platform fixtures to use reviewed or audited claims, then add a
+  conflict/rule differential case.
+- Measure on the installed Brain after the owner approves a migration 065 update.
+- Consider a set-returning or cached form of `recollect_memory_supported`.

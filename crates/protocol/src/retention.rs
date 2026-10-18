@@ -68,6 +68,18 @@ pub struct ErasureTarget {
 }
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct ErasurePreview {
+    #[serde(default)]
+    pub semantic_entries: i64,
+    #[serde(default)]
+    pub semantic_batches: i64,
+    #[serde(default)]
+    pub knowledge_alias_candidates: i64,
+    #[serde(default)]
+    pub knowledge_alias_changes: i64,
+    #[serde(default)]
+    pub knowledge_field_inputs: i64,
+    #[serde(default)]
+    pub retrieval_feedback_contexts: i64,
     pub brain_id: Uuid,
     pub target: ErasureTarget,
     pub eligibility_epoch: i64,

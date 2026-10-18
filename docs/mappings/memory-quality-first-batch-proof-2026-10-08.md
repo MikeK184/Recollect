@@ -2,7 +2,10 @@
 
 Observed: 2026-10-08 to 2026-10-09 (Europe/Stockholm)
 Confidence: observed-once
-Delivery: local code and normal root installation; uncommitted, no release or push.
+Delivery: historical staged implementation/deployment proof, later committed in f2673d7.
+Current status: see the [October 9 checkpoint](automatic-knowledge-mapping-progress-2026-10-09.md)
+for migration 047, 35/40 normal graph reads and the still-open acceptance. The
+migration-043/046 observations below retain their original measurement context.
 
 ## Result
 
@@ -248,7 +251,7 @@ removing them or increasing timeouts is not the accepted repair. No speedup or
 working large-Brain graph is claimed from health or generation counts alone.
 Receipt: `.cache/memory-first-batch-final-sql-profile.log`.
 
-The October 9 [reuse follow-up](../research/memory-product-improvement-plan-2026-10-08.md#graph-performance-reuse-follow-up--2026-10-09)
+The October 9 [reuse follow-up](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/memory-product-improvement-plan-2026-10-08.md#graph-performance-reuse-follow-up--2026-10-09)
 compares Cognee's bounded visualization, claude-mem's staged WAL-backed retrieval
 and Graphify's cached graph serving. It records candidate read/preparation changes
 and optional Graphify extraction separately from delivered code. That later lookup

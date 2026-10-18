@@ -2,7 +2,7 @@
 
 Use the named [installation tooling](installation.md) and the accepted
 [recovery contract](../contracts/operations-recovery-drills.md). The
-[dated evidence](../mappings/recovery-2026-09-26.md) distinguishes the local drill
+[dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/recovery-2026-09-26.md) distinguishes the local drill
 from an off-machine production backup or a universal capacity claim.
 
 ## Prepare explicit recovery inputs
@@ -136,6 +136,11 @@ creation. Existing destination volumes are refused. A durable hold prevents norm
 startup through import and privacy reconciliation. If interrupted, inspect status
 and repeat the exact restore command with `--resume`. It retires only helpers and
 import sessions tagged to that restore and removes its marked abandoned staging.
+Before releasing the hold, the operator command runs PostgreSQL `ANALYZE` on the
+reconciled destination: logical dumps omit planner statistics, and missing
+statistics can make otherwise small canonical reads exceed their time limits.
+An analysis failure retains the hold; resume the same explicit restore after
+resolving it. This does not change retrieval eligibility or its time limits.
 Do not delete the hold or manually rerun old queued work. A failed upgrade is
 recovered into another fresh compatible installation, never by reverse migrations
 or overwriting the failed installation's volumes.

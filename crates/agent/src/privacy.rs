@@ -236,6 +236,7 @@ pub async fn apply_deletion(
         removed += 1;
     }
     fs::File::open(&root).await?.sync_all().await?;
+    removed += crate::plugin_coordination::apply_deletion(&root, endpoint, device, brain)?;
     Ok(removed)
 }
 pub async fn synchronize(

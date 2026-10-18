@@ -1,4 +1,4 @@
-import { loadGraph, openGraphDrawer } from "./desktop-helpers";
+import { use2DGraph, loadGraph, openGraphDrawer } from "./desktop-helpers";
 import { test, expect as baseExpect } from "@playwright/test";
 const expect = baseExpect.configure({ timeout: 20_000 });
 
@@ -105,7 +105,7 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
     )
     .toBe("ready");
   // Materialize a ready knowledge generation before the navigation under test.
-  await page.goto(`/brains/${fixture.brain}/graph`);
+  await page.goto(`/brains/${fixture.brain}/graph?tab=evidence`);
   const panel = page.locator("body");
   await expect(
     page.getByRole("region", { name: "Evidence graphs", exact: true }),
@@ -152,7 +152,8 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
       exploreRequests.push(request.postData() ?? "");
   });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/brains/${fixture.brain}/graph`);
+  await page.goto(`/brains/${fixture.brain}/graph?tab=evidence`);
+  await use2DGraph(page);
   const canvas = page.getByTestId("graph-canvas");
   await expect(canvas).toHaveAttribute("data-layout-ready", "true");
   // Navigation uses exactly one bounded exploration response, including its
@@ -195,6 +196,7 @@ test("graph canvas dominates its chrome with one bounded default read", async ({
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.reload();
+    await use2DGraph(page);
     await expect(canvas).toHaveAttribute("data-layout-ready", "true");
     const overlapping = await canvas.evaluate((element) => {
       const cy = (element as HTMLElement & { _cyreg: { cy: import("cytoscape").Core } })._cyreg.cy;

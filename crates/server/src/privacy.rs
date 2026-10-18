@@ -49,6 +49,42 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub knowledge_mapping_inputs: Vec<Uuid>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_source_inputs: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_topic_intent_sources: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_topic_intent_mappings: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_shadow_candidates: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_shadow_reports: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_field_inputs: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_mapping_stages: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub semantic_entries: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub semantic_batches: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_alias_candidates: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub knowledge_alias_changes: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub retrieval_feedback_contexts: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coordination_sessions: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coordination_overlaps: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coordination_messages: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coordination_events: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub managed_skills: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub managed_skill_versions: Vec<Uuid>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub capture_event_fences: Vec<CaptureFence>,
     pub publication_fences: Vec<PublicationFence>,
     pub independent_claim_revisions: i64,
@@ -106,6 +142,12 @@ pub async fn preview(
         jobs: m.jobs.len() as i64,
         model_input_fences: m.model_input_sources.len() as i64,
         model_claim_fences: m.model_input_claim_revisions.len() as i64,
+        semantic_entries: m.semantic_entries.len() as i64,
+        semantic_batches: m.semantic_batches.len() as i64,
+        knowledge_alias_candidates: m.knowledge_alias_candidates.len() as i64,
+        knowledge_alias_changes: m.knowledge_alias_changes.len() as i64,
+        knowledge_field_inputs: m.knowledge_field_inputs.len() as i64,
+        retrieval_feedback_contexts: m.retrieval_feedback_contexts.len() as i64,
         capture_event_fences: m.capture_event_fences.len() as i64,
         independent_claim_revisions: m.independent_claim_revisions,
         shared_sources: m.shared_sources,
