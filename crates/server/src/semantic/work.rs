@@ -4,7 +4,7 @@ use crate::{
     worker::{self, ClaimedJob, Failure},
 };
 use axum::http::StatusCode;
-use recollect_protocol::SemanticBatch;
+use recollect_protocol::{ModelPolicyVersion, SemanticBatch};
 
 async fn lease(tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<()> {
     let valid: Option<bool> = sqlx::query_scalar("SELECT lease_until>clock_timestamp() FROM jobs WHERE id=$1 AND brain_id=$2 AND state='running' AND lease_token=$3 FOR UPDATE")
@@ -18,15 +18,14 @@ async fn lease(tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<()> {
     Ok(())
 }
 
-async fn ready<'a>(
-    state: &'a AppState,
+/// Everything about a batch that is cheap to check and must be current at the
+/// moment of the check: the lease, batch, policy, profile and its input rows.
+async fn inspect(
+    state: &AppState,
     job: &ClaimedJob,
-) -> Result<(Tx<'a>, SemanticBatch, Vec<Uuid>)> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::lock_brain(&mut tx, job.brain_id, true).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
-    lease(&mut tx, job).await?;
-    let batch = queue::batch(&mut tx, job.brain_id, job.target_id).await?;
+    tx: &mut Tx<'_>,
+) -> Result<(SemanticBatch, ModelPolicyVersion, Vec<Uuid>)> {
+    let batch = queue::batch(tx, job.brain_id, job.target_id).await?;
     if batch.job_id != job.id
         || batch.actor_id != job.actor_id
         || !matches!(batch.state.as_str(), "queued" | "running")
@@ -36,7 +35,7 @@ async fn ready<'a>(
             "This batch no longer accepts model output.",
         ));
     }
-    let policy = model_policy::current(state, &mut tx, job.brain_id).await?;
+    let policy = model_policy::current(state, tx, job.brain_id).await?;
     if policy.change_id != batch.policy_id {
         return Err(model_policy::failure(
             "model_policy_changed",
@@ -47,7 +46,7 @@ async fn ready<'a>(
         return Err(model_policy::denied());
     }
     model_policy::permits(state, &policy.policy, "embedding", &[])?;
-    let profile = profile(&mut tx, job.brain_id)
+    let profile = profile(tx, job.brain_id)
         .await?
         .ok_or_else(Error::missing)?;
     if profile.id != batch.profile_id || !compatible(&policy.policy, &profile) {
@@ -57,16 +56,28 @@ async fn ready<'a>(
         ));
     }
     let entries: Vec<Uuid> = sqlx::query_scalar("SELECT e.id FROM semantic_batch_inputs i JOIN semantic_entries e ON e.id=i.entry_id AND e.brain_id=i.brain_id WHERE i.brain_id=$1 AND i.batch_id=$2 AND e.batch_id=i.batch_id AND e.profile_id=$3 AND e.state IN ('queued','running') ORDER BY i.ordinal")
-        .bind(job.brain_id).bind(batch.id).bind(profile.id).fetch_all(&mut *tx).await?;
+        .bind(job.brain_id).bind(batch.id).bind(profile.id).fetch_all(&mut **tx).await?;
     if entries.len() != batch.input_count as usize {
         return Err(model_policy::failure(
             "semantic_input_changed",
             "A batch input was removed or assigned to another attempt.",
         ));
     }
+    Ok((batch, policy, entries))
+}
+
+/// The expensive part: every representation reads the retained artifact and
+/// several rows. Read-only, so it can run in a lock-free snapshot.
+async fn inspect_inputs(
+    state: &AppState,
+    job: &ClaimedJob,
+    tx: &mut Tx<'_>,
+    policy: &ModelPolicyVersion,
+    entries: &[Uuid],
+) -> Result<()> {
     let mut bytes = 0usize;
-    for id in &entries {
-        let input = representation(state, &mut tx, job.brain_id, *id).await?;
+    for id in entries {
+        let input = representation(state, tx, job.brain_id, *id).await?;
         model_policy::permits(
             state,
             &policy.policy,
@@ -80,6 +91,48 @@ async fn ready<'a>(
             "semantic_input_too_large",
             "This batch exceeds the current model input allowance.",
         ));
+    }
+    Ok(())
+}
+
+/// A lock-free, repeatable-read check of the batch inputs. Only its success is
+/// used, and only if the canonical-input epoch is still the same under the lock.
+async fn prepare(
+    state: &AppState,
+    job: &ClaimedJob,
+) -> Result<(i64, ModelPolicyVersion, Vec<Uuid>)> {
+    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
+    db::require_role(&mut tx, job.brain_id, false).await?;
+    let epoch = crate::graph::preparation_epoch(&mut tx, job.brain_id).await?;
+    let (_, policy, entries) = inspect(state, job, &mut tx).await?;
+    inspect_inputs(state, job, &mut tx, &policy, &entries).await?;
+    Ok((epoch, policy, entries))
+}
+
+/// Take the exclusive Brain lock only after the representations were checked
+/// without it. If a canonical input changed in between (or the snapshot check
+/// failed), check them again under the lock exactly as before, so a failure or
+/// a race can never publish what the locked check would have refused.
+async fn ready<'a>(
+    state: &'a AppState,
+    job: &ClaimedJob,
+) -> Result<(Tx<'a>, SemanticBatch, Vec<Uuid>)> {
+    let prepared = prepare(state, job).await.ok();
+    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
+    db::lock_brain(&mut tx, job.brain_id, true).await?;
+    db::require_writer(&mut tx, job.brain_id).await?;
+    lease(&mut tx, job).await?;
+    let (batch, policy, entries) = inspect(state, job, &mut tx).await?;
+    let proven = match prepared {
+        Some((epoch, prepared_policy, prepared_entries)) => {
+            prepared_policy.change_id == policy.change_id
+                && prepared_entries == entries
+                && crate::graph::preparation_epoch(&mut tx, job.brain_id).await? == epoch
+        }
+        None => false,
+    };
+    if !proven {
+        inspect_inputs(state, job, &mut tx, &policy, &entries).await?;
     }
     Ok((tx, batch, entries))
 }

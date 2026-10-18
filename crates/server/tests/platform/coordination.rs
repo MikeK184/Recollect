@@ -433,10 +433,71 @@ async fn coordination_authority_replay_negotiation_and_a2a() {
         .0,
         StatusCode::UNAUTHORIZED
     );
-    let end = tokio::time::timeout(std::time::Duration::from_secs(2), stream.frame())
+    let end = tokio::time::timeout(std::time::Duration::from_secs(5), stream.frame())
         .await
         .unwrap();
     assert!(end.is_none(), "Revocation must end a pending SSE stream");
+    finish(h).await;
+}
+
+#[tokio::test]
+#[ignore = "Requires owned PostgreSQL fixture"]
+async fn coordination_heartbeat_takes_the_shared_brain_lock() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let brain: Uuid = h
+        .call(
+            "POST",
+            "/api/brains",
+            Some(&owner),
+            json!({"name":"Synthetic heartbeat"}),
+        )
+        .await
+        .1["id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let base = format!("/api/brains/{brain}");
+    let coord = format!("{base}/coordination");
+    let (_, token) = h.pair_device(&owner, "mike-mac").await;
+    let actor: Uuid = sqlx::query_scalar("SELECT id FROM accounts WHERE installation_owner")
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    let repo = Uuid::new_v4();
+    sqlx::query("INSERT INTO repositories(id,brain_id,canonical_origin,created_by) VALUES($1,$2,'example.test/synthetic/heartbeat',$3)").bind(repo).bind(brain).bind(actor).execute(&h.admin).await.unwrap();
+    let t = task(&h, &base, &token, repo, None).await;
+    let id = Uuid::new_v4();
+    let (status, body) = h
+        .bearer(
+            "POST",
+            &format!("{coord}/sessions"),
+            &token,
+            announcement(&t, id, repo, "charts/vault.yaml", "write"),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    // A reader (recall) holds the shared lock. An exclusive heartbeat would wait
+    // for it, and every later reader would queue behind that waiter.
+    let mut reader = db::actor_tx(&h.state.pool, actor).await.ok().unwrap();
+    db::lock_brain(&mut reader, brain, false)
+        .await
+        .ok()
+        .unwrap();
+    let (status, body) = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        h.bearer(
+            "POST",
+            &format!("{coord}/sessions/{id}/heartbeat"),
+            &token,
+            json!({"expected_revision":1}),
+        ),
+    )
+    .await
+    .expect("Heartbeat must not wait for the exclusive Brain lock");
+    assert_eq!(status, StatusCode::OK, "{body}");
+    reader.rollback().await.unwrap();
     finish(h).await;
 }
 

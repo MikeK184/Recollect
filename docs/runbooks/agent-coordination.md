@@ -84,6 +84,11 @@ coordination SSE supplies push delivery separately; do not claim A2A task stream
 or webhook support. Reconnect can redeliver event IDs. Pull/ack remains available
 for retained messages after presence expires, subject to current access.
 
+Each SSE stream rechecks access and polls its inbox every 2 seconds for up to
+25 seconds; a Brain admits at most 32 concurrent streams and answers further
+connections with `coordination_capacity` (429), so clients should reconnect
+with the last event ID after a backoff. Heartbeats take the shared Brain lock.
+
 ## Failure and Recovery
 
 A failed build is not a skipped test. Repair the reported source/dependency issue

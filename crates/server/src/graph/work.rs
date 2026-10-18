@@ -69,28 +69,42 @@ async fn prepare<'a>(state: &'a AppState, job: &ClaimedJob) -> Result<(Tx<'a>, G
     descriptor::available(&mut tx, &g).await?;
     Ok((tx, g))
 }
+/// Progress is job metadata, not canonical content: one lease-guarded UPDATE
+/// without the Brain lock, so ~100 batch ticks per generation never queue behind
+/// or ahead of Brain writers. Authorization is re-checked under the exclusive
+/// lock by `ready` before anything is published.
 async fn progress(
     state: &AppState,
     job: &ClaimedJob,
     percent: i32,
 ) -> Result<chrono::DateTime<chrono::Utc>> {
     let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
-    lease(&mut tx, job).await?;
-    sqlx::query(
-        "UPDATE jobs SET progress=$3,updated_at=clock_timestamp() WHERE id=$1 AND lease_token=$2",
+    let deadline: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+        "UPDATE jobs SET progress=$3,updated_at=clock_timestamp() WHERE id=$1 AND brain_id=$4 AND lease_token=$2 AND state='running' AND lease_until>clock_timestamp() RETURNING lease_until",
     )
     .bind(job.id)
     .bind(job.lease_token)
     .bind(percent)
-    .execute(&mut *tx)
+    .bind(job.brain_id)
+    .fetch_optional(&mut *tx)
     .await?;
-    let deadline: chrono::DateTime<chrono::Utc> =
-        sqlx::query_scalar("SELECT lease_until FROM jobs WHERE id=$1 AND lease_token=$2")
-            .bind(job.id)
-            .bind(job.lease_token)
-            .fetch_one(&mut *tx)
-            .await?;
+    let Some(deadline) = deadline else {
+        // The job policy also requires a current writer, so a revoked writer
+        // matches no row. Keep reporting that as a permission loss, not a lease loss.
+        let writer: Option<bool> =
+            sqlx::query_scalar("SELECT recollect_role($1) IN ('writer','admin')")
+                .bind(job.brain_id)
+                .fetch_one(&mut *tx)
+                .await?;
+        return Err(if writer == Some(true) {
+            failure(
+                "graph_lease_lost",
+                "This graph worker no longer owns publication.",
+            )
+        } else {
+            Error::forbidden()
+        });
+    };
     tx.commit().await?;
     Ok(deadline)
 }

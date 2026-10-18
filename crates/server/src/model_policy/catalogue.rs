@@ -383,21 +383,47 @@ async fn catalogue(
         return Err(Error::invalid("Choose a supported provider."));
     }
     tx.commit().await?;
-    let mut caches = state.model_catalogue.lock().await;
-    let cache = caches.entry(provider.clone()).or_default();
-    if refresh && !fresh(&cache) && cache.attempted.is_none_or(|at| at.elapsed() >= BACKOFF) {
-        cache.attempted = Some(Instant::now());
-        match fetch(&state, &provider).await {
-            Ok(ids) => {
-                cache.ids = Some(ids);
-                cache.observed = Some(Instant::now());
-                cache.observed_at = Some(Utc::now());
-                cache.error = None;
-            }
-            Err(code) => cache.error = Some(code),
-        }
+    if refresh {
+        refresh_cache(&state.model_catalogue, &provider, || {
+            fetch(&state, &provider)
+        })
+        .await;
     }
-    Ok(Json(response(cache, &provider)))
+    let mut caches = state.model_catalogue.lock().await;
+    Ok(Json(response(
+        caches.entry(provider.clone()).or_default(),
+        &provider,
+    )))
+}
+
+/// The cache mutex guards map access only and is never held across the two
+/// outbound fetches: readers, and a policy update holding the exclusive Brain
+/// lock, must not wait out a slow provider. Recording the attempt before the
+/// fetch is the refresh guard; a concurrent refresh sees it and does not fetch.
+async fn refresh_cache<F>(caches: &SharedCache, provider: &str, fetch: impl FnOnce() -> F)
+where
+    F: std::future::Future<Output = std::result::Result<HashSet<String>, &'static str>>,
+{
+    {
+        let mut caches = caches.lock().await;
+        let cache = caches.entry(provider.to_owned()).or_default();
+        if fresh(cache) || cache.attempted.is_some_and(|at| at.elapsed() < BACKOFF) {
+            return;
+        }
+        cache.attempted = Some(Instant::now());
+    }
+    let fetched = fetch().await;
+    let mut caches = caches.lock().await;
+    let cache = caches.entry(provider.to_owned()).or_default();
+    match fetched {
+        Ok(ids) => {
+            cache.ids = Some(ids);
+            cache.observed = Some(Instant::now());
+            cache.observed_at = Some(Utc::now());
+            cache.error = None;
+        }
+        Err(code) => cache.error = Some(code),
+    }
 }
 
 #[derive(Default, Deserialize)]
@@ -472,5 +498,47 @@ mod tests {
         assert!(embedding_supported("text-embedding-3-large", 256));
         assert!(!embedding_supported("text-embedding-3-small", 3072));
         assert!(!embedding_supported("text-embedding-3-large", 0));
+    }
+
+    #[tokio::test]
+    async fn refresh_does_not_hold_the_cache_mutex_across_the_fetch() {
+        let caches = SharedCache::default();
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        refresh_cache(&caches, "openai", || async {
+            calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            // Readers and a concurrent refresh proceed while the fetch is in flight.
+            let mut readers = caches.try_lock().expect("mutex free during fetch");
+            assert!(readers.get("openai").unwrap().attempted.is_some());
+            readers.entry("other".into()).or_default();
+            drop(readers);
+            refresh_cache(&caches, "openai", || async {
+                panic!("a second refresh must not fetch inside the backoff")
+            })
+            .await;
+            Ok(["gpt-4.1-mini".to_owned()].into())
+        })
+        .await;
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        let held = caches.lock().await;
+        let cache = held.get("openai").unwrap();
+        assert!(fresh(cache) && cache.error.is_none());
+        assert!(cache.ids.as_ref().unwrap().contains("gpt-4.1-mini"));
+    }
+
+    #[tokio::test]
+    async fn failed_refresh_records_its_error_and_keeps_the_backoff() {
+        let caches = SharedCache::default();
+        refresh_cache(&caches, "openai", || async {
+            Err("model_catalogue_unavailable")
+        })
+        .await;
+        refresh_cache(&caches, "openai", || async {
+            panic!("retry inside the backoff")
+        })
+        .await;
+        let held = caches.lock().await;
+        let cache = held.get("openai").unwrap();
+        assert_eq!(cache.error, Some("model_catalogue_unavailable"));
+        assert!(!fresh(cache));
     }
 }
