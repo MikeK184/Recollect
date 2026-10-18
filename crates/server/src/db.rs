@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 pub async fn pool(url: &str) -> std::result::Result<PgPool, sqlx::Error> {
     PgPoolOptions::new()
-        .max_connections(10)
+        .max_connections(crate::config::db_pool_size())
         .acquire_timeout(Duration::from_secs(5))
         .after_connect(|conn, _| {
             Box::pin(async move {
@@ -207,6 +207,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     (
         "047_bounded_support_discovery",
         include_str!("../migrations/047_bounded_support_discovery.sql"),
+    ),
+    (
+        "048_worker_scan_indexes",
+        include_str!("../migrations/048_worker_scan_indexes.sql"),
     ),
 ];
 

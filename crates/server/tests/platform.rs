@@ -1730,6 +1730,52 @@ async fn durable_command_replay_atomicity_capacity_and_freshness() {
 
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
+async fn worker_heartbeat_keeps_work_longer_than_the_lease() {
+    use recollect_server::worker;
+    use std::time::Duration;
+    let h = Harness::new().await;
+    let login = h.login().await;
+    assert_eq!(
+        h.call("POST", "/api/brains", Some(&login), json!({"name":"Long lease"}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    let job = worker::claim(&h.state.pool, "interactive")
+        .await
+        .unwrap()
+        .unwrap();
+    // The lease is 20 s; work for 24 s while another lane polls after expiry would have occurred.
+    let (held, probe) = tokio::join!(
+        worker::with_lease(
+            &h.state.pool,
+            &job,
+            tokio::time::sleep(Duration::from_secs(24))
+        ),
+        async {
+            tokio::time::sleep(Duration::from_secs(22)).await;
+            worker::claim(&h.state.pool, "interactive").await
+        }
+    );
+    held.unwrap();
+    assert!(
+        probe.unwrap().is_none(),
+        "A renewed lease must not be reclaimed by another poll"
+    );
+    let row: (String, i32, bool, Option<Uuid>) = sqlx::query_as(
+        "SELECT state,attempts,lease_until>clock_timestamp(),lease_token FROM jobs WHERE id=$1",
+    )
+    .bind(job.id)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(row, ("running".into(), 1, true, Some(job.lease_token)));
+    assert!(worker::renew(&h.state.pool, &job).await.unwrap());
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
 async fn worker_limits_crash_leases_retry_cancel_and_revocation() {
     use recollect_server::worker::{self, Failure};
     let h = Harness::new().await;
@@ -2049,6 +2095,8 @@ async fn worker_limits_crash_leases_retry_cancel_and_revocation() {
         .execute(&h.admin)
         .await
         .unwrap();
+    // Housekeeping runs in the maintenance loop, not in claims.
+    worker::cleanup(&h.state.pool).await.unwrap();
     assert!(
         worker::claim(&h.state.pool, "interactive")
             .await

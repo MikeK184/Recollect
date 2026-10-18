@@ -501,14 +501,86 @@ pub(super) async fn interactive_final_gate(
     final_gate(tx, auth, selection).await
 }
 
+/// Entities and relationships of one generation already proven to match their
+/// canonical descriptors, valid for one preparation epoch and a short window.
+struct Proven {
+    epoch: i64,
+    since: std::time::Instant,
+    nodes: std::collections::HashSet<String>,
+    edges: std::collections::HashSet<Uuid>,
+}
+static PROVEN: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<Uuid, Proven>>> =
+    std::sync::LazyLock::new(Default::default);
+/// Canonical changes (including erasure) move the preparation epoch and always
+/// force re-verification. The window bounds how long out-of-band damage to
+/// Neo4j can go unnoticed within one epoch.
+const PROOF_WINDOW: Duration = Duration::from_secs(20);
+const PROVEN_GENERATIONS: usize = 16;
+const PROVEN_ITEMS: usize = 250_000;
+
+/// Forget every proof. For tests that damage the projection out of band.
+pub fn reset_verification() {
+    if let Ok(mut proven) = PROVEN.lock() {
+        proven.clear();
+    }
+}
+
+/// Callers must not hold a database transaction: a full check is one request
+/// for the generation plus one per 500 nodes and edges. Entities and
+/// relationships already proven at this preparation epoch are skipped; the
+/// generation itself is always re-checked.
 pub(super) async fn verify(state: &AppState, selected: &Selected) -> Result<()> {
+    let epoch = selected.preparation_epoch;
     for (g, d) in &selected.projections {
-        adapter::verify_generation(state, g).await?;
-        for batch in d.nodes.chunks(500) {
-            adapter::verify_nodes(state, g, batch).await?;
+        let (nodes, edges): (Vec<_>, Vec<_>) = match PROVEN.lock() {
+            Ok(proven) => match proven.get(&g.id) {
+                Some(p) if p.epoch == epoch && p.since.elapsed() < PROOF_WINDOW => (
+                    d.nodes.iter().filter(|n| !p.nodes.contains(&n.key())).cloned().collect(),
+                    d.edges.iter().filter(|e| !p.edges.contains(&e.id)).cloned().collect(),
+                ),
+                _ => (d.nodes.to_vec(), d.edges.to_vec()),
+            },
+            Err(_) => (d.nodes.to_vec(), d.edges.to_vec()),
+        };
+        let result = async {
+            adapter::verify_generation(state, g).await?;
+            for batch in nodes.chunks(500) {
+                adapter::verify_nodes(state, g, batch).await?;
+            }
+            for batch in edges.chunks(500) {
+                adapter::verify_edges(state, g, batch).await?;
+            }
+            Ok::<_, Error>(())
         }
-        for batch in d.edges.chunks(500) {
-            adapter::verify_edges(state, g, batch).await?;
+        .await;
+        let Ok(mut proven) = PROVEN.lock() else {
+            result?;
+            continue;
+        };
+        if result.is_err() {
+            proven.remove(&g.id);
+            return result;
+        }
+        if proven.len() >= PROVEN_GENERATIONS && !proven.contains_key(&g.id) {
+            proven.clear();
+        }
+        let entry = proven.entry(g.id).or_insert_with(|| Proven {
+            epoch,
+            since: std::time::Instant::now(),
+            nodes: Default::default(),
+            edges: Default::default(),
+        });
+        if entry.epoch != epoch || entry.since.elapsed() >= PROOF_WINDOW {
+            *entry = Proven {
+                epoch,
+                since: std::time::Instant::now(),
+                nodes: Default::default(),
+                edges: Default::default(),
+            };
+        }
+        if entry.nodes.len() + entry.edges.len() + nodes.len() + edges.len() <= PROVEN_ITEMS {
+            entry.nodes.extend(nodes.iter().map(|n| n.key()));
+            entry.edges.extend(edges.iter().map(|e| e.id));
         }
     }
     Ok(())
@@ -559,8 +631,8 @@ pub async fn view(
             )
             .await?
         };
-        verify(&state, &selected).await?;
         tx.commit().await?;
+        verify(&state, &selected).await?;
         let mut tx = auth.publication_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'")
             .execute(&mut *tx)
@@ -626,6 +698,8 @@ pub async fn path(
         }
         // Verify the selected physical input before a no-path response can be
         // mistaken for absence in an erased, missing or damaged projection.
+        // The snapshot is complete, so release it before the Neo4j round trips.
+        tx.commit().await?;
         verify(&state, &selected).await?;
         let found = if input.start == input.end {
             Some((vec![input.start.clone()], vec![]))
@@ -691,7 +765,6 @@ pub async fn path(
         } else {
             "no_path_within_bound"
         };
-        tx.commit().await?;
         let mut tx = auth.publication_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'")
             .execute(&mut *tx)

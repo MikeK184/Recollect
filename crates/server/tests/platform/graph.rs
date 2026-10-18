@@ -20,6 +20,8 @@ mod retrieval;
 mod scope;
 
 pub(super) async fn cypher(h: &Harness, statement: &str, parameters: Value) -> Value {
+    // Tests damage the projection out of band; verification proofs must not hide it.
+    recollect_server::graph::reset_verification();
     let response = h
         .state
         .http
