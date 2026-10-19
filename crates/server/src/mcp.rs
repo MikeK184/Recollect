@@ -11,7 +11,7 @@ use crate::{
     AppState,
     auth::Auth,
     commands, db,
-    db::admission::{self, Admitted, Archived, BrainAccess, Lock, Transport},
+    db::admission::{self, Admitted, Archived, BrainAccess, Lock, Role, Transport},
     error::{Error, Result},
     workspace,
 };
@@ -72,11 +72,17 @@ fn mutation_error(error: sqlx::Error) -> Error {
     }
 }
 fn archived() -> Error {
-    conflict("Reopen this Brain before configuring or using execution profiles.")
+    Error(
+        StatusCode::CONFLICT,
+        "brain_archived",
+        "Reopen this Brain before configuring or using execution profiles.",
+    )
 }
 /// Reads share the Brain lock and work on archived Brains. Writes are
-/// browser-only, take the exclusive lock and refuse archived Brains; callers
-/// check administrator or profile rights after admission.
+/// browser-only, take the exclusive lock and refuse archived Brains. An
+/// administrator-only surface raises the floor with `with_role`, so a member
+/// below it is refused before the archive fence; profile rights are checked by
+/// the caller after admission.
 fn access(write: bool) -> BrainAccess {
     if write {
         BrainAccess::READ
@@ -87,16 +93,23 @@ fn access(write: bool) -> BrainAccess {
         BrainAccess::READ
     }
 }
+async fn admitted<'a>(
+    state: &'a AppState,
+    auth: &Auth,
+    brain: Uuid,
+    access: BrainAccess,
+) -> Result<Admitted<'a>> {
+    let mut admitted = admission::brain_tx(&state.pool, auth, brain, access).await?;
+    definitions::lock(&mut admitted.tx).await?;
+    Ok(admitted)
+}
 async fn transaction<'a>(
     state: &'a AppState,
     auth: &Auth,
     brain: Uuid,
     write: bool,
 ) -> Result<Tx<'a>> {
-    let Admitted { mut tx, .. } =
-        admission::brain_tx(&state.pool, auth, brain, access(write)).await?;
-    definitions::lock(&mut tx).await?;
-    Ok(tx)
+    Ok(admitted(state, auth, brain, access(write)).await?.tx)
 }
 async fn require_open(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
     let archived_brain: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
@@ -108,10 +121,9 @@ async fn require_open(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
     }
     Ok(())
 }
-async fn require_admin(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
-    if db::require_role(tx, brain, false).await? != "admin" {
-        return Err(Error::forbidden());
-    }
+/// The administrator check for a transaction that is already open.
+async fn require_admin_in(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
+    admission::admit_in(tx, brain, &BrainAccess::READ.with_role(Role::Admin)).await?;
     Ok(())
 }
 async fn environment(tx: &mut Tx<'_>, brain: Uuid, id: Option<Uuid>) -> Result<()> {
@@ -336,10 +348,9 @@ pub async fn catalogue(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<McpCatalogue>> {
-    let mut tx = transaction(&state, &auth, brain, false).await?;
-    let role = db::require_role(&mut tx, brain, false).await?;
+    let Admitted { mut tx, role, .. } = admitted(&state, &auth, brain, access(false)).await?;
     let profiles = profiles::list(&mut tx, brain).await?;
-    let manager = role == "admin" || profiles.iter().any(|p| p.rights.manage);
+    let manager = role.is_admin() || profiles.iter().any(|p| p.rights.manage);
     let definitions: Vec<definitions::DefinitionRow> =
         sqlx::query_as("SELECT manifest,enabled,updated_at FROM mcp_definitions ORDER BY key")
             .fetch_all(&mut *tx)
@@ -374,7 +385,7 @@ pub async fn catalogue(
                 })
         })
         .collect();
-    let definitions = if role == "admin" {
+    let definitions = if role.is_admin() {
         definitions.iter().map(|d| d.summary()).collect()
     } else {
         vec![]
@@ -384,7 +395,7 @@ pub async fn catalogue(
         definitions,
         connections,
         profiles,
-        can_configure: role == "admin",
+        can_configure: role.is_admin(),
         execution_state: "not_connected".into(),
     }))
 }
@@ -394,8 +405,8 @@ pub async fn get_definition(
     auth: Auth,
     Path((brain, key)): Path<(Uuid, String)>,
 ) -> Result<Json<McpDefinitionDetail>> {
-    let mut tx = transaction(&state, &auth, brain, false).await?;
-    require_admin(&mut tx, brain).await?;
+    let Admitted { mut tx, .. } =
+        admitted(&state, &auth, brain, access(false).with_role(Role::Admin)).await?;
     let result = definitions::load(&mut tx, &key).await?.detail();
     tx.commit().await?;
     Ok(Json(result))
@@ -406,8 +417,8 @@ pub async fn get_connection(
     auth: Auth,
     Path((brain, id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<McpConnectionDetail>> {
-    let mut tx = transaction(&state, &auth, brain, false).await?;
-    require_admin(&mut tx, brain).await?;
+    let Admitted { mut tx, .. } =
+        admitted(&state, &auth, brain, access(false).with_role(Role::Admin)).await?;
     let result = connection_detail(&mut tx, brain, id).await?;
     tx.commit().await?;
     Ok(Json(result))
@@ -422,8 +433,8 @@ async fn write_connection(
 ) -> Result<Json<McpConnectionDetail>> {
     input.name = input.name.trim().into();
     let key = commands::key(&headers)?;
-    let mut tx = transaction(state, auth, brain, true).await?;
-    require_admin(&mut tx, brain).await?;
+    let Admitted { mut tx, .. } =
+        admitted(state, auth, brain, access(true).with_role(Role::Admin)).await?;
     let mut disabling_unchanged = false;
     if let Some(id) = id {
         let old = connection(&mut tx, brain, id).await?;

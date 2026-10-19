@@ -1,3 +1,4 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -112,8 +113,9 @@ pub async fn list(
     let offset = publication::offset(&Page {
         offset: query.offset,
     })?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     if let Some(env) = query.environment_id {
         let exists:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM evidence_groups WHERE id=$1 AND brain_id=$2 AND kind='environment')").bind(env).bind(brain).fetch_one(&mut *tx).await?;
         if !exists {
@@ -137,8 +139,9 @@ pub async fn detail(
     Query(page): Query<Page>,
 ) -> Result<Json<ManifestDetail>> {
     let offset = publication::offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let current = current(&mut tx, brain, id).await?;
     let total = sqlx::query_scalar(
         "SELECT count(*) FROM manifest_revisions WHERE brain_id=$1 AND manifest_id=$2 AND privacy_state='active'",
@@ -162,8 +165,9 @@ pub async fn revision(
     auth: Auth,
     Path((brain, manifest, id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<ManifestRevision>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let revision: Option<SqlJson<ManifestRevision>> = sqlx::query_scalar(
         "SELECT CASE WHEN privacy_state='active' THEN revision END FROM manifest_revisions WHERE brain_id=$1 AND manifest_id=$2 AND id=$3",
     )
@@ -211,8 +215,9 @@ async fn save(
     validate(&mut input)?;
     publication::safe_payload(state, &json!(input))?;
     let key = commands::key(headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     if let Some(reply) = commands::reserve::<ManifestRevision>(
         &mut tx,
         key.as_deref(),

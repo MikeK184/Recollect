@@ -83,7 +83,7 @@ pub async fn resolve(
         return Err(denied());
     }
     if original.actor_id != auth.user.id {
-        require_admin(&mut tx, brain).await?;
+        require_admin_in(&mut tx, brain).await?;
     }
     if original.state != "unknown" {
         return Err(runtime_conflict(

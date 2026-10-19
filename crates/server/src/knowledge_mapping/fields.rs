@@ -24,6 +24,7 @@ use std::{
 use uuid::Uuid;
 
 mod refresh;
+use crate::db::admission::{self, BrainAccess};
 pub use refresh::{execute, run_once};
 const WINDOW: usize = 250;
 const DETAILS: usize = 80;
@@ -411,14 +412,17 @@ pub async fn view(
             "Canonical field preparation exceeded its bounded window.",
         )
     })??;
-    let mut tx = auth.publication_tx(&state.pool).await?;
-    sqlx::query("SET LOCAL statement_timeout='750ms'")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL lock_timeout='250ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::READ
+            .with_statement_timeout(Duration::from_millis(750))
+            .with_lock_timeout(Duration::from_millis(250))
+            .with_session_recheck(),
+    )
+    .await?
+    .tx;
     retrieval::graph::authorize(&mut tx, &auth, brain, &out.scope).await?;
     graph::preparation_unchanged(&mut tx, brain, out.epoch).await?;
     if out.expires_at.is_some_and(|at| at <= Utc::now()) {

@@ -61,8 +61,11 @@ roles remain ownership/direct/fresh-group grants from the team contract.
 
 Bearer calls do not require browser CSRF. Browser session, local account recovery,
 team administration and pairing approval remain browser-only. Brain operations
-use the same principal/grant checks for either identity transport. A device does
-not imply a Brain binding, workspace scope or any MCP profile-use permission.
+use the same principal/grant checks for either identity transport; the order of
+those checks is the [admission order](platform-team-access.md#admission-order). A
+browser-only surface refuses a device with 403 `browser_required`, and a device-only
+surface refuses a browser with 403 `device_required`, before any Brain lookup. A
+device does not imply a Brain binding, workspace scope or any MCP profile-use permission.
 
 `GET /api/devices` lists only the actor's safe device metadata. The browser can
 revoke one of its devices with `DELETE /api/devices/{id}`. A bearer can revoke only

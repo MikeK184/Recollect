@@ -120,6 +120,35 @@ fn strongest(modes: &BTreeSet<String>) -> &'static str {
     }
 }
 
+/// The helpers the admission replaced, frozen as raw statements: the reference
+/// the lock-equivalence proof compares against.
+async fn reference_lock(tx: &mut admission::Tx<'_>, brain: Uuid, exclusive: bool) {
+    let locked: bool = sqlx::query_scalar("SELECT recollect_lock_brain($1,$2)")
+        .bind(brain)
+        .bind(exclusive)
+        .fetch_one(&mut **tx)
+        .await
+        .unwrap();
+    assert!(locked);
+}
+async fn reference_role(tx: &mut admission::Tx<'_>, brain: Uuid) -> Option<String> {
+    reference_lock(tx, brain, false).await;
+    sqlx::query_scalar("SELECT recollect_role($1)")
+        .bind(brain)
+        .fetch_one(&mut **tx)
+        .await
+        .unwrap()
+}
+async fn reference_require_writer(tx: &mut admission::Tx<'_>, brain: Uuid) {
+    reference_lock(tx, brain, true).await;
+    let _: Option<bool> = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_optional(&mut **tx)
+        .await
+        .unwrap();
+    assert!(reference_role(tx, brain).await.is_some());
+}
+
 async fn pid_of(tx: &mut admission::Tx<'_>) -> i32 {
     sqlx::query_scalar("SELECT pg_backend_pid()")
         .fetch_one(&mut **tx)
@@ -137,8 +166,8 @@ async fn admission_holds_the_same_brain_lock_as_the_helpers_it_replaces() {
 
     // Reads: the queued shared lock and a row share lock, nothing stronger.
     let mut old = db::actor_tx(pool, f.owner).await.unwrap();
-    db::lock_brain(&mut old, f.brain, false).await.unwrap();
-    db::require_role(&mut old, f.brain, false).await.unwrap();
+    reference_lock(&mut old, f.brain, false).await;
+    assert!(reference_role(&mut old, f.brain).await.is_some());
     let old_read = observe(&h, pid_of(&mut old).await, &f).await;
     old.rollback().await.unwrap();
     let mut new = admission::brain_tx_as(pool, f.owner, None, f.brain, BrainAccess::READ)
@@ -174,7 +203,7 @@ async fn admission_holds_the_same_brain_lock_as_the_helpers_it_replaces() {
     // one through `require_role`; the single admission keeps the exclusive lock
     // and drops only the redundant shared hold.
     let mut old = db::actor_tx(pool, f.owner).await.unwrap();
-    db::require_writer(&mut old, f.brain).await.unwrap();
+    reference_require_writer(&mut old, f.brain).await;
     let old_write = observe(&h, pid_of(&mut old).await, &f).await;
     old.rollback().await.unwrap();
     let mut new = admission::brain_tx_as(pool, f.owner, None, f.brain, BrainAccess::WRITE)
@@ -212,7 +241,12 @@ async fn admission_holds_the_same_brain_lock_as_the_helpers_it_replaces() {
 
     // Administrator access (`require_role(.., true)`): exclusive, no extra hold.
     let mut old = db::actor_tx(pool, f.owner).await.unwrap();
-    db::require_role(&mut old, f.brain, true).await.unwrap();
+    reference_lock(&mut old, f.brain, true).await;
+    let _: Option<String> = sqlx::query_scalar("SELECT recollect_role($1)")
+        .bind(f.brain)
+        .fetch_one(&mut *old)
+        .await
+        .unwrap();
     let old_admin = observe(&h, pid_of(&mut old).await, &f).await;
     old.rollback().await.unwrap();
     let mut new = admission::brain_tx_as(
@@ -336,26 +370,27 @@ async fn admission_costs_one_statement_after_authentication() {
         );
         report.push(format!("{name}: {}", new.len()));
     }
-    // The statements the replaced helpers sent after authentication.
-    let (_, old_write) = statements(async {
+    // The open-transaction wrappers kept for tests now run the same single
+    // statement; the helpers they replaced sent four (`require_writer`) and
+    // three (`lock_brain` then `require_role`) after authentication.
+    let (_, wrapped_write) = statements(async {
         let mut tx = db::actor_tx(pool, f.owner).await.unwrap();
         db::require_writer(&mut tx, f.brain).await.unwrap();
         tx.rollback().await.unwrap();
     })
     .await;
-    let (_, old_read) = statements(async {
+    let (_, wrapped_read) = statements(async {
         let mut tx = db::actor_tx(pool, f.owner).await.unwrap();
-        db::lock_brain(&mut tx, f.brain, false).await.unwrap();
         db::require_role(&mut tx, f.brain, false).await.unwrap();
         tx.rollback().await.unwrap();
     })
     .await;
-    assert_eq!(old_write.len() - auth_only.len(), 4);
-    assert_eq!(old_read.len() - auth_only.len(), 3);
+    assert_eq!(wrapped_write.len() - auth_only.len(), 1);
+    assert_eq!(wrapped_read.len() - auth_only.len(), 1);
     report.push(format!(
-        "replaced require_writer: {}, replaced lock_brain+require_role: {}",
-        old_write.len(),
-        old_read.len()
+        "open-transaction require_writer: {}, require_role: {}",
+        wrapped_write.len(),
+        wrapped_read.len()
     ));
     eprintln!("ADMISSION_STATEMENTS {}", report.join("; "));
     h.finish().await;
@@ -538,5 +573,125 @@ async fn admission_variants_for_workers_and_preparation_snapshots() {
         admission::brain_preparation_tx(pool, reader, None, Uuid::new_v4(), BrainAccess::READ)
             .await;
     assert_eq!(missing.err().unwrap().0, StatusCode::NOT_FOUND);
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn admission_applies_timeouts_before_the_lock_wait_and_admits_in_an_open_transaction() {
+    let h = Harness::new().await;
+    let f = fixture(&h).await;
+    let (reader, _) = h.fixture_member().await;
+    let owner = h.login().await;
+    let (status, _, _) = h
+        .call(
+            "PUT",
+            &format!("/api/brains/{}/grants/{reader}", f.brain),
+            Some(&owner),
+            json!({"role":"reader"}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let owned_pool = h.state.pool.clone();
+    let pool = &owned_pool;
+    sqlx::query("SELECT 1").execute(pool).await.unwrap();
+
+    // Both timeouts are set locally, in one extra statement, before the lock.
+    let timed = BrainAccess::WRITE
+        .with_statement_timeout(Duration::from_millis(750))
+        .with_lock_timeout(Duration::from_millis(250));
+    let (_, auth_only) = statements(async {
+        let tx = db::actor_tx(pool, f.owner).await.unwrap();
+        tx.rollback().await.unwrap();
+    })
+    .await;
+    let (settings, timed_statements) = statements(async {
+        let mut admitted = admission::brain_tx_as(pool, f.owner, None, f.brain, timed)
+            .await
+            .unwrap();
+        let statement: String = sqlx::query_scalar("SELECT current_setting('statement_timeout')")
+            .fetch_one(&mut *admitted.tx)
+            .await
+            .unwrap();
+        let lock: String = sqlx::query_scalar("SELECT current_setting('lock_timeout')")
+            .fetch_one(&mut *admitted.tx)
+            .await
+            .unwrap();
+        admitted.tx.commit().await.unwrap();
+        (statement, lock)
+    })
+    .await;
+    assert_eq!(settings, ("750ms".to_owned(), "250ms".to_owned()));
+    // Authentication, one `set_config` statement, admission, the two reads.
+    assert_eq!(
+        timed_statements.len(),
+        auth_only.len() + 4,
+        "{timed_statements:?}"
+    );
+    assert!(timed_statements[auth_only.len()].contains("set_config"));
+    assert!(timed_statements[auth_only.len() + 1].contains("recollect_admit_brain"));
+    // `SET LOCAL` semantics: nothing leaks to the next user of the connection.
+    let leaked: String = sqlx::query_scalar("SELECT current_setting('lock_timeout')")
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    assert_eq!(leaked, "0");
+
+    // A busy Brain fails fast instead of queueing past the lock timeout.
+    let holder = admission::brain_tx_as(pool, f.owner, None, f.brain, BrainAccess::WRITE)
+        .await
+        .unwrap();
+    let started = std::time::Instant::now();
+    let refused = admission::brain_tx_as(
+        pool,
+        f.owner,
+        None,
+        f.brain,
+        BrainAccess::WRITE.with_lock_timeout(Duration::from_millis(200)),
+    )
+    .await;
+    assert_eq!(refused.err().unwrap().1, "database_unavailable");
+    assert!(started.elapsed() < Duration::from_secs(5));
+    holder.tx.rollback().await.unwrap();
+
+    // The in-transaction variant takes the same lock and applies the same policy.
+    let mut tx = db::actor_tx(pool, f.owner).await.unwrap();
+    let role = admission::admit_in(&mut tx, f.brain, &BrainAccess::WRITE)
+        .await
+        .unwrap();
+    assert_eq!(role, Role::Admin);
+    let pid = pid_of(&mut tx).await;
+    let held = observe(&h, pid, &f).await;
+    assert_eq!(strongest(&held.advisory), "ExclusiveLock");
+    assert!(!held.exclusive_free && !held.shared_free);
+    tx.rollback().await.unwrap();
+    let mut tx = db::actor_tx(pool, reader).await.unwrap();
+    assert_eq!(
+        admission::admit_in(&mut tx, f.brain, &BrainAccess::WRITE)
+            .await
+            .err()
+            .unwrap()
+            .1,
+        "forbidden"
+    );
+    tx.rollback().await.unwrap();
+    let mut tx = db::actor_tx(pool, reader).await.unwrap();
+    assert_eq!(
+        admission::admit_in(&mut tx, Uuid::new_v4(), &BrainAccess::READ)
+            .await
+            .err()
+            .unwrap()
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    tx.rollback().await.unwrap();
+    // The thin wrappers kept for open-transaction callers agree.
+    let mut tx = db::actor_tx(pool, f.owner).await.unwrap();
+    assert_eq!(
+        db::require_role(&mut tx, f.brain, true).await.unwrap(),
+        "admin"
+    );
+    db::require_writer(&mut tx, f.brain).await.unwrap();
+    tx.rollback().await.unwrap();
     h.finish().await;
 }

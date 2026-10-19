@@ -1,6 +1,7 @@
 //! Authenticated candidate staging, not semantic publication. Pending aliases
 //! never equate identities and these tables are not an unchecked read API.
 use super::{EntityKind, SourceCandidates, source_candidates};
+use crate::db::admission::{self, BrainAccess, Role};
 use crate::{
     AppState,
     auth::Auth,
@@ -92,13 +93,15 @@ pub async fn prepare_source(
     output: &[u8],
 ) -> Result<PreparedSource> {
     auth.require_browser()?;
-    let mut tx = auth.preparation_tx(&state.pool).await?;
-    if !matches!(
-        db::require_role(&mut tx, brain, false).await?.as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        auth.user.id,
+        auth.device_id,
+        brain,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     let epoch = graph::preparation_epoch(&mut tx, brain).await?;
     let deadline = input_gate(&mut tx, brain, version).await?;
     let source = model_gateway::source(state, &mut tx, brain, version, 2 * 1024 * 1024).await?;
@@ -129,8 +132,14 @@ pub async fn stage_source(state: &AppState, auth: &Auth, prepared: PreparedSourc
     if prepared.actor != auth.user.id {
         return Err(Error::forbidden());
     }
-    let mut tx = auth.publication_tx(&state.pool).await?;
-    db::require_writer(&mut tx, prepared.brain).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        auth,
+        prepared.brain,
+        BrainAccess::WRITE.with_session_recheck(),
+    )
+    .await?
+    .tx;
     if graph::preparation_epoch(&mut tx, prepared.brain).await? != prepared.epoch {
         return Err(changed());
     }

@@ -182,7 +182,8 @@ present, must authorize the whole selection and retain their immutable scope.
 
 Use these Brain-scoped endpoints, all under `/api/brains/{brain}`:
 
-- `GET/PUT /repositories/policy`: inspect/admin-update repository text capture.
+- `GET/PUT /repositories/policy`: inspect/admin-update repository text capture (an
+  archived Brain is 409 `brain_archived` for an administrator and 403 for a writer).
 - `POST /repositories/{repository}/snapshots`: paired, scoped immutable upload.
 - `GET /repositories/{repository}/snapshots`: paginated revision variants.
 - `GET /repository-snapshots/{snapshot}`: provenance, coverage and processing.

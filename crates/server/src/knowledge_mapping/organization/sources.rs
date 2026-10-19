@@ -1,6 +1,7 @@
 //! Source contributor navigation has its own cursor; existing entity detail
 //! phases keep their original meaning and response-wide 80-row bound.
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use std::collections::BTreeMap;
 
 #[derive(Clone, FromRow)]
@@ -423,8 +424,14 @@ pub async fn view(
     })?;
     tokio::time::timeout(Duration::from_secs(5), async {
         let prepared = prepare_sources(&state, &auth, brain, &input).await?;
-        let mut tx = auth.publication_tx(&state.pool).await?;
-        db::require_role(&mut tx, brain, false).await?;
+        let mut tx = admission::brain_tx(
+            &state.pool,
+            &auth,
+            brain,
+            BrainAccess::READ.with_session_recheck(),
+        )
+        .await?
+        .tx;
         retrieval::graph::authorize(&mut tx, &auth, brain, &prepared.scope).await?;
         let live: bool =
             sqlx::query_scalar("SELECT $1::timestamptz IS NULL OR $1>clock_timestamp()")
@@ -455,8 +462,15 @@ pub(super) async fn prepare_change(
     inputs: &[Uuid],
     visible: bool,
 ) -> Result<(i64, Option<DateTime<Utc>>)> {
-    let mut tx = auth.preparation_tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        auth.user.id,
+        auth.device_id,
+        brain,
+        BrainAccess::READ,
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL recollect.bulk_qualification=on")
         .execute(&mut *tx)
         .await?;

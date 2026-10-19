@@ -1,10 +1,10 @@
 //! Bounded retained-vector preparation. Only exact scalar affinities leave
 //! PostgreSQL; vectors and centroids never become a second persisted store.
 use super::{affinity, storage};
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
-    db,
     error::{Error, Result},
     memory_evidence::Tx,
     model_gateway, model_policy, semantic,
@@ -399,7 +399,7 @@ pub async fn cosine_edges(
     {
         return Err(corrupt());
     }
-    db::require_role(tx, brain, false).await?;
+    admission::admit_in(tx, brain, &BrainAccess::READ).await?;
     let zero:bool=sqlx::query_scalar("WITH c AS(SELECT source_version_id,l2_normalize(avg(l2_normalize(embedding) ORDER BY chunk_id)) v FROM semantic_entries WHERE brain_id=$1 AND id=ANY($2) GROUP BY source_version_id) SELECT EXISTS(SELECT 1 FROM c WHERE vector_norm(v)=0)")
         .bind(brain).bind(entry_ids).fetch_one(&mut **tx).await?;
     if zero {
@@ -500,7 +500,7 @@ pub fn project(
 /// Caller holds the freshly authenticated Brain writer. Provisional IDs are
 /// never published before exact context/version/retention gates are repeated.
 pub async fn persist(tx: &mut Tx<'_>, brain: Uuid, actor: Uuid, features: &Features) -> Result<()> {
-    db::require_writer(tx, brain).await?;
+    admission::admit_in(tx, brain, &BrainAccess::WRITE).await?;
     let duplicate:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM jsonb_to_recordset($2) x(id uuid,source uuid,version uuid,context jsonb) JOIN knowledge_source_inputs i ON i.brain_id=$1 AND i.source_version_id=x.version AND i.context=x.context AND i.id<>x.id)").bind(brain).bind(Json(&features.sources)).fetch_one(&mut **tx).await?;
     if duplicate {
         return Err(corrupt());

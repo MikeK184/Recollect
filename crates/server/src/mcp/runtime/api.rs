@@ -92,7 +92,7 @@ pub async fn cancel(
     let mut tx = execution_tx(&state.pool, auth.user.id, auth.device_id, brain).await?;
     let row = load_call(&mut tx, brain, id, true).await?;
     if row.actor_id != auth.user.id {
-        require_admin(&mut tx, brain).await?;
+        require_admin_in(&mut tx, brain).await?;
     }
     if matches!(row.state.as_str(), "queued" | "starting" | "running") && !row.cancel_requested {
         sqlx::query("UPDATE mcp_calls SET cancel_requested=true,state=CASE WHEN state='queued' THEN 'cancelled' ELSE state END,code=CASE WHEN state='queued' THEN 'cancelled_before_dispatch' ELSE code END,completed_at=CASE WHEN state='queued' THEN clock_timestamp() ELSE completed_at END,payload_expires_at=CASE WHEN state='queued' THEN clock_timestamp()+interval '1 hour' ELSE payload_expires_at END WHERE id=$1")

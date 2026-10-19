@@ -1,6 +1,7 @@
 //! Explicit utility with canonical delivery/attribution. Nothing in this module
 //! changes production retrieval scores, truth, identity or topic membership.
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use crate::{commands, db, graph as topology};
 use axum::http::HeaderMap;
 use sqlx::FromRow;
@@ -130,8 +131,15 @@ async fn prepare(
     brain: Uuid,
     input: &FeedbackContextRequest,
 ) -> Result<Prepared> {
-    let mut tx = auth.preparation_tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        auth.user.id,
+        auth.device_id,
+        brain,
+        BrainAccess::READ,
+    )
+    .await?
+    .tx;
     let epoch = topology::preparation_epoch(&mut tx, brain).await?;
     let (task, scope) = attribution(&mut tx, auth, brain, &input.scope, false).await?;
     let logical: Option<Uuid> = if input.input_kind == "source_version" {
@@ -214,9 +222,7 @@ pub async fn context(
     tokio::time::timeout(Duration::from_secs(15), async {
         let prepared = prepare(&state, &auth, brain, &input).await?;
         tokio::time::timeout(Duration::from_millis(1500), async {
-            let mut tx = auth.publication_tx(&state.pool).await?;
-            sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;
-            db::require_writer(&mut tx, brain).await?;
+            let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE.with_statement_timeout(Duration::from_millis(750)).with_session_recheck()).await?.tx;
             final_gate(&mut tx,&auth,brain,&input,&prepared,None).await?;
             let saved: Option<FeedbackResult> = commands::reserve(&mut tx,Some(&key),"retrieval.feedback.context",json!({"brain":brain,"input":input})).await?;
             let id: Option<Uuid> = sqlx::query_scalar("SELECT id FROM retrieval_feedback_contexts WHERE brain_id=$1 AND actor_id=$2 AND task_id=$3 AND query_context_id=$4 AND input_kind=$5 AND revision_id=$6")
@@ -262,9 +268,7 @@ pub async fn record(
         let input=stored.request();
         let prepared=prepare(&state,&auth,brain,&input).await?;
         tokio::time::timeout(Duration::from_millis(1500), async {
-            let mut tx=auth.publication_tx(&state.pool).await?;
-            sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;
-            db::require_writer(&mut tx,brain).await?;
+            let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE.with_statement_timeout(Duration::from_millis(750)).with_session_recheck()).await?.tx;
             let current:Stored=sqlx::query_as(&format!("{STORED} FOR UPDATE OF c")).bind(brain).bind(command.context_id).fetch_optional(&mut *tx).await?.ok_or_else(Error::missing)?;
             if current.scope_id!=prepared.scope || current.task_id!=prepared.task { return Err(changed()); }
             final_gate(&mut tx,&auth,brain,&input,&prepared,current.expires_at).await?;

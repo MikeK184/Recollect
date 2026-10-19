@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -282,8 +283,9 @@ pub async fn get(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<ModelSettings>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let current = current(&state, &mut tx, brain).await?;
     tx.commit().await?;
     Ok(Json(ModelSettings {
@@ -304,9 +306,14 @@ pub async fn update(
     Json(mut input): Json<ModelPolicyUpdate>,
 ) -> Result<Json<ModelPolicyVersion>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     validate(&state, &mut tx, brain, &mut input.policy).await?;
     let key = commands::key(&headers)?;
     if let Some(saved) = commands::reserve::<ModelPolicyVersion>(
@@ -400,8 +407,9 @@ pub async fn history(
     Path(brain): Path<Uuid>,
     Query(query): Query<PageQuery>,
 ) -> Result<Json<Vec<ModelPolicyVersion>>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let rows:Vec<SqlJson<ModelPolicyVersion>>=sqlx::query_scalar("SELECT jsonb_build_object('change_id',id,'brain_id',brain_id,'policy',policy,'created_by',created_by,'created_at',created_at) FROM model_policies WHERE brain_id=$1 ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
         .bind(brain).bind(offset(&query)?).fetch_all(&mut *tx).await?;
     tx.commit().await?;
@@ -424,8 +432,9 @@ pub async fn usage(
     Path(brain): Path<Uuid>,
     Query(query): Query<PageQuery>,
 ) -> Result<Json<ModelUsage>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     sqlx::query("SELECT recollect_expire_model_requests($1)")
         .bind(brain)
         .execute(&mut *tx)

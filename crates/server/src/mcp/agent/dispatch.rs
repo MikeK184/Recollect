@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use catalogue::{Scope, Spec};
 use recollect_protocol::{ApiError, OperationBinding, RecallRequest};
 use serde::Serialize;
@@ -104,8 +105,10 @@ impl AgentService {
     }
 
     async fn operation(&self, operation: Uuid, kind: Scope) -> Result<OperationBinding> {
-        let mut tx = self.auth.tx(&self.state.pool).await?;
-        db::require_role(&mut tx, self.brain, false).await?;
+        let mut tx =
+            admission::brain_tx(&self.state.pool, &self.auth, self.brain, BrainAccess::READ)
+                .await?
+                .tx;
         let bound = crate::workspace::bound_operation(&mut tx, self.brain, operation).await?;
         let valid_kind = match kind {
             Scope::Write | Scope::SourceWrite | Scope::Handover => bound.kind == "write",

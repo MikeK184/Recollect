@@ -1,9 +1,9 @@
 //! Read-only, temporary answers. Durable rows contain disposition and validity
 //! metadata only; neither the question nor the generated text is stored.
+use crate::db::admission::{self, BrainAccess, Lock};
 use crate::{
     AppState,
     auth::Auth,
-    db,
     error::{Error, Result},
     memory_evidence::Tx,
     model_gateway as gateway, model_policy, publication,
@@ -155,8 +155,13 @@ impl Row {
     }
 }
 
+/// Answer bookkeeping serializes with other writers: any member, exclusive lock.
+fn answering_lock() -> BrainAccess {
+    BrainAccess::READ.with_lock(Lock::Exclusive)
+}
+
 pub(crate) async fn active(tx: &mut Tx<'_>, auth: &Auth, brain: Uuid, id: Uuid) -> Result<()> {
-    db::require_role(tx, brain, false).await?;
+    admission::admit_in(tx, brain, &BrainAccess::READ).await?;
     let valid: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM sessions WHERE token=$1 AND account_id=$2 AND expires_at>clock_timestamp())")
         .bind(auth.session).bind(auth.user.id).fetch_one(&mut **tx).await?;
     if !valid {
@@ -240,8 +245,9 @@ async fn finish(
 
 async fn status(state: &AppState, auth: &Auth, brain: Uuid, id: Uuid) -> Result<AnswerResponse> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     sqlx::query("UPDATE answer_requests SET state=CASE WHEN cancel_requested THEN 'cancelled' ELSE 'uncertain' END,
         failure_code='answer_interrupted',finished_at=clock_timestamp() WHERE brain_id=$1 AND actor_id=$2 AND id=$3
         AND state IN ('retrieving','answering') AND deadline<=clock_timestamp()")
@@ -356,8 +362,9 @@ async fn run(
     input: AnswerRequest,
     token: Uuid,
 ) -> Result<AnswerResponse> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, answering_lock())
+        .await?
+        .tx;
     active(&mut tx, auth, brain, input.request_id).await?;
     let policy = model_policy::current(state, &mut tx, brain).await?;
     model_policy::permits(state, &policy.policy, "answering", &["query".into()])?;
@@ -379,8 +386,9 @@ async fn run(
     };
     let recall = retrieval::for_answer(state, auth, brain, input.recall.clone(), &guard).await?;
     let bundle = Bundle::new(auth, input.request_id, input.recall, recall);
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, answering_lock())
+        .await?
+        .tx;
     bundle.revalidate(state, &mut tx).await?;
     sqlx::query("UPDATE answer_requests SET memory_epoch=$4,expires_at=$5 WHERE brain_id=$1 AND actor_id=$2 AND id=$3")
         .bind(brain).bind(auth.user.id).bind(input.request_id).bind(bundle.response().memory_epoch).bind(bundle.response().expires_at)
@@ -417,8 +425,9 @@ async fn run(
         ));
     };
     let answer = validate_answer(state, output, &citations)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, answering_lock())
+        .await?
+        .tx;
     bundle.revalidate(state, &mut tx).await?;
     let current = model_policy::current(state, &mut tx, brain).await?;
     if current.change_id != policy.change_id {
@@ -453,9 +462,9 @@ pub async fn create(
     auth.require_browser()?;
     validate(&mut input)?;
     publication::safe_payload(&state, &json!(&input))?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, answering_lock())
+        .await?
+        .tx;
     let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM answer_requests WHERE brain_id=$1 AND actor_id=$2 AND id=$3)",
     )
@@ -558,9 +567,9 @@ pub async fn cancel(
     Path((brain, id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<AnswerResponse>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, answering_lock())
+        .await?
+        .tx;
     row(&mut tx, brain, auth.user.id, id).await?;
     sqlx::query("UPDATE answer_requests SET cancel_requested=true WHERE brain_id=$1 AND actor_id=$2 AND id=$3 AND state IN ('retrieving','answering')")
         .bind(brain).bind(auth.user.id).bind(id).execute(&mut *tx).await?;

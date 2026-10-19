@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 mod labels;
 mod sources;
+use crate::db::admission::{self, BrainAccess};
 pub use sources::{__path_view as __path_source_view, view as source_view};
 const SOURCE_WINDOW: usize = 250;
 const DETAIL_WINDOW: usize = 80;
@@ -827,11 +828,16 @@ pub async fn view(
     tokio::time::timeout(Duration::from_secs(5), async {
         for attempt in 0..3 {
             let prepared = prepare(&state, &auth, brain, &input).await?;
-            let mut tx = auth.publication_tx(&state.pool).await?;
-            sqlx::query("SET LOCAL statement_timeout='750ms'")
-                .execute(&mut *tx)
-                .await?;
-            db::require_role(&mut tx, brain, false).await?;
+            let mut tx = admission::brain_tx(
+                &state.pool,
+                &auth,
+                brain,
+                BrainAccess::READ
+                    .with_statement_timeout(Duration::from_millis(750))
+                    .with_session_recheck(),
+            )
+            .await?
+            .tx;
             retrieval::graph::authorize(&mut tx, &auth, brain, &prepared.scope).await?;
             if graph::preparation_epoch(&mut tx, brain).await? != prepared.epoch {
                 tx.rollback().await?;
@@ -873,15 +879,19 @@ async fn prepare_topic_change(
     inputs: &[Uuid],
     require_visible: bool,
 ) -> Result<(i64, Option<DateTime<Utc>>)> {
-    let mut tx = auth.preparation_tx(&state.pool).await?;
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        auth.user.id,
+        auth.device_id,
+        brain,
+        BrainAccess::READ.with_statement_timeout(Duration::from_millis(1500)),
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL recollect.bulk_qualification='on'")
         .execute(&mut *tx)
         .await?;
     sqlx::query("SET LOCAL jit=off").execute(&mut *tx).await?;
-    sqlx::query("SET LOCAL statement_timeout='1500ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_role(&mut tx, brain, false).await?;
     let epoch = graph::preparation_epoch(&mut tx, brain).await?;
     let mut after: Option<Uuid> = None;
     loop {
@@ -1066,11 +1076,7 @@ pub async fn topic(
         })??;
     drop(capacity);
     tokio::time::timeout(Duration::from_millis(1500), async {
-    let mut tx = auth.publication_tx(&state.pool).await?;
-    sqlx::query("SET LOCAL statement_timeout='750ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE.with_statement_timeout(Duration::from_millis(750)).with_session_recheck()).await?.tx;
     let deadline_current: bool =
         sqlx::query_scalar("SELECT $1::timestamptz IS NULL OR $1>clock_timestamp()")
             .bind(prepared_deadline)
@@ -1234,7 +1240,7 @@ pub async fn topic(
         split_topic_id,
     };
     commands::finish(&mut tx, Some(&key), brain, &result).await?;
-    db::require_writer(&mut tx,brain).await?;
+    admission::admit_in(&mut tx, brain, &BrainAccess::WRITE).await?;
     let retained:bool=sqlx::query_scalar("SELECT $1::timestamptz IS NULL OR $1>clock_timestamp()").bind(prepared_deadline).fetch_one(&mut *tx).await?;
     if !retained { return Err(changed()); }
     tx.commit().await?;

@@ -1,3 +1,4 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -115,8 +116,9 @@ async fn save(
     memory_policy::text(&input.title, 256, true)?;
     procedures::contribution_ids(&mut input.contributions)?;
     publication::safe_payload(state, &json!(input))?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     let key = commands::key(headers)?;
     if let Some(saved) = commands::reserve::<HandoverRun>(
         &mut tx,
@@ -225,8 +227,9 @@ pub async fn list(
     let offset = model_policy::offset(&model_policy::PageQuery {
         offset: query.offset,
     })?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let selection = memory::inspection::scope(&mut tx, &auth, brain, query.operation_id)
         .await?
         .map(SqlJson);
@@ -252,8 +255,9 @@ pub async fn retry(
     headers: HeaderMap,
     Json(retry): Json<LearningRetryInput>,
 ) -> Result<Json<HandoverRun>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     let mut input = input(&row(&mut tx, brain, id).await?);
     input.operation_id = retry.operation_id;
     tx.commit().await?;
@@ -289,8 +293,15 @@ async fn ready_checked<'a>(
     job: &ClaimedJob,
     response: bool,
 ) -> Result<(Tx<'a>, HandoverRun, Vec<ClaimSupport>)> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let run = row(&mut tx, job.brain_id, job.target_id).await?;
     if !matches!(run.state.as_str(), "queued" | "running") {

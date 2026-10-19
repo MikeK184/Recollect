@@ -137,7 +137,11 @@ configuration `revision` UUID to reject stale forms with 409; these are ordinary
 concurrent-edit checks, not release/version negotiation. Changes and minimal audit
 commit together under the existing Brain/account authorization locks. No dummy
 processing job or model operation is created. Archived Brains remain inspectable
-but cannot be configured or used for execution discovery. Capacity is 100 approved
+but cannot be configured or used for execution discovery: those requests return 409
+`brain_archived`. Administrator-only writes (connections, private runners, credential
+provisioning and new profiles) check the administrator role first, so a member who is
+not an administrator gets 403 on an archived Brain, never 409; profile rights are
+checked after the archive fence ([admission order](platform-team-access.md#admission-order)). Capacity is 100 approved
 definitions installation-wide, 100 connections/profiles per Brain and 100 grants
 per profile. Capacity errors are explicit, not silent truncation.
 

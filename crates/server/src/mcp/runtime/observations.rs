@@ -1,6 +1,7 @@
 //! The coordinator produces observations; canonical capture owns the evidence.
 //! This path never calls a connector or a model, including on retry.
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 
 #[derive(Deserialize)]
 struct Descriptor {
@@ -164,8 +165,9 @@ pub async fn list(
     Query(query): Query<publication::Page>,
 ) -> Result<Json<McpObservationPage>> {
     let offset = publication::offset(&query)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     load_call(&mut tx, brain, id, false).await?;
     let result = page(&mut tx, id, offset).await?;
     tx.commit().await?;
@@ -177,8 +179,9 @@ pub async fn status(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<McpObservationStatus>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let result: DbJson<McpObservationStatus> = sqlx::query_scalar("SELECT jsonb_build_object(
         'pending',count(*) FILTER(WHERE o.state='pending'), 'errors',count(*) FILTER(WHERE o.state='error'),
         'published',count(*) FILTER(WHERE o.state='published'), 'filtered',count(*) FILTER(WHERE o.state='filtered'),
@@ -212,8 +215,15 @@ struct Pending {
     evidence_available: bool,
 }
 async fn publish(state: &AppState, item: &Candidate, lease: Uuid) -> Result<()> {
-    let mut tx = db::device_tx(&state.pool, item.actor_id, item.device_id).await?;
-    db::require_writer(&mut tx, item.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        item.actor_id,
+        item.device_id,
+        item.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     require_open(&mut tx, item.brain_id).await?;
     let pending: Pending = sqlx::query_as("SELECT o.call_id,
         least(o.expires_at,recollect_retention_deadline(o.brain_id,'tool_output',o.captured_at)) expires_at,

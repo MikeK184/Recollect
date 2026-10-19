@@ -175,13 +175,17 @@ pub async fn rebuild(
 }
 
 pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
-    let mut tx = db::actor_tx(&state.pool, actor).await?;
     // A Brain whose admission lock is held elsewhere must not pin a connection
     // for the rest of its time budget; the pass moves on and retries.
-    sqlx::query("SET LOCAL lock_timeout='2s'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        actor,
+        None,
+        brain,
+        BrainAccess::WRITE.with_lock_timeout(std::time::Duration::from_secs(2)),
+    )
+    .await?
+    .tx;
     let first: i16 = sqlx::query_scalar("UPDATE brains SET graph_scanned_at=clock_timestamp(),graph_discovery_cursor=(graph_discovery_cursor+1)%3 WHERE id=$1 RETURNING (graph_discovery_cursor+2)::smallint%3::smallint")
         .bind(brain)
         .fetch_one(&mut *tx)
@@ -252,11 +256,15 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
         if !adapter::cleanup(state, brain, id).await? {
             continue;
         }
-        let mut tx = db::actor_tx(&state.pool, actor).await?;
-        sqlx::query("SET LOCAL lock_timeout='2s'")
-            .execute(&mut *tx)
-            .await?;
-        db::require_writer(&mut tx, brain).await?;
+        let mut tx = admission::brain_tx_as(
+            &state.pool,
+            actor,
+            None,
+            brain,
+            BrainAccess::WRITE.with_lock_timeout(std::time::Duration::from_secs(2)),
+        )
+        .await?
+        .tx;
         sqlx::query("UPDATE graph_generations SET cleaned_at=clock_timestamp() WHERE brain_id=$1 AND id=$2 AND state IN ('superseded','removed')")
             .bind(brain).bind(id).execute(&mut *tx).await?;
         tx.commit().await?;

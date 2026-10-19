@@ -32,7 +32,8 @@ below continue to govern the successor.
 A Brain administrator creates, replaces or disables bundles. Brain readers can
 list and fetch applicable enabled bundles. Ordinary writers do not gain
 publication rights. Skills use existing account/device authentication, current
-Brain membership, archived/deleted Brain fences and RLS. Every read validates its
+Brain membership, archived/deleted Brain fences (409 `brain_archived` and 404, in the
+[admission order](platform-team-access.md#admission-order)) and RLS. Every read validates its
 Brain and applicability before returning content; a guessed ID is not authority.
 Only an authenticated administrator browser session publishes through the
 manager HTTP surface; paired-device requests and MCP expose no publication

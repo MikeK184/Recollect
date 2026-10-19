@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use crate::{commands, publication};
 use axum::{
     Json as ResponseJson,
@@ -27,8 +28,7 @@ pub async fn queue(
     tokio::time::timeout(Duration::from_secs(20),async {
         let config=validate(&input)?;
         let key=commands::key(&headers)?;
-        let mut tx=auth.tx(&state.pool).await?;
-        db::require_writer(&mut tx,brain).await?;
+        let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE).await?.tx;
         crate::retrieval::graph::authorize(&mut tx,&auth,brain,&input.scope).await?;
         if let Some(saved)=commands::reserve(&mut tx,key.as_deref(),"graph.analyze",json!({"brain":brain,"input":input})).await? {
             tx.commit().await?;return Ok(ResponseJson(saved));
@@ -69,8 +69,9 @@ pub async fn get(
 ) -> Result<ResponseJson<AnalyticsStatus>> {
     auth.require_browser()?;
     let offset = publication::offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let saved:Vec<Json<AnalyticsReport>>=sqlx::query_scalar("SELECT to_jsonb(r)-'descriptor'-'scores' FROM analytics_reports r WHERE r.purpose='topology' AND brain_id=$1 ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
       .bind(brain).bind(offset).fetch_all(&mut *tx).await?;
     let epoch = analytics_epoch(&mut tx, brain).await?;
@@ -122,8 +123,7 @@ pub async fn view(
     })?;
     tokio::time::timeout(Duration::from_secs(20),async {
         if input.offset>NODES {return Err(Error::invalid("The report offset exceeds its result limit."));}
-        let mut tx=auth.tx(&state.pool).await?;
-        db::require_role(&mut tx,brain,false).await?;
+        let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ).await?.tx;
         let public:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM analytics_reports WHERE brain_id=$1 AND id=$2 AND purpose='topology')").bind(brain).bind(id).fetch_one(&mut *tx).await?;
         if !public{return Err(Error::missing());}
         let mut r=report(&mut tx,brain,id).await?;
@@ -157,7 +157,7 @@ pub async fn view(
         }
         let job:jobs::JobRow=sqlx::query_as("SELECT * FROM jobs WHERE brain_id=$1 AND id=$2").bind(brain).bind(r.job_id).fetch_one(&mut *tx).await?;
         let cleanup_pending=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM analytics_attempts WHERE brain_id=$1 AND report_id=$2 AND cleaned_at IS NULL)").bind(brain).bind(id).fetch_one(&mut *tx).await?;
-        db::require_role(&mut tx,brain,false).await?;
+        admission::admit_in(&mut tx,brain,&BrainAccess::READ).await?;
         // Lock the report last: no job locks or stale-state updates may follow.
         // Another reader's observed invalidation does not advance the Brain epoch.
         let latest:Option<Json<AnalyticsReport>>=sqlx::query_scalar("SELECT recollect_analytics_read_final($1,$2)").bind(brain).bind(id).fetch_one(&mut *tx).await?;

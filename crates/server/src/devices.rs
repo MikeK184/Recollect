@@ -1,3 +1,4 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -426,8 +427,9 @@ pub async fn brain_agents(
     let include_hidden = query
         .get("include_hidden")
         .is_some_and(|v| v == "true" || v == "1");
-    let mut tx = auth.tx(&state.pool).await?;
-    crate::db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     #[derive(sqlx::FromRow)]
     struct Row {
         id: Uuid,
@@ -661,8 +663,7 @@ pub(crate) async fn record_usage(
             return response;
         }
         let recorded=async {
-            let mut tx=auth.tx(&state.pool).await?;
-            crate::db::require_role(&mut tx,brain,false).await?;
+            let mut tx=admission::brain_tx(&state.pool,&auth,brain,BrainAccess::READ).await?.tx;
             sqlx::query("INSERT INTO agent_brain_usage(brain_id,device_id,host_kind) VALUES($1,$2,$3) ON CONFLICT(brain_id,device_id,host_kind) DO UPDATE SET used_at=clock_timestamp() WHERE agent_brain_usage.used_at<clock_timestamp()-interval '1 minute'").bind(brain).bind(device).bind(host).execute(&mut *tx).await?;
             tx.commit().await?;
             Ok::<_,crate::error::Error>(())

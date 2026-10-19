@@ -1,7 +1,7 @@
 //! The single outbound model boundary. Callers supply canonical identities, never
 //! caller-asserted content classes or provider URLs.
 use crate::{
-    AppState, artifacts, db,
+    AppState, artifacts,
     db::admission::{self, Archived, BrainAccess, Lock},
     error::{Error, Result},
     memory,
@@ -829,11 +829,15 @@ pub async fn preview_for_policy(
             "Read-only previews require an unleased canonical extraction or embedding invocation.",
         ));
     }
-    let mut tx = db::preparation_tx(&state.pool, context.actor, context.device).await?;
-    sqlx::query("SET LOCAL statement_timeout='2s'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_role(&mut tx, context.brain, false).await?;
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        context.actor,
+        context.device,
+        context.brain,
+        BrainAccess::READ.with_statement_timeout(Duration::from_secs(2)),
+    )
+    .await?
+    .tx;
     let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
         .bind(context.brain)
         .fetch_one(&mut *tx)

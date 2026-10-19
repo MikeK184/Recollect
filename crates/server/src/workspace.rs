@@ -3,7 +3,7 @@ use crate::{
     auth::Auth,
     db::{
         self,
-        admission::{self, Archived, BrainAccess, Lock},
+        admission::{self, Archived, BrainAccess, Lock, Role},
     },
     error::{Error, Result},
     jobs,
@@ -61,10 +61,15 @@ fn local_path(value: &str) -> Result<String> {
     )
 }
 fn archived() -> Error {
-    conflict("Reopen this Brain before changing workspace context.")
+    Error(
+        StatusCode::CONFLICT,
+        "brain_archived",
+        "Reopen this Brain before changing workspace context.",
+    )
 }
 /// Any member, under the exclusive Brain lock; an archived Brain refuses
-/// workspace changes. Callers add their own writer or administrator checks.
+/// workspace changes. A surface that needs a writer or administrator raises the
+/// floor with `with_role`.
 const WORKING: BrainAccess = BrainAccess::READ
     .with_lock(Lock::Exclusive)
     .with_archived(Archived::Reject(archived));
@@ -120,8 +125,9 @@ pub async fn repositories(
 ) -> Result<Json<RepositoryPage>> {
     let page_offset = offset(query.offset)?;
     let search = crate::publication::list_query(query.q.as_deref())?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let condition = "r.brain_id=$1 AND ($2='' OR position(lower($2) in lower(r.canonical_origin))>0 OR EXISTS(SELECT 1 FROM repository_origins o WHERE o.repository_id=r.id AND position(lower($2) in lower(o.origin))>0))";
     let total: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM repositories r WHERE {condition}"
@@ -153,8 +159,9 @@ pub async fn repository_identity(
     auth: Auth,
     Path((brain, id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Repository>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let value = repository(&mut tx, brain, id).await?;
     tx.commit().await?;
     Ok(Json(value))
@@ -449,8 +456,9 @@ pub async fn catalogue(
 ) -> Result<Json<WorkspaceCatalogue>> {
     let checkout_offset = offset(query.checkout_offset)?;
     let task_offset = offset(query.task_offset)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let repositories = if query.include_repositories == Some(false) {
         vec![]
     } else {
@@ -573,8 +581,9 @@ pub async fn refresh(
     {
         return Err(Error::invalid("Duplicate checkout path in refresh."));
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     jobs::capacity(&mut tx, brain).await?;
     let existing: Option<Uuid> = sqlx::query_scalar(
         "SELECT id FROM workspace_registrations WHERE brain_id=$1 AND device_id=$2 AND root=$3",
@@ -682,8 +691,9 @@ pub async fn alias(
     Json(input): Json<RepositoryOrigin>,
 ) -> Result<Json<Repository>> {
     let origin = canonical_origin(&input.origin).map_err(Error::invalid)?;
-    let mut tx = working_tx(&state, &auth, brain).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, WORKING.with_role(Role::Admin))
+        .await?
+        .tx;
     repository(&mut tx, brain, id).await?;
     let current: Option<Uuid> = sqlx::query_scalar(
         "SELECT repository_id FROM repository_origins WHERE brain_id=$1 AND origin=$2",
@@ -859,10 +869,16 @@ pub async fn begin(
     ) {
         return Err(Error::invalid("Unknown operation kind."));
     }
-    let mut tx = working_tx(&state, &auth, brain).await?;
-    if matches!(input.kind.as_str(), "write" | "capture") {
-        db::require_writer(&mut tx, brain).await?;
-    }
+    // Changing files or capturing needs a writer; the floor applies before the
+    // archive fence, so a reader of an archived Brain is forbidden, not conflicted.
+    let floor = if matches!(input.kind.as_str(), "write" | "capture") {
+        Role::Writer
+    } else {
+        Role::Reader
+    };
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, WORKING.with_role(floor))
+        .await?
+        .tx;
     let current = task(&mut tx, brain, id).await?;
     if current.closed {
         return Err(conflict("This task is closed."));
@@ -937,8 +953,9 @@ pub async fn detail(
 ) -> Result<Json<TaskDetail>> {
     let scope_offset = offset(query.scope_offset)?;
     let operation_offset = offset(query.operation_offset)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let task = task(&mut tx, brain, id).await?;
     let scope_total = sqlx::query_scalar("SELECT count(*) FROM scope_snapshots WHERE task_id=$1")
         .bind(id)
@@ -978,8 +995,9 @@ pub async fn operation(
     auth: Auth,
     Path((brain, id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<OperationBinding>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let result = bound_operation(&mut tx, brain, id).await?;
     tx.commit().await?;
     Ok(Json(result))

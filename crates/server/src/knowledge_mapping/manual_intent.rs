@@ -4,10 +4,7 @@ use super::source_features::{self, Features, SourceInput};
 use crate::{
     AppState,
     auth::Auth,
-    db::{
-        self,
-        admission::{self, BrainAccess, Role},
-    },
+    db::admission::{self, BrainAccess, Role},
     error::{Error, Result},
     graph,
     memory_evidence::Tx,
@@ -735,7 +732,7 @@ pub async fn reserve_command(
 }
 
 async fn fresh(tx: &mut Tx<'_>, brain: Uuid, intent: &Intent) -> Result<()> {
-    db::require_writer(tx, brain).await?;
+    admission::admit_in(tx, brain, &BrainAccess::WRITE).await?;
     if graph::preparation_epoch(tx, brain).await? != intent.epoch {
         return Err(changed());
     }

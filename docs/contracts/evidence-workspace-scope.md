@@ -108,7 +108,10 @@ handover/capture, rather than labeling a session with only its final scope.
 All current Brain members may create their own working tasks. Tasks/operations
 are private to their account even for a Brain admin. Task mutations retain audit
 in the same transaction; temporary working context has no materialized projection
-and needs no dummy background job. Archived Brains reject new bindings/mutations.
+and needs no dummy background job. Archived Brains reject new bindings/mutations with
+409 `brain_archived`. Starting a write or capture operation needs a writer and adding a
+repository origin alias needs an administrator; both checks precede the archive fence,
+so a reader or non-administrator of an archived Brain is 403, never 409.
 Close stops new task operations; children remain independent. Keep at most 100
 active tasks per account/Brain, 1,000 snapshots and 1,000 operations per task.
 Task, scope-history and operation-history pages contain 20 rows. Historical IDs

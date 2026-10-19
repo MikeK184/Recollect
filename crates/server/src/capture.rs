@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState, artifacts,
     auth::Auth,
@@ -45,8 +46,9 @@ pub async fn get_policy(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<CaptureSettings>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let response = current(&mut tx, brain).await?;
     tx.commit().await?;
     Ok(Json(response))
@@ -66,8 +68,14 @@ pub async fn update_policy(
         )
     })?;
     publication::safe_payload(&state, &json!(input.policy))?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let key = commands::key(&headers)?;
     if let Some(saved) = commands::reserve(
         &mut tx,
@@ -176,8 +184,9 @@ pub async fn bind(
         ));
     }
     publication::safe_payload(&state, &json!(input))?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     let existing: Option<BindingRow> =
         sqlx::query_as("SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND id=$2")
             .bind(brain)
@@ -278,8 +287,9 @@ pub async fn report_device(
             "Use bounded queue counts and a supported capture issue code.",
         ));
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let owns: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND device_id=$2 AND actor_id=$3)")
         .bind(brain).bind(device).bind(auth.user.id).fetch_one(&mut *tx).await?;
     if !owns {
@@ -298,8 +308,9 @@ pub async fn devices(
     Query(query): Query<CaptureQuery>,
 ) -> Result<Json<CaptureDevicePage>> {
     let offset = query.offset.unwrap_or(0).max(0);
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     #[derive(sqlx::FromRow)]
     struct Row {
         device_id: Uuid,
@@ -342,8 +353,9 @@ pub async fn bindings(
     let offset = publication::offset(&publication::Page {
         offset: query.offset,
     })?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let rows: Vec<BindingRow> = sqlx::query_as("SELECT * FROM capture_bindings WHERE host IN ('codex','claude_code','opencode') AND brain_id=$1 AND actor_id=$2 AND ($3::uuid IS NULL OR device_id=$3) ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $4")
         .bind(brain).bind(auth.user.id).bind(auth.device_id).bind(offset).fetch_all(&mut *tx).await?;
     let mut items = Vec::new();
@@ -432,8 +444,9 @@ pub async fn publish(
     if input.id.is_nil() {
         return Err(Error::invalid("Provide a stable event UUID."));
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     let binding = own_binding(&mut tx, brain, input.binding_id, &auth)
         .await?
         .dto(&mut tx)
@@ -634,8 +647,9 @@ pub async fn events(
     {
         return Err(Error::invalid("Choose a supported capture kind."));
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let filter = "e.brain_id=$1 AND ($2::uuid IS NULL OR e.binding_id=$2) AND ($3::text IS NULL OR e.metadata->>'kind'=$3) AND ($4::uuid IS NULL OR b.device_id=$4)";
     let total = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM capture_events e JOIN capture_bindings b ON b.id=e.binding_id WHERE {filter}"

@@ -2,8 +2,9 @@
 //! Production visibility requires a separately qualified canonical profile;
 //! missing legacy outputs never trigger another provider request.
 use super::{SOURCE_SCHEMA, SourceCandidates, organization, source_candidates, storage};
+use crate::db::admission::{self, BrainAccess, Role};
 use crate::{
-    AppState, db,
+    AppState,
     error::{Error, Result},
     graph, jobs,
     memory_evidence::Tx,
@@ -279,15 +280,15 @@ pub(crate) async fn learning_context(
     job: &ClaimedJob,
     run: &LearningRun,
 ) -> Result<Value> {
-    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
-    if !matches!(
-        db::require_role(&mut tx, run.brain_id, false)
-            .await?
-            .as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        run.brain_id,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     let source: Uuid =
         sqlx::query_scalar("SELECT source_id FROM source_versions WHERE brain_id=$1 AND id=$2")
             .bind(run.brain_id)
@@ -319,15 +320,15 @@ pub(crate) async fn prepare_learning(
     {
         return Ok(PreparedMapping::Invalid("adapter_or_size_rejected"));
     }
-    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
-    if !matches!(
-        db::require_role(&mut tx, run.brain_id, false)
-            .await?
-            .as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        run.brain_id,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL statement_timeout='2s'")
         .execute(&mut *tx)
         .await?;
@@ -573,15 +574,15 @@ async fn eligible(
 }
 
 async fn publish(state: &AppState, job: &ClaimedJob) -> Result<()> {
-    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
-    if !matches!(
-        db::require_role(&mut tx, job.brain_id, false)
-            .await?
-            .as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL statement_timeout='2s'")
         .execute(&mut *tx)
         .await?;
@@ -589,14 +590,17 @@ async fn publish(state: &AppState, job: &ClaimedJob) -> Result<()> {
     let epoch = graph::preparation_epoch(&mut tx, job.brain_id).await?;
     let context = storage::context(&mut tx, job.brain_id, version, source).await?;
     tx.commit().await?;
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    sqlx::query("SET LOCAL statement_timeout='1s'")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL lock_timeout='250ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE
+            .with_statement_timeout(std::time::Duration::from_secs(1))
+            .with_lock_timeout(std::time::Duration::from_millis(250)),
+    )
+    .await?
+    .tx;
     // Lock the exact lease before any derivative is moved or published.
     sqlx::query("SELECT id FROM jobs WHERE id=$1 AND lease_token=$2 FOR UPDATE")
         .bind(job.id)
@@ -697,14 +701,17 @@ pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<
 }
 
 async fn discard_superseded(state: &AppState, job: &ClaimedJob) -> Result<()> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    sqlx::query("SET LOCAL statement_timeout='750ms'")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL lock_timeout='250ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE
+            .with_statement_timeout(std::time::Duration::from_millis(750))
+            .with_lock_timeout(std::time::Duration::from_millis(250)),
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let still_superseded:bool=sqlx::query_scalar("SELECT coalesce((SELECT recollect_mapping_superseded(i.brain_id,i.producer_request_id,i.source_version_id,c.context) FROM knowledge_mapping_inputs i JOIN knowledge_mapping_contexts c ON c.brain_id=i.brain_id AND c.id=i.context_id WHERE i.brain_id=$1 AND i.id=$2),false)")
         .bind(job.brain_id).bind(job.target_id).fetch_one(&mut *tx).await?;

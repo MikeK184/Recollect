@@ -12,7 +12,8 @@
 //! 5. Surface-specific locks and checks stay with the surface (for example the
 //!    MCP catalogue advisory lock).
 //!
-//! Steps 2 to 4 cost one round trip: `recollect_admit_brain` (migration 070)
+//! Steps 2 to 4 cost one round trip (plus one for a requested timeout, which
+//! must precede the lock wait it bounds): `recollect_admit_brain` (migration 070)
 //! locks, then reads the role and archive flag in separate statements so both
 //! reflect whatever committed while this transaction waited for the lock. The
 //! lock namespace and modes are exactly those of `recollect_lock_brain`.
@@ -25,6 +26,7 @@ use crate::{
 };
 use axum::http::StatusCode;
 use sqlx::{PgPool, Postgres, Transaction};
+use std::time::Duration;
 use uuid::Uuid;
 
 pub type Tx<'a> = Transaction<'a, Postgres>;
@@ -96,6 +98,12 @@ pub struct BrainAccess {
     /// Also lock and re-check the browser session (devices are always locked
     /// and checked). Ignored by the worker variants, which have no session.
     pub recheck_session: bool,
+    /// `SET LOCAL lock_timeout` before the lock wait, so a busy Brain fails fast
+    /// instead of pinning the connection.
+    pub lock_timeout: Option<Duration>,
+    /// `SET LOCAL statement_timeout` before the lock wait, bounding it and every
+    /// later statement of the transaction.
+    pub statement_timeout: Option<Duration>,
 }
 
 impl BrainAccess {
@@ -106,6 +114,8 @@ impl BrainAccess {
         transport: Transport::Any,
         archived: Archived::Allow,
         recheck_session: false,
+        lock_timeout: None,
+        statement_timeout: None,
     };
     /// Writer or administrator, exclusive lock, archived Brains refused with the
     /// evidence error.
@@ -115,6 +125,8 @@ impl BrainAccess {
         transport: Transport::Any,
         archived: Archived::Reject(evidence_archived),
         recheck_session: false,
+        lock_timeout: None,
+        statement_timeout: None,
     };
     /// Administrator under the exclusive lock. The archive policy has no default.
     pub const fn admin(archived: Archived) -> Self {
@@ -124,6 +136,8 @@ impl BrainAccess {
             transport: Transport::Any,
             archived,
             recheck_session: false,
+            lock_timeout: None,
+            statement_timeout: None,
         }
     }
     pub const fn with_role(mut self, role: Role) -> Self {
@@ -144,6 +158,14 @@ impl BrainAccess {
     }
     pub const fn with_session_recheck(mut self) -> Self {
         self.recheck_session = true;
+        self
+    }
+    pub const fn with_lock_timeout(mut self, timeout: Duration) -> Self {
+        self.lock_timeout = Some(timeout);
+        self
+    }
+    pub const fn with_statement_timeout(mut self, timeout: Duration) -> Self {
+        self.statement_timeout = Some(timeout);
         self
     }
 }
@@ -173,10 +195,13 @@ pub fn browser_required() -> Error {
     )
 }
 
-/// A surface that only a paired device may use. The existing answer is the
-/// generic forbidden error; one place to change it.
+/// A surface that only a paired device may use.
 pub fn device_required() -> Error {
-    Error::forbidden()
+    Error(
+        StatusCode::FORBIDDEN,
+        "device_required",
+        "This endpoint requires a paired device.",
+    )
 }
 
 /// Step 0 of the canonical order: no database.
@@ -268,21 +293,67 @@ async fn admit<'a>(
     lock: Lock,
     device: bool,
 ) -> Result<Admitted<'a>> {
-    let (role, archived): (Option<String>, Option<bool>) =
-        sqlx::query_as("SELECT role, archived FROM recollect_admit_brain($1,$2)")
-            .bind(brain)
-            .bind(lock == Lock::Exclusive)
-            .fetch_one(&mut *tx)
-            .await?;
-    // An unknown role name cannot come from the database; it fails closed.
-    let role = role.as_deref().and_then(Role::parse);
-    let archived = archived.unwrap_or(false);
+    apply_timeouts(&mut tx, access).await?;
+    let (role, archived) = lookup(&mut tx, brain, lock).await?;
     decide(access, device, role, archived)?;
     Ok(Admitted {
         tx,
         role: role.ok_or_else(Error::missing)?,
         archived,
     })
+}
+
+/// Admit within a transaction the caller already opened and authenticated, for
+/// helpers that receive one. Same single statement, lock and policy as
+/// [`brain_tx`]; the transport is not known here, so only `Transport::Any` and
+/// archive policies that ignore the credential are accepted. Returns the
+/// effective role. A timeout on `access` is ignored: set it before this call.
+pub async fn admit_in(tx: &mut Tx<'_>, brain: Uuid, access: &BrainAccess) -> Result<Role> {
+    debug_assert!(
+        matches!(access.transport, Transport::Any)
+            && !matches!(access.archived, Archived::AdminBrowserOnly(_)),
+        "admit_in cannot see the credential; open the transaction with brain_tx"
+    );
+    let (role, archived) = lookup(tx, brain, access.lock).await?;
+    decide(access, false, role, archived)?;
+    role.ok_or_else(Error::missing)
+}
+
+async fn apply_timeouts(tx: &mut Tx<'_>, access: &BrainAccess) -> Result<()> {
+    let (mut names, mut values) = (vec![], vec![]);
+    for (name, timeout) in [
+        ("statement_timeout", access.statement_timeout),
+        ("lock_timeout", access.lock_timeout),
+    ] {
+        if let Some(timeout) = timeout {
+            names.push(name);
+            values.push(format!("{}ms", timeout.as_millis()));
+        }
+    }
+    if names.is_empty() {
+        return Ok(());
+    }
+    // `set_config(..., true)` is `SET LOCAL`; one statement sets every timeout.
+    sqlx::query("SELECT set_config(n,v,true) FROM unnest($1::text[],$2::text[]) AS t(n,v)")
+        .bind(names)
+        .bind(values)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+async fn lookup(tx: &mut Tx<'_>, brain: Uuid, lock: Lock) -> Result<(Option<Role>, bool)> {
+    let (role, archived): (Option<String>, Option<bool>) =
+        sqlx::query_as("SELECT role, archived FROM recollect_admit_brain($1,$2)")
+            .bind(brain)
+            .bind(lock == Lock::Exclusive)
+            .fetch_one(&mut **tx)
+            .await?;
+    // An unknown role name cannot come from the database; it fails closed.
+    Ok((
+        role.as_deref().and_then(Role::parse),
+        archived.unwrap_or(false),
+    ))
 }
 
 #[cfg(test)]
@@ -326,7 +397,10 @@ mod tests {
             Some((403, "browser_required"))
         );
         assert_eq!(code(transport(&device, true)), None);
-        assert_eq!(code(transport(&device, false)), FORBIDDEN);
+        assert_eq!(
+            code(transport(&device, false)),
+            Some((403, "device_required"))
+        );
     }
 
     #[test]
@@ -444,6 +518,26 @@ mod tests {
     }
 
     #[test]
+    fn timeouts_are_opt_in_and_independent() {
+        for access in [BrainAccess::READ, BrainAccess::WRITE] {
+            assert_eq!(
+                (access.lock_timeout, access.statement_timeout),
+                (None, None)
+            );
+        }
+        let lock = BrainAccess::WRITE.with_lock_timeout(Duration::from_millis(250));
+        assert_eq!(lock.lock_timeout, Some(Duration::from_millis(250)));
+        assert_eq!(lock.statement_timeout, None);
+        let both = lock.with_statement_timeout(Duration::from_secs(2));
+        assert_eq!(both.statement_timeout, Some(Duration::from_secs(2)));
+        assert_eq!(both.lock_timeout, Some(Duration::from_millis(250)));
+        // A timeout changes no policy: the decision is the same.
+        let decide_with =
+            |access: &BrainAccess| code(decide(access, false, Some(Role::Writer), true));
+        assert_eq!(decide_with(&both), decide_with(&BrainAccess::WRITE));
+    }
+
+    #[test]
     fn constructors_keep_the_existing_error_texts() {
         let user = User {
             id: Uuid::new_v4(),
@@ -462,11 +556,15 @@ mod tests {
             (existing.0, existing.1, existing.2),
             (ours.0, ours.1, ours.2)
         );
-        let forbidden = Error::forbidden();
+        // A missing device is no longer the generic forbidden error.
         let required = device_required();
         assert_eq!(
-            (forbidden.0, forbidden.1, forbidden.2),
-            (required.0, required.1, required.2)
+            (required.0, required.1, required.2),
+            (
+                StatusCode::FORBIDDEN,
+                "device_required",
+                "This endpoint requires a paired device."
+            )
         );
         let evidence = evidence_archived();
         assert_eq!(

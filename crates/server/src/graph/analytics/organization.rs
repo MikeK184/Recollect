@@ -3,6 +3,7 @@
 //! Only a freshly qualified, leased publication creates canonical topics.
 use super::*;
 mod hybrid;
+use crate::db::admission::{self, BrainAccess, Role};
 use crate::knowledge_mapping::{
     EntityKind,
     affinity::{self, Association, Projection, Vertex},
@@ -52,13 +53,15 @@ async fn prepare_inner(
     actor: Uuid,
     device: Option<Uuid>,
 ) -> Result<Prepared> {
-    let mut tx = db::preparation_tx(&state.pool, actor, device).await?;
-    if !matches!(
-        db::require_role(&mut tx, brain, false).await?.as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        actor,
+        device,
+        brain,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL statement_timeout='4000ms'")
         .execute(&mut *tx)
         .await?;
@@ -376,8 +379,7 @@ async fn schedule_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<us
         .await;
     }
     tokio::time::timeout(Duration::from_millis(1500),Box::pin(async {
-    let mut tx = db::device_tx(&state.pool, actor, None).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx_as(&state.pool, actor, None, brain, BrainAccess::WRITE).await?.tx;
     sqlx::query("SET LOCAL statement_timeout='1000ms'")
         .execute(&mut *tx)
         .await?;
@@ -467,8 +469,7 @@ async fn reconcile_without_machine(
     )
     .await?;
     tokio::time::timeout(Duration::from_millis(1500),Box::pin(async {
-        let mut tx=db::device_tx(&state.pool,actor,None).await?;
-        db::require_writer(&mut tx,brain).await?;
+        let mut tx = admission::brain_tx_as(&state.pool, actor, None, brain, BrainAccess::WRITE).await?.tx;
         sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;
         sqlx::query("SET LOCAL lock_timeout='250ms'").execute(&mut *tx).await?;
         let fresh:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM brains b JOIN knowledge_organization_outbox o ON o.brain_id=b.id WHERE b.id=$1 AND b.analytics_epoch=$2 AND o.revision=$3)").bind(brain).bind(epoch).bind(current_revision).fetch_one(&mut *tx).await?;

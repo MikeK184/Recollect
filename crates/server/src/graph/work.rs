@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::admission::{self, BrainAccess, Role};
 use crate::{
     db,
     worker::{self, ClaimedJob, Failure},
@@ -16,8 +17,15 @@ async fn lease(tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<()> {
     Ok(())
 }
 async fn ready<'a>(state: &'a AppState, job: &ClaimedJob) -> Result<(Tx<'a>, GraphGeneration)> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let g = generation(&mut tx, job.brain_id, job.target_id).await?;
     if g.job_id != job.id || !matches!(g.state.as_str(), "queued" | "running") {
@@ -30,11 +38,15 @@ async fn ready<'a>(state: &'a AppState, job: &ClaimedJob) -> Result<(Tx<'a>, Gra
     Ok((tx, g))
 }
 async fn prepare<'a>(state: &'a AppState, job: &ClaimedJob) -> Result<(Tx<'a>, GraphGeneration)> {
-    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
-    let role = db::require_role(&mut tx, job.brain_id, false).await?;
-    if !matches!(role.as_str(), "writer" | "admin") {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
         .bind(job.brain_id)
         .fetch_one(&mut *tx)

@@ -1,7 +1,7 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState, artifacts,
     auth::Auth,
-    db,
     error::{Error, Result},
     publication,
 };
@@ -18,10 +18,11 @@ use uuid::Uuid;
 
 pub(crate) type Tx<'a> = Transaction<'a, Postgres>;
 pub(crate) async fn read_tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid) -> Result<Tx<'a>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, false).await?;
-    db::require_role(&mut tx, brain, false).await?;
-    Ok(tx)
+    Ok(
+        admission::brain_tx(&state.pool, auth, brain, BrainAccess::READ)
+            .await?
+            .tx,
+    )
 }
 #[derive(Clone, sqlx::FromRow)]
 pub(crate) struct EvidenceRow {

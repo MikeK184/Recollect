@@ -33,6 +33,13 @@ fn conflict() -> Error {
         "Coordination state changed or an identity was reused. Refresh before retrying.",
     )
 }
+fn archived() -> Error {
+    Error(
+        StatusCode::CONFLICT,
+        "brain_archived",
+        "Reopen this Brain before using agent coordination.",
+    )
+}
 const PAGE_BYTES: usize = 32 * 1024 * 1024;
 fn response_limit() -> Error {
     Error(
@@ -66,7 +73,7 @@ fn access(write: bool) -> BrainAccess {
     BrainAccess::READ
         .with_lock(if write { Lock::Exclusive } else { Lock::Shared })
         .with_transport(Transport::Device)
-        .with_archived(Archived::Reject(conflict))
+        .with_archived(Archived::Reject(archived))
         .with_session_recheck()
 }
 async fn tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid, write: bool) -> Result<Tx<'a>> {
@@ -356,7 +363,7 @@ pub async fn announce(
             return Err(capacity());
         }
     }
-    let device_id = auth.device_id.ok_or_else(Error::forbidden)?;
+    let device_id = auth.device_id.ok_or_else(admission::device_required)?;
     let device_name: String = sqlx::query_scalar("SELECT name FROM devices WHERE id=$1")
         .bind(device_id)
         .fetch_one(&mut *tx)

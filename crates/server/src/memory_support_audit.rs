@@ -1,4 +1,5 @@
 //! Verification-only work never rewrites author-owned assertions or decisions.
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState, db,
     error::{Error, Result},
@@ -294,9 +295,15 @@ async fn queue(
     Ok(())
 }
 async fn ready<'a>(state: &'a AppState, job: &ClaimedJob) -> Result<(Tx<'a>, Assessment)> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
-    db::lock_brain(&mut tx, job.brain_id, true).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     let active:Option<bool>=sqlx::query_scalar("SELECT lease_until>clock_timestamp() FROM jobs WHERE id=$1 AND brain_id=$2 AND lease_token=$3 AND state='running' FOR UPDATE")
         .bind(job.id).bind(job.brain_id).bind(job.lease_token).fetch_optional(&mut *tx).await?;
     if active != Some(true) {

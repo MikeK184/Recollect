@@ -1,5 +1,6 @@
 use super::*;
-use crate::{auth::Auth, db, retrieval};
+use crate::db::admission::{self, BrainAccess};
+use crate::{auth::Auth, retrieval};
 use axum::{
     Json as ResponseJson,
     extract::{Path, State},
@@ -128,7 +129,7 @@ async fn select_inner(
     }
     scope.relations.sort();
     scope.relations.dedup();
-    db::require_role(tx, brain, false).await?;
+    admission::admit_in(tx, brain, &BrainAccess::READ).await?;
     let prepared_at = preparation_epoch(tx, brain).await?;
     retrieval::graph::authorize(tx, auth, brain, &scope).await?;
     if scope.kind == "repository" && scope.snapshot_id.is_none() {
@@ -416,7 +417,7 @@ pub(super) async fn final_gate(
     auth: &Auth,
     selection: &Selected,
 ) -> Result<DateTime<Utc>> {
-    db::require_role(tx, selection.view.brain_id, false).await?;
+    admission::admit_in(tx, selection.view.brain_id, &BrainAccess::READ).await?;
     preparation_unchanged(tx, selection.view.brain_id, selection.preparation_epoch).await?;
     retrieval::graph::authorize(tx, auth, selection.view.brain_id, &selection.view.scope).await?;
     let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
@@ -523,7 +524,7 @@ pub(super) async fn interactive_final_gate(
     selection: &mut Selected,
 ) -> Result<DateTime<Utc>> {
     let brain = selection.view.brain_id;
-    db::require_role(tx, brain, false).await?;
+    admission::admit_in(tx, brain, &BrainAccess::READ).await?;
     let current = preparation_epoch(tx, brain).await?;
     if !selection.windowed || current == selection.preparation_epoch {
         return final_gate(tx, auth, selection).await;

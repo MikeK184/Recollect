@@ -12,6 +12,7 @@ use crate::{
 };
 use sqlx::FromRow;
 mod groups;
+use crate::db::admission::{self, BrainAccess, Role};
 use std::{
     collections::{BTreeMap, BTreeSet},
     time::Duration,
@@ -373,7 +374,7 @@ pub async fn admit(
 
   tx.commit().await?;
   tokio::time::timeout(Duration::from_millis(1500),async{
-   let mut tx=evaluator.publication_tx(&state.pool).await?;sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;sqlx::query("SET LOCAL lock_timeout='250ms'").execute(&mut *tx).await?;db::require_writer(&mut tx,cx.brain).await?;
+   let mut tx=admission::brain_tx(&state.pool,evaluator,cx.brain,BrainAccess::WRITE.with_session_recheck().with_statement_timeout(Duration::from_millis(750)).with_lock_timeout(Duration::from_millis(250))).await?.tx;
    if analytics_epoch(&mut tx,cx.brain).await?!=epoch{return Err(changed());}deadline(&mut tx,Some(expires)).await?;
    lock_producer(&mut tx,cx,request_id).await?;let live=request(state,&mut tx,cx,request_id,version,false).await?;if live.prompt_label!=q.prompt_label||live.schema_label!=q.schema_label||mapping::production::mapping_adapter(&live.prompt_label,&live.schema_label)!=Some(payload.adapter_revision.as_str())||live.mapping_output_sha256.as_deref()!=Some(&digest)||live.offered.0!=q.offered.0{return Err(invalid());}
    let existing:Option<(Uuid,Json<Value>,Json<mapping::SourceCandidates>,String,DateTime<Utc>,String,String)>=sqlx::query_as("SELECT id,context,payload,output_sha256,expires_at,schema_revision,adapter_revision FROM knowledge_shadow_candidates WHERE brain_id=$1 AND request_id=$2").bind(cx.brain).bind(request_id).fetch_optional(&mut *tx).await?;
@@ -400,8 +401,7 @@ async fn prepare(
     tokio::time::timeout(Duration::from_secs(5),async{
   if sources.is_empty()||sources.len()>250||!parameters.valid()||gds_version.is_empty()||gds_version.len()>64||sources.iter().map(|s|s.version).collect::<BTreeSet<_>>().len()!=sources.len(){return Err(invalid());}
   sources.sort_by_key(|s|s.version);
-  let mut tx=db::preparation_tx(&state.pool,cx.actor,cx.device).await?;settings(&mut tx).await?;
-  if !matches!(db::require_role(&mut tx,cx.brain,false).await?.as_str(),"writer"|"admin"){return Err(Error::forbidden());}
+  let mut tx=admission::brain_preparation_tx(&state.pool,cx.actor,cx.device,cx.brain,BrainAccess::READ.with_role(Role::Writer)).await?.tx;settings(&mut tx).await?;
   let epoch=analytics_epoch(&mut tx,cx.brain).await?;let policy=model_policy::current(state,&mut tx,cx.brain).await?;
   let versions:Vec<_>=sources.iter().map(|s|s.version).collect();let(current,source_deadline)=canonical(state,&mut tx,evaluator,cx,&versions).await?;
   let mut expiry=[Some(bounds(&mut tx,cx).await?),source_deadline].into_iter().flatten().min().ok_or_else(invalid)?;
@@ -643,7 +643,7 @@ pub async fn queue(
         .collect();
     let p = prepare(state, evaluator, cx, sources, mode, parameters, gds_version).await?;
     tokio::time::timeout(Duration::from_millis(1500),async{
-  let mut tx=evaluator.publication_tx(&state.pool).await?;sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;sqlx::query("SET LOCAL lock_timeout='250ms'").execute(&mut *tx).await?;db::require_writer(&mut tx,brain).await?;sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;
+  let mut tx=admission::brain_tx(&state.pool,evaluator,brain,BrainAccess::WRITE.with_session_recheck().with_statement_timeout(Duration::from_millis(750)).with_lock_timeout(Duration::from_millis(250))).await?.tx;
   fresh(&mut tx,cx,&p).await?;
   let(total,pending):(i64,i64)=sqlx::query_as("SELECT count(*),count(*) FILTER(WHERE state IN('queued','running')) FROM analytics_reports WHERE brain_id=$1 AND purpose='organization_shadow'").bind(brain).fetch_one(&mut *tx).await?;
   if total>=100||pending>=20{return Err(failure("shadow_capacity","Retained experimental reports exceed their bounded window."));}
@@ -799,9 +799,16 @@ pub async fn result(
         actor: evaluator.user.id,
         device: evaluator.device_id,
     };
-    let mut tx = evaluator.preparation_tx(&state.pool).await?;
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        evaluator.user.id,
+        evaluator.device_id,
+        brain,
+        BrainAccess::READ,
+    )
+    .await?
+    .tx;
     settings(&mut tx).await?;
-    db::require_role(&mut tx, brain, false).await?;
     let p = saved(&mut tx, brain, id).await?;
     let status: String = sqlx::query_scalar("SELECT state FROM analytics_reports WHERE brain_id=$1 AND id=$2 AND actor_id=$3 AND purpose='organization_shadow'").bind(brain).bind(id).bind(evaluator.user.id).fetch_optional(&mut *tx).await?.ok_or_else(invalid)?;
     if status != "ready" {
@@ -815,14 +822,17 @@ pub async fn result(
     tx.commit().await?;
     reprepare(state, evaluator, cx, &p).await?;
     tokio::time::timeout(Duration::from_millis(1500), async {
-        let mut tx = evaluator.publication_tx(&state.pool).await?;
-        sqlx::query("SET LOCAL statement_timeout='750ms'")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("SET LOCAL lock_timeout='250ms'")
-            .execute(&mut *tx)
-            .await?;
-        db::require_writer(&mut tx, brain).await?;
+        let mut tx = admission::brain_tx(
+            &state.pool,
+            evaluator,
+            brain,
+            BrainAccess::WRITE
+                .with_session_recheck()
+                .with_statement_timeout(Duration::from_millis(750))
+                .with_lock_timeout(Duration::from_millis(250)),
+        )
+        .await?
+        .tx;
         fresh(&mut tx, cx, &p).await?;
         tx.commit().await?;
         Ok::<_, Error>(())

@@ -4,8 +4,9 @@
 //! principal over both transports meets an active, an archived and a deleted
 //! Brain, and the exact (HTTP status, error code) pair is asserted from a data
 //! table. The table was recorded against the helpers the slice replaces and
-//! stays identical through the helper move (W1). The behaviour-unification step
-//! (W3) flips its cells explicitly in this table, one reviewable edit.
+//! stayed identical through the helper move (W1, W2). The behaviour-unification
+//! step (W3) flipped 41 cells explicitly in this table, one reviewable edit;
+//! the list is on `GOLDEN`.
 //!
 //! Set `ADMISSION_MATRIX_RECORD=1` to print the observed table instead of
 //! asserting it.
@@ -330,6 +331,19 @@ async fn build(h: &Harness) -> Matrix {
 
 /// Recorded against the helpers this slice replaces, one row per endpoint and
 /// principal, one cell per Brain state in the order active, archived, deleted.
+///
+/// W3 flipped exactly these cells, every other cell is the recorded one:
+/// - an archived Brain answers `brain_archived` (was `mcp_configuration_conflict`,
+///   `coordination_conflict` or `workspace_conflict`): `mcp_write` admin/browser,
+///   `coordination_read` and `coordination_write` admin, writer and reader on a
+///   device, `workspace_write` for the six member principals (1 + 3 + 3 + 6 cells);
+/// - a member below the administrator floor is `403 forbidden` on an archived
+///   Brain, role before the archive fence (was 409): `mcp_write` writer and reader
+///   on the browser, `publication_write` writer on the browser and on a device
+///   (4 cells);
+/// - a browser caller of the device-only coordination surface gets
+///   `403 device_required` (was `403 forbidden`) in every Brain state: admin,
+///   writer, reader and outsider on the browser, read and write (24 cells).
 #[rustfmt::skip]
 const GOLDEN: &[(&str, [[Cell; 3]; 11])] = &[
     ("mcp_read", [
@@ -346,11 +360,11 @@ const GOLDEN: &[(&str, [[Cell; 3]; 11])] = &[
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // revoked/device
     ]),
     ("mcp_write", [
-        [(200, "-"), (409, "mcp_configuration_conflict"), (404, "not_found")], // admin/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/browser
         [(403, "browser_required"), (403, "browser_required"), (403, "browser_required")], // admin/device
-        [(403, "forbidden"), (409, "mcp_configuration_conflict"), (404, "not_found")], // writer/browser
+        [(403, "forbidden"), (403, "forbidden"), (404, "not_found")], // writer/browser
         [(403, "browser_required"), (403, "browser_required"), (403, "browser_required")], // writer/device
-        [(403, "forbidden"), (409, "mcp_configuration_conflict"), (404, "not_found")], // reader/browser
+        [(403, "forbidden"), (403, "forbidden"), (404, "not_found")], // reader/browser
         [(403, "browser_required"), (403, "browser_required"), (403, "browser_required")], // reader/device
         [(404, "not_found"), (404, "not_found"), (404, "not_found")], // outsider/browser
         [(403, "browser_required"), (403, "browser_required"), (403, "browser_required")], // outsider/device
@@ -359,26 +373,26 @@ const GOLDEN: &[(&str, [[Cell; 3]; 11])] = &[
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // revoked/device
     ]),
     ("coordination_read", [
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // admin/browser
-        [(200, "-"), (409, "coordination_conflict"), (404, "not_found")], // admin/device
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // writer/browser
-        [(200, "-"), (409, "coordination_conflict"), (404, "not_found")], // writer/device
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // reader/browser
-        [(200, "-"), (409, "coordination_conflict"), (404, "not_found")], // reader/device
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // outsider/browser
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // admin/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/device
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // writer/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // writer/device
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // reader/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // reader/device
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // outsider/browser
         [(404, "not_found"), (404, "not_found"), (404, "not_found")], // outsider/device
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // disabled/browser
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // disabled/device
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // revoked/device
     ]),
     ("coordination_write", [
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // admin/browser
-        [(200, "-"), (409, "coordination_conflict"), (404, "not_found")], // admin/device
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // writer/browser
-        [(200, "-"), (409, "coordination_conflict"), (404, "not_found")], // writer/device
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // reader/browser
-        [(200, "-"), (409, "coordination_conflict"), (404, "not_found")], // reader/device
-        [(403, "forbidden"), (403, "forbidden"), (403, "forbidden")], // outsider/browser
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // admin/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/device
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // writer/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // writer/device
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // reader/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // reader/device
+        [(403, "device_required"), (403, "device_required"), (403, "device_required")], // outsider/browser
         [(404, "not_found"), (404, "not_found"), (404, "not_found")], // outsider/device
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // disabled/browser
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // disabled/device
@@ -411,12 +425,12 @@ const GOLDEN: &[(&str, [[Cell; 3]; 11])] = &[
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // revoked/device
     ]),
     ("workspace_write", [
-        [(200, "-"), (409, "workspace_conflict"), (404, "not_found")], // admin/browser
-        [(200, "-"), (409, "workspace_conflict"), (404, "not_found")], // admin/device
-        [(200, "-"), (409, "workspace_conflict"), (404, "not_found")], // writer/browser
-        [(200, "-"), (409, "workspace_conflict"), (404, "not_found")], // writer/device
-        [(200, "-"), (409, "workspace_conflict"), (404, "not_found")], // reader/browser
-        [(200, "-"), (409, "workspace_conflict"), (404, "not_found")], // reader/device
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/device
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // writer/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // writer/device
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // reader/browser
+        [(200, "-"), (409, "brain_archived"), (404, "not_found")], // reader/device
         [(404, "not_found"), (404, "not_found"), (404, "not_found")], // outsider/browser
         [(404, "not_found"), (404, "not_found"), (404, "not_found")], // outsider/device
         [(401, "unauthorized"), (401, "unauthorized"), (401, "unauthorized")], // disabled/browser
@@ -439,8 +453,8 @@ const GOLDEN: &[(&str, [[Cell; 3]; 11])] = &[
     ("publication_write", [
         [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/browser
         [(200, "-"), (409, "brain_archived"), (404, "not_found")], // admin/device
-        [(403, "forbidden"), (409, "brain_archived"), (404, "not_found")], // writer/browser
-        [(403, "forbidden"), (409, "brain_archived"), (404, "not_found")], // writer/device
+        [(403, "forbidden"), (403, "forbidden"), (404, "not_found")], // writer/browser
+        [(403, "forbidden"), (403, "forbidden"), (404, "not_found")], // writer/device
         [(403, "forbidden"), (403, "forbidden"), (404, "not_found")], // reader/browser
         [(403, "forbidden"), (403, "forbidden"), (404, "not_found")], // reader/device
         [(404, "not_found"), (404, "not_found"), (404, "not_found")], // outsider/browser

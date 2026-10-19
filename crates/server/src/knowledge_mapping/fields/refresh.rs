@@ -1,5 +1,6 @@
 //! Restart-safe bounded deterministic field preparation and leased publication.
 use super::*;
+use crate::db::admission::{self, BrainAccess, Role};
 use crate::{
     jobs,
     worker::{self, ClaimedJob, Failure},
@@ -68,15 +69,15 @@ async fn lease(tx: &mut Tx<'_>, job: &ClaimedJob) -> Result<()> {
     Ok(())
 }
 async fn publish(state: &AppState, job: &ClaimedJob) -> Result<()> {
-    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
-    if !matches!(
-        db::require_role(&mut tx, job.brain_id, false)
-            .await?
-            .as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let (revision,phase,after):(i64,i32,Option<Uuid>)=sqlx::query_as("SELECT revision,phase,after_id FROM knowledge_field_outbox WHERE brain_id=$1 AND job_id=$2").bind(job.brain_id).bind(job.id).fetch_one(&mut *tx).await?;
     let phase = if phase == 4 { 0 } else { phase };
@@ -153,14 +154,17 @@ async fn publish(state: &AppState, job: &ClaimedJob) -> Result<()> {
         ));
     }
     tx.commit().await?;
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    sqlx::query("SET LOCAL statement_timeout='2s'")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL lock_timeout='250ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE
+            .with_statement_timeout(Duration::from_secs(2))
+            .with_lock_timeout(Duration::from_millis(250)),
+    )
+    .await?
+    .tx;
     sqlx::query("SELECT id FROM jobs WHERE id=$1 AND lease_token=$2 FOR UPDATE")
         .bind(job.id)
         .bind(job.lease_token)
@@ -281,8 +285,9 @@ pub async fn run_once(state: &AppState) -> Result<usize> {
             .await?;
     let mut count = 0;
     for (brain, actor) in routing {
-        let mut tx = db::device_tx(&state.pool, actor, None).await?;
-        db::require_writer(&mut tx, brain).await?;
+        let mut tx = admission::brain_tx_as(&state.pool, actor, None, brain, BrainAccess::WRITE)
+            .await?
+            .tx;
         let available:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM knowledge_field_outbox o WHERE brain_id=$1 AND (revision>handled_revision OR deadline<=clock_timestamp()) AND NOT EXISTS(SELECT 1 FROM jobs WHERE brain_id=$1 AND kind='knowledge.fields' AND state IN ('queued','running')) FOR UPDATE)").bind(brain).fetch_one(&mut *tx).await?;
         if available {
             let audit = db::audit(

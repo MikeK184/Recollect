@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use crate::worker::{self, Failure};
 use std::time::Duration;
 
@@ -6,8 +7,15 @@ pub(super) async fn ready<'a>(
     state: &'a AppState,
     job: &ClaimedJob,
 ) -> Result<(Tx<'a>, AnalyticsReport, Auth)> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let r = internal_report(&mut tx, job.brain_id, job.target_id).await?;
     if r.job_id != job.id || r.state != "running" {
@@ -48,8 +56,15 @@ pub(super) async fn progress(
         .filter(|n| (0..=100).contains(n))
         .min()
         .map_or(15, |n| 20 + n * 60 / 100);
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     sqlx::query("UPDATE jobs SET progress=greatest(progress,$3),updated_at=clock_timestamp() WHERE id=$1 AND lease_token=$2")
       .bind(job.id).bind(job.lease_token).bind(percent).execute(&mut *tx).await?;

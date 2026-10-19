@@ -4,7 +4,7 @@ use crate::{
     commands,
     db::{
         self,
-        admission::{self, BrainAccess},
+        admission::{self, Archived, BrainAccess},
     },
     error::{Error, Result},
     jobs,
@@ -348,8 +348,9 @@ pub async fn identity(
     auth: Auth,
     Path((brain, source)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<SourceSummary>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let value = summary(&state, &mut tx, brain, source).await?;
     tx.commit().await?;
     Ok(Json(value))
@@ -399,8 +400,9 @@ pub async fn catalogue(
 ) -> Result<Json<EvidenceCatalogue>> {
     let offset = offset(query.offset)?;
     let search = crate::publication::list_query(query.q.as_deref())?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let mut filters = vec![];
     for (id, kind) in [
         (query.collection, "collection"),
@@ -470,8 +472,14 @@ pub async fn policy(
     Path(brain): Path<Uuid>,
     Json(input): Json<EvidencePolicy>,
 ) -> Result<Json<EvidencePolicy>> {
-    let mut tx = write_tx(&state, &auth, brain).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Reject(admission::evidence_archived)),
+    )
+    .await?
+    .tx;
     sqlx::query("UPDATE brains SET allow_document_content=$2 WHERE id=$1")
         .bind(brain)
         .bind(input.allow_document_content)
@@ -1137,8 +1145,9 @@ pub async fn history(
     Query(query): Query<PageQuery>,
 ) -> Result<Json<SourceHistory>> {
     let offset = offset(query.offset)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     source_exists(&mut tx, brain, source).await?;
     let total = sqlx::query_scalar(
         "SELECT count(*) FROM source_versions WHERE brain_id=$1 AND source_id=$2",
@@ -1175,8 +1184,9 @@ pub async fn content(
     Path((brain, source, version)): Path<(Uuid, Uuid, Uuid)>,
     Query(query): Query<ContentQuery>,
 ) -> Result<Json<SourceContent>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let row = version_row(&mut tx, brain, source, version).await?;
     if let Some(selection) = read_selection(&mut tx, &auth, brain, query.operation_id).await? {
         let scope = crate::capture::source_selection(&mut tx, brain, version).await?;

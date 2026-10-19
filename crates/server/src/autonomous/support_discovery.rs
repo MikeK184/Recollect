@@ -1,7 +1,8 @@
 //! Bounded provisional discovery. Fresh complete qualification, not the saved
 //! cursor or a prepared Boolean, authorizes an audit's existing queue operation.
+use crate::db::admission::{self, Admitted, BrainAccess, Role};
 use crate::{
-    AppState, db, error::Result, memory_evidence::Tx, memory_support, memory_support_audit,
+    AppState, error::Result, memory_evidence::Tx, memory_support, memory_support_audit,
     model_policy,
 };
 use recollect_protocol::ModelPolicyVersion;
@@ -76,11 +77,9 @@ async fn qualifies(
 /// Library entry point shared by the scheduler and native race controls. This
 /// performs no mutation, reservation, model request or Brain admission lock.
 pub async fn prepare(state: &AppState, brain: Uuid, actor: Uuid) -> Result<Option<Prepared>> {
-    let mut tx = db::preparation_tx(&state.pool, actor, None).await?;
-    if !matches!(
-        db::require_role(&mut tx, brain, false).await?.as_str(),
-        "writer" | "admin"
-    ) {
+    let Admitted { mut tx, role, .. } =
+        admission::brain_preparation_tx(&state.pool, actor, None, brain, BrainAccess::READ).await?;
+    if role < Role::Writer {
         return Ok(None);
     }
     let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
@@ -150,8 +149,15 @@ pub async fn prepare(state: &AppState, brain: Uuid, actor: Uuid) -> Result<Optio
 /// Commit progress independently of other maintenance. Canonical changes during
 /// preparation are safe because every admitted revision is fully checked again.
 pub async fn publish(state: &AppState, prepared: Prepared) -> Result<usize> {
-    let mut tx = db::actor_tx(&state.pool, prepared.actor).await?;
-    db::require_writer(&mut tx, prepared.brain).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        prepared.actor,
+        None,
+        prepared.brain,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     let p = model_policy::current(state, &mut tx, prepared.brain).await?;
     if p.change_id != prepared.policy || !enabled(state, &p, prepared.actor) {
         return Ok(0);

@@ -78,7 +78,9 @@ explicit. Session/connector sanitization is owned by the capture slices.
 Readers may browse permitted source metadata/history/content. Writers/admins may
 import, update, organize, remove associations/groups and request reprocessing.
 Changing capture policy requires admin. Brain, source and group IDs must agree;
-foreign IDs return 404. Archived Brains reject new evidence mutations with 409.
+foreign IDs return 404. Archived Brains reject new evidence mutations with 409
+`brain_archived`, after the role check: a reader of an archived Brain is 403, and
+changing the capture policy needs an administrator, so a writer is 403 there too.
 Per-request transaction/device authority, current grants, CSRF and audit apply.
 An environment with retained revision-manifest history cannot be removed by
 ordinary group deletion; the [publication contract](evidence-repository-publication.md)

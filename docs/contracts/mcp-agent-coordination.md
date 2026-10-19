@@ -21,7 +21,11 @@ peer messages and recipient inboxes. Every read/write/stream rechecks current
 Brain membership, account status and device validity. An authenticated device
 may announce and mutate only its own account/device task and coordination session.
 All Brain member roles may coordinate; coordination does not grant knowledge
-write or managed-tool Use. Archived/deleted Brains deny admission.
+write or managed-tool Use. Coordination is device-only: a browser caller gets 403
+`device_required` before any Brain lookup. Beyond that the surface follows the
+[admission order](platform-team-access.md#admission-order): a Brain the caller cannot
+see, a deleted one included, is 404, and an archived Brain denies admission with 409
+`brain_archived`.
 
 The server derives account ID/name, device ID/name, Brain, environment and scoped
 repository/area IDs; client display strings never become identity. Tasks/scopes
@@ -297,13 +301,15 @@ A2A HTTP errors use the specification's `error` envelope with numeric HTTP
 `code`, canonical `status`, `message` and typed `details`; A2A-specific failures
 include `google.rpc.ErrorInfo` with the standard reason and
 `domain: "a2a-protocol.org"`. Native controller errors must be translated rather
-than returned in their internal JSON shape. Missing/unsupported version handling
+than returned in their internal JSON shape: a browser caller maps to `PERMISSION_DENIED`
+with the native `device_required` message and an archived Brain to `ALREADY_EXISTS` with
+the native `brain_archived` message. Missing/unsupported version handling
 follows the official service-parameter rules; it introduces no native product
 version gate.
 
 Validation failures are typed 400/422; missing/foreign resources do not expose
 their contents; unauthenticated/revoked requests deny access; stale/replayed
-conflicts are 409; bounded capacity is 429; transport failure preserves durable
+conflicts are 409, and an archived Brain is 409 `brain_archived`; bounded capacity is 429; transport failure preserves durable
 cursor/request identity. Server acceptance is not proof of host delivery. Outbox
 retry may replay only idempotent coordination writes, never external tool effects.
 
