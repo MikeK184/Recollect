@@ -69,6 +69,7 @@ behavior; presentation changes never change what a page measures or authorizes.
 | `desktop-brain-pages` | shipped | contract-backed | archived | Approved Dashboard landing, concise Ask and scalable Knowledge inspection |
 | `desktop-brain-identity-and-navigation` | shipped | contract-backed | archived | Focused Brain chooser, uploaded icons, personal grouped Agents and Brain-scoped contributors; access drawer and pairing redirects |
 | `desktop-live-control-panel` | shipped | contract-backed | archived | Approved flat light global pages and real source/agent/job pipeline with exact attribution, freshness and failure handling |
+| `desktop-session-revalidation` | shipped | contract-backed | inline: a 401 triggers one shared /api/auth/me check and ends the session only if /me also rejects it, restoring the documented expired-session notice; Playwright for a forced 401, a server-revoked session and an explicit sign-out | A stale or single-route 401 no longer signs out a valid session; a revoked session shows the sign-in view with a "Your session ended" notice and an explicit sign-out shows none; `session.spec.ts` passes 4/4 and 2 of its 3 browser cases fail on the previous code |
 
 The archived motion foundation records its original dark-theme delivery; the
 light-palette restoration supersedes that color choice without reopening its

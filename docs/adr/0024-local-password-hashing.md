@@ -51,11 +51,12 @@ and about 19 MiB transient memory.
 ## Consequences
 
 Each teammate login costs one Argon2id verification; the existing per-address and
-per-name throttle still bounds attempts. Login for unknown or unprovisioned local
-accounts also performs one verification so response timing does not reveal which
-usernames exist. A previous server version cannot verify hashed entries; rolling
-back requires the owner to use Reset sign-in for affected teammates. Restoring an
-old backup of the file re-triggers the automatic conversion. Recovery from a
+per-name throttle still bounds attempts. A local sign-in for an unknown, disabled or
+unprovisioned account, and for the owner, also performs one verification against
+a dummy hash so response timing does not reveal which usernames exist. A
+previous server version cannot verify hashed entries; rolling back requires the
+owner to use Reset sign-in for affected teammates. Restoring an old backup of the
+file re-triggers the automatic conversion. Recovery from a
 corrupt or insecure file stays with the operator: fix the file mode or restore a
 copy, then restart.
 

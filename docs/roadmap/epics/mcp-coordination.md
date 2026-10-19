@@ -104,6 +104,7 @@ MCP clients is implied.
 | `desktop-connection-authority` | shipped | adr-backed, contract-backed | archived | Agents as the sole incoming-connect home, Connections outbound-MCP only, plain-language placement and tool-group naming with session/context views |
 | `mcp-brain-agent-roster` | shipped | contract-backed | archived | Per-Brain agent roster (plugin vs MCP-token agents, host kind, brain-scoped last use), Devices out of global nav with hidden pairing deep link, two-integration copy cleanup and the external-MCP-through-Brain proof |
 | `agents-surface-refinement` | shipped | contract-backed | archived | Per-Brain roster shows only agents used on this Brain; new global `/agents` page lists every agent with the Brains it is used in and last use there; account-scoped `GET /api/agents` read |
+| `mcp-credential-resolution-freshness` | shipped | contract-backed | inline: remove the pre-read credential reuse so each operation resolves again as the contract requires, keep the after-read same-object return, drop an upstream-rejected resolution without retrying the call; unit tests plus the existing platform permission-loosening proof without `invalidate()` | Rotated OS-store/reference-file values and loosened key files take effect on the next call, unchanged values keep their generation, and an upstream 401/403 drops that connection's cached resolution; 3 unit tests (rotation, rejection, real HTTP 401/403 with no retry) and the `mcp::` platform subset unchanged (30 pass, the same 13 unrelated failures as before) |
 
 ## Completion Criteria
 

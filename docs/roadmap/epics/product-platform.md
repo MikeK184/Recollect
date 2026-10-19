@@ -1,6 +1,6 @@
 # Product Platform and Access
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -72,7 +72,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-desktop-shell` | shipped | adr-backed, contract-backed | archived | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
 | `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
 | `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
-| `platform-local-credential-hardening` | in-progress | adr-backed, contract-backed | pack | Argon2id hashing of invited local account passwords, automatic conversion of legacy plaintext entries and a fail-closed strict credential-file read |
+| `platform-local-credential-hardening` | shipped | adr-backed, contract-backed | archived | Invited local passwords stored only as Argon2id hashes (ADR 0024), legacy plaintext converted at startup or sign-in and the credential file read fail-closed (503); proven by 5 unit tests, a new platform test, a real `serve` startup run, and unchanged auth/team/MCP platform subsets (30 pass, the same 13 unrelated failures as before the change) |
 
 ## Completion Criteria
 
