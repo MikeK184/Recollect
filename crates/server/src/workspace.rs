@@ -3,7 +3,7 @@ use crate::{
     auth::Auth,
     db::{
         self,
-        admission::{self, Admitted, Archived, BrainAccess, Lock, Role},
+        admission::{self, Archived, BrainAccess, Lock, Role},
     },
     error::{Error, Result},
     jobs,
@@ -61,10 +61,15 @@ fn local_path(value: &str) -> Result<String> {
     )
 }
 fn archived() -> Error {
-    conflict("Reopen this Brain before changing workspace context.")
+    Error(
+        StatusCode::CONFLICT,
+        "brain_archived",
+        "Reopen this Brain before changing workspace context.",
+    )
 }
 /// Any member, under the exclusive Brain lock; an archived Brain refuses
-/// workspace changes. Callers add their own writer or administrator checks.
+/// workspace changes. A surface that needs a writer or administrator raises the
+/// floor with `with_role`.
 const WORKING: BrainAccess = BrainAccess::READ
     .with_lock(Lock::Exclusive)
     .with_archived(Archived::Reject(archived));
@@ -686,11 +691,9 @@ pub async fn alias(
     Json(input): Json<RepositoryOrigin>,
 ) -> Result<Json<Repository>> {
     let origin = canonical_origin(&input.origin).map_err(Error::invalid)?;
-    let Admitted { mut tx, role, .. } =
-        admission::brain_tx(&state.pool, &auth, brain, WORKING).await?;
-    if !role.is_admin() {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, WORKING.with_role(Role::Admin))
+        .await?
+        .tx;
     repository(&mut tx, brain, id).await?;
     let current: Option<Uuid> = sqlx::query_scalar(
         "SELECT repository_id FROM repository_origins WHERE brain_id=$1 AND origin=$2",
@@ -866,11 +869,16 @@ pub async fn begin(
     ) {
         return Err(Error::invalid("Unknown operation kind."));
     }
-    let Admitted { mut tx, role, .. } =
-        admission::brain_tx(&state.pool, &auth, brain, WORKING).await?;
-    if matches!(input.kind.as_str(), "write" | "capture") && role < Role::Writer {
-        return Err(Error::forbidden());
-    }
+    // Changing files or capturing needs a writer; the floor applies before the
+    // archive fence, so a reader of an archived Brain is forbidden, not conflicted.
+    let floor = if matches!(input.kind.as_str(), "write" | "capture") {
+        Role::Writer
+    } else {
+        Role::Reader
+    };
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, WORKING.with_role(floor))
+        .await?
+        .tx;
     let current = task(&mut tx, brain, id).await?;
     if current.closed {
         return Err(conflict("This task is closed."));

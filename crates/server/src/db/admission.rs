@@ -195,10 +195,13 @@ pub fn browser_required() -> Error {
     )
 }
 
-/// A surface that only a paired device may use. The existing answer is the
-/// generic forbidden error; one place to change it.
+/// A surface that only a paired device may use.
 pub fn device_required() -> Error {
-    Error::forbidden()
+    Error(
+        StatusCode::FORBIDDEN,
+        "device_required",
+        "This endpoint requires a paired device.",
+    )
 }
 
 /// Step 0 of the canonical order: no database.
@@ -394,7 +397,10 @@ mod tests {
             Some((403, "browser_required"))
         );
         assert_eq!(code(transport(&device, true)), None);
-        assert_eq!(code(transport(&device, false)), FORBIDDEN);
+        assert_eq!(
+            code(transport(&device, false)),
+            Some((403, "device_required"))
+        );
     }
 
     #[test]
@@ -550,11 +556,15 @@ mod tests {
             (existing.0, existing.1, existing.2),
             (ours.0, ours.1, ours.2)
         );
-        let forbidden = Error::forbidden();
+        // A missing device is no longer the generic forbidden error.
         let required = device_required();
         assert_eq!(
-            (forbidden.0, forbidden.1, forbidden.2),
-            (required.0, required.1, required.2)
+            (required.0, required.1, required.2),
+            (
+                StatusCode::FORBIDDEN,
+                "device_required",
+                "This endpoint requires a paired device."
+            )
         );
         let evidence = evidence_archived();
         assert_eq!(

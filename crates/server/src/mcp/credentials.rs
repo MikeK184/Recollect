@@ -98,8 +98,8 @@ pub async fn provision(
     if !auth.user.installation_owner {
         return Err(Error::forbidden());
     }
-    let Admitted { mut tx, role, .. } = admitted(&state, &auth, brain, true).await?;
-    require_admin(role)?;
+    let Admitted { mut tx, .. } =
+        admitted(&state, &auth, brain, access(true).with_role(Role::Admin)).await?;
     let row = connection(&mut tx, brain, id).await?;
     if row.revision != input.base_revision {
         return Err(conflict(

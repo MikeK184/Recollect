@@ -72,11 +72,17 @@ fn mutation_error(error: sqlx::Error) -> Error {
     }
 }
 fn archived() -> Error {
-    conflict("Reopen this Brain before configuring or using execution profiles.")
+    Error(
+        StatusCode::CONFLICT,
+        "brain_archived",
+        "Reopen this Brain before configuring or using execution profiles.",
+    )
 }
 /// Reads share the Brain lock and work on archived Brains. Writes are
-/// browser-only, take the exclusive lock and refuse archived Brains; callers
-/// check administrator or profile rights after admission.
+/// browser-only, take the exclusive lock and refuse archived Brains. An
+/// administrator-only surface raises the floor with `with_role`, so a member
+/// below it is refused before the archive fence; profile rights are checked by
+/// the caller after admission.
 fn access(write: bool) -> BrainAccess {
     if write {
         BrainAccess::READ
@@ -91,9 +97,9 @@ async fn admitted<'a>(
     state: &'a AppState,
     auth: &Auth,
     brain: Uuid,
-    write: bool,
+    access: BrainAccess,
 ) -> Result<Admitted<'a>> {
-    let mut admitted = admission::brain_tx(&state.pool, auth, brain, access(write)).await?;
+    let mut admitted = admission::brain_tx(&state.pool, auth, brain, access).await?;
     definitions::lock(&mut admitted.tx).await?;
     Ok(admitted)
 }
@@ -103,7 +109,7 @@ async fn transaction<'a>(
     brain: Uuid,
     write: bool,
 ) -> Result<Tx<'a>> {
-    Ok(admitted(state, auth, brain, write).await?.tx)
+    Ok(admitted(state, auth, brain, access(write)).await?.tx)
 }
 async fn require_open(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
     let archived_brain: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
@@ -118,12 +124,6 @@ async fn require_open(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
 /// The administrator check for a transaction that is already open.
 async fn require_admin_in(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
     admission::admit_in(tx, brain, &BrainAccess::READ.with_role(Role::Admin)).await?;
-    Ok(())
-}
-fn require_admin(role: Role) -> Result<()> {
-    if !role.is_admin() {
-        return Err(Error::forbidden());
-    }
     Ok(())
 }
 async fn environment(tx: &mut Tx<'_>, brain: Uuid, id: Option<Uuid>) -> Result<()> {
@@ -348,7 +348,7 @@ pub async fn catalogue(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<McpCatalogue>> {
-    let Admitted { mut tx, role, .. } = admitted(&state, &auth, brain, false).await?;
+    let Admitted { mut tx, role, .. } = admitted(&state, &auth, brain, access(false)).await?;
     let profiles = profiles::list(&mut tx, brain).await?;
     let manager = role.is_admin() || profiles.iter().any(|p| p.rights.manage);
     let definitions: Vec<definitions::DefinitionRow> =
@@ -405,8 +405,8 @@ pub async fn get_definition(
     auth: Auth,
     Path((brain, key)): Path<(Uuid, String)>,
 ) -> Result<Json<McpDefinitionDetail>> {
-    let Admitted { mut tx, role, .. } = admitted(&state, &auth, brain, false).await?;
-    require_admin(role)?;
+    let Admitted { mut tx, .. } =
+        admitted(&state, &auth, brain, access(false).with_role(Role::Admin)).await?;
     let result = definitions::load(&mut tx, &key).await?.detail();
     tx.commit().await?;
     Ok(Json(result))
@@ -417,8 +417,8 @@ pub async fn get_connection(
     auth: Auth,
     Path((brain, id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<McpConnectionDetail>> {
-    let Admitted { mut tx, role, .. } = admitted(&state, &auth, brain, false).await?;
-    require_admin(role)?;
+    let Admitted { mut tx, .. } =
+        admitted(&state, &auth, brain, access(false).with_role(Role::Admin)).await?;
     let result = connection_detail(&mut tx, brain, id).await?;
     tx.commit().await?;
     Ok(Json(result))
@@ -433,8 +433,8 @@ async fn write_connection(
 ) -> Result<Json<McpConnectionDetail>> {
     input.name = input.name.trim().into();
     let key = commands::key(&headers)?;
-    let Admitted { mut tx, role, .. } = admitted(state, auth, brain, true).await?;
-    require_admin(role)?;
+    let Admitted { mut tx, .. } =
+        admitted(state, auth, brain, access(true).with_role(Role::Admin)).await?;
     let mut disabling_unchanged = false;
     if let Some(id) = id {
         let old = connection(&mut tx, brain, id).await?;

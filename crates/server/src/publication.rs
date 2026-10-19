@@ -4,7 +4,7 @@ use crate::{
     commands,
     db::{
         self,
-        admission::{self, Admitted, BrainAccess},
+        admission::{self, Archived, BrainAccess},
     },
     error::{Error, Result},
     jobs, worker, workspace,
@@ -389,11 +389,14 @@ pub async fn set_policy(
     Path(brain): Path<Uuid>,
     Json(input): Json<RepositoryPolicy>,
 ) -> Result<Json<RepositoryPolicy>> {
-    let Admitted { mut tx, role, .. } =
-        admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE).await?;
-    if !role.is_admin() {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Reject(admission::evidence_archived)),
+    )
+    .await?
+    .tx;
     sqlx::query("UPDATE brains SET allow_repository_content=$2 WHERE id=$1")
         .bind(brain)
         .bind(input.allow_file_content)

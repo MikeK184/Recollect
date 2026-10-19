@@ -79,8 +79,8 @@ async fn save(
     input.name = input.name.trim().into();
     text(&input.name, 120, false)?;
     let key = commands::key(&headers)?;
-    let Admitted { mut tx, role, .. } = admitted(state, auth, brain, true).await?;
-    require_admin(role)?;
+    let Admitted { mut tx, .. } =
+        admitted(state, auth, brain, access(true).with_role(Role::Admin)).await?;
     if let Some(saved) = commands::reserve::<McpPrivateRunner>(
         &mut tx,
         key.as_deref(),

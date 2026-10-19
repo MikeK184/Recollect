@@ -113,7 +113,14 @@ async fn write_profile(
         return Err(Error::invalid("Choose at most 20 distinct connections."));
     }
     let key = commands::key(&headers)?;
-    let Admitted { mut tx, role, .. } = admitted(state, auth, brain, true).await?;
+    // A new profile is administrator-only; an update needs the profile's own
+    // manage right, checked after admission.
+    let access = if id.is_none() {
+        access(true).with_role(Role::Admin)
+    } else {
+        access(true)
+    };
+    let Admitted { mut tx, .. } = admitted(state, auth, brain, access).await?;
     if let Some(id) = id {
         let old = load(&mut tx, brain, id).await?;
         if !old.rights.manage {
@@ -123,7 +130,6 @@ async fn write_profile(
             return Err(conflict("This profile changed. Refresh it before saving."));
         }
     } else {
-        require_admin(role)?;
         if input.base_revision.is_some() {
             return Err(Error::invalid("A new profile has no base revision."));
         }
