@@ -99,16 +99,16 @@ and makes no paid model inference request.
 
 ### Actual captures
 
-- [Tool access, actual installation](../../output/browser-review-2026-10-05/implementation-tool-access.jpg)
-- [Populated green/red permission card, synthetic fixture](../../output/browser-review-2026-10-05/implementation-tool-access-fixture.jpg)
-- [Inline Direct permission controls](../../output/browser-review-2026-10-05/implementation-tool-access-edit.jpg)
-- [Partial-save retry receipts](../../output/browser-review-2026-10-05/implementation-tool-access-partial-save.jpg)
-- [Retained connection conflict](../../output/browser-review-2026-10-05/implementation-connection-edit-conflict.jpg)
-- [Safe highlighted code](../../output/browser-review-2026-10-05/implementation-code-formatting.jpg)
-- [Cached synthetic icon](../../output/browser-review-2026-10-05/implementation-cached-icon.jpg)
-- [Compact agent activity](../../output/browser-review-2026-10-05/implementation-agents.jpg)
-- [Masked direct configuration](../../output/browser-review-2026-10-05/implementation-direct-config-masked.jpg)
-- [AI model/rebuild draft, subsequently cancelled](../../output/browser-review-2026-10-05/implementation-ai-edit.jpg)
+- Tool access, actual installation (`f2673d7:output/browser-review-2026-10-05/implementation-tool-access.jpg`)
+- Populated green/red permission card, synthetic fixture (`f2673d7:output/browser-review-2026-10-05/implementation-tool-access-fixture.jpg`)
+- Inline Direct permission controls (`f2673d7:output/browser-review-2026-10-05/implementation-tool-access-edit.jpg`)
+- Partial-save retry receipts (`f2673d7:output/browser-review-2026-10-05/implementation-tool-access-partial-save.jpg`)
+- Retained connection conflict (`f2673d7:output/browser-review-2026-10-05/implementation-connection-edit-conflict.jpg`)
+- Safe highlighted code (`f2673d7:output/browser-review-2026-10-05/implementation-code-formatting.jpg`)
+- Cached synthetic icon (`f2673d7:output/browser-review-2026-10-05/implementation-cached-icon.jpg`)
+- Compact agent activity (`f2673d7:output/browser-review-2026-10-05/implementation-agents.jpg`)
+- Masked direct configuration (`f2673d7:output/browser-review-2026-10-05/implementation-direct-config-masked.jpg`)
+- AI model/rebuild draft, subsequently cancelled (`f2673d7:output/browser-review-2026-10-05/implementation-ai-edit.jpg`)
 
 ## Translation and Limits
 

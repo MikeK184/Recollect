@@ -203,7 +203,11 @@ async fn vault_proxy_failures_and_nonrenewable_leases_never_use_stale_credential
     };
     use std::os::unix::fs::PermissionsExt;
     use std::sync::atomic::AtomicUsize;
-    let root = directory();
+    // Unix socket paths are capped near 104 bytes, which the repository-relative
+    // `directory()` exceeds in deep checkouts and CI workspaces.
+    let root =
+        std::env::temp_dir().join(format!("rc-{}", &Uuid::new_v4().simple().to_string()[..8]));
+    std::fs::create_dir_all(&root).unwrap();
     std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
     let socket = root.join("vault.sock");
     let listener = tokio::net::UnixListener::bind(&socket).unwrap();

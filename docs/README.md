@@ -73,6 +73,12 @@ product features, change product decisions or refresh runtime/benchmark
 measurements. The earlier snapshot is available at
 [checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
 
+`output/` (browser screenshots, generated imagery and review captures) is
+ignored and no longer tracked. Where earlier records cite `output/...`, the last
+tracked copy is at Git revision `f2673d7`: read it with
+`git show f2673d7:output/<path>`. Cite new evidence by revision or in a tracked
+summary, not by a link into `output/`.
+
 New foundation decisions remain pending until accepted. Pending foundations
 cannot govern dependent implementation; the small-fix exception does not bypass
 that rule. Foundation authoring does not require speculative product epics.
