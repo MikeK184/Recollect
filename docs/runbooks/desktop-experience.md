@@ -77,8 +77,11 @@ No tool is executed and no answer is automatically saved as memory.
 
 New Brains created in the browser include the managed autonomous preset. Existing
 Brains show **Enable autonomous memory** in Ask and **Settings → AI & automation**.
-That one action authorizes the installed models for eligible retained Brain
-content and turns on learning, semantic indexing, supported capture and Ask.
+That one action authorizes the Brain's chosen model for eligible retained Brain
+content and turns on learning, semantic indexing, supported capture and Ask. When
+no text model is chosen yet (the installation names none), the action reads **Choose
+a model**: capture is already on, and the Brain's administrator picks a listed model
+before anything is sent to a provider.
 Existing exclusions and retention are preserved. No numerical tuning is required.
 The preset has a 1,000,000-token daily accounting ceiling, two concurrent calls,
 a 32 KiB input bound and 4,096 output tokens. These are engineering defaults,

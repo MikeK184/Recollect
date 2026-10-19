@@ -22,6 +22,11 @@ the compatibility mode and the historical scope of the shipped provider slice.
 The [semantic contract](retrieval-semantic.md) extends this shared gateway with
 canonical embedding representations and default-false standing automatic embedding;
 it preserves separate capture, learning and query-transmission permissions.
+The 2026-10-19 [no-built-in-model amendment](brain-model-catalogue-and-selection.md)
+removes the installation's implicit text model: an installation supplies one only
+through an explicit operator setting, otherwise each Brain chooses its own, and an
+unconfigured Brain's gateway request fails with `model_not_selected` before any
+credential or provider is considered. Saved policies are unchanged.
 The 2026-09-26 [answer contract](retrieval-answers.md) adds the separate default-off
 `answering` purpose and exact retrieval-bundle consumer. Existing model selection,
 content classes, quotas and metadata-only retention remain authoritative.
@@ -45,8 +50,9 @@ account access; it is not Brain transmission authority.
 One Rust gateway owns external model requests. Initially its concrete provider is
 OpenAI's direct HTTPS API; no arbitrary URL, fallback provider, model-supplied tool,
 credential, executable or process selection is accepted from a request. Installation
-inputs select the text/embedding model and dimensions; this installation uses the
-user's exact pair. Credentials stay in environment-backed configuration. Key presence
+inputs select the embedding model and dimensions and may name an explicit text
+model; otherwise each Brain chooses its text model, and the user's original
+`gpt-5.6-luna` selection remains a supported catalogue entry rather than a default. Credentials stay in environment-backed configuration. Key presence
 is distinct from an observed successful call. Provider output and error bodies are
 untrusted and never logged.
 

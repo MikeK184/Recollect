@@ -16,7 +16,8 @@ does not establish customer-corpus capacity or general model superiority.
 
 ## Procedure
 
-Initialize, configure, build and start the selected installation using the
+Initialize (with `--text-model gpt-5.6-luna`, since no text model is built in),
+configure, build and start the selected installation using the
 [installation runbook](installation.md). For the opt-in quality experiment, put
 the approved `OPENAI_API_KEY` only in that installation's ignored `runtime.env`
 and restart the selected installation to load it. Use `gpt-5.6-luna` and

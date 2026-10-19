@@ -124,6 +124,10 @@ Prepare loopback access on an unused local port:
 ./scripts/install.py config personal-demo
 ```
 
+Add `--text-model <id>` only to name one text model for every Brain of the
+installation; without it `runtime.env` has no text model and each Brain's
+administrator chooses one before any text is sent to a provider.
+
 The generated `.data/install/personal-demo/runtime.env` contains the owner login
 and application/provider inputs. Initialization does not print credentials or
 overwrite existing files. `config` renders actual Compose privately and prints

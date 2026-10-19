@@ -15,14 +15,38 @@ adapters read `OPENAI_API_KEY` and `OPENROUTER_API_KEY` from the environment.
 Model selection belongs to the Brain policy catalogue. The environment supplies
 only the embedding pair `text-embedding-3-large` at 3,072 dimensions
 (`RECOLLECT_EMBEDDING_MODEL`, `RECOLLECT_EMBEDDING_DIMENSIONS`) and an optional
-`RECOLLECT_TEXT_MODEL`; when that is unset the server starts with its built-in
-placeholder text model, which is not a recommendation. The ignored `.env` is preserved by setup.
+`RECOLLECT_TEXT_MODEL`. There is no built-in text model: when that variable is
+unset the installation reports none and each Brain's administrator chooses one
+(below); the installer's `--text-model` writes it only when given. The ignored
+`.env` is preserved by setup.
 
 Key presence does not prove a successful call. Each Brain's policy independently
 grants model, purpose and content-class access.
 New policy forms select autonomous maintenance. Existing saved policies preserve
 their previous mode until an admin changes them. No fallback model/provider is
 selected automatically.
+
+## Choose a text model
+
+A Brain with no selected text model captures evidence but sends nothing to a
+provider. Ask, **Settings → AI permissions** and the Brain's AI card show **Choose a
+model**, and the gateway reports `model_not_selected` ("Choose a text model for this
+Brain"). New browser-created Brains start in this state when the installation names
+no model, with capture on, the managed limits saved and transmission off.
+
+1. As a Brain admin, open **Choose a model** (Ask or **Settings → AI**). The list
+   loads from the installation's provider account; this is the explicit action that
+   refreshes it. The provider key must be set in the ignored `.env`.
+2. Pick a listed text model and choose **Use this model**. This re-applies the managed
+   autonomous preset (see the [desktop guide](desktop-experience.md)) with the chosen
+   model and turns it on. A model the account does not list, or an unrefreshed list, is
+   refused with its own message.
+3. To pick a model without turning the preset on, use **Edit AI permissions**: choose
+   the text model first, then allow AI processing and save.
+
+Existing saved policies, including ones that already name `gpt-5.6-luna`, are never
+changed by this and keep working. An operator who wants one model for every Brain
+sets `RECOLLECT_TEXT_MODEL` (or `./scripts/install.py init … --text-model <id>`).
 
 ## Select OpenRouter per Brain
 
@@ -62,7 +86,8 @@ Batch are separate work.
 ## Policy and connectivity
 
 1. Open **Settings → AI permissions → Edit AI permissions** as a browser Brain admin.
-2. Enable transmission and keep **Autonomous memory** selected for normal operation.
+2. Make sure a text model is selected (see **Choose a text model**), enable
+   transmission and keep **Autonomous memory** selected for normal operation.
    Permit extraction, synthesis and claim content, plus the actual source classes
    to learn, such as document. Query permission supports handover titles. The fixed
    connectivity check additionally needs embedding permission.
