@@ -1,3 +1,4 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -179,8 +180,9 @@ pub async fn review(
     }
     publication::safe_payload(&state, &json!(input))?;
     let key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     if let Some(decision) = commands::reserve::<ReviewDecision>(
         &mut tx,
         key.as_deref(),

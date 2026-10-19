@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -79,8 +80,9 @@ pub async fn get(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<RetentionSettings>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let result = settings(&mut tx, brain).await?;
     tx.commit().await?;
     Ok(Json(result))
@@ -96,8 +98,14 @@ pub async fn update(
     auth.require_browser()?;
     validate(&input.policy)?;
     let key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     if let Some(result) = commands::reserve(
         &mut tx,
         key.as_deref(),

@@ -1,7 +1,8 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
-    commands, db,
+    commands,
     error::{Error, Result},
     memory_evidence::Tx,
     publication,
@@ -120,8 +121,14 @@ pub async fn preview(
 ) -> Result<Json<ErasurePreview>> {
     auth.require_browser()?;
     validate(&target)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let closure: Option<SqlJson<Manifest>> =
         sqlx::query_scalar("SELECT recollect_privacy_preview($1,$2,$3)")
             .bind(brain)
@@ -210,8 +217,14 @@ pub async fn erase(
     auth.require_browser()?;
     validate(&input.target)?;
     let key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     if let Some(saved) = commands::reserve::<ErasureStatus>(
         &mut tx,
         key.as_deref(),
@@ -256,8 +269,9 @@ pub async fn list(
     Query(page): Query<publication::Page>,
 ) -> Result<Json<ErasurePage>> {
     let offset = publication::offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let (total, latest_sequence): (i64, i64) = sqlx::query_as(
         "SELECT count(*),coalesce(max(sequence),0) FROM privacy_requests WHERE brain_id=$1",
     )
@@ -287,8 +301,14 @@ pub async fn retry(
     Path((brain, id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<ErasureStatus>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     status(&mut tx, brain, id).await?;
     tx.commit().await?;
     crate::privacy_journal::maintain_scoped(&state, Some(brain))
@@ -300,8 +320,9 @@ pub async fn retry(
                 "Privacy maintenance is unavailable. Its committed request remains pending.",
             )
         })?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let result = status(&mut tx, brain, id).await?;
     tx.commit().await?;
     Ok(Json(result))
@@ -314,8 +335,9 @@ pub async fn device_sync(
     Path(brain): Path<Uuid>,
 ) -> Result<Json<PrivacyDeviceSync>> {
     auth.device_id.ok_or_else(Error::forbidden)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let policy = crate::retention::settings(&mut tx, brain).await?.policy;
     let sequence = sqlx::query_scalar(
         "SELECT coalesce(max(sequence),0) FROM privacy_requests WHERE brain_id=$1",
@@ -356,8 +378,9 @@ pub async fn device_ack(
     Json(input): Json<PrivacyDeviceAck>,
 ) -> Result<Json<PrivacyDeviceReceipt>> {
     let device_id = auth.device_id.ok_or_else(Error::forbidden)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let latest: i64 = sqlx::query_scalar(
         "SELECT coalesce(max(sequence),0) FROM privacy_requests WHERE brain_id=$1",
     )

@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -108,8 +109,9 @@ pub async fn list(
     auth: Auth,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<Job>>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::READ)
+        .await?
+        .tx;
     let rows = sqlx::query_as::<_, JobRow>(
         "SELECT * FROM jobs WHERE brain_id=$1 ORDER BY created_at DESC,id LIMIT 100",
     )
@@ -126,8 +128,9 @@ pub async fn processing(
     auth: Auth,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ProcessingStatus>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::READ)
+        .await?
+        .tx;
     let (current,refreshed_at): (bool,Option<DateTime<Utc>>) = sqlx::query_as("SELECT coalesce(b.change_id=d.source_change,false),d.refreshed_at FROM brains b LEFT JOIN brain_directory d ON d.brain_id=b.id WHERE b.id=$1")
         .bind(id).fetch_one(&mut *tx).await?;
     let (pending,running,failed): (i64,i64,i64) = sqlx::query_as("SELECT count(*) FILTER (WHERE state IN ('queued','running')),count(*) FILTER (WHERE state='running'),count(*) FILTER (WHERE state IN ('failed','cancelled')) FROM jobs WHERE brain_id=$1")
@@ -157,8 +160,9 @@ pub async fn retry(
     auth: Auth,
     Path((id, job)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Job>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::admin(Archived::Allow))
+        .await?
+        .tx;
     let old =
         sqlx::query_as::<_, JobRow>("SELECT * FROM jobs WHERE id=$1 AND brain_id=$2 FOR UPDATE")
             .bind(job)
@@ -225,8 +229,9 @@ pub async fn cancel(
     auth: Auth,
     Path((id, job)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Job>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::admin(Archived::Allow))
+        .await?
+        .tx;
     let old =
         sqlx::query_as::<_, JobRow>("SELECT * FROM jobs WHERE id=$1 AND brain_id=$2 FOR UPDATE")
             .bind(job)

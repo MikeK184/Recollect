@@ -1,3 +1,4 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -194,8 +195,9 @@ async fn save(
     mut input: LearningInput,
     retry: Option<Uuid>,
 ) -> Result<LearningRun> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     let key = commands::key(headers)?;
     if let Some(saved) = commands::reserve::<LearningRun>(
         &mut tx,
@@ -271,8 +273,9 @@ pub async fn retry(
     headers: HeaderMap,
     Json(input): Json<LearningRetryInput>,
 ) -> Result<Json<LearningRun>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     let old = row(&mut tx, brain, id).await?;
     tx.commit().await?;
     let input = LearningInput {
@@ -292,8 +295,9 @@ pub async fn list(
     Path(brain): Path<Uuid>,
     Query(query): Query<LearningQuery>,
 ) -> Result<Json<LearningPage>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let offset = model_policy::offset(&model_policy::PageQuery {
         offset: query.offset,
     })?;
@@ -384,8 +388,15 @@ pub(crate) async fn ready<'a>(
     state: &'a AppState,
     job: &ClaimedJob,
 ) -> Result<(Tx<'a>, LearningRun, ModelPolicyVersion)> {
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let run = row(&mut tx, job.brain_id, job.target_id).await?;
     if !matches!(run.state.as_str(), "queued" | "running") {

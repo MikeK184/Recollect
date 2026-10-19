@@ -4,7 +4,7 @@ use crate::{
     commands,
     db::{
         self,
-        admission::{self, BrainAccess},
+        admission::{self, Admitted, BrainAccess},
     },
     error::{Error, Result},
     jobs, worker, workspace,
@@ -370,8 +370,9 @@ pub async fn policy(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<RepositoryPolicy>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let allowed = sqlx::query_scalar("SELECT allow_repository_content FROM brains WHERE id=$1")
         .bind(brain)
         .fetch_one(&mut *tx)
@@ -388,8 +389,11 @@ pub async fn set_policy(
     Path(brain): Path<Uuid>,
     Json(input): Json<RepositoryPolicy>,
 ) -> Result<Json<RepositoryPolicy>> {
-    let mut tx = write_tx(&state, &auth, brain).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let Admitted { mut tx, role, .. } =
+        admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE).await?;
+    if !role.is_admin() {
+        return Err(Error::forbidden());
+    }
     sqlx::query("UPDATE brains SET allow_repository_content=$2 WHERE id=$1")
         .bind(brain)
         .bind(input.allow_file_content)
@@ -579,8 +583,9 @@ pub async fn list(
     Query(page): Query<Page>,
 ) -> Result<Json<SnapshotPage>> {
     let offset = offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM repositories WHERE id=$1 AND brain_id=$2)")
             .bind(repository)
@@ -632,9 +637,9 @@ pub async fn detail(
     Query(page): Query<Page>,
 ) -> Result<Json<SnapshotDetail>> {
     let offset = offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
-    db::lock_brain(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let snapshot = snapshot(&mut tx, brain, id).await?;
     let total = sqlx::query_scalar(
         "SELECT count(*) FROM repository_contributions WHERE snapshot_id=$1 AND brain_id=$2",
@@ -690,8 +695,9 @@ pub async fn files(
     Query(page): Query<Page>,
 ) -> Result<Json<RepositoryFilePage>> {
     let offset = offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let snapshot = snapshot(&mut tx, brain, id).await?;
     let rows = sqlx::query_as::<_,FileRow>("SELECT * FROM repository_files WHERE brain_id=$1 AND snapshot_id=$2 ORDER BY path LIMIT 100 OFFSET $3").bind(brain).bind(id).bind(offset).fetch_all(&mut *tx).await?;
     let mut items = Vec::new();
@@ -711,9 +717,9 @@ pub async fn file(
     auth: Auth,
     Path((brain, id, file)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<RepositoryFileContent>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
-    db::lock_brain(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     snapshot(&mut tx, brain, id).await?;
     let row = sqlx::query_as::<_, FileRow>(
         "SELECT * FROM repository_files WHERE brain_id=$1 AND snapshot_id=$2 AND id=$3",
@@ -758,8 +764,9 @@ pub async fn facts(
     Query(page): Query<Page>,
 ) -> Result<Json<RepositoryFactPage>> {
     let offset = offset(&page)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let snapshot = snapshot(&mut tx, brain, id).await?;
     let items = sqlx::query_as::<_,FactRow>("SELECT id,ordinal,record FROM repository_facts WHERE brain_id=$1 AND snapshot_id=$2 ORDER BY ordinal LIMIT 100 OFFSET $3").bind(brain).bind(id).bind(offset).fetch_all(&mut *tx).await?.into_iter().map(|r| RepositoryFact {id:r.id,ordinal:r.ordinal,record:r.record.0}).collect();
     tx.commit().await?;
@@ -779,8 +786,9 @@ pub async fn artifact(
     if !matches!(kind.as_str(), "facts" | "insights" | "receipt") {
         return Err(Error::missing());
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     snapshot(&mut tx, brain, id).await?;
     let row: Option<(Uuid,i32)> = sqlx::query_as("SELECT id,byte_length FROM repository_artifacts WHERE brain_id=$1 AND snapshot_id=$2 AND kind=$3").bind(brain).bind(id).bind(&kind).fetch_optional(&mut *tx).await?;
     let (availability, content) = if let Some((artifact, length)) = row {

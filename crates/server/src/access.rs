@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived};
 use crate::{
     AppState,
     auth::Auth,
@@ -37,8 +38,14 @@ pub async fn get(
     auth: Auth,
     Path(id): Path<Uuid>,
 ) -> Result<Json<BrainAccess>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let rows:Vec<DbJson<EffectiveAccess>>=sqlx::query_scalar("SELECT jsonb_build_object('account',jsonb_build_object('id',a.id,'username',a.username,'enabled',a.enabled,'installation_owner',a.installation_owner,'auth_kind',a.auth_kind,'oidc_subject',a.oidc_subject),'owner',b.owner_id=a.id,'direct_role',d.role,'groups',coalesce((SELECT jsonb_agg(g.group_name ORDER BY g.group_name) FROM brain_group_grants g WHERE g.brain_id=b.id AND g.issuer=a.oidc_issuer AND g.group_name=ANY(a.oidc_groups) AND a.membership_until>now()),'[]'::jsonb),'effective_role',recollect_account_role(b.id,a.id),'membership_until',a.membership_until) FROM brains b CROSS JOIN accounts a LEFT JOIN brain_grants d ON d.brain_id=b.id AND d.account_id=a.id WHERE b.id=$1 AND (b.owner_id=a.id OR d.role IS NOT NULL OR EXISTS(SELECT 1 FROM brain_group_grants g WHERE g.brain_id=b.id AND g.issuer=a.oidc_issuer AND g.group_name=ANY(a.oidc_groups))) ORDER BY a.username LIMIT 1000")
         .bind(id).fetch_all(&mut *tx).await?;
     let groups:Vec<DbJson<GroupGrant>>=sqlx::query_scalar("SELECT jsonb_build_object('id',id,'group_name',group_name,'role',role) FROM brain_group_grants WHERE brain_id=$1 ORDER BY group_name LIMIT 1000").bind(id).fetch_all(&mut *tx).await?;
@@ -97,8 +104,14 @@ pub async fn set(
     Json(input): Json<GrantRequest>,
 ) -> Result<Json<AccessChange>> {
     let role = role(&input.role)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let response = grant(&mut tx, auth.user.id, id, account, Some(role)).await?;
     tx.commit().await?;
     Ok(response)
@@ -111,8 +124,14 @@ pub async fn by_name(
     Json(input): Json<DirectGrantRequest>,
 ) -> Result<Json<AccessChange>> {
     let role = role(&input.role)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let account: Option<Uuid> =
         sqlx::query_scalar("SELECT id FROM accounts WHERE username=$1 AND enabled")
             .bind(input.username.trim())
@@ -135,8 +154,14 @@ pub async fn remove(
     auth: Auth,
     Path((id, account)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<AccessChange>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let response = grant(&mut tx, auth.user.id, id, account, None).await?;
     tx.commit().await?;
     Ok(response)
@@ -163,8 +188,14 @@ pub async fn set_group(
             "Supply an exact group name or ID within 200 characters.",
         ));
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let count: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM brain_group_grants WHERE brain_id=$1 AND group_name<>$2",
     )
@@ -203,8 +234,14 @@ pub async fn remove_group(
     auth: Auth,
     Path((id, mapping)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM brain_group_grants WHERE id=$1 AND brain_id=$2)",
     )
@@ -239,8 +276,14 @@ pub async fn transfer(
     Path(id): Path<Uuid>,
     Json(input): Json<OwnerRequest>,
 ) -> Result<Json<AccessChange>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        id,
+        admission::BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let owner: Uuid = sqlx::query_scalar("SELECT owner_id FROM brains WHERE id=$1")
         .bind(id)
         .fetch_one(&mut *tx)

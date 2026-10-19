@@ -2,10 +2,11 @@
 //! tombstones and visibility; these handlers enforce the caller class, map the
 //! function's distinct rejection codes to actionable responses, and expose the
 //! companion fence. No handler performs a Vault call.
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
-    commands, db,
+    commands,
     error::{Error, Result},
 };
 use axum::{
@@ -221,8 +222,14 @@ pub async fn preview(
     Path(brain): Path<Uuid>,
 ) -> Result<Json<BrainDeletionPreview>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let preview: Option<SqlJson<serde_json::Value>> =
         sqlx::query_scalar("SELECT recollect_brain_preview($1)")
             .bind(brain)
@@ -271,8 +278,14 @@ pub async fn delete(
         ));
     }
     let key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     // A committed deletion invalidates its receipt, so a keyed replay reaches
     // GONE inside reserve. This operation never saves a response, so reserve
     // only returns GONE, a key conflict, or None here.

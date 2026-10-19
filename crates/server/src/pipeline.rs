@@ -1,4 +1,5 @@
-use crate::{AppState, auth::Auth, db, error::Result};
+use crate::db::admission::{self, BrainAccess};
+use crate::{AppState, auth::Auth, error::Result};
 use axum::{
     Json,
     extract::{Path, State},
@@ -15,8 +16,9 @@ pub async fn get(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<PipelineFeed>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     // Existing RLS remains in force. No private operation bindings, raw MCP
     // execution payloads, prompts, model requests or source bodies are selected.
     let rows: Vec<DbJson<PipelineItem>> = sqlx::query_scalar(include_str!("pipeline.sql"))

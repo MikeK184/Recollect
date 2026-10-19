@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -52,8 +53,9 @@ pub async fn get(
     auth: Auth,
     Path(id): Path<Uuid>,
 ) -> Result<Response> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::READ)
+        .await?
+        .tx;
     let png: Option<Vec<u8>> = sqlx::query_scalar("SELECT icon_png FROM brains WHERE id=$1")
         .bind(id)
         .fetch_one(&mut *tx)
@@ -80,8 +82,9 @@ pub async fn put(
     bytes: Bytes,
 ) -> Result<Json<Brain>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::admin(Archived::Allow))
+        .await?
+        .tx;
     if headers
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
@@ -115,8 +118,9 @@ pub async fn remove(
     Path(id): Path<Uuid>,
 ) -> Result<Json<Brain>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::admin(Archived::Allow))
+        .await?
+        .tx;
     let changed = sqlx::query("UPDATE brains SET icon_png=NULL,icon_revision=NULL,updated_at=now(),change_id=gen_random_uuid() WHERE id=$1 AND icon_png IS NOT NULL").bind(id).execute(&mut *tx).await?.rows_affected();
     if changed > 0 {
         db::audit(

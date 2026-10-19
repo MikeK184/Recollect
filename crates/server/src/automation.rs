@@ -1,8 +1,9 @@
 //! One auditable adoption of the managed preset; domain workers still own work.
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
-    capture, commands, db,
+    capture, commands,
     error::{Error, Result},
     memory_evidence::Tx,
     model_policy, retention,
@@ -106,8 +107,9 @@ pub async fn get(
     auth: Auth,
     Path(brain): Path<Uuid>,
 ) -> Result<Json<AutomationSettings>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let result = settings(&state, &mut tx, brain).await?;
     tx.commit().await?;
     Ok(Json(result))
@@ -122,9 +124,14 @@ pub async fn update(
     Json(input): Json<AutomationUpdate>,
 ) -> Result<Json<AutomationSettings>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Reject(admission::evidence_archived)),
+    )
+    .await?
+    .tx;
     let key = commands::key(&headers)?;
     if let Some(saved) = commands::reserve(
         &mut tx,

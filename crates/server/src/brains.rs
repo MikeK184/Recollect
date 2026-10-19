@@ -1,3 +1,4 @@
+use crate::db::admission::{self, Archived, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -153,8 +154,9 @@ pub async fn update(
     if name.is_none() && description.is_none() && input.archived.is_none() {
         return Err(Error::invalid("Choose a field to update."));
     }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::admin(Archived::Allow))
+        .await?
+        .tx;
     if let Some(response) = commands::reserve::<Brain>(
         &mut tx,
         key.as_deref(),
@@ -182,8 +184,9 @@ pub async fn audit(
     auth: Auth,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<AuditEvent>>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, id, true).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, id, BrainAccess::admin(Archived::Allow))
+        .await?
+        .tx;
     type Row = (Uuid, Uuid, String, Uuid, String, DateTime<Utc>);
     let rows: Vec<Row> = sqlx::query_as("SELECT id,actor_id,action,target_id,disposition,created_at FROM mutation_audit WHERE brain_id=$1 ORDER BY created_at DESC,id LIMIT 100")
         .bind(id).fetch_all(&mut *tx).await?;

@@ -1,3 +1,4 @@
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState, artifacts,
     auth::Auth,
@@ -164,8 +165,9 @@ async fn save(
     policy::validate(&mut input.content)?;
     publication::safe_payload(state, &json!(input))?;
     let key = commands::key(headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     validate_evidence(state, &mut tx, brain, &input.content).await?;
     if auth.device_id.is_some() && input.operation_id.is_none() {
         return Err(Error::forbidden());

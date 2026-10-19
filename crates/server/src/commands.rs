@@ -1,7 +1,5 @@
-use crate::{
-    db,
-    error::{Error, Result},
-};
+use crate::db::admission::{self, BrainAccess, Role};
+use crate::error::{Error, Result};
 use axum::http::{HeaderMap, StatusCode};
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -60,10 +58,7 @@ pub async fn reserve<T: DeserializeOwned>(
     }
     if let Some(response) = row.3 {
         if let Some(brain) = row.2 {
-            let role = db::require_role(tx, brain, false).await?;
-            if !matches!(role.as_str(), "writer" | "admin") {
-                return Err(Error::forbidden());
-            }
+            admission::admit_in(tx, brain, &BrainAccess::READ.with_role(Role::Writer)).await?;
         }
         return serde_json::from_value(response).map(Some).map_err(|_| {
             Error(
