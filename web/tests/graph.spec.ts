@@ -367,6 +367,32 @@ test("graph processing, evidence, qualified paths and desktop canvas interaction
   await expect(
     page.getByRole("dialog", { name: "Find an evidence path", exact: true }),
   ).not.toBeVisible();
+  // Toggling the path swaps the scene inside the same renderer: its key does
+  // not include the path, so the canvas element (and with it the WebGL context
+  // and the explorer-owned camera session) survives the round trip.
+  const renderer = explorer.locator(".graph-renderer");
+  await renderer.evaluate((element) => {
+    (element as HTMLElement & { rendererProbe?: string }).rendererProbe =
+      "kept";
+  });
+  await explorer
+    .getByRole("button", { name: "Show shortest path on canvas", exact: true })
+    .click();
+  await expect(explorer.getByTestId("exploration-counts")).toHaveText(
+    "2 loaded nodes · 1 directed relationships",
+  );
+  await explorer
+    .getByRole("button", { name: "Return to exploration", exact: true })
+    .click();
+  await expect(explorer.getByTestId("exploration-counts")).toHaveText(
+    "4 loaded nodes · 2 directed relationships",
+  );
+  expect(
+    await renderer.evaluate(
+      (element) =>
+        (element as HTMLElement & { rendererProbe?: string }).rendererProbe,
+    ),
+  ).toBe("kept");
   await explorer
     .getByRole("button", { name: "Show shortest path on canvas", exact: true })
     .click();
