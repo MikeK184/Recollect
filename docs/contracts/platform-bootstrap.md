@@ -43,6 +43,15 @@ public origin, including login. Wrong credentials return a generic 401; bounded
 in-memory throttling permits at most ten attempts per username per minute.
 Recovery is an operator-only CLI command that invalidates owner sessions; the
 operator changes the password in the ignored environment and restarts the server.
+A 401 from any other route means only that the caller's own browser session or
+device credential is not valid for that request. Authentication failures of
+upstream services (model providers, the graph, MCP providers and credential
+providers) never use 401; they return 502, 503 or 409 with a stable code. A stale
+in-flight request can fail after its session was replaced, so the browser does not
+end the session on a 401: it re-reads `GET /api/auth/me` (concurrent 401s share
+one read) and ends the session only if that also returns 401. It then shows the
+sign-in view with "Your session ended — sign in again". An explicit sign-out
+shows no notice.
 
 `GET/POST /api/brains` lists accessible Brains or creates an active Brain owned
 by the caller. `GET/PATCH /api/brains/{id}` reads or renames/archives/reopens one.
