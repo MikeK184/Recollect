@@ -45,7 +45,7 @@ registering a runner does not grant permission to execute tools.
 Recollect is an early project for individuals and trusted internal teams.
 The documented workflows have local acceptance evidence. Public marketplace
 distribution, native MCP OAuth and further evaluation remain separate work.
-See [current work](https://github.com/MikeK184/Recollect/blob/main/docs/roadmap/execution/active/README.md)
+See [current work](https://github.com/MikeK184/Recollect/blob/main/docs/roadmap/epics/index.md)
 and [evaluation limits](./public-memory-benchmark.md).
 :::
 

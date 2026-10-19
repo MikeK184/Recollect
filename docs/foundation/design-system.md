@@ -288,5 +288,5 @@ matching the six final approved PNGs. Measure composition at 1586 × 992 and
 verify practical desktop widths. Keep the original brand and true inventory,
 but reproduce header alignment, typography hierarchy, icon weights, compact
 fields and card grouping. Prior structural acceptance does not establish visual
-fidelity. The [follow-up pack](../roadmap/execution/archive/desktop-management-vision-fidelity.md)
+fidelity. The [follow-up pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-management-vision-fidelity.md)
 requires independent inspection of fresh actual captures and fixes.

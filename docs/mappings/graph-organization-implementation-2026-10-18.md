@@ -1050,7 +1050,7 @@ failed real-model qualification or establish a deployed service.
 
 ## Attributed feedback delivery and frozen comparison
 
-The [feedback slice](../roadmap/execution/archive/retrieval-attributed-feedback.md)
+The [feedback slice](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/retrieval-attributed-feedback.md)
 is locally delivered without changing production ranking. Three current
 migration-063 PostgreSQL command/lifecycle tests pass in 4.00 s, with provider
 keys unset; earlier populated ancestry/actual older-backup/legacy-manifest proof

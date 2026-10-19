@@ -2,7 +2,7 @@
 
 The packaged plugin owns connection setup, native session capture and automatic
 memory recall. Start Codex, Claude Code or OpenCode normally after connecting.
-The [completed integration](../../docs/roadmap/execution/archive/mcp-plugin-session-memory.md)
+The [completed integration](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-plugin-session-memory.md)
 was verified through actual installed hosts. Current source-workflow and rebuilt-binary acceptance limits are recorded in the
 [plugin workflow report](../../docs/mappings/plugin-workflow-repair-2026-10-07.md). See the [evidence and platform limits](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/plugin-session-memory-2026-10-01.md).
 

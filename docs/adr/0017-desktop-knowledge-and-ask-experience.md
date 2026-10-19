@@ -52,7 +52,7 @@ canvas chrome rather than above it.
 Ask leads with the question composer. Exact/text search remains fully available
 as an explicit mode and as the fallback when answering is disabled, but it is
 no longer the landing tab. This amends the presentation decision recorded in the
-shipped [successor cleanup pack](../roadmap/execution/archive/mcp-successor-cleanup.md)
+shipped [successor cleanup pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-successor-cleanup.md)
 and restores the landing behavior
 [desktop contract](../contracts/desktop-experience.md) already specifies.
 
@@ -141,7 +141,7 @@ Amends [ADR 0014](0014-desktop-experience-and-answers.md) by narrowing its
 nine-peer navigation enumeration to the tiered layout above while leaving its
 token, typography, icon, route-ownership, desktop-only and read-only-answer
 decisions intact. Supersedes the Ask landing-tab decision recorded in the
-shipped [successor cleanup pack](../roadmap/execution/archive/mcp-successor-cleanup.md)
+shipped [successor cleanup pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-successor-cleanup.md)
 and the agent-connection-card placement in
 [managed experience](../contracts/memory-managed-experience.md#human-and-agent-experience).
 No domain contract, permission, retention rule or retrieval semantics is

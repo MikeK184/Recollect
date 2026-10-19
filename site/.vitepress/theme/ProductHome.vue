@@ -69,6 +69,6 @@ const tools = [
       <div><p class="rc-eyebrow">YOUR KNOWLEDGE. YOUR INFRASTRUCTURE.</p><h2 id="start-title">Start with one Brain.</h2><p>Run Recollect on your machine or a private server. Connect your agent, choose your policies, and build from there.</p><a class="rc-button rc-button-primary" :href="withBase('/docs/installation.html')">Installation guide <span aria-hidden="true">→</span></a><p class="rc-prerequisites">Docker with Compose · Python 3.11+</p></div>
       <div class="rc-command-card"><div><span>Run locally</span><button @click="copyCommands" aria-live="polite">{{ copyLabel }}</button></div><pre><code>{{ commands }}</code></pre><p>Then open <code>http://127.0.0.1:8787</code></p></div>
     </section>
-    <div class="rc-status"><span class="rc-badge">Early project</span><p>Built for individuals and trusted internal teams. Workflows have local acceptance evidence; <a href="https://github.com/MikeK184/Recollect/blob/main/docs/roadmap/execution/active/README.md">current work and limits</a> remain visible.</p></div>
+    <div class="rc-status"><span class="rc-badge">Early project</span><p>Built for individuals and trusted internal teams. Workflows have local acceptance evidence; <a href="https://github.com/MikeK184/Recollect/blob/main/docs/roadmap/epics/index.md">current work and limits</a> remain visible.</p></div>
   </div>
 </template>

@@ -46,7 +46,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Archived packs](../execution/archive/README.md) retain the delivered slices.
+[Archived packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) retain the delivered slices.
 The removed packs, the superseded chronological closeouts and original research
 references remain at commit
 [`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs)

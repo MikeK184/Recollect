@@ -113,7 +113,7 @@ and 21 unknown topic pairs per producer. Full acceptance stays with the
 
 ## Delivery evidence
 
-[Archived packs](../execution/archive/README.md) retain the delivered slices.
+[Archived packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) retain the delivered slices.
 The superseded chronological closeouts and original research references remain
 in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/graph-intelligence.md).
 Dated test/deployment observations are not a current runtime health claim.
