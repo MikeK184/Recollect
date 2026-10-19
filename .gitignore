@@ -31,3 +31,6 @@ __pycache__/
 
 # Claude Code personal project settings and approvals.
 /.claude/settings.local.json
+
+# Dependency installs are never tracked (tool installs under .codex/tools included).
+node_modules/
