@@ -261,6 +261,102 @@ pub const BRAIN_BUDGET: Duration = Duration::from_secs(30);
 /// Ceiling for a whole subsystem pass across every Brain.
 const PASS_BUDGET: Duration = Duration::from_secs(120);
 const MAINTENANCE_EVERY: Duration = Duration::from_secs(10);
+/// Brains remembered per subsystem before the order is forgotten and rebuilt.
+const ATTEMPT_MEMORY: usize = 4096;
+
+/// Order in which this process last started each Brain, per subsystem. It is
+/// only a fairness hint for scheduling: nothing durable depends on it, a restart
+/// falls back to the database's own order, and it is cleared when it grows.
+#[derive(Default)]
+struct Attempts {
+    next: u64,
+    last: std::collections::HashMap<Uuid, u64>,
+}
+impl Attempts {
+    /// Never-attempted Brains first, then least recently attempted. Stable, so
+    /// ties keep the database's order.
+    fn order(&self, brains: &mut [(Uuid, Uuid)]) {
+        brains.sort_by_key(|(brain, _)| self.last.get(brain).copied());
+    }
+    fn record(&mut self, brain: Uuid) {
+        if self.last.len() >= ATTEMPT_MEMORY && !self.last.contains_key(&brain) {
+            self.last.clear();
+        }
+        self.next += 1;
+        self.last.insert(brain, self.next);
+    }
+}
+static ATTEMPTS: std::sync::LazyLock<
+    std::sync::Mutex<std::collections::HashMap<&'static str, Attempts>>,
+> = std::sync::LazyLock::new(Default::default);
+fn attempts<T>(subsystem: &'static str, f: impl FnOnce(&mut Attempts) -> T) -> T {
+    let mut all = ATTEMPTS.lock().unwrap_or_else(|e| e.into_inner());
+    f(all.entry(subsystem).or_default())
+}
+
+/// Run one maintenance subsystem's work for every Brain in turn, so one Brain
+/// that cannot make progress never starves the rest
+/// ([autonomous maintenance contract](../../../docs/contracts/memory-autonomous-maintenance.md):
+/// archived or unavailable Brains stay visible "while other work proceeds").
+///
+/// * Each Brain gets [`BRAIN_BUDGET`]; on expiry its work future is dropped.
+///   That is safe: dropping an sqlx 0.8 `Transaction` queues a ROLLBACK, the pool
+///   settles the connection (`ping`) before it is reused, and PostgreSQL then
+///   releases that transaction's locks. Nothing is half-committed, because every
+///   unit of work either commits as one transaction or leaves no rows. (Native
+///   graph I/O already in flight is idempotent and lease/attempt-fenced.)
+/// * No new Brain starts once `PASS_BUDGET - BRAIN_BUDGET` has elapsed, so the
+///   caller's whole-pass limit is not what cancels the last Brain mid-work.
+///   Skipped Brains are logged and keep their place for the next pass.
+/// * Brains run in least-recently-attempted order. The attempt is recorded
+///   before the work starts so a pass cancelled mid-work still counts, and a
+///   Brain that timed out is recorded again after the pass so it goes to the
+///   back instead of leading every pass.
+///
+/// Returns the sum of the units of work reported by Brains that completed.
+pub(crate) async fn each_brain<F, Fut>(
+    subsystem: &'static str,
+    mut brains: Vec<(Uuid, Uuid)>,
+    mut work: F,
+) -> usize
+where
+    F: FnMut(Uuid, Uuid) -> Fut,
+    Fut: std::future::Future<Output = crate::error::Result<usize>>,
+{
+    attempts(subsystem, |a| a.order(&mut brains));
+    let pass = tokio::time::Instant::now();
+    let mut count = 0;
+    let mut timed_out = vec![];
+    for (position, &(brain, actor)) in brains.iter().enumerate() {
+        if pass.elapsed() >= PASS_BUDGET - BRAIN_BUDGET {
+            for &(skipped, _) in &brains[position..] {
+                tracing::info!(subsystem, brain_id=%skipped, outcome="skipped", "Maintenance pass budget reached before this Brain");
+            }
+            break;
+        }
+        attempts(subsystem, |a| a.record(brain));
+        let started = tokio::time::Instant::now();
+        let outcome = tokio::time::timeout(BRAIN_BUDGET, work(brain, actor)).await;
+        let elapsed_ms = started.elapsed().as_millis() as u64;
+        match outcome {
+            Ok(Ok(done)) => {
+                count += done;
+                tracing::debug!(subsystem, brain_id=%brain, outcome="ok", elapsed_ms, "Maintenance completed");
+            }
+            Ok(Err(error)) => {
+                tracing::warn!(subsystem, brain_id=%brain, outcome="error", code=error.1, elapsed_ms, "Maintenance is waiting");
+            }
+            Err(_) => {
+                timed_out.push(brain);
+                tracing::warn!(subsystem, brain_id=%brain, outcome="timeout", code="brain_budget", elapsed_ms, "Maintenance exceeded its Brain budget");
+            }
+        }
+    }
+    attempts(subsystem, |a| {
+        timed_out.into_iter().for_each(|b| a.record(b))
+    });
+    count
+}
 
 /// Delay between polls of one lane: starts at `base`, doubles while claims
 /// return nothing up to `cap`, and resets as soon as a job is claimed.
@@ -541,6 +637,141 @@ mod tests {
         )
         .await;
         assert_eq!(result, Err(Failure::LostLease));
+    }
+
+    fn brains(count: usize) -> Vec<(Uuid, Uuid)> {
+        (0..count)
+            .map(|_| (Uuid::new_v4(), Uuid::new_v4()))
+            .collect()
+    }
+    type Log = std::sync::Arc<std::sync::Mutex<Vec<Uuid>>>;
+    /// Work that records its Brain, then behaves as `behave` says.
+    async fn visit(
+        subsystem: &'static str,
+        brains: &[(Uuid, Uuid)],
+        log: &Log,
+        behave: impl Fn(Uuid) -> Option<Duration> + Copy,
+        failing: Option<Uuid>,
+    ) -> usize {
+        each_brain(subsystem, brains.to_vec(), |brain, _| {
+            let log = log.clone();
+            async move {
+                log.lock().unwrap().push(brain);
+                match behave(brain) {
+                    Some(wait) => tokio::time::sleep(wait).await,
+                    None => std::future::pending::<()>().await,
+                }
+                if failing == Some(brain) {
+                    return Err(crate::error::Error::missing());
+                }
+                Ok(1)
+            }
+        })
+        .await
+    }
+    fn took(log: &Log) -> Vec<Uuid> {
+        std::mem::take(&mut *log.lock().unwrap())
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_stuck_brain_times_out_and_the_others_still_run() {
+        let brains = brains(3);
+        let (stuck, log) = (brains[0].0, Log::default());
+        let started = tokio::time::Instant::now();
+        let done = visit(
+            "test-stuck",
+            &brains,
+            &log,
+            |b| (b != stuck).then_some(Duration::ZERO),
+            None,
+        )
+        .await;
+        assert_eq!(done, 2, "Only the two healthy Brains complete work");
+        assert_eq!(took(&log), brains.iter().map(|b| b.0).collect::<Vec<_>>());
+        assert_eq!(
+            started.elapsed(),
+            BRAIN_BUDGET,
+            "The stuck Brain costs exactly its budget"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_error_in_one_brain_does_not_stop_the_rest() {
+        let brains = brains(3);
+        let log = Log::default();
+        let done = visit(
+            "test-error",
+            &brains,
+            &log,
+            |_| Some(Duration::ZERO),
+            Some(brains[1].0),
+        )
+        .await;
+        assert_eq!(done, 2);
+        assert_eq!(took(&log).len(), 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_brain_that_timed_out_is_ordered_last_on_the_next_pass() {
+        let brains = brains(3);
+        let (stuck, log) = (brains[0].0, Log::default());
+        visit(
+            "test-order",
+            &brains,
+            &log,
+            |b| (b != stuck).then_some(Duration::ZERO),
+            None,
+        )
+        .await;
+        took(&log);
+        // Healthy now: the previously stuck Brain no longer leads the pass.
+        let done = visit("test-order", &brains, &log, |_| Some(Duration::ZERO), None).await;
+        assert_eq!(done, 3);
+        assert_eq!(
+            took(&log),
+            [brains[1].0, brains[2].0, brains[0].0],
+            "A Brain that exhausted its budget goes to the back, not the front"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_pass_stops_starting_brains_at_its_deadline_and_resumes_with_the_skipped() {
+        let ids: Vec<Uuid> = {
+            let list = brains(6);
+            list.iter().map(|b| b.0).collect()
+        };
+        let brains: Vec<_> = ids.iter().map(|&b| (b, Uuid::nil())).collect();
+        let log = Log::default();
+        let slow = |_| Some(Duration::from_secs(25));
+        let started = tokio::time::Instant::now();
+        // Starts at 0, 25, 50 and 75 s. At 100 s the 90 s limit
+        // (PASS_BUDGET - BRAIN_BUDGET) has passed, so the last two never start.
+        let done = visit("test-deadline", &brains, &log, slow, None).await;
+        assert_eq!(done, 4);
+        assert_eq!(took(&log), ids[..4]);
+        assert_eq!(started.elapsed(), Duration::from_secs(100));
+        // The skipped Brains were never attempted, so they lead the next pass.
+        let done = visit("test-deadline", &brains, &log, slow, None).await;
+        assert_eq!(done, 4);
+        assert_eq!(took(&log), [ids[4], ids[5], ids[0], ids[1]]);
+    }
+
+    #[test]
+    fn attempt_memory_is_bounded_and_unattempted_brains_lead() {
+        let mut attempts = Attempts::default();
+        let known = Uuid::new_v4();
+        attempts.record(known);
+        let fresh = Uuid::new_v4();
+        let mut order = [(known, Uuid::nil()), (fresh, Uuid::nil())];
+        attempts.order(&mut order);
+        assert_eq!(order[0].0, fresh);
+        for _ in 0..ATTEMPT_MEMORY {
+            attempts.record(Uuid::new_v4());
+        }
+        assert!(
+            attempts.last.len() <= ATTEMPT_MEMORY,
+            "The attempt map must stay bounded"
+        );
     }
 
     #[test]

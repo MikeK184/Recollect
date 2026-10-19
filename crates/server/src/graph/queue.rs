@@ -169,6 +169,11 @@ pub async fn rebuild(
 
 pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
     let mut tx = db::actor_tx(&state.pool, actor).await?;
+    // A Brain whose admission lock is held elsewhere must not pin a connection
+    // for the rest of its time budget; the pass moves on and retries.
+    sqlx::query("SET LOCAL lock_timeout='2s'")
+        .execute(&mut *tx)
+        .await?;
     db::require_writer(&mut tx, brain).await?;
     let first: i16 = sqlx::query_scalar("UPDATE brains SET graph_scanned_at=clock_timestamp(),graph_discovery_cursor=(graph_discovery_cursor+1)%3 WHERE id=$1 RETURNING (graph_discovery_cursor+2)::smallint%3::smallint")
         .bind(brain)
@@ -241,6 +246,9 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
             continue;
         }
         let mut tx = db::actor_tx(&state.pool, actor).await?;
+        sqlx::query("SET LOCAL lock_timeout='2s'")
+            .execute(&mut *tx)
+            .await?;
         db::require_writer(&mut tx, brain).await?;
         sqlx::query("UPDATE graph_generations SET cleaned_at=clock_timestamp() WHERE brain_id=$1 AND id=$2 AND state IN ('superseded','removed')")
             .bind(brain).bind(id).execute(&mut *tx).await?;
@@ -264,19 +272,8 @@ pub async fn run_once(state: &AppState) -> Result<usize> {
     let brains: Vec<(Uuid, Uuid)> = sqlx::query_as("SELECT * FROM recollect_graph_brains()")
         .fetch_all(&state.pool)
         .await?;
-    let mut count = 0;
-    for (brain, actor) in brains {
-        match tokio::time::timeout(
-            crate::worker::BRAIN_BUDGET,
-            maintain_brain(state, brain, actor),
-        )
-        .await
-        {
-            Ok(Ok(n)) => count += n,
-            Ok(Err(_)) | Err(_) => {
-                tracing::warn!(brain_id=%brain,"Graph maintenance remains pending")
-            }
-        }
-    }
-    Ok(count)
+    Ok(crate::worker::each_brain("graph", brains, |brain, actor| {
+        maintain_brain(state, brain, actor)
+    })
+    .await)
 }

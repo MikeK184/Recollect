@@ -9,6 +9,8 @@ mod capture;
 mod catalogue;
 #[path = "extractor_revision4.rs"]
 mod extractor_revision4;
+#[path = "maintenance_budget.rs"]
+mod maintenance_budget;
 #[path = "mapping_contract.rs"]
 mod mapping_contract;
 #[path = "mcp_memory.rs"]

@@ -700,12 +700,5 @@ pub async fn run_once(state: &AppState) -> Result<usize> {
         sqlx::query_as("SELECT brain_id,actor_id FROM recollect_autonomous_brains()")
             .fetch_all(&state.pool)
             .await?;
-    let mut count = 0;
-    for (id, actor) in brains {
-        match brain(state, id, actor).await {
-            Ok(n) => count += n,
-            Err(e) => tracing::warn!(brain_id=%id,code=e.1,"Autonomous maintenance is waiting"),
-        }
-    }
-    Ok(count)
+    Ok(crate::worker::each_brain("autonomous", brains, |id, actor| brain(state, id, actor)).await)
 }
