@@ -181,7 +181,12 @@ impl CredentialSlot {
             Err(_) => Err(storage_error()),
         };
         #[cfg(not(target_os = "macos"))]
-        match self.entry.as_ref().ok_or_else(storage_error)?.delete_credential() {
+        match self
+            .entry
+            .as_ref()
+            .ok_or_else(storage_error)?
+            .delete_credential()
+        {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(_) => Err(storage_error()),
         }
