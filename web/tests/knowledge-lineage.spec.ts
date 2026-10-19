@@ -6,6 +6,12 @@ import AxeBuilder from "@axe-core/playwright";
 // Knowledge views, dense rows that keep every status dimension readable as
 // text, and keyboard reachability with focus return.
 
+// Chunks that belong to the lazy Knowledge surface. The Claims panel is split
+// into ClaimDialog, ClaimEditor, ClaimEvidenceDialog, claimsShared, the Claims*
+// list modules and the useClaim* hooks; Rollup names a shared split after one
+// of them, so every Claim*, claimsShared and useClaim* chunk must stay lazy.
+const knowledgeChunk =
+  /\/(?:KnowledgeSurface|Claim\w*|claimsShared|useClaim\w*)-[\w-]+\.js$/;
 const inspector = (page: Page) =>
   page.getByRole("complementary", { name: "Lineage inspector", exact: true });
 const switcher = (page: Page) =>
@@ -170,11 +176,9 @@ test("selecting a memory shows content, evidence with exact versions and a bound
         })),
     );
   const beforeKnowledge = await scripts();
-  expect(
-    beforeKnowledge.some((entry) =>
-      /KnowledgeSurface-|ClaimsPanel-|ClaimReviewDialog-/.test(entry.file),
-    ),
-  ).toBe(false);
+  expect(beforeKnowledge.some((entry) => knowledgeChunk.test(entry.file))).toBe(
+    false,
+  );
   await page.goto(`/brains/${fixture.brain}/memory`);
   const beforeSelection = await scripts();
   const region = inspector(page);
@@ -208,10 +212,16 @@ test("selecting a memory shows content, evidence with exact versions and a bound
   );
   await page.keyboard.press("Escape");
   await expect(evidenceDialog).not.toBeVisible();
+  const afterEvidence = await scripts();
+  // The guard above is only meaningful while the pattern still names the
+  // chunks that load; opening a memory and its evidence must have fetched one.
+  expect(afterEvidence.some((entry) => knowledgeChunk.test(entry.file))).toBe(
+    true,
+  );
   writeFileSync(
     "../.cache/desktop-final-browser-assets.json",
     JSON.stringify(
-      { beforeKnowledge, beforeSelection, afterEvidence: await scripts() },
+      { beforeKnowledge, beforeSelection, afterEvidence },
       null,
       2,
     ),

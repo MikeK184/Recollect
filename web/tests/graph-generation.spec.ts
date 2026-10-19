@@ -5,6 +5,7 @@ import { createServer } from "node:net";
 import { once } from "node:events";
 import { fileURLToPath } from "node:url";
 import type { components } from "../src/api-schema";
+import { openGraphDrawer } from "./desktop-helpers";
 type Generation = components["schemas"]["GraphGeneration"];
 let vite: ChildProcess, origin: string;
 test.beforeAll(async () => {
@@ -336,6 +337,157 @@ test("same-epoch superseded generation clears scene and inspector until an expli
   expect(f.state.posts.every((path) => path.endsWith("/graph/explore"))).toBe(
     true,
   );
+  expect(f.errors).toEqual([]);
+});
+
+// Reads, and optionally moves, the 3D camera through the canvas component's own
+// force-graph ref, found on the React fiber as graph-3d.spec.ts does. The move
+// uses the library's cameraPosition, the call a real orbit ends in.
+async function camera(page: Page, to?: number[]) {
+  return page
+    .getByTestId("graph-canvas")
+    .evaluate((element: any, move?: number[]) => {
+      let fiber =
+        element[
+          Object.keys(element).find((key) => key.startsWith("__reactFiber"))!
+        ];
+      let api: any;
+      while (fiber && !api) {
+        let hook = fiber.memoizedState;
+        while (hook) {
+          const candidate = hook.memoizedState?.current;
+          if (typeof candidate?.cameraPosition === "function") {
+            api = candidate;
+            break;
+          }
+          hook = hook.next;
+        }
+        fiber = fiber.return;
+      }
+      if (!api) throw Error("Graph canvas ref unavailable");
+      if (move) {
+        const target = api.controls().target;
+        api.cameraPosition(
+          { x: move[0], y: move[1], z: move[2] },
+          { x: target.x, y: target.y, z: target.z },
+          0,
+        );
+      }
+      const position = api.camera().position;
+      return [position.x, position.y, position.z];
+    }, to);
+}
+
+test("an equal exploration request restores the camera, a different scene fits afresh", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fitted = await camera(page);
+  const moved = await camera(page, [
+    fitted[0] + 80,
+    fitted[1] + 60,
+    fitted[2] + 40,
+  ]);
+  expect(moved).not.toEqual(fitted);
+  const reads = f.state.explores;
+  // The same center, direction and hop bound is a new read but not a new
+  // renderer key: the canvas unmounts around the read and the explorer-owned
+  // session puts the camera back where the user left it.
+  const gate = deferred();
+  f.state.readWait = gate.promise;
+  await openGraphDrawer(page, "Explore relationships", "Explore");
+  await page
+    .getByRole("button", { name: "Show eligible overview", exact: true })
+    .click();
+  await expect(f.canvas).toHaveCount(0);
+  f.state.readWait = null;
+  gate.resolve();
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  expect(f.state.explores).toBe(reads + 1);
+  const restored = await camera(page);
+  restored.forEach((value, axis) => expect(value).toBeCloseTo(moved[axis], 1));
+  // A different center reads a different scene (a new renderer key and a new
+  // topology): the camera is fitted to it instead of inheriting the moved one.
+  f.state.visibleCount = 2;
+  const next = deferred();
+  f.state.readWait = next.promise;
+  await openGraphDrawer(page, "Explore relationships", "Explore");
+  await page
+    .getByLabel("Exploration center", { exact: true })
+    .fill(`source_version:${f.version}`);
+  await page
+    .getByRole("button", { name: "Explore from center", exact: true })
+    .click();
+  await expect(f.canvas).toHaveCount(0);
+  f.state.readWait = null;
+  next.resolve();
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  expect(f.state.explores).toBe(reads + 2);
+  const refitted = await camera(page);
+  expect(
+    refitted.some((value, axis) => Math.abs(value - moved[axis]) > 1),
+  ).toBe(true);
+  expect(f.errors).toEqual([]);
+});
+
+test("a background generation poll keeps the renderer and its camera", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fitted = await camera(page);
+  const moved = await camera(page, [
+    fitted[0] + 80,
+    fitted[1] + 60,
+    fitted[2] + 40,
+  ]);
+  await f.canvas.evaluate((element) => {
+    (element as HTMLElement & { cameraProbe?: string }).cameraProbe = "kept";
+  });
+  const reads = f.state.explores;
+  // Two heartbeats verify the accepted scene against the server. Neither may
+  // remount the canvas, refit the camera or issue another exploration read.
+  await heartbeat(f);
+  await heartbeat(f);
+  expect(
+    await f.canvas.evaluate(
+      (element) =>
+        (element as HTMLElement & { cameraProbe?: string }).cameraProbe,
+    ),
+  ).toBe("kept");
+  (await camera(page)).forEach((value, axis) =>
+    expect(value).toBeCloseTo(moved[axis], 1),
+  );
+  expect(f.state.explores).toBe(reads);
+  expect(f.errors).toEqual([]);
+});
+
+test("a scene replaced after a superseded generation starts with a fresh camera", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fitted = await camera(page);
+  const moved = await camera(page, [
+    fitted[0] + 80,
+    fitted[1] + 60,
+    fitted[2] + 40,
+  ]);
+  // The superseded generation discards the scene with its explorer, and with it
+  // the camera session; only an explicit read brings a new scene back.
+  f.state.generations = [{ ...f.original, state: "superseded" }, f.replacement];
+  await expect(f.canvas).toHaveCount(0, { timeout: 6500 });
+  f.state.current = f.replacement;
+  await page
+    .getByRole("button", { name: "Load graph view", exact: true })
+    .click();
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fresh = await camera(page);
+  expect(fresh.some((value, axis) => Math.abs(value - moved[axis]) > 1)).toBe(
+    true,
+  );
+  fresh.forEach((value, axis) => expect(value).toBeCloseTo(fitted[axis], 0));
   expect(f.errors).toEqual([]);
 });
 
