@@ -116,6 +116,33 @@ async fn verdicts(
     expected
 }
 
+/// The owner-rights connection has no actor and no row-level security applies
+/// to it, as for the privacy closure that calls the predicate: the scalar function
+/// must keep answering unfiltered, like the previous body and the unchanged core.
+async fn exempt_verdicts(
+    h: &Harness,
+    brain: Uuid,
+    targets: &[Uuid],
+) -> std::collections::BTreeMap<Uuid, bool> {
+    let rows: Vec<(Uuid, bool, bool, bool)> = sqlx::query_as(&format!(
+        "SELECT t.id,recollect_memory_supported($1,t.id),{REFERENCE}($1,t.id),recollect_memory_supported_core($1,t.id) FROM unnest($2::uuid[]) t(id)"
+    ))
+    .bind(brain)
+    .bind(targets)
+    .fetch_all(&h.admin)
+    .await
+    .unwrap();
+    let mut verdicts = std::collections::BTreeMap::new();
+    for (id, scalar, old, core) in rows {
+        assert!(
+            scalar == old && core == old,
+            "Owner-rights support changed for {id}: scalar {scalar}, core {core}, previous {old}"
+        );
+        verdicts.insert(id, old);
+    }
+    verdicts
+}
+
 /// Every revision of every Brain, asked about in each Brain's context, so the
 /// foreign-Brain revisions are exercised too. Members must get the previous
 /// body's verdict and a non-member must get false from both.
@@ -132,7 +159,13 @@ pub(crate) async fn assert_equivalent(
     let mut result = std::collections::BTreeMap::new();
     for brain in brains {
         let owner = owner_of(h, *brain).await;
-        for (id, supported) in verdicts(h, *brain, Some(owner), &targets).await {
+        let members = verdicts(h, *brain, Some(owner), &targets).await;
+        assert_eq!(
+            exempt_verdicts(h, *brain, &targets).await,
+            members,
+            "An owner-rights caller and a member see the same support"
+        );
+        for (id, supported) in members {
             result.insert((*brain, id), supported);
         }
         for (id, supported) in verdicts(h, *brain, None, &targets).await {
@@ -143,8 +176,7 @@ pub(crate) async fn assert_equivalent(
 }
 
 /// The previous body's verdict for one revision as the Brain owner, with the
-/// scalar, batch and non-member results asserted equal to it first. Existing
-/// scenarios call this where they used to ask an unauthenticated connection.
+/// scalar, batch, owner-rights and non-member results asserted equal to it first.
 pub(crate) async fn checked(h: &Harness, brain: Uuid, revision: Uuid) -> bool {
     install_reference(h).await;
     let all: Vec<Uuid> = sqlx::query_scalar("SELECT id FROM claim_revisions WHERE brain_id=$1")
@@ -158,50 +190,15 @@ pub(crate) async fn checked(h: &Harness, brain: Uuid, revision: Uuid) -> bool {
         targets.push(revision);
     }
     let members = verdicts(h, brain, Some(owner), &targets).await;
+    assert_eq!(
+        exempt_verdicts(h, brain, &targets).await,
+        members,
+        "An owner-rights caller and a member see the same support"
+    );
     for (id, supported) in verdicts(h, brain, None, &targets).await {
         assert!(!supported, "A non-member never sees support for {id}");
     }
     members[&revision]
-}
-
-/// `recollect_memory_supported` is membership-gated, so a bare administrative
-/// connection (which has no actor) sees false. Scenarios that inspect support
-/// through `pool` ask as the owner of the revision's Brain instead.
-pub(crate) async fn supported_as_owner(pool: &sqlx::PgPool, revision: Uuid) -> bool {
-    let mut tx = pool.begin().await.unwrap();
-    sqlx::query("SELECT set_config('recollect.actor',(SELECT b.owner_id::text FROM claim_revisions r JOIN brains b ON b.id=r.brain_id WHERE r.id=$1),true)")
-        .bind(revision)
-        .execute(&mut *tx)
-        .await
-        .unwrap();
-    let verdict = sqlx::query_scalar(
-        "SELECT recollect_memory_supported(brain_id,id) FROM claim_revisions WHERE id=$1",
-    )
-    .bind(revision)
-    .fetch_one(&mut *tx)
-    .await
-    .unwrap();
-    tx.rollback().await.unwrap();
-    verdict
-}
-
-/// The owner-context verdict of every session digest claim of the Brain.
-pub(crate) async fn digest_verdicts(pool: &sqlx::PgPool, brain: Uuid) -> Vec<bool> {
-    let mut tx = pool.begin().await.unwrap();
-    sqlx::query(
-        "SELECT set_config('recollect.actor',(SELECT owner_id::text FROM brains WHERE id=$1),true)",
-    )
-    .bind(brain)
-    .execute(&mut *tx)
-    .await
-    .unwrap();
-    let verdicts = sqlx::query_scalar("SELECT recollect_memory_supported(brain_id,revision_id) FROM session_digest_claims WHERE brain_id=$1 ORDER BY claim_id")
-        .bind(brain)
-        .fetch_all(&mut *tx)
-        .await
-        .unwrap();
-    tx.rollback().await.unwrap();
-    verdicts
 }
 
 /// Table, row-level security flag, then policy name, permissive flag, command and
@@ -223,7 +220,7 @@ async fn policy_problems(h: &Harness) -> (Vec<String>, Vec<String>) {
     let rows: Vec<PolicyRow> = sqlx::query_as(
         "WITH RECURSIVE closure(oid) AS (
            SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-           WHERE n.nspname='public' AND p.proname IN ('recollect_memory_supported','recollect_memory_supported_many')
+           WHERE n.nspname='public' AND p.proname IN ('recollect_memory_supported_core','recollect_memory_supported_many')
            UNION
            SELECT q.oid FROM closure c JOIN pg_proc cp ON cp.oid=c.oid
             JOIN pg_proc q ON q.pronamespace=cp.pronamespace AND q.proname LIKE 'recollect\\_%'

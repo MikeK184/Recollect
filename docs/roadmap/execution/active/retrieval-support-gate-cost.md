@@ -43,18 +43,29 @@ Implementation: authorized by the repository owner on 2026-10-19
   clauses, so a policy evaluation costs a function-context switch per visited
   row. The same predicate costs about 0.8 ms per revision as the superuser, so
   the cost is policy evaluation, not plans or indexes.
-- Migration `068_support_gate_definer.sql` recreates `recollect_memory_supported`
-  as `LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp`. It
-  returns false when `recollect_role(b)` is NULL, otherwise it evaluates the
-  unchanged 043/046 predicate tree. Results are identical because every read
-  policy on the tables the tree reads reduces to Brain membership (derived
-  from `pg_policy` and enforced by a guard test); the actor GUC is session
-  state, so `recollect_role` inside the function still sees the caller. The
-  pattern is that of the migration 065 window functions. The migration owner
-  bypasses row security, as it does for those functions.
+- Migration `068_support_gate_definer.sql` splits the scalar function by whether
+  row-level security applies to the caller. `recollect_memory_supported_core` is
+  the unchanged 043/046 predicate with the caller's rights;
+  `recollect_memory_supported_member` is
+  `LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp`, returns
+  false when `recollect_role(b)` is NULL and otherwise evaluates the core; and
+  `recollect_memory_supported` (same name, owner and grants) calls the member
+  form when `row_security_active('claim_revisions')` and the core otherwise.
+  Results are identical because every read policy on the tables the predicate
+  reads reduces to Brain membership (derived from `pg_policy` and enforced by a
+  guard test); the actor GUC is session state, so `recollect_role` inside the
+  function still sees the caller. The pattern is that of the migration 065
+  window functions, and the migration owner bypasses row security as it does for
+  those. The first design (a plain definer function with the membership test)
+  broke `automatic_digest_preserves_completed_responses_and_retained_inputs`:
+  migration 039's owner-rights `recollect_privacy_closure` calls the predicate
+  without an actor, got false, and cancelled a valid digest job. Owner-rights
+  callers therefore keep their unfiltered evaluation, which is also what an
+  invoker-rights function gave a caller that row security does not apply to.
 - `recollect_memory_supported_many(b uuid, targets uuid[])` returns
   `(revision_id, supported)` per distinct target with the same membership
-  check. It computes one recursive closure for all targets, evaluates each
+  check (for actor contexts; a caller without a Brain role gets false, the safe
+  answer). It computes one recursive closure for all targets, evaluates each
   distinct revision once with the existing per-revision gates, then combines
   per target exactly as the scalar form: every closure member supported and
   acyclic, no non-root handover, every member digest-current.

@@ -571,14 +571,6 @@ async fn support_audit_discovery_all_recorded_states_policy_verifier_and_rls_mat
 
 async fn original_support_predicates_match(h: &Harness, brain: Uuid) {
     let mut tx = h.admin.begin().await.unwrap();
-    // The current scalar function is membership-gated, so evaluate as the owner.
-    sqlx::query(
-        "SELECT set_config('recollect.actor',(SELECT owner_id::text FROM brains WHERE id=$1),true)",
-    )
-    .bind(brain)
-    .execute(&mut *tx)
-    .await
-    .unwrap();
     for (source, name, original) in [
         (
             include_str!("../../migrations/037_memory_revision_support.sql"),
@@ -633,8 +625,7 @@ async fn original_support_predicates_match(h: &Harness, brain: Uuid) {
         recollect_revision_supported($1,id) IS DISTINCT FROM pg_temp.original_revision_supported($1,id)
         OR recollect_pre_digest_supported($1,id) IS DISTINCT FROM pg_temp.original_pre_digest_supported($1,id)
         OR recollect_memory_supported($1,id) IS DISTINCT FROM pg_temp.original_memory_supported($1,id)
-        OR (SELECT s.supported FROM recollect_memory_supported_many($1,ARRAY(SELECT id FROM targets)) s WHERE s.revision_id=targets.id)
-          IS DISTINCT FROM pg_temp.original_memory_supported($1,id)")
+        OR recollect_memory_supported_core($1,id) IS DISTINCT FROM pg_temp.original_memory_supported($1,id)")
         .bind(brain).fetch_one(&mut *tx).await.unwrap();
     assert_eq!(
         mismatches, 0,
@@ -660,8 +651,8 @@ async fn reviewed(h: &Harness, owner: &Login, base: &str, r: &Value) -> Value {
     ok(h,"POST",&format!("{base}/claims/{}/review",r["claim_id"].as_str().unwrap()),owner,
        json!({"base_revision":r["id"],"action":"accept","reason":"Explicit isolated synthetic human review","content":null,"revalidation_basis":null})).await["claims"][0]["revision"].clone()
 }
-/// The support verdict as the Brain owner through the application role, after
-/// asserting that the scalar, batch and non-member results equal the previous body.
+/// The support verdict, after asserting that the scalar, batch, owner-rights and
+/// non-member results through each caller kind equal the previous body.
 async fn guard(h: &Harness, base: &str, r: &Value) -> bool {
     crate::support_gate::checked(h, brain_id(base), uuid(&r["id"])).await
 }
@@ -1163,8 +1154,12 @@ async fn support_audit_inflight_erasure_and_older_backup_scrub_reasons_preserve_
     let erased:(String,Option<String>,Option<String>)=sqlx::query_as("SELECT privacy_state,reason,disposition FROM memory_support_assessments WHERE revision_id=$1")
         .bind(uuid(&old["id"])).fetch_one(&backup_admin).await.unwrap();
     assert_eq!(erased, ("erased".into(), None, None));
-    let positive: bool =
-        crate::support_gate::supported_as_owner(&backup_admin, uuid(&control["id"])).await;
+    let positive: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
+        .bind(brain_id(&base))
+        .bind(uuid(&control["id"]))
+        .fetch_one(&backup_admin)
+        .await
+        .unwrap();
     assert!(
         positive,
         "Older-backup replay preserves the unrelated supported control"
@@ -2631,7 +2626,14 @@ async fn support_handover_source_erasure_replays_staged_and_published_reasons_in
                 .await
                 .unwrap();
         assert_eq!(pending, ("removed".into(), "".into(), json!({})));
-        assert!(crate::support_gate::supported_as_owner(admin, uuid(&control["id"])).await);
+        assert!(
+            sqlx::query_scalar::<_, bool>("SELECT recollect_memory_supported($1,$2)")
+                .bind(brain_id(&base))
+                .bind(uuid(&control["id"]))
+                .fetch_one(admin)
+                .await
+                .unwrap()
+        );
     }
     assert!(!worker::run_once(&h.state, "model").await.unwrap());
     assert_eq!(p.calls.load(Ordering::SeqCst), before);
