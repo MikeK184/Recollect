@@ -3,7 +3,7 @@
 Status: in-progress
 Owning epic: `docs/roadmap/epics/product-platform.md`
 Work type: product
-Implementation: authorized 2026-10-19 by the repository owner (design final, both parts)
+Implementation: authorized 2026-10-19 by the repository owner (design final, both parts); part 1 (W0, W1) delivered locally, part 2 (W2, W3) pending
 
 ## Summary
 
@@ -81,8 +81,10 @@ Implementation: authorized 2026-10-19 by the repository owner (design final, bot
   A Brain that is deleted, invisible to the caller or lost while waiting for the
   lock yields a NULL role and maps to 404. Preparation transactions keep the
   existing `recollect_lock_brain` behaviour (no lock; exclusive is rejected).
-- Opening a Brain transaction drops from six to nine round trips to one after
-  authentication; the lock namespace, modes and row locks are unchanged.
+- Admission becomes one statement after authentication (measured: two to four
+  statements before, one after); the lock namespace, modes and row locks are
+  unchanged. A write admission no longer re-takes the shared lock it already
+  held exclusively.
 
 ### Canonical order
 
@@ -154,3 +156,30 @@ lock is taken (no existence oracle; a deleted Brain is also 404). 3. Role (403).
   the five helpers moved and each admission uses one statement after
   authentication. The slice ships when W2 and W3 are delivered, the contract
   paragraph is recorded and the closing Summary names the matrix and subset runs.
+
+## Part 1 progress
+
+Part 1 (W0, W1) is delivered locally; the pack stays in-progress for part 2.
+
+- W0: `db::admission`, migration 070, eight `decide()` unit tests, the golden
+  matrix (eleven principal/transport rows by three Brain states by eleven
+  endpoints, 363 asserted cells recorded on the unmodified helpers) and platform
+  tests for the lock held, statements per admission, role and archive read after
+  the lock wait, no queueing for an invisible Brain, and the worker and
+  preparation variants.
+- W1: the MCP, coordination (including A2A), skills, workspace, publication and
+  evidence helpers, plus the gateway `authorize` and `check`, the manual-intent
+  preparation read, the semantic status, reindex, preparation and retry handlers
+  and the graph status and rebuild handlers, all on `brain_tx`, with the matrix
+  unchanged and identical per-test results for the six-family platform subset.
+- Measured: admission statements after authentication were two to four (H4 two;
+  H1 read, H3 three; H1 write, H2, H5 four) and are one. A write admission held
+  the exclusive and a redundant shared advisory lock and now holds the exclusive
+  lock alone; reads still hold the shared lock.
+- Left for part 2 beyond W2 and W3: the sites that set `lock_timeout` or
+  `statement_timeout` between opening the transaction and the lock (semantic
+  survey and publish, graph maintenance and cleanup, model preview) need a
+  pre-admission setting on `BrainAccess` or stay inline; one manual-intent site
+  runs on an existing transaction. Inline sites at the end of part 1: 86
+  `require_role(false)`, 26 `require_role(true)`, 47 `require_writer`, 17
+  `lock_brain`.
