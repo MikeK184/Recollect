@@ -10,4 +10,3 @@ are in the [roadmap](../../epics/index.md); shipped packs are in Git history.
 | [operations-memory-quality-first-batch](operations-memory-quality-first-batch.md) | in-progress |
 | [graph-concurrent-preparation](graph-concurrent-preparation.md) | in-progress |
 | [mcp-copy-ready-agent-config](mcp-copy-ready-agent-config.md) | in-progress |
-| [memory-supersession-support-boundary](memory-supersession-support-boundary.md) | in-progress |

@@ -101,7 +101,7 @@ complete local acceptance. No running-installation deployment is claimed.
 | `memory-capture-reconciliation` | shipped | contract-backed | archived | Delivered attributed model inputs, bound session reconciliation, maintenance at capacity, recall-feedback exclusions and independent capture/knowledge time with database/native/browser/real-Luna proof |
 | `memory-desktop-workflows` | shipped | adr-backed, contract-backed | archived | Readable memory/handover inspectors and standing settings with literal assertion search and preserved autonomous authority |
 | `memory-managed-experience` | shipped | contract-backed | archived | Managed autonomous defaults, simple Ask/notes and actionable owner MCP setup |
-| `memory-supersession-support-boundary` | in-progress | contract-backed | pack | Same-claim replacement/retirement edges stay erasure dependencies but stop inheriting the replaced revision's source expiry in the support, batch and deadline checks |
+| `memory-supersession-support-boundary` | shipped | contract-backed | archived | Same-claim replacement edges stay erasure and audit dependencies but leave the support, batch and deadline closure (migration 071); proved by the independent support_gate reference plus three boundary cases, the capture publication case, a 145/157 platform subset with only the 12 baseline failures, fmt, Clippy and validate.sh |
 
 `brain-openrouter-glm-throughput` is an inline slice (no pack): the accepted
 selection contract and renewed user GLM/Qwen instruction establish authority;
