@@ -11,12 +11,7 @@ pub fn assertion_key(value: &str, lowercase: bool) -> String {
     }
 }
 pub(crate) fn text(value: &str, max: usize, required: bool) -> Result<()> {
-    if (required && value.trim().is_empty())
-        || value.chars().count() > max
-        || value
-            .chars()
-            .any(|c| c.is_control() && c != '\n' && c != '\t')
-    {
+    if !crate::text_rules::valid(value, max, required, true) {
         return Err(Error::invalid(
             "Claim text is empty, too long or contains unsupported control characters.",
         ));

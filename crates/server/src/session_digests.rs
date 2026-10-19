@@ -89,12 +89,16 @@ pub(crate) async fn prepare_partition(
     .bind(&ids)
     .fetch_one(&mut **tx)
     .await?;
+    // Each candidate is viewed exactly once. Its serialized contribution to the
+    // synthesis input is kept so paging never has to view a claim again.
+    let mut sizes = std::collections::BTreeMap::new();
     for Json(r) in rows {
         let v = memory::view(state, tx, r, chrono::Utc::now(), None).await?;
         if v.eligibility.investigation
             && v.eligibility.rule_ids.is_empty()
             && v.revision.content.freshness == "current"
         {
+            sizes.insert(v.revision.id, contributor_size(&v));
             eligible.push(v);
         }
     }
@@ -105,21 +109,32 @@ pub(crate) async fn prepare_partition(
     let mut pages = Vec::new();
     let mut page = Vec::new();
     let mut allowance = (0, 0);
+    let mut page_size = 0usize;
+    let limit = policy.policy.max_input_bytes as usize;
     for v in eligible {
-        let mut trial = page.clone();
-        trial.push(v.revision.id);
-        if let Preflight::Fits(n) = preflight(state, tx, brain, &p, &trial, policy).await? {
-            page = trial;
-            allowance = n;
-            continue;
+        let size = sizes[&v.revision.id];
+        // Accumulated view size alone proves a page is full; no preflight needed.
+        if page.is_empty() || synthesis_base() + page_size + size <= limit {
+            let mut trial = page.clone();
+            trial.push(v.revision.id);
+            if let Preflight::Fits(n) =
+                preflight(state, tx, brain, &p, &trial, policy, Some(&sizes)).await?
+            {
+                page = trial;
+                page_size += size;
+                allowance = n;
+                continue;
+            }
         }
         if !page.is_empty() {
             pages.push((std::mem::take(&mut page), allowance));
+            page_size = 0;
         }
         let single = vec![v.revision.id];
-        match preflight(state, tx, brain, &p, &single, policy).await? {
+        match preflight(state, tx, brain, &p, &single, policy, Some(&sizes)).await? {
             Preflight::Fits(n) => {
                 page = single;
+                page_size = size;
                 allowance = n;
             }
             Preflight::Omitted(reason) => {
@@ -179,7 +194,7 @@ pub(crate) async fn publish_page(
     }
     // Wall-clock expiry can change without an epoch increment. Revalidate the
     // complete exact page, including input fences and every retained support.
-    if !matches!(preflight(state, tx, brain, p, ids, policy).await?, Preflight::Fits(n) if n == *allowance)
+    if !matches!(preflight(state, tx, brain, p, ids, policy, None).await?, Preflight::Fits(n) if n == *allowance)
     {
         return Ok(PageOutcome::Deferred);
     }
@@ -320,6 +335,21 @@ pub(crate) async fn finish_partition(
     Ok(())
 }
 
+/// Fixed part of the synthesis input before any contributor is added.
+fn synthesis_base() -> usize {
+    "Session continuation".len() + serde_json::json!({"kind":"query"}).to_string().len()
+}
+
+/// A contributor's serialized view plus its input reference in the synthesis input.
+fn contributor_size(view: &recollect_protocol::ClaimView) -> usize {
+    serde_json::to_vec(view).expect("typed input").len()
+        + serde_json::json!({"kind":"claim_revision","id":view.revision.id})
+            .to_string()
+            .len()
+}
+
+/// `sizes` holds the already-viewed contributors of one preparation snapshot.
+/// Publication passes `None` and views every contributor again under its own lock.
 async fn preflight(
     state: &AppState,
     tx: &mut Tx<'_>,
@@ -327,6 +357,7 @@ async fn preflight(
     p: &Partition,
     ids: &[Uuid],
     policy: &ModelPolicyVersion,
+    sizes: Option<&std::collections::BTreeMap<Uuid, usize>>,
 ) -> Result<Preflight> {
     if ids.len() > 12 {
         return Ok(Preflight::Omitted("whole_input_budget"));
@@ -341,14 +372,14 @@ async fn preflight(
     if supports.len() > 20 {
         return Ok(Preflight::Omitted("support_count_budget"));
     }
-    let mut synthesis =
-        "Session continuation".len() + serde_json::json!({"kind":"query"}).to_string().len();
+    let mut synthesis = synthesis_base();
     for c in &contributors {
-        let v = memory::view(state, tx, c.clone(), chrono::Utc::now(), None).await?;
-        synthesis += serde_json::to_vec(&v).expect("typed input").len()
-            + serde_json::json!({"kind":"claim_revision","id":c.id})
-                .to_string()
-                .len();
+        synthesis += match sizes.and_then(|sizes| sizes.get(&c.id)) {
+            Some(size) => *size,
+            None => contributor_size(
+                &memory::view(state, tx, c.clone(), chrono::Utc::now(), None).await?,
+            ),
+        };
     }
     let limit = policy.policy.max_input_bytes as usize;
     if synthesis > limit {

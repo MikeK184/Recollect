@@ -420,31 +420,7 @@ fn body(
                 json!({"model":p.text_model,"store":false,"max_output_tokens":p.max_output_tokens,
                     "instructions":inv.instructions,"input":input})
             };
-            if p.provider == "openrouter" && p.text_model == "z-ai/glm-5.3-flash" {
-                result["reasoning"] = json!({"effort":"low"});
-            }
-            if p.provider == "openrouter" && p.text_model == "z-ai/glm-4.7-flash" {
-                result["reasoning"] = json!({"enabled":false});
-            }
-            if p.provider == "openrouter"
-                && matches!(
-                    p.text_model.as_str(),
-                    "z-ai/glm-5.3-flash" | "z-ai/glm-4.7-flash"
-                )
-            {
-                result["provider"]["sort"] = json!("throughput");
-                result["provider"]["max_price"] = json!({"prompt":0.15,"completion":0.5});
-                if p.text_model == "z-ai/glm-5.3-flash" {
-                    result["provider"].as_object_mut().unwrap().remove("sort");
-                    result["provider"]["only"] = json!(["deepinfra/fp4"]);
-                }
-            }
-            if p.provider == "openrouter" && p.text_model == "openai/gpt-6-luna" {
-                result["reasoning"] = json!({"effort":"none"});
-            }
-            if p.text_model == "gpt-5.6-luna" {
-                result["reasoning"] = json!({"effort":"none"});
-            }
+            apply_route(&mut result, &p.provider, &p.text_model);
             if let Format::Json { name, schema } = format {
                 if p.provider == "openrouter" {
                     result["response_format"] = json!({"type":"json_schema","json_schema":{"name":name,"strict":true,"schema":schema}});
@@ -458,6 +434,82 @@ fn body(
     safe_input(state, &result)?;
     Ok(result)
 }
+/// Per-model overrides applied to the provider request. Operators replace the
+/// whole table with `RECOLLECT_MODEL_ROUTES` (a JSON array of these entries);
+/// `routing` keys are merged into the OpenRouter `provider` preferences and
+/// `reasoning` becomes the request's `reasoning` object. An unlisted model is
+/// sent with the base request only.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ModelRoute {
+    provider: String,
+    model: String,
+    #[serde(default)]
+    reasoning: Option<Value>,
+    #[serde(default)]
+    routing: serde_json::Map<String, Value>,
+}
+
+const DEFAULT_MODEL_ROUTES: &str = r#"[
+  {"provider":"openrouter","model":"z-ai/glm-5.3-flash","reasoning":{"effort":"low"},
+   "routing":{"only":["deepinfra/fp4"],"max_price":{"prompt":0.15,"completion":0.5}}},
+  {"provider":"openrouter","model":"z-ai/glm-4.7-flash","reasoning":{"enabled":false},
+   "routing":{"sort":"throughput","max_price":{"prompt":0.15,"completion":0.5}}},
+  {"provider":"openrouter","model":"openai/gpt-6-luna","reasoning":{"effort":"none"}},
+  {"provider":"openai","model":"gpt-5.6-luna","reasoning":{"effort":"none"}}
+]"#;
+
+fn parse_routes(raw: &str) -> std::result::Result<Vec<ModelRoute>, serde_json::Error> {
+    serde_json::from_str(raw)
+}
+
+fn model_routes() -> &'static [ModelRoute] {
+    static ROUTES: std::sync::OnceLock<Vec<ModelRoute>> = std::sync::OnceLock::new();
+    ROUTES.get_or_init(|| {
+        if let Ok(raw) = std::env::var("RECOLLECT_MODEL_ROUTES") {
+            match parse_routes(&raw) {
+                Ok(routes) => return routes,
+                Err(error) => tracing::error!(
+                    %error,
+                    "RECOLLECT_MODEL_ROUTES is not a valid route table; using the built-in routes"
+                ),
+            }
+        }
+        parse_routes(DEFAULT_MODEL_ROUTES).expect("built-in model routes are valid")
+    })
+}
+
+fn apply_route(result: &mut Value, provider: &str, model: &str) {
+    apply_route_from(model_routes(), result, provider, model);
+}
+
+fn apply_route_from(routes: &[ModelRoute], result: &mut Value, provider: &str, model: &str) {
+    let Some(route) = routes
+        .iter()
+        .find(|route| route.provider == provider && route.model == model)
+    else {
+        return;
+    };
+    if let Some(reasoning) = &route.reasoning {
+        result["reasoning"] = reasoning.clone();
+    }
+    if provider == "openrouter" {
+        for (key, value) in &route.routing {
+            result["provider"][key] = value.clone();
+        }
+    }
+}
+
+/// Fixed admission headroom added to every reservation for provider-side
+/// framing the request length does not show. It is never charged on its own.
+const RESERVATION_HEADROOM_TOKENS: i64 = 2048;
+
+/// Input tokens are estimated from the serialized request length; providers
+/// report real usage after the call, which replaces this for the final charge.
+pub(crate) fn estimate_input_tokens(bytes: usize) -> i64 {
+    bytes.div_ceil(3).max(1) as i64
+}
+
 struct ProviderResult {
     output: Option<Output>,
     code: Option<&'static str>,
@@ -945,8 +997,9 @@ async fn invoke_inner(
             "The complete model request exceeds the application limit.",
         ));
     }
-    let reservation = bytes as i64
-        + 2048
+    let estimated_input = estimate_input_tokens(bytes);
+    let reservation = estimated_input
+        + RESERVATION_HEADROOM_TOKENS
         + if matches!(inv.format, Format::Embedding) {
             0
         } else {
@@ -975,8 +1028,8 @@ async fn invoke_inner(
     } else {
         &version.policy.text_model
     };
-    sqlx::query("INSERT INTO model_requests(id,brain_id,actor_id,device_id,operation_id,policy_id,purpose,model,prompt_label,schema_label,state,call_token,reserved_tokens,charged_tokens,provider) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'running',$11,$12,$12,$13)")
-        .bind(id).bind(context.brain).bind(context.actor).bind(context.device).bind(inv.operation).bind(version.change_id).bind(&inv.purpose).bind(model).bind(&inv.prompt_label).bind(&inv.schema_label).bind(token).bind(reservation).bind(&version.policy.provider).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO model_requests(id,brain_id,actor_id,device_id,operation_id,policy_id,purpose,model,prompt_label,schema_label,state,call_token,reserved_tokens,charged_tokens,provider,estimated_input_tokens) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'running',$11,$12,$12,$13,$14)")
+        .bind(id).bind(context.brain).bind(context.actor).bind(context.device).bind(inv.operation).bind(version.change_id).bind(&inv.purpose).bind(model).bind(&inv.prompt_label).bind(&inv.schema_label).bind(token).bind(reservation).bind(&version.policy.provider).bind(estimated_input).execute(&mut *tx).await?;
     for input in &dependencies {
         sqlx::query("INSERT INTO model_request_inputs(request_id,brain_id,kind,input_id) VALUES($1,$2,$3,$4)")
             .bind(id).bind(context.brain).bind(&input.kind).bind(input.id).execute(&mut *tx).await?;
@@ -1180,4 +1233,59 @@ pub async fn check(
     Ok(Json(ModelCheckResult {
         requests: vec![text.request, embedding.request],
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_estimate_rounds_up_and_is_never_zero() {
+        assert_eq!(estimate_input_tokens(0), 1);
+        assert_eq!(estimate_input_tokens(3), 1);
+        assert_eq!(estimate_input_tokens(4), 2);
+        assert_eq!(estimate_input_tokens(65_536), 21_846);
+    }
+
+    #[test]
+    fn default_routes_keep_the_reviewed_provider_preferences() {
+        let routes = parse_routes(DEFAULT_MODEL_ROUTES).unwrap();
+        let base = json!({"provider":{"require_parameters":true,"allow_fallbacks":false}});
+        let mut flash = base.clone();
+        apply_route_from(&routes, &mut flash, "openrouter", "z-ai/glm-5.3-flash");
+        assert_eq!(flash["reasoning"], json!({"effort":"low"}));
+        assert_eq!(flash["provider"]["only"], json!(["deepinfra/fp4"]));
+        assert_eq!(
+            flash["provider"]["max_price"],
+            json!({"prompt":0.15,"completion":0.5})
+        );
+        assert!(flash["provider"].get("sort").is_none());
+        assert_eq!(flash["provider"]["allow_fallbacks"], false);
+        let mut older = base.clone();
+        apply_route_from(&routes, &mut older, "openrouter", "z-ai/glm-4.7-flash");
+        assert_eq!(older["reasoning"], json!({"enabled":false}));
+        assert_eq!(older["provider"]["sort"], "throughput");
+        let mut direct = json!({"model":"gpt-5.6-luna"});
+        apply_route_from(&routes, &mut direct, "openai", "gpt-5.6-luna");
+        assert_eq!(direct["reasoning"], json!({"effort":"none"}));
+        assert!(direct.get("provider").is_none());
+        let mut unlisted = base.clone();
+        apply_route_from(&routes, &mut unlisted, "openrouter", "vendor/other");
+        assert_eq!(unlisted, base);
+    }
+
+    #[test]
+    fn route_tables_are_provider_scoped_and_strict() {
+        let routes = parse_routes(
+            r#"[{"provider":"openrouter","model":"vendor/m","routing":{"sort":"price"}}]"#,
+        )
+        .unwrap();
+        let mut other_provider = json!({"model":"vendor/m"});
+        apply_route_from(&routes, &mut other_provider, "openai", "vendor/m");
+        assert!(other_provider.get("provider").is_none());
+        let mut matched = json!({"provider":{}});
+        apply_route_from(&routes, &mut matched, "openrouter", "vendor/m");
+        assert_eq!(matched["provider"]["sort"], "price");
+        assert!(parse_routes(r#"[{"provider":"openrouter","model":"m","unknown":1}]"#).is_err());
+    }
 }

@@ -22,12 +22,7 @@ pub(crate) fn conflict(message: &'static str) -> Error {
     Error(StatusCode::CONFLICT, "review_conflict", message)
 }
 pub(crate) fn reason(reason: &str) -> Result<()> {
-    if reason.trim().is_empty()
-        || reason.chars().count() > 2000
-        || reason
-            .chars()
-            .any(|c| c.is_control() && c != '\n' && c != '\t')
-    {
+    if !crate::text_rules::valid(reason, 2000, true, true) {
         return Err(Error::invalid(
             "Provide a review reason of 1–2,000 characters.",
         ));

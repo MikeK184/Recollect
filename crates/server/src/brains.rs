@@ -43,7 +43,7 @@ impl From<BrainRow> for Brain {
 }
 fn name(value: String) -> Result<String> {
     let value = value.trim();
-    if value.is_empty() || value.chars().count() > 120 {
+    if !crate::text_rules::valid(value, 120, true, false) {
         return Err(Error::invalid(
             "Use a Brain name between 1 and 120 characters.",
         ));
@@ -51,7 +51,7 @@ fn name(value: String) -> Result<String> {
     Ok(value.into())
 }
 fn description(value: String) -> Result<String> {
-    if value.chars().count() > 2000 {
+    if !crate::text_rules::valid(&value, 2000, false, true) {
         return Err(Error::invalid(
             "Keep the description within 2,000 characters.",
         ));

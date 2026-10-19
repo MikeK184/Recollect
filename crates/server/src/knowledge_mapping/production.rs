@@ -253,15 +253,17 @@ async fn coverage(
     request: Uuid,
     state: &str,
     input: Option<Uuid>,
+    failure: Option<&str>,
 ) -> Result<()> {
-    sqlx::query("INSERT INTO knowledge_mapping_coverage(run_id,brain_id,request_id,state,input_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(run_id) DO UPDATE SET state=excluded.state,input_id=excluded.input_id WHERE knowledge_mapping_coverage.request_id=excluded.request_id")
-        .bind(run.id).bind(run.brain_id).bind(request).bind(state).bind(input).execute(&mut **tx).await?;
+    sqlx::query("INSERT INTO knowledge_mapping_coverage(run_id,brain_id,request_id,state,input_id,failure) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(run_id) DO UPDATE SET state=excluded.state,input_id=excluded.input_id,failure=excluded.failure WHERE knowledge_mapping_coverage.request_id=excluded.request_id")
+        .bind(run.id).bind(run.brain_id).bind(request).bind(state).bind(input).bind(failure).execute(&mut **tx).await?;
     Ok(())
 }
 
 pub(crate) enum PreparedMapping {
     Missing,
-    Invalid,
+    /// Static reason: a `CandidateFailure::code()` or an operational cause.
+    Invalid(&'static str),
     Validated {
         candidates: SourceCandidates,
         source: Uuid,
@@ -315,7 +317,7 @@ pub(crate) async fn prepare_learning(
     if mapping_adapter(&request.prompt_label, &request.schema_label).is_none()
         || serde_json::to_vec(mapping).map_or(true, |bytes| bytes.len() > 256 * 1024)
     {
-        return Ok(PreparedMapping::Invalid);
+        return Ok(PreparedMapping::Invalid("adapter_or_size_rejected"));
     }
     let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
     if !matches!(
@@ -331,7 +333,9 @@ pub(crate) async fn prepare_learning(
         .await?;
     let deadline = match storage::input_gate(&mut tx, run.brain_id, run.source_version_id).await {
         Ok(deadline) => deadline,
-        Err(error) if error.1 == "content_removed" => return Ok(PreparedMapping::Invalid),
+        Err(error) if error.1 == "content_removed" => {
+            return Ok(PreparedMapping::Invalid("content_removed"));
+        }
         Err(error) => return Err(error),
     };
     let source =
@@ -346,7 +350,7 @@ pub(crate) async fn prepare_learning(
     .await?;
     tx.commit().await?;
     if &context != expected_context {
-        return Ok(PreparedMapping::Invalid);
+        return Ok(PreparedMapping::Invalid("context_changed"));
     }
     Ok(
         match adapt_for_request(
@@ -362,7 +366,7 @@ pub(crate) async fn prepare_learning(
                 context,
                 deadline,
             },
-            Err(_) => PreparedMapping::Invalid,
+            Err(failure) => PreparedMapping::Invalid(failure.code()),
         },
     )
 }
@@ -377,8 +381,12 @@ pub(crate) async fn stage_learning(
     prepared: PreparedMapping,
 ) -> Result<()> {
     let (candidates, prepared_source, prepared_context, deadline) = match prepared {
-        PreparedMapping::Missing => return coverage(tx, run, request.id, "missing", None).await,
-        PreparedMapping::Invalid => return coverage(tx, run, request.id, "invalid", None).await,
+        PreparedMapping::Missing => {
+            return coverage(tx, run, request.id, "missing", None, None).await;
+        }
+        PreparedMapping::Invalid(reason) => {
+            return coverage(tx, run, request.id, "invalid", None, Some(reason)).await;
+        }
         PreparedMapping::Validated {
             candidates,
             source,
@@ -393,13 +401,29 @@ pub(crate) async fn stage_learning(
         || prepared_context != context
         || deadline.is_some_and(|at| at <= Utc::now())
     {
-        return coverage(tx, run, request.id, "invalid", None).await;
+        return coverage(
+            tx,
+            run,
+            request.id,
+            "invalid",
+            None,
+            Some("context_changed"),
+        )
+        .await;
     }
     let current_deadline = match storage::input_gate(tx, run.brain_id, run.source_version_id).await
     {
         Ok(deadline) => deadline,
         Err(error) if error.1 == "content_removed" => {
-            return coverage(tx, run, request.id, "invalid", None).await;
+            return coverage(
+                tx,
+                run,
+                request.id,
+                "invalid",
+                None,
+                Some("content_removed"),
+            )
+            .await;
         }
         Err(error) => return Err(error),
     };
@@ -412,7 +436,7 @@ pub(crate) async fn stage_learning(
         .fetch_one(&mut **tx)
         .await?;
     if superseded {
-        coverage(tx, run, request.id, "superseded", None).await?;
+        coverage(tx, run, request.id, "superseded", None, None).await?;
         sqlx::query("DELETE FROM knowledge_mapping_stages WHERE brain_id=$1 AND run_id=$2")
             .bind(run.brain_id)
             .bind(run.id)
@@ -451,6 +475,7 @@ pub(crate) async fn stage_learning(
                 "blocked_capacity"
             },
             None,
+            None,
         )
         .await;
     };
@@ -469,7 +494,7 @@ pub(crate) async fn stage_learning(
     .await?;
     sqlx::query("INSERT INTO knowledge_mapping_origins(input_id,brain_id,run_id,request_id,policy_id,producer_change_id,offered_inputs) SELECT $1,$2,$3,$4,$5,$6,coalesce(jsonb_agg(jsonb_build_object('kind',kind,'id',input_id) ORDER BY kind,input_id),'[]'::jsonb) FROM model_request_inputs WHERE brain_id=$2 AND request_id=$4 ON CONFLICT(input_id) DO NOTHING")
         .bind(input).bind(run.brain_id).bind(run.id).bind(request.id).bind(run.policy_id).bind(profile).execute(&mut **tx).await?;
-    coverage(tx, run, request.id, "staged", Some(input)).await
+    coverage(tx, run, request.id, "staged", Some(input), None).await
 }
 
 /// Queue exactly this retained source stage in the successful learning commit,

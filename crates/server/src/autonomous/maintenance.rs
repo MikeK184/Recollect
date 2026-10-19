@@ -16,6 +16,35 @@ use uuid::Uuid;
 
 const SCAN: i64 = 16;
 const PREPARE_TIME: Duration = Duration::from_secs(5);
+
+/// Consecutive preparation timeouts per digest partition in this process, so a
+/// partition that can never be prepared surfaces at warn instead of every cycle
+/// silently skipping it. Bounded; it is only a logging aid.
+#[derive(Default)]
+struct PreparationTimeouts(std::sync::Mutex<std::collections::HashMap<Uuid, u32>>);
+
+impl PreparationTimeouts {
+    fn record(&self, partition: Uuid) -> u32 {
+        let mut counts = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if counts.len() >= 1024 && !counts.contains_key(&partition) {
+            counts.clear();
+        }
+        let count = counts.entry(partition).or_default();
+        *count = count.saturating_add(1);
+        *count
+    }
+    fn clear(&self, partition: Uuid) {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&partition);
+    }
+}
+
+fn preparation_timeouts() -> &'static PreparationTimeouts {
+    static TIMEOUTS: std::sync::OnceLock<PreparationTimeouts> = std::sync::OnceLock::new();
+    TIMEOUTS.get_or_init(PreparationTimeouts::default)
+}
 const PUBLISH_TIME: Duration = Duration::from_millis(1500);
 
 pub(crate) fn enabled(state: &AppState, p: &ModelPolicyVersion, actor: Uuid) -> bool {
@@ -226,12 +255,23 @@ pub async fn prepare_digest(
         .await;
         match result {
             Ok(Ok(Some((epoch, value)))) => {
+                preparation_timeouts().clear(id);
                 cursor.epoch = epoch;
                 prepared = Some(value);
                 break;
             }
-            Ok(Ok(None)) => {}
-            _ => tracing::debug!(brain_id=%brain, "Digest partition remains unresolved"),
+            Ok(Ok(None)) => preparation_timeouts().clear(id),
+            Ok(Err(error)) => {
+                tracing::debug!(brain_id=%brain, partition_id=%id, code=error.1, "Digest partition remains unresolved")
+            }
+            Err(_) => {
+                let repeated = preparation_timeouts().record(id);
+                if repeated >= 2 {
+                    tracing::warn!(brain_id=%brain, partition_id=%id, consecutive_timeouts=repeated, "Digest partition preparation keeps timing out; its digest is not advancing");
+                } else {
+                    tracing::debug!(brain_id=%brain, partition_id=%id, "Digest partition preparation timed out");
+                }
+            }
         }
     }
     Ok(Some(PreparedDigest {
@@ -483,7 +523,29 @@ async fn source_eligible(
         AND recollect_content_state(v.brain_id,v.retention_class,v.privacy_state,v.created_at)='active'
         AND NOT EXISTS(SELECT 1 FROM automatic_support_excerpts a WHERE a.brain_id=v.brain_id AND a.version_id=v.id)
         AND NOT recollect_source_model_fenced(v.brain_id,v.id)
-        AND NOT EXISTS(SELECT 1 FROM learning_runs l WHERE l.brain_id=v.brain_id AND l.source_version_id=v.id AND l.policy_id=$5 AND l.automatic))")
+        AND NOT EXISTS(SELECT 1 FROM learning_runs l WHERE l.brain_id=v.brain_id AND l.source_version_id=v.id AND l.policy_id=$5 AND l.automatic AND (
+          l.state<>'failed' OR l.error_code IN ('content_removed','model_input_fenced')
+          OR (NOT EXISTS(SELECT 1 FROM learning_runs child WHERE child.retry_of=l.id)
+            AND (l.finished_at IS NULL OR l.finished_at>clock_timestamp()-interval '1 day'
+              OR (l.error_code=ANY($6) AND l.automatic_attempt<2)))))
+        AND (SELECT count(*) FROM learning_runs l WHERE l.brain_id=v.brain_id AND l.source_version_id=v.id AND l.policy_id=$5 AND l.automatic AND l.retry_of IS NULL)<3)")
         .bind(brain).bind(id).bind(&policy.policy.content_classes).bind(policy.policy.max_input_bytes).bind(policy.change_id)
+        .bind(super::LEARNING_RETRY_CODES)
         .fetch_one(&mut **tx).await.map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preparation_timeouts_count_per_partition_until_cleared() {
+        let timeouts = PreparationTimeouts::default();
+        let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
+        assert_eq!(timeouts.record(a), 1);
+        assert_eq!(timeouts.record(a), 2);
+        assert_eq!(timeouts.record(b), 1);
+        timeouts.clear(a);
+        assert_eq!(timeouts.record(a), 1);
+    }
 }

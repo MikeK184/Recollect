@@ -532,13 +532,29 @@ async fn maintenance(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize
 // The same full retry predicates qualify discovery and each exact fresh
 // publication. A saved run id is never permission to repeat a provider request.
 const LOCAL_RECOVERY_INPUTS: &str = "SELECT r.id,j.id FROM handover_runs r JOIN jobs j ON j.id=r.job_id LEFT JOIN handover_support_stages s ON s.run_id=r.id AND s.brain_id=r.brain_id WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.state='failed' AND j.state='failed' AND j.error_code IN ('database_error','lease_expired') AND r.local_recoveries<2 AND j.updated_at+make_interval(mins=>CASE r.local_recoveries WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp() AND (s.run_id IS NULL OR (s.privacy_state='active' AND (recollect_handover_support_deadline(s.brain_id,s.run_id) IS NULL OR recollect_handover_support_deadline(s.brain_id,s.run_id)>clock_timestamp()))) AND (s.verdict IS NOT NULL OR NOT EXISTS(SELECT 1 FROM model_requests m WHERE m.brain_id=r.brain_id AND m.operation_id=coalesce(s.assessment_operation_id,r.id))) AND ($4::uuid IS NULL OR r.id=$4) ORDER BY j.updated_at,r.id LIMIT $3";
+/// Failures that say nothing permanent about the source. Each is retried at most
+/// twice (`automatic_attempt<2`) with the 5 and 30 minute backoff; budget
+/// exhaustion waits for the next UTC day. Content removal is never retried.
+pub(crate) const LEARNING_RETRY_CODES: &[&str] = &[
+    "provider_rate_limited",
+    "provider_unavailable",
+    "provider_incomplete",
+    "provider_shape",
+    "model_budget_exhausted",
+    "reconciliation_input_changed",
+    "learning_input_expired",
+    "claim_capacity",
+    "review_capacity",
+    "permission_or_policy_denied",
+];
 const LEARNING_RETRY_INPUTS: &str = "SELECT to_jsonb(r) FROM learning_runs r JOIN sources s ON s.current_version=r.source_version_id
          WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.automatic AND r.state='failed'
-         AND r.error_code IN ('provider_rate_limited','provider_unavailable','provider_incomplete','provider_shape','model_budget_exhausted') AND r.automatic_attempt<2
+         AND r.error_code=ANY($5) AND r.automatic_attempt<2
          AND CASE WHEN r.error_code='model_budget_exhausted'
            THEN ((date_trunc('day',r.finished_at AT TIME ZONE 'UTC')+interval '1 day') AT TIME ZONE 'UTC')<=clock_timestamp()
            ELSE r.finished_at+make_interval(mins=>CASE r.automatic_attempt WHEN 0 THEN 5 ELSE 30 END)<=clock_timestamp() END
          AND NOT EXISTS(SELECT 1 FROM learning_runs child WHERE child.retry_of=r.id)
+         AND NOT EXISTS(SELECT 1 FROM learning_runs newer WHERE newer.brain_id=r.brain_id AND newer.source_version_id=r.source_version_id AND newer.policy_id=r.policy_id AND newer.automatic AND newer.retry_of IS NULL AND newer.created_at>r.created_at)
          AND NOT EXISTS(SELECT 1 FROM learning_support_stages stage WHERE stage.run_id=r.id AND stage.brain_id=r.brain_id AND (stage.verdicts IS NOT NULL OR stage.privacy_state<>'active' OR recollect_learning_support_deadline(stage.brain_id,stage.run_id)<=clock_timestamp()))
          AND ($4::uuid IS NULL OR r.id=$4) ORDER BY r.finished_at,r.id LIMIT $3";
 const HANDOVER_RETRY_INPUTS: &str = "SELECT to_jsonb(r) FROM handover_runs r WHERE r.brain_id=$1 AND r.policy_id=$2 AND r.state='failed'
@@ -575,6 +591,7 @@ async fn retry_maintenance(
         .bind(p.change_id)
         .bind(limit.saturating_sub(local.len()) as i64)
         .bind(None::<Uuid>)
+        .bind(LEARNING_RETRY_CODES)
         .fetch_all(&mut *tx)
         .await?;
     let handovers: Vec<Json<HandoverRun>> = sqlx::query_scalar(HANDOVER_RETRY_INPUTS)
@@ -614,6 +631,7 @@ async fn retry_maintenance(
                 .bind(p.change_id)
                 .bind(1_i64)
                 .bind(Some(prior.id))
+                .bind(LEARNING_RETRY_CODES)
                 .fetch_optional(&mut *tx)
                 .await?;
             let Some(Json(old)) = fresh else {

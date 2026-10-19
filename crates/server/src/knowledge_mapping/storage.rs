@@ -102,7 +102,8 @@ pub async fn prepare_source(
     let epoch = graph::preparation_epoch(&mut tx, brain).await?;
     let deadline = input_gate(&mut tx, brain, version).await?;
     let source = model_gateway::source(state, &mut tx, brain, version, 2 * 1024 * 1024).await?;
-    let candidates = source_candidates(version, &source.text, output).map_err(|_| {
+    let candidates = source_candidates(version, &source.text, output).map_err(|failure| {
+        tracing::warn!(brain_id=%brain, version_id=%version, failure=failure.code(), "Mapping candidates were rejected");
         Error::invalid(
             "Mapping candidates must reference exact source spans and valid local endpoints.",
         )

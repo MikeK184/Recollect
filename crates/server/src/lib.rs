@@ -50,6 +50,7 @@ mod session_digests;
 pub mod shutdown;
 pub mod skills;
 mod strict_json;
+mod text_rules;
 mod support_excerpts;
 pub mod team;
 mod web;

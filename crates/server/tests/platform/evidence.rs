@@ -461,6 +461,48 @@ async fn collections_history_artifacts_scope_and_fenced_processing() {
         before,
         "Failed file persistence rolls back canonical metadata/audit/jobs"
     );
+    // The rolled-back import left only its opaque intent (successful imports
+    // delete theirs in the same commit). Maintenance sweeps the orphan after
+    // the grace period, even when content did reach storage.
+    let pending: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT artifact_id FROM evidence_artifact_intents WHERE brain_id=$1 AND removed_at IS NULL",
+    )
+    .bind(brain_id)
+    .fetch_all(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(pending.len(), 1);
+    let orphan_path = artifacts::path(&h.state.config.artifact_dir, brain_id, pending[0]);
+    artifacts::write(
+        &h.state.config.artifact_dir,
+        brain_id,
+        pending[0],
+        "Orphaned content",
+    )
+    .await
+    .unwrap();
+    recollect_server::privacy_journal::run_once(&h.state)
+        .await
+        .unwrap();
+    assert!(orphan_path.exists(), "A fresh intent may still commit");
+    sqlx::query(
+        "UPDATE evidence_artifact_intents SET created_at=clock_timestamp()-interval '1 hour'",
+    )
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    recollect_server::privacy_journal::run_once(&h.state)
+        .await
+        .unwrap();
+    assert!(!orphan_path.exists());
+    let swept: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM evidence_artifact_intents WHERE artifact_id=$1 AND removed_at IS NOT NULL",
+    )
+    .bind(pending[0])
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(swept, 1);
     let oversized = json!({"title":"Oversized","media_type":"text/plain","content":"a".repeat(artifacts::MAX_TEXT+1),"retain_content":true});
     assert_eq!(
         h.call("POST", &format!("{base}/sources"), Some(&writer), oversized)

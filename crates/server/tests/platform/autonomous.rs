@@ -617,6 +617,70 @@ async fn automatic_retries_are_bounded_and_human_overrides_survive_reconciliatio
     h.finish().await;
 }
 
+async fn age_failed(h: &Harness, code: &str, age: &str) {
+    sqlx::query(&format!("UPDATE learning_runs SET error_code=$1,finished_at=clock_timestamp()-interval '{age}' WHERE state='failed' AND NOT EXISTS(SELECT 1 FROM learning_runs c WHERE c.retry_of=learning_runs.id)"))
+        .bind(code).execute(&h.admin).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
+async fn deferrable_failures_retry_and_exhausted_chains_get_one_bounded_fresh_run() {
+    let (h, owner, base, p, server) = setup().await;
+    enable(&h, &owner, &base).await;
+    source(&h, &owner, &base, "Amber.port = 8080\n").await;
+    process(&h).await;
+    let tick = || async {
+        autonomous::run_once(&h.state)
+            .await
+            .map_err(|e| e.1)
+            .unwrap()
+    };
+    assert_eq!(tick().await, 1);
+    p.mode.store(1, Ordering::SeqCst);
+    model_job(&h).await;
+    // Concurrent change and capacity pressure are transient, not permanent.
+    for (attempt, code) in [(1, "reconciliation_input_changed"), (2, "claim_capacity")] {
+        age_failed(&h, code, "1 hour").await;
+        assert_eq!(tick().await, 1, "{code} is retried");
+        let queued = runs(&h, &owner, &base).await;
+        assert_eq!(queued["items"][0]["automatic_attempt"], attempt);
+        assert!(queued["items"][0]["retry_of"].is_string());
+        model_job(&h).await;
+    }
+    // The bounded chain is exhausted and recently failed: nothing is queued.
+    age_failed(&h, "review_capacity", "1 hour").await;
+    assert_eq!(tick().await, 0);
+    // After the cooldown a new bounded chain may start; it is not a retry.
+    age_failed(&h, "review_capacity", "2 days").await;
+    assert_eq!(tick().await, 1);
+    let fresh = runs(&h, &owner, &base).await;
+    assert_eq!(fresh["items"][0]["automatic_attempt"], 0);
+    assert!(fresh["items"][0]["retry_of"].is_null());
+    assert_eq!(tick().await, 0, "an active fresh run owns the source");
+    model_job(&h).await;
+    for code in ["learning_input_expired", "permission_or_policy_denied"] {
+        age_failed(&h, code, "1 hour").await;
+        assert_eq!(tick().await, 1, "{code} is retried");
+        model_job(&h).await;
+    }
+    let heads: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM learning_runs WHERE automatic AND retry_of IS NULL",
+    )
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(heads, 2);
+    // A source whose content was removed is never retried or restarted.
+    sqlx::query("UPDATE learning_runs SET error_code='content_removed' WHERE state='failed'")
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    age_failed(&h, "content_removed", "5 days").await;
+    assert_eq!(tick().await, 0);
+    server.abort();
+    h.finish().await;
+}
+
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
 async fn autonomous_inflight_erasure_expiry_and_older_restore_preserve_independent_evidence() {

@@ -49,6 +49,9 @@ USD 0.15 input/0.50 output per-million price ceilings, strict parameter support
 and disabled fallbacks. Recovery results remain separate from first-pass results.
 These ceilings preserve cheap routing; they do not guarantee availability. Known
 rate-limit failures remain visible and uncertain calls require reconciliation.
+The per-model reasoning and provider-preference overrides live in a built-in
+table that `RECOLLECT_MODEL_ROUTES` (a JSON array, documented in `.env.example`)
+replaces; an invalid value is logged and the built-in table is used.
 
 Model prices are dated references. OpenRouter route prices can differ; request
 history shows the billed cost when returned, or explicitly marks it unavailable.
@@ -63,7 +66,10 @@ Batch are separate work.
    to learn, such as document. Query permission supports handover titles. The fixed
    connectivity check additionally needs embedding permission.
 3. Set the daily token allowance, concurrent calls and input/output limits.
-   Unknown outcomes keep their conservative reservation; known usage replaces it.
+   A reservation is the estimated input (request bytes divided by three), fixed
+   headroom and the output limit. Known usage replaces it. A failed or uncertain
+   call with no reported usage is charged its estimated input only; a succeeded
+   call without usage keeps the full reservation.
 4. Save once. The native worker catches up eligible retained current sources and
    responds to later evidence changes. It checks every ten seconds and resumes
    queued work after restart. Existing unscoped sources use Brain scope; the system
@@ -153,10 +159,14 @@ Neither mode can override rejection rules or modify an existing human decision.
   Brain policy or scope; capture permission alone is insufficient.
 - Provider failures have safe codes; no response body is logged. Autonomous work
   can create at most two separately recorded retries for known rate-limit or
-  availability failures and rejected incomplete/malformed results, after five
-  and thirty minutes. A daily budget denial makes no provider call and waits
-  until the next UTC reset within the same replacement limit. A timeout or other uncertain
-  outcome keeps its reservation and does not automatically spend again. After
+  availability failures, rejected incomplete/malformed results and transient
+  local conflicts (changed reconciliation input, expired input, claim or review
+  capacity, a policy denial), after five and thirty minutes. A daily budget
+  denial makes no provider call and waits until the next UTC reset within the
+  same replacement limit. A source whose automatic chain failed for any reason
+  other than removed content may start one new chain after a day, at most three
+  chains per source and policy. A timeout or other uncertain outcome is charged
+  its estimated input and does not automatically spend again. After
   diagnosing the service, **Start new learning attempt** records an explicit new
   attempt. This is service recovery, not approval of individual memories.
 - A repeated interrupted command uses its original request key. Gateway calls are

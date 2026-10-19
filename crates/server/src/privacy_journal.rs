@@ -185,14 +185,28 @@ struct Pending {
 }
 /// Export and clean only already-authorized canonical requests.
 pub async fn maintain(state: &AppState) -> anyhow::Result<usize> {
+    maintain_scoped(state, None).await
+}
+/// A Brain-scoped retry processes only that Brain's pending requests.
+pub async fn maintain_scoped(state: &AppState, brain: Option<Uuid>) -> anyhow::Result<usize> {
     let (installation_id, initialized) = identity(&state.pool).await?;
     ensure!(
         initialized,
         "Initialize the erasure journal with the migration command"
     );
-    let pending: Vec<Pending> = sqlx::query_as("SELECT * FROM recollect_privacy_pending()")
-        .fetch_all(&state.pool)
-        .await?;
+    let pending: Vec<Pending> = match brain {
+        Some(brain) => {
+            sqlx::query_as("SELECT * FROM recollect_privacy_pending_for($1)")
+                .bind(brain)
+                .fetch_all(&state.pool)
+                .await?
+        }
+        None => {
+            sqlx::query_as("SELECT * FROM recollect_privacy_pending()")
+                .fetch_all(&state.pool)
+                .await?
+        }
+    };
     let count = pending.len();
     for r in pending {
         let entry = Entry {
@@ -210,19 +224,28 @@ pub async fn maintain(state: &AppState) -> anyhow::Result<usize> {
         let mut failure = (!exported).then_some("journal_unavailable");
         // Tombstones already deny reads. Preserve artifacts for retry if durable export failed.
         if exported {
-            if crate::graph::analytics::erase(
+            let analytics = crate::graph::analytics::erase(
                 &state.config,
                 &state.pool,
                 entry.brain_id,
                 entry.sequence,
                 entry.id,
             )
-            .await
-            .is_ok()
-                && crate::graph::erase(&state.config, entry.brain_id, &entry.manifest)
-                    .await
-                    .is_ok()
-            {
+            .await;
+            if let Err(error) = &analytics {
+                tracing::warn!(brain_id=%entry.brain_id, request=%entry.id, %error, "Analytics erasure is incomplete");
+            }
+            let graph = if analytics.is_ok() {
+                let result =
+                    crate::graph::erase(&state.config, entry.brain_id, &entry.manifest).await;
+                if let Err(error) = &result {
+                    tracing::warn!(brain_id=%entry.brain_id, request=%entry.id, code=error.1, reason=error.2, "Graph erasure is incomplete");
+                }
+                result.is_ok()
+            } else {
+                false
+            };
+            if graph {
                 sqlx::query("SELECT recollect_privacy_graph_done($1)")
                     .bind(entry.id)
                     .execute(&state.pool)
@@ -231,13 +254,12 @@ pub async fn maintain(state: &AppState) -> anyhow::Result<usize> {
                 failure = Some("graph_unavailable");
             }
             for id in &entry.manifest.artifacts {
-                if remove_artifact(&state.config, entry.brain_id, *id)
-                    .await
-                    .is_ok()
-                {
-                    removed.push(*id)
-                } else {
-                    failure = Some("artifact_unavailable");
+                match remove_artifact(&state.config, entry.brain_id, *id).await {
+                    Ok(()) => removed.push(*id),
+                    Err(error) => {
+                        tracing::warn!(brain_id=%entry.brain_id, request=%entry.id, artifact=%id, %error, "Artifact removal is incomplete");
+                        failure = Some("artifact_unavailable");
+                    }
                 }
             }
         }
@@ -253,6 +275,7 @@ pub async fn maintain(state: &AppState) -> anyhow::Result<usize> {
 }
 pub async fn run_once(state: &AppState) -> anyhow::Result<usize> {
     crate::support_excerpts::reconcile_artifacts(state, None).await?;
+    crate::evidence::reconcile_artifacts(state).await?;
     for _ in 0..20 {
         let request: Option<Uuid> = sqlx::query_scalar("SELECT recollect_expire_one()")
             .fetch_one(&state.pool)
