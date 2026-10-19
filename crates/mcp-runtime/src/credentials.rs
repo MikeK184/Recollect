@@ -184,8 +184,29 @@ const STATIC_REUSE: Duration = Duration::from_secs(60);
 struct Fingerprint(Option<SystemTime>, u64);
 struct Cached {
     fingerprint: Option<Fingerprint>,
+    /// Local secret files the resolution read; a hit is served only while each
+    /// is still a private, owner-held regular file (the same gate as reading).
+    local_files: Vec<PathBuf>,
     resolved_at: Instant,
     credentials: Arc<ResolvedCredentials>,
+}
+/// Cheap re-check of the file gate without reading: a key file that was
+/// loosened or replaced by a symlink is refused on the next call, not after
+/// the reuse window.
+fn local_files_private(paths: &[PathBuf]) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        paths.iter().all(|path| {
+            std::fs::symlink_metadata(path).is_ok_and(|m| {
+                m.is_file()
+                    && m.mode() & 0o077 == 0
+                    && m.uid() == nix::unistd::Uid::effective().as_raw()
+            })
+        })
+    }
+    #[cfg(not(unix))]
+    paths.is_empty()
 }
 pub struct CredentialResolver {
     path: Option<PathBuf>,
@@ -243,6 +264,7 @@ impl CredentialResolver {
             && cached.fingerprint.as_ref() == Some(&fingerprint)
             && cached.resolved_at.elapsed() < STATIC_REUSE
             && cached.credentials.reusable()
+            && local_files_private(&cached.local_files)
         {
             return Ok(cached.credentials.clone());
         }
@@ -280,11 +302,15 @@ impl CredentialResolver {
             return Err(RuntimeError("credential_binding_invalid"));
         }
         let mut sources = BTreeSet::new();
+        let mut local_files = BTreeSet::new();
         for reference in binding
             .environment
             .values()
             .chain(binding.headers.values().map(|h| &h.source))
         {
+            if let SecretReference::LocalFile { path, .. } = reference {
+                local_files.insert(path.clone());
+            }
             if let SecretReference::Vault { source, field } = reference {
                 if source.is_empty()
                     || source.len() > 120
@@ -356,6 +382,7 @@ impl CredentialResolver {
                 && old.credentials.headers == resolved.headers
             {
                 old.fingerprint = reusable.then_some(fingerprint);
+                old.local_files = local_files.iter().cloned().collect();
                 old.resolved_at = Instant::now();
                 return Ok(old.credentials.clone());
             }
@@ -367,6 +394,7 @@ impl CredentialResolver {
             key,
             Cached {
                 fingerprint: reusable.then_some(fingerprint),
+                local_files: local_files.into_iter().collect(),
                 resolved_at: Instant::now(),
                 credentials: resolved.clone(),
             },

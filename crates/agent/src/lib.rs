@@ -43,8 +43,9 @@ pub struct CredentialSlot {
     /// Explicit file-backed store for test fixtures and CI. Set only through
     /// `RECOLLECT_CREDENTIAL_STORE_DIR`; normal installs never use it.
     file: Option<std::path::PathBuf>,
+    /// `None` only for the file-backed store, which never touches the OS store.
     #[cfg(not(target_os = "macos"))]
-    entry: keyring::Entry,
+    entry: Option<keyring::Entry>,
 }
 const COMPANION_SERVICE: &str = "recollect-companion";
 /// Directory that replaces the OS credential store when set. Intended for
@@ -84,7 +85,7 @@ impl CredentialSlot {
         return Ok(Self {
             account,
             file,
-            entry,
+            entry: Some(entry),
         });
     }
     fn file_load(path: &std::path::Path) -> Result<Option<StoredDevice>> {
@@ -131,8 +132,7 @@ impl CredentialSlot {
         return Self {
             account: String::new(),
             file: Some(path),
-            entry: keyring::Entry::new(COMPANION_SERVICE, "recollect-file-backed")
-                .expect("keyring entry handle"),
+            entry: None,
         };
     }
     pub fn load(&self) -> Result<Option<StoredDevice>> {
@@ -147,7 +147,7 @@ impl CredentialSlot {
             None=>Ok(None),
         };
         #[cfg(not(target_os = "macos"))]
-        match self.entry.get_password() {
+        match self.entry.as_ref().ok_or_else(storage_error)?.get_password() {
             Ok(data)=>Ok(Some(serde_json::from_str(&data).map_err(|_|anyhow!("This profile's stored credential is unreadable. Use forget, revoke it in Devices and pair again."))?)),
             Err(keyring::Error::NoEntry)=>Ok(None),
             Err(_)=>Err(storage_error()),
@@ -166,6 +166,8 @@ impl CredentialSlot {
         .map_err(|_| storage_error());
         #[cfg(not(target_os = "macos"))]
         self.entry
+            .as_ref()
+            .ok_or_else(storage_error)?
             .set_password(&serde_json::to_string(device)?)
             .map_err(|_| storage_error())
     }
@@ -179,7 +181,7 @@ impl CredentialSlot {
             Err(_) => Err(storage_error()),
         };
         #[cfg(not(target_os = "macos"))]
-        match self.entry.delete_credential() {
+        match self.entry.as_ref().ok_or_else(storage_error)?.delete_credential() {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(_) => Err(storage_error()),
         }
