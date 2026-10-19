@@ -12,7 +12,7 @@ pending foundation documents as accepted authority.
 ## Index
 
 - [0001: Repository governance](0001-repository-governance.md)
-- [0002: Local CodeGraph navigation](0002-local-codegraph-navigation.md)
+- [0002: Local CodeGraph navigation](0002-local-codegraph-navigation.md) (superseded by the [development tooling runbook](../runbooks/development-tooling.md))
 - [0003: Product runtime](0003-product-runtime.md)
 - [0004: Committed repository publication](0004-committed-repository-publication.md)
 - [0005: Canonical claims and time](0005-canonical-claims-and-time.md)
@@ -30,7 +30,7 @@ pending foundation documents as accepted authority.
 - [0017: One knowledge surface, primary Ask and separated wiring](0017-desktop-knowledge-and-ask-experience.md)
 
 - [0018: Plugin-managed automatic agent memory](0018-plugin-managed-agent-memory.md)
-- [0019: Rust semantic navigation and Graft developer context](0019-rust-semantic-developer-navigation.md)
+- [0019: Rust semantic navigation and Graft developer context](0019-rust-semantic-developer-navigation.md) (superseded by the [development tooling runbook](../runbooks/development-tooling.md))
 - [0020: Automatic knowledge organization in Rust](0020-automatic-knowledge-organization.md)
 - [0021: Grouped spatial graph navigation](0021-grouped-spatial-graph-navigation.md)
 

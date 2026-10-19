@@ -16,9 +16,6 @@ local capability does not establish a deployed or published service.
 | [mcp-native-skill-reload.md](mcp-native-skill-reload.md) | shipped |
 | [mcp-agent-coordination.md](mcp-agent-coordination.md) | shipped |
 | [mcp-managed-skills.md](mcp-managed-skills.md) | shipped |
-| [repository-current-documentation.md](repository-current-documentation.md) | shipped |
-| [rust-semantic-developer-navigation.md](rust-semantic-developer-navigation.md) | shipped |
-| [claude-code-project-setup.md](claude-code-project-setup.md) | shipped |
 | [retrieval-semantic-discovery-plans.md](retrieval-semantic-discovery-plans.md) | shipped |
 | [operations-longmemeval-bench.md](operations-longmemeval-bench.md) | shipped |
 | [brain-openrouter-provider.md](brain-openrouter-provider.md) | shipped |
@@ -31,7 +28,6 @@ local capability does not establish a deployed or published service.
 | [desktop-dashboard-refresh-stability.md](desktop-dashboard-refresh-stability.md) | shipped |
 | [desktop-input-errors-and-page-recovery.md](desktop-input-errors-and-page-recovery.md) | shipped |
 | [mcp-plugin-workflow-repair.md](mcp-plugin-workflow-repair.md) | shipped |
-| [repository-product-docs-site.md](repository-product-docs-site.md) | shipped |
 | [desktop-private-runner-relationships.md](desktop-private-runner-relationships.md) | shipped |
 | [mcp-ubuntu-private-runner-proof.md](mcp-ubuntu-private-runner-proof.md) | shipped |
 | [desktop-inline-private-runners.md](desktop-inline-private-runners.md) | shipped |
@@ -67,7 +63,6 @@ local capability does not establish a deployed or published service.
 | [mcp-brain-agent-roster.md](mcp-brain-agent-roster.md) | shipped |
 | [mcp-plugin-session-memory.md](mcp-plugin-session-memory.md) | shipped |
 | [mcp-codex-plugin.md](mcp-codex-plugin.md) | shipped |
-| [opencode-project-setup.md](opencode-project-setup.md) | shipped |
 | [evidence-desktop-workflows.md](evidence-desktop-workflows.md) | shipped |
 | [memory-desktop-workflows.md](memory-desktop-workflows.md) | shipped |
 | [graph-desktop-workspace.md](graph-desktop-workspace.md) | shipped |
@@ -101,9 +96,6 @@ local capability does not establish a deployed or published service.
 | [retrieval-investigation-ui.md](retrieval-investigation-ui.md) | shipped |
 | [retrieval-graph-fusion.md](retrieval-graph-fusion.md) | shipped |
 | [Graph exploration](graph-exploration.md) | shipped |
-| [repository-governance-bootstrap.md](repository-governance-bootstrap.md) | shipped |
-| [codegraph-local-navigation.md](codegraph-local-navigation.md) | shipped |
-| [documentation-skills.md](documentation-skills.md) | shipped |
 | [platform-bootstrap.md](platform-bootstrap.md) | shipped |
 | [platform-durable-work.md](platform-durable-work.md) | shipped |
 | [platform-team-access.md](platform-team-access.md) | shipped |

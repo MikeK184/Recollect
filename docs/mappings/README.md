@@ -18,11 +18,9 @@ connectivity, pricing or performance guarantees.
 | [Automatic memory baseline](memory-source-support-staging-2026-10-07.md) | Source-support, digests, project brief and exact-family reconciliation; synthetic model evaluation limits |
 | [Plugin workflow and remaining host limits](plugin-workflow-repair-2026-10-07.md) | Supported source workflow, bounded learning recovery and separate rebuilt-binary acceptance |
 | [Management and direct-token acceptance](desktop-browser-management-2026-10-05.md) | Implemented browser/HTTP behavior and unfinished native-host launch proof |
-| [Rust Analyzer MCP and Graft](rust-semantic-navigation-proof-2026-10-09.md) | Actual semantic/structural calls, isolation and index limitations |
 | [Accepted management visual baseline](desktop-management-vision-fidelity-2026-10-05.md) | Corrected implementation replacing the rejected concepts; functional/visual scope distinguished |
 | [Integrated desktop baseline](desktop-final-acceptance-2026-10-01.md) | Original native/browser acceptance; later checkpoint controls current runtime claims |
 | [Ubuntu private-runner baseline](private-runner-ubuntu-proof-2026-10-06.md) | Dated connected-host execution, denials and recovery evidence |
-| [Public documentation site baseline](public-product-docs-site-2026-10-06.md) | Published site acceptance and source/build ownership |
 | [Integrated product baseline](integrated-evaluations-2026-09-26.md) | Original quality/workload/failure controls; does not establish current graph or model quality |
 
 ## Evidence lifecycle

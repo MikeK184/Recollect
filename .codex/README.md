@@ -76,10 +76,9 @@ queries need no model key or paid API call.
 The project registrations locate this Git checkout from root or nested launch
 directories. Inspect them with `codex mcp get rust_analyzer` and
 `codex mcp get graft`. A fresh host session may be required to expose newly
-registered tools. The [runbook](../docs/runbooks/rust-semantic-navigation.md)
-contains the actual Rust stdio proof and refresh commands; the
-[dated evidence](../docs/mappings/rust-semantic-navigation-proof-2026-10-09.md)
-separates configuration discovery from successful calls and coverage limits.
+registered tools. The [development tooling runbook](../docs/runbooks/development-tooling.md)
+contains the actual Rust stdio proof, refresh commands and coverage limits, and
+separates configuration discovery from successful calls.
 
 ## Local CodeGraph CLI
 

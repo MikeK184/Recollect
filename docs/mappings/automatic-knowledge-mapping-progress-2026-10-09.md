@@ -320,7 +320,7 @@ to graph qualification and mapping preparation. Graft file API and nested-direct
 CLI freshness pass. These are developer tools; a fresh host session is needed to
 load the registrations into Codex's current tool catalog. No deep summaries,
 paid provider requests or home configuration changes were used. See the
-[tooling proof](rust-semantic-navigation-proof-2026-10-09.md).
+[development tooling runbook](../runbooks/development-tooling.md).
 
 The remaining normal lock trace includes semantic discovery. Its former query
 applied expensive canonical predicates to populated source/revision relations

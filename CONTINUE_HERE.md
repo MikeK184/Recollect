@@ -18,7 +18,7 @@ owning pack and recheck Git/runtime state before continuing. Dated
 [implementation checkpoint](docs/mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
 retain the measured results and limits.
 
-Use [Rust Analyzer MCP and Graft](docs/runbooks/rust-semantic-navigation.md)
+Use [Rust Analyzer MCP and Graft](docs/runbooks/development-tooling.md)
 for semantic/structural navigation and `rg` for literal/config/docs discovery.
 Historical handoffs are available in
 [Git](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/CONTINUE_HERE.md).

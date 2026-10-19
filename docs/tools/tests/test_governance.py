@@ -11,10 +11,103 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lint_agent_governance import REQUIRED, GovernanceError, Validator
 
 REPO = Path(__file__).resolve().parents[3]
-SLICE = "repository-governance-bootstrap"
+SLICE = "fixture-slice"
 EPIC = "docs/roadmap/epics/repository-governance.md"
 ACTIVE = f"docs/roadmap/execution/active/{SLICE}.md"
 ARCHIVED = f"docs/roadmap/execution/archive/{SLICE}.md"
+
+FIXTURE_EPIC = f"""# Fixture epic
+
+Status: active
+
+## Purpose
+
+Exercise lifecycle validation in an isolated copy.
+
+## Governing Sources
+
+- [ADR 0001](../../adr/0001-repository-governance.md)
+
+## Dependencies and Boundaries
+
+None for this fixture.
+
+## Slice Map
+
+| Slice ID | Status | Evidence | Execution | Summary |
+| --- | --- | --- | --- | --- |
+| `{SLICE}` | in-progress | adr-backed, contract-backed | pack | Fixture slice |
+"""
+
+FIXTURE_PACK = f"""# Fixture slice
+
+Status: in-progress
+Owning epic: `{EPIC}`
+Work type: governance
+
+## Summary
+
+- Goal: Exercise lifecycle validation.
+- Non-goals: Real delivery.
+- Delivery shape: Test fixture only.
+
+## Governing Sources
+
+- [ADR 0001](../../../adr/0001-repository-governance.md)
+
+## Scope
+
+- In scope: One fixture slice.
+- Out of scope: Everything else.
+- Blockers: None for this fixture.
+
+## Surface and Interface Changes
+
+- Interfaces: N/A: fixture.
+- Storage: N/A: fixture.
+- Ownership: Test module.
+
+## Data and Authority
+
+- Inputs: Fixture files.
+- Authority: ADR 0001.
+- Blind spots: None.
+
+## States and Edge Cases
+
+- Loading: N/A: fixture.
+- Empty: N/A: fixture.
+- Error: N/A: fixture.
+- Blocked: N/A: fixture.
+- No-access: N/A: fixture.
+- Duplicate or replay: N/A: fixture.
+- Stale data: N/A: fixture.
+- Reconciliation divergence: N/A: fixture.
+
+## Integrations and Runtime Inputs
+
+- Providers: N/A: fixture.
+- Environment: N/A: fixture.
+- Secrets: N/A: fixture.
+- Failure handling: N/A: fixture.
+
+## Tests and Acceptance
+
+- Automated: Governance unit tests.
+- Manual: N/A: fixture.
+- Acceptance: The validator accepts or rejects the fixture as the test expects.
+
+## Closeout
+
+- Planned: Fixture deliverable.
+- Shipped: Fixture behavior delivered.
+- Not shipped: Nothing.
+- New blockers: None.
+- Docs updated: None.
+- Validation: Fixture validation passed.
+- Version: N/A: fixture.
+- Commit: uncommitted
+"""
 
 
 class GovernanceTests(unittest.TestCase):
@@ -34,25 +127,13 @@ class GovernanceTests(unittest.TestCase):
                 target.write_text("# Fixture document\n")
         for file in ("docs/adr/0001-repository-governance.md", "docs/contracts/repository-governance.md"):
             shutil.copy2(REPO / file, self.root / file)
-        # This single-slice fixture does not import later tooling authority. Keep
-        # its links textual; the real repository validates the actual decisions.
+        # The fixture has no runbook; keep that link textual in the copied contract.
         governance = "docs/contracts/repository-governance.md"
         text = (self.root / governance).read_text()
-        text = re.sub(r"\[([^]]+)\]\((?:\.\./adr/0019-rust-semantic-developer-navigation\.md|rust-semantic-developer-navigation\.md)\)", r"\1", text)
+        text = re.sub(r"\[([^]]+)\]\(\.\./runbooks/development-tooling\.md\)", r"\1", text)
         self.write(governance, text)
-        bootstrap = REPO / ARCHIVED if (REPO / ARCHIVED).exists() else REPO / ACTIVE
-        shutil.copy2(bootstrap, self.root / ACTIVE)
-        self.replace(ACTIVE, "Status: shipped", "Status: in-progress")
-        self.write(ACTIVE, re.sub(r"(?m)^- Blockers:.*$", "- Blockers: None for this fixture.", (self.root / ACTIVE).read_text()))
-        epic = (REPO / EPIC).read_text()
-        prefix, _, table = epic.partition("## Slice Map")
-        subject_rows = [
-            line for line in table.splitlines()
-            if line.startswith(("| Slice ID |", "| --- |")) or f"`{SLICE}`" in line
-        ]
-        self.write(EPIC, prefix + "## Slice Map\n\n" + "\n".join(subject_rows) + "\n")
-        self.replace(EPIC, "Status: complete", "Status: active")
-        self.replace(EPIC, f"`{SLICE}` | shipped", f"`{SLICE}` | in-progress")
+        self.write(ACTIVE, FIXTURE_PACK)
+        self.write(EPIC, FIXTURE_EPIC)
         self.write(
             "docs/roadmap/epics/index.md",
             "# Fixture roadmap\n\n## Epic Overview\n\n"

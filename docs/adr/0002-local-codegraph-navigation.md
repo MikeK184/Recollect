@@ -1,6 +1,6 @@
 # 0002: Local CodeGraph Navigation
 
-Status: accepted
+Status: superseded
 
 ## Decision
 
@@ -26,13 +26,16 @@ permission, dataset, and session code.
 
 ## Consequences
 
-The [navigation contract](../contracts/local-codegraph-navigation.md) governs
-setup and proof. This supplements [ADR 0001](0001-repository-governance.md)
+The navigation contract it referenced was removed (see the runbook history).
+This supplemented [ADR 0001](0001-repository-governance.md)
 for developer tooling only. The graph describes the local working tree and
 may be incomplete or stale. It is not Recollect's product extractor, committed
 snapshot publication, authorization evidence, or a replacement for source/tests.
 
 ## Supersession
 
-N/A: this adds an optional developer CLI without replacing bootstrap authority
-or Cognee's selected Enola product extraction baseline.
+Superseded on 2026-10-19 by the [development tooling runbook](../runbooks/development-tooling.md),
+which records what is installed and how to verify it. This ADR added an optional
+developer CLI without replacing bootstrap authority or the product extraction
+baseline. The original text and its contract remain at commit
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).

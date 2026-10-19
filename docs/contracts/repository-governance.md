@@ -23,7 +23,8 @@ Status: accepted
 - Each shipped pack records all closeout fields and concrete validation
   evidence. Version/commit may explicitly be N/A or uncommitted.
 - Project Codex configuration contains Context7, the Rust Analyzer/Graft
-  developer tools of [ADR 0019](../adr/0019-rust-semantic-developer-navigation.md),
+  developer tools recorded in the
+  [development tooling runbook](../runbooks/development-tooling.md),
   and six agent registrations.
   Role files define names, descriptions, and instructions. Personal execution
   preferences remain inherited. Delegation requires explicit user request.
@@ -35,7 +36,7 @@ Status: accepted
   The configured development MCPs are Context7 on both hosts plus secret-free
   local stdio chrome-devtools on OpenCode only for browser control. Codex
   also includes the repository-local Rust Analyzer and Graft stdio servers.
-  Their launchers enforce the [navigation contract](rust-semantic-developer-navigation.md).
+  Their launcher and sandbox rules are in that runbook.
   Keep credentials and
   personal model, provider, permission and UI settings out of project files.
 - Claude Code has equivalent repository-local configuration: root `CLAUDE.md`

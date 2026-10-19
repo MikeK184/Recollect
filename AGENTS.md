@@ -52,7 +52,7 @@ unresolved product decisions; do not invent them in code.
 
 - Use the repository-local Rust Analyzer MCP for Rust definitions, references,
   types and diagnostics, and Graft MCP for repository context and call traces.
-  See [setup and proof](docs/runbooks/rust-semantic-navigation.md). Allow initial
+  See [setup and proof](docs/runbooks/development-tooling.md). Allow initial
   indexing to finish; empty or stale results do not prove absence. Explicit
   `graft build --lsp` refreshes optional compiler edges; automatic Graft refresh
   is structural only. Verify ambiguous relationships in source.
