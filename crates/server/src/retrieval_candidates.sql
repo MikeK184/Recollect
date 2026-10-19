@@ -1,4 +1,12 @@
-WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
+WITH retention_days AS MATERIALIZED (
+  -- recollect_retention_deadline(brain,class,captured) is captured plus this
+  -- many days. Evaluated per candidate row it costs a policy lookup under row
+  -- security (about 160 us) for every chunk or fact, so the day counts are
+  -- resolved once per class and each row only adds an interval.
+  SELECT k.class,recollect_retention_days($1,k.class) AS days
+  FROM (VALUES ('raw_session'),('tool_output'),('document'),('support_excerpt'),
+    ('repository'),('claim'),('audit')) k(class)
+), /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
   -- Read each authorized capture association once. Expanding these joins for
   -- every candidate repeatedly evaluates event/binding RLS under mixed load.
   SELECT e.source_id,e.source_version_id,e.received_at,b.selection
@@ -83,7 +91,7 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     NULL::text path,NULL::integer line_from,NULL::integer line_to,
     NULL::integer byte_from,NULL::integer byte_to,NULL::uuid artifact_id,0 byte_length,
     'ready'::text processing,r.revision data,r.recall_vector vector,
-    recollect_retention_deadline(r.brain_id,'claim',r.recorded_at) expires_at,
+    r.recorded_at+(SELECT d.days FROM retention_days d WHERE d.class='claim')*interval '24 hours' expires_at,
     ($3<>'' AND r.revision#>>'{content,subject}'=$3) literal,
     recollect_claim_status_eligible(r.revision,$7) status_eligible
   FROM selected_claims r
@@ -101,7 +109,7 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     c.line_start,c.line_end,c.byte_start,c.byte_end,v.artifact_id,v.byte_length,v.processing,
     jsonb_build_object('retention_class',v.retention_class),
     v.recall_vector || coalesce(c.recall_vector,''::tsvector),
-    recollect_retention_deadline(v.brain_id,v.retention_class,v.created_at),
+    v.created_at+(SELECT d.days FROM retention_days d WHERE d.class=v.retention_class)*interval '24 hours',
     ($3<>'' AND v.title=$3),true
   FROM /* graph_window:sources */ source_knowledge v
   LEFT JOIN source_chunks c ON c.version_id=v.id AND c.brain_id=v.brain_id
@@ -128,7 +136,7 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     NULL,s.repository_id,s.id,s.revision,
     coalesce(f.record->>'file',f.record#>>'{source,path}',f.record->>'path'),
     NULL,NULL,NULL,NULL,NULL,0,'ready',f.record,f.recall_vector,
-    recollect_retention_deadline(s.brain_id,'repository',s.created_at),
+    s.created_at+(SELECT d.days FROM retention_days d WHERE d.class='repository')*interval '24 hours',
     ($3<>'' AND ($3=f.record->>'name' OR $3=coalesce(f.record->>'file',f.record#>>'{source,path}',f.record->>'path'))),true
   FROM /* graph_window:facts */ repository_facts f JOIN fact_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
   WHERE f.brain_id=$1

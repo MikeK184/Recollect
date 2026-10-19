@@ -163,6 +163,34 @@ pub(super) async fn build(
     Ok(())
 }
 
+/// `EXPLAIN (ANALYZE, BUFFERS)` of the full pass for this context; the rows are
+/// inserted as by `build`, so a timing proof can keep using the table.
+pub(super) async fn build_explained(
+    tx: &mut Tx<'_>,
+    context: &ReadContext<'_>,
+    breadth: Breadth,
+) -> Result<Vec<String>> {
+    sqlx::query(FULL_DDL).execute(&mut **tx).await?;
+    let input = context.input;
+    let sql = format!(
+        "EXPLAIN (ANALYZE, BUFFERS) INSERT INTO {TABLE}({FULL_COLUMNS}) {} SELECT {FULL_COLUMNS} FROM matched",
+        chain(breadth)
+    );
+    Ok(sqlx::query_scalar(&sql)
+        .bind(context.brain)
+        .bind(context.at)
+        .bind(&input.query)
+        .bind(SqlJson(&input.selection))
+        .bind(input.collection_id)
+        .bind(context.manifest.map(SqlJson))
+        .bind(&input.mode)
+        .bind(input.exact.as_ref().map(|e| e.kind.as_str()))
+        .bind(input.exact.as_ref().map(|e| e.id))
+        .bind(&input.channels)
+        .fetch_all(&mut **tx)
+        .await?)
+}
+
 /// Plan of the lexical-window pass for `query` over `brain`: `EXPLAIN` only, so
 /// nothing is read or written beyond an empty temporary table in the caller's
 /// transaction. Lets a populated-Brain test prove the GIN indexes are eligible.

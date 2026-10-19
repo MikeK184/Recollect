@@ -4,6 +4,8 @@ use recollect_server::semantic;
 mod admission;
 #[path = "semantic_recovery.rs"]
 mod recovery;
+#[path = "semantic_scale.rs"]
+mod scale;
 
 async fn status(h: &Harness, owner: &Login, base: &str) -> Value {
     ok(h, "GET", &format!("{base}/semantic"), owner, Value::Null).await

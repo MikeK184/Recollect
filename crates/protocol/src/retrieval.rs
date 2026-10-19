@@ -30,6 +30,10 @@ pub struct RecallRequest {
     pub channels: Vec<String>,
     pub semantic_request_id: Option<Uuid>,
     pub semantic_min_similarity: Option<f32>,
+    /// Force exact cosine ranking and refuse a scope above its bound, for
+    /// evaluations that must not accept the approximate large-scope shortlist.
+    #[schema(required = false)]
+    pub semantic_exact: bool,
     pub graph: Option<RecallGraphOptions>,
     pub source_diversity: bool,
     pub limit: usize,
@@ -53,6 +57,7 @@ impl Default for RecallRequest {
             channels: vec!["exact".into(), "lexical".into()],
             semantic_request_id: None,
             semantic_min_similarity: None,
+            semantic_exact: false,
             graph: None,
             source_diversity: true,
             limit: 10,
@@ -155,8 +160,20 @@ pub struct RecallResponse {
 pub struct RecallSemantic {
     pub profile: Option<crate::SemanticProfile>,
     pub model_request_id: Option<Uuid>,
+    /// Eligible scoped representations with a usable vector (not capped by the
+    /// exact bound).
     pub scoped_entries: usize,
     pub state: String,
+    /// `exact_cosine` ranks every scoped vector; `binary_shortlist_rerank`
+    /// keeps the Hamming-nearest signatures and ranks only those exactly.
+    #[serde(default)]
+    pub method: String,
+    /// Vectors that were scored with exact cosine in this query.
+    #[serde(default)]
+    pub reranked: usize,
+    /// Eligible scoped representations that have no usable vector yet.
+    #[serde(default)]
+    pub unindexed_entries: usize,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]

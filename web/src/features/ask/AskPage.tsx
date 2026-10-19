@@ -80,6 +80,7 @@ const initialRequest = (): Request => ({
   strategy: "auto",
   semantic_request_id: null,
   semantic_min_similarity: null,
+  semantic_exact: false,
   graph: null,
   source_diversity: true,
   limit: 10,

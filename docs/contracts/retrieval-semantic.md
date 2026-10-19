@@ -15,6 +15,14 @@ supersedes the fixed 3,072-dimensional storage and installation-pair assumptions
 below. It adds model/dimension-safe full-precision storage and an atomic explicit
 Save-and-rebuild generation while preserving scope, canonical input and erasure fences.
 
+Large-scope amendment, 2026-10-19: the 5,000-representation refusal below is
+replaced by two labelled ranking tiers. Scopes up to the exact bound keep their
+exact cosine ranking unchanged; larger scopes, up to the 50,000-entry per-profile
+cap, use a Hamming shortlist over derived bit signatures with exact re-ranking,
+reported as approximate. No vector index is introduced; the
+[measurements](../mappings/semantic-large-scope-2026-10-19.md) record the
+recall and timings that fixed the bounds.
+
 ## Source
 
 The full product goal authorizes this original slice and its routine decisions.
@@ -52,9 +60,15 @@ hashes, strict user version-pinning workflow or alternate canonical writer.
 Use full-precision `vector(3072)` with exact cosine distance. Store vectors only in
 the Brain-scoped projection, never in Neo4j, logs, model-request history or browser
 status responses. Reject wrong returned model, dimensions, duplicate/missing batch
-indices, nonfinite components and zero-length norms. No ANN/half-precision index is
-introduced. Model requests and entries retain the exact profile/representation and
-canonical input identity; incompatible vectors cannot participate in ranking.
+indices, nonfinite components and zero-length norms. No ANN, half-precision or other
+vector index is introduced. Each stored vector has a derived one-bit-per-dimension
+signature (the sign of each component, pgvector `binary_quantize`) in the same row.
+The trigger that validates the profile dimension recomputes it on every write of the
+vector, so erasure, expiry, fences and reindex that clear a vector clear its signature
+in the same statement; a constraint keeps it NULL exactly when the vector is NULL. It
+is internal, never serialized, and read only by the shortlist tier below. Model
+requests and entries retain the exact profile/representation and canonical input
+identity; incompatible vectors cannot participate in ranking.
 
 ### Canonical text representation
 
@@ -168,13 +182,43 @@ without a model call. A denied/unavailable semantic channel is explicit; do not
 silently return exact/lexical results as successful semantic search.
 
 Filter Brain, scope, collection, known revision, manifest and current privacy before
-distance ranking. Exact cosine search scans only the selected compatible projection.
-Apply shared full claim eligibility, raw-assertion rules, artifact availability and
-deadline guards while collecting candidates; continue past withheld rows to obtain
-the best eligible semantic identities. Bound the scoped scan to 5,000 representations;
-a larger selection returns a clear narrow-scope error instead of silently truncating
-the exact eligible baseline. Strict modes contain no raw evidence. Current retention,
-rejection and erasure override any historical vector or time selection.
+distance ranking. Every distance, exact or approximate, is computed only over the
+active profile's own entries of the selected population, so no other scope or Brain
+can influence a result or its cost. Apply shared full claim eligibility, raw-assertion
+rules, artifact availability and deadline guards while collecting candidates; continue
+past withheld rows to obtain the best eligible semantic identities. Strict modes
+contain no raw evidence. Current retention, rejection and erasure override any
+historical vector or time selection.
+
+Two ranking tiers, chosen by the number of eligible scoped representations that have
+a usable vector (reported uncapped as `semantic.scoped_entries`):
+
+- Exact (`semantic.method` `exact_cosine`): up to 5,000 representations, and up to
+  50,000 for profiles of at most 384 dimensions, whose vectors are stored inline and
+  measured under one second over 50,000. Every scoped vector is scored once; the
+  ranking, tie order and results are those of the previous exact scan.
+- Shortlist (`binary_shortlist_rerank`): above that bound, up to the 50,000-entry
+  per-profile cap. Order the scoped signatures by Hamming distance to the query's
+  signature (ties by kind, identity and fragment), keep the nearest 4,000 and rank
+  only those by exact cosine. If fewer than 100 eligible identities result, rank the
+  next 4,000 once, then report `semantic_shortlist_exhausted`: eligible matches may
+  exist beyond the shortlist. The ranking is approximate, so a true neighbour whose
+  signature is far from the query's can be missed.
+
+Approximation is never silent: the algorithm label is
+`pgvector-binary-shortlist-exact-rerank` (or the fusion label), each semantic item
+carries the `semantic_shortlist_approximate` qualification, and the coverage carries
+that reason. `semantic.reranked` counts the exactly scored vectors and
+`semantic.unindexed_entries` counts eligible scoped representations without a usable
+vector (reported with `semantic_scoped_coverage_partial`). A request may set
+`semantic_exact`: it forces the exact tier and keeps the refusal
+`semantic_scope_too_large` above the exact bound, before any provider call, for
+evaluations that must not accept an approximation; like the other semantic options it
+needs the semantic channel. A scope above 50,000 representations is refused in every
+mode. Automatic recall keeps the semantic channel for every scope within the cap and
+drops it, with `automatic_semantic_scope_too_large`, only for that refusal.
+Approximate recall is measured against exact on the same eligible scope, not assumed;
+see the measurements linked above.
 
 Return up to 100 eligible semantic candidates before the existing result/context
 limits. Expose cosine similarity and a `semantic_similarity_not_truth` qualification.
@@ -229,6 +273,13 @@ operation scope; it generates one query-attempt ID per explicit invocation.
 - Exact eligible cosine control with adversarial out-of-scope vectors, near matches,
   duplicate fragments and more than 100 ineligible high-scoring inputs; useful
   permitted results remain. Compare independent cosine math and all three channels.
+- Large scopes: recall@100 of the shortlist against exact cosine on deterministic
+  synthetic vectors (50,000 entries at 8, 384, 1,536 and 3,072 dimensions, planted
+  neighbours and independent noise), statement plans as the application role at
+  5,000, 20,000 and 50,000 scoped rows under two seconds, out-of-scope, stale, erased
+  and other-Brain high scorers never returned, paging and exhaustion reporting,
+  automatic recall keeping the channel, the `semantic_exact` refusal, and the
+  migration backfill, signature erasure and reindex lengths.
 - Rejection, copied raw assertions, reindex, expiry, in-flight erasure and older
   populated database/privacy replay preserve canonical behavior and no resurrection.
 - A small declared engineering corpus with exact phrases, paraphrases, independent
@@ -241,8 +292,15 @@ operation scope; it generates one query-attempt ID per explicit invocation.
 
 ## Explicit Deferrals
 
-ANN, dimension reduction, graph candidates, learned gates/reranking, query expansion,
+A vector index, dimension reduction, graph candidates, learned gates/reranking, query expansion,
 host prompt injection, response caching and generated answers are outside this slice.
+A shared HNSW or IVFFlat index is rejected, not merely postponed: it lets other
+Brains' vectors influence results and speed, selective scopes exhaust iterative-scan
+budgets, erased vectors linger until vacuum, ordered index scans under row-level
+security are unproven, and IVFFlat stops at 2,000 dimensions. A per-Brain partitioned
+HNSW index needs runtime DDL and about 300 MB per full Brain against the 1 GB database
+memory limit. Revisit it only with measured need and a per-Brain isolation design that
+compares recall with the exact baseline.
 No customer content is newly transmitted in local proof. External deployment and
 commits remain outside the goal. These exclusions do not defer current-consumer
 scope, rejection, retention, erasure, provenance or recovery acceptance.
