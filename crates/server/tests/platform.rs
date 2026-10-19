@@ -65,6 +65,8 @@ mod retention;
 mod retrieval;
 #[path = "platform/review.rs"]
 mod review;
+#[path = "platform/support_gate.rs"]
+mod support_gate;
 #[path = "platform/surface.rs"]
 mod surface;
 #[path = "platform/workspace.rs"]

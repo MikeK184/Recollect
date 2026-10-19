@@ -283,8 +283,11 @@ async fn automatic_digest_final_excerpt_expiry_scrubs_partition_and_preserves_co
     .unwrap();
     sqlx::query("UPDATE capture_events SET captured_at=clock_timestamp()-interval '400 days' WHERE source_version_id=$1").bind(raw).execute(&h.admin).await.unwrap();
     privacy_journal::run_once(&h.state).await.unwrap();
-    let usable:i64=sqlx::query_scalar("SELECT count(*) FROM session_digest_claims d WHERE d.brain_id=$1 AND recollect_memory_supported(d.brain_id,d.revision_id)")
-        .bind(brain).fetch_one(&h.admin).await.unwrap();
+    let usable = crate::support_gate::digest_verdicts(&h.admin, brain)
+        .await
+        .into_iter()
+        .filter(|v| *v)
+        .count();
     assert_eq!(
         usable, 2,
         "Independently retained support survives raw expiry"
@@ -317,8 +320,11 @@ async fn automatic_digest_final_excerpt_expiry_scrubs_partition_and_preserves_co
     assert_eq!(partitions[0], ("".into(), "expired".into(), json!({})));
     assert_eq!(partitions[1].0, "control");
     assert_eq!(partitions[1].1, "active");
-    let usable:i64=sqlx::query_scalar("SELECT count(*) FROM session_digest_claims d WHERE d.brain_id=$1 AND recollect_memory_supported(d.brain_id,d.revision_id)")
-        .bind(brain).fetch_one(&h.admin).await.unwrap();
+    let usable = crate::support_gate::digest_verdicts(&h.admin, brain)
+        .await
+        .into_iter()
+        .filter(|v| *v)
+        .count();
     assert_eq!(usable, 1);
     assert_eq!(
         p.calls.load(Ordering::SeqCst),
@@ -384,8 +390,10 @@ async fn automatic_digest_scanner_rotates_past_one_hundred_settled_sessions() {
         assert_eq!(autonomous::run_once(&h.state).await.ok(), Some(0));
     }
     assert_eq!(p.calls.load(Ordering::SeqCst), 4);
-    assert!(sqlx::query_scalar::<_,bool>("SELECT recollect_memory_supported(d.brain_id,d.revision_id) FROM session_digest_claims d WHERE d.brain_id=$1")
-        .bind(brain).fetch_one(&h.admin).await.unwrap());
+    assert_eq!(
+        crate::support_gate::digest_verdicts(&h.admin, brain).await,
+        vec![true]
+    );
     server.abort();
     h.finish().await;
 }

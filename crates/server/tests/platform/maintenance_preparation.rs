@@ -95,6 +95,12 @@ async fn install_gate(h: &Harness) {
       LANGUAGE plpgsql STABLE SET search_path=public,pg_temp AS $$ BEGIN
        PERFORM pg_advisory_xact_lock(67126124,8);
        RETURN fixture_maintenance_supported(b,target);
+      END $$;
+      ALTER FUNCTION recollect_memory_supported_many(uuid,uuid[]) RENAME TO fixture_maintenance_supported_many;
+      CREATE FUNCTION recollect_memory_supported_many(b uuid,targets uuid[]) RETURNS TABLE(revision_id uuid,supported boolean)
+      LANGUAGE plpgsql STABLE SET search_path=public,pg_temp AS $$ BEGIN
+       PERFORM pg_advisory_xact_lock(67126124,8);
+       RETURN QUERY SELECT f.revision_id,f.supported FROM fixture_maintenance_supported_many(b,targets) f;
       END $$;")
         .execute(&h.admin).await.unwrap();
 }

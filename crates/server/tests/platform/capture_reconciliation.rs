@@ -794,13 +794,11 @@ async fn automatic_excerpt_preserves_scoped_reply_after_raw_expiry_and_original_
     .execute(&h.admin)
     .await
     .unwrap();
-    let guarded: bool = sqlx::query_scalar(
-        "SELECT recollect_memory_supported(brain_id,id) FROM claim_revisions WHERE id=$1",
+    let guarded: bool = crate::support_gate::supported_as_owner(
+        &h.admin,
+        revision["id"].as_str().unwrap().parse::<Uuid>().unwrap(),
     )
-    .bind(revision["id"].as_str().unwrap().parse::<Uuid>().unwrap())
-    .fetch_one(&h.admin)
-    .await
-    .unwrap();
+    .await;
     assert!(
         guarded,
         "An independently retained exact copy survives ordinary raw expiry"
@@ -842,13 +840,11 @@ async fn automatic_excerpt_preserves_scoped_reply_after_raw_expiry_and_original_
     .unwrap();
     assert_eq!(scrubbed, ("erased".into(), json!({})));
     assert!(
-        !sqlx::query_scalar::<_, bool>(
-            "SELECT recollect_memory_supported(brain_id,id) FROM claim_revisions WHERE id=$1"
+        !crate::support_gate::supported_as_owner(
+            &h.admin,
+            revision["id"].as_str().unwrap().parse::<Uuid>().unwrap()
         )
-        .bind(revision["id"].as_str().unwrap().parse::<Uuid>().unwrap())
-        .fetch_one(&h.admin)
         .await
-        .unwrap()
     );
     server.abort();
     h.finish().await;
@@ -933,12 +929,7 @@ async fn automatic_session_digest_settles_refreshes_and_deduplicates_native_work
         json!({"summary":"Amber declares port 8080.","completed":[],"next_steps":[],"risks":[]});
     model_job(&h).await;
     let (claim,revision):(Uuid,Uuid)=sqlx::query_as("SELECT d.claim_id,c.current_revision FROM session_digest_claims d JOIN claims c ON c.id=d.claim_id WHERE d.brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
-    let usable: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
-        .bind(brain)
-        .bind(revision)
-        .fetch_one(&h.admin)
-        .await
-        .unwrap();
+    let usable: bool = crate::support_gate::supported_as_owner(&h.admin, revision).await;
     assert!(usable);
     let calls = p.calls.load(Ordering::SeqCst);
     assert_eq!(
@@ -1020,12 +1011,7 @@ async fn automatic_session_digest_settles_refreshes_and_deduplicates_native_work
     late["event"]["host_event"] = json!("PreToolUse");
     late["event"]["content"] = Value::Null;
     let late = device_ok(&h, "POST", &format!("{base}/capture/events"), &token, late).await;
-    let stale: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
-        .bind(brain)
-        .bind(revision)
-        .fetch_one(&h.admin)
-        .await
-        .unwrap();
+    let stale: bool = crate::support_gate::supported_as_owner(&h.admin, revision).await;
     assert!(!stale);
     let invalidated=device_ok(&h,"POST",&format!("{base}/recall"),&token,json!({"query":"Unrelated question with no lexical match","operation_id":op["id"],"selection":op["scope"]["selection"],"project_brief":true,"continuation":{"task_id":task,"binding_id":bound["id"]}})).await;
     assert!(
@@ -1059,12 +1045,7 @@ async fn automatic_session_digest_settles_refreshes_and_deduplicates_native_work
         "Same contributors advance coverage without a model call"
     );
     assert_eq!(p.calls.load(Ordering::SeqCst), calls);
-    let usable: bool = sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
-        .bind(brain)
-        .bind(revision)
-        .fetch_one(&h.admin)
-        .await
-        .unwrap();
+    let usable: bool = crate::support_gate::supported_as_owner(&h.admin, revision).await;
     assert!(usable);
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM claim_revisions WHERE claim_id=$1")
         .bind(claim)
@@ -1212,7 +1193,7 @@ async fn automatic_digest_preserves_completed_responses_and_retained_inputs() {
             sqlx::query("UPDATE jobs SET not_before=clock_timestamp()-interval '1 second' WHERE brain_id=$1 AND kind='handover.generate'").bind(brain).execute(&h.admin).await.unwrap();
             model_job(&h).await;
         }
-        let usable:bool=sqlx::query_scalar("SELECT recollect_memory_supported(d.brain_id,d.revision_id) FROM session_digest_claims d WHERE d.brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+        let usable = crate::support_gate::digest_verdicts(&h.admin, brain).await == vec![true];
         assert!(usable, "Continuation completes at boundary {boundary}");
         assert_eq!(
             p.calls.load(Ordering::SeqCst),
@@ -1361,7 +1342,8 @@ async fn automatic_digest_recovery_respects_leaf_attempts_and_omission_reasons()
                 *p.candidates.lock().unwrap() = json!({"summary":"Amber declares port 8080.","completed":[],"next_steps":[],"risks":[]});
                 model_job(&h).await;
                 if scenario == 0 {
-                    let usable:bool=sqlx::query_scalar("SELECT recollect_memory_supported(brain_id,revision_id) FROM session_digest_claims WHERE brain_id=$1").bind(brain).fetch_one(&h.admin).await.unwrap();
+                    let usable =
+                        crate::support_gate::digest_verdicts(&h.admin, brain).await == vec![true];
                     assert!(usable);
                     assert_eq!(p.calls.load(Ordering::SeqCst), before + 3);
                     break;

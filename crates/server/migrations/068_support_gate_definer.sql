@@ -1,0 +1,71 @@
+-- The canonical support predicate is evaluated as the migration role after one
+-- Brain membership test. Every table the predicate reads has a per-row read
+-- policy that reduces to Brain membership (`recollect_role(brain_id) IS NOT
+-- NULL`, or its bulk form), and `recollect_role` is itself a SECURITY DEFINER
+-- function with SET clauses, so evaluating the policy for each visited row cost
+-- an application-role call 25-50 ms per revision against less than 1 ms without
+-- row security. A caller that is a member sees exactly the rows the definer
+-- reads and a non-member sees none, so the result is unchanged; the platform
+-- policy-guard test fails if a restrictive or non-membership read policy ever
+-- appears on a table the predicate reads. As for the migration 065 window
+-- functions, the definer must bypass row security (the migration role does).
+
+CREATE OR REPLACE FUNCTION recollect_memory_supported(b uuid,target uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
+ SELECT CASE WHEN recollect_role(b) IS NULL THEN false
+  WHEN recollect_pre_digest_supported(b,target) THEN NOT EXISTS(
+   SELECT 1 FROM recollect_memory_dependencies(b,target) d WHERE NOT recollect_digest_current(b,d.revision_id))
+  ELSE false END
+$$;
+REVOKE ALL ON FUNCTION recollect_memory_supported(uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION recollect_memory_supported(uuid,uuid) TO recollect_app;
+
+-- Support for many revisions of one Brain in one statement. It returns one row
+-- per distinct non-null target with exactly the scalar function's verdict: the
+-- root's own gates first, then one shared exact/current-head closure whose
+-- members are each evaluated once (own gates unless the member is the root,
+-- exact-contribution acyclicity, no handover other than the root), then digest
+-- currency for the members of the roots that passed. A non-member gets false
+-- for every target. A closure that contains a NULL member (a claim without a
+-- current revision) is unsupported, as in the scalar function.
+CREATE FUNCTION recollect_memory_supported_many(b uuid,targets uuid[]) RETURNS TABLE(revision_id uuid,supported boolean)
+LANGUAGE sql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS $$
+ WITH RECURSIVE roots AS MATERIALIZED (
+  SELECT DISTINCT t.id FROM unnest(targets) t(id) WHERE t.id IS NOT NULL
+ ), member AS MATERIALIZED (
+  SELECT recollect_role(b) IS NOT NULL AS ok
+ ), qualified AS MATERIALIZED (
+  SELECT r.id FROM roots r
+  WHERE CASE WHEN (SELECT ok FROM member) THEN recollect_revision_supported(b,r.id) ELSE false END
+ ), closure(root,id) AS (
+  SELECT q.id,q.id FROM qualified q
+  UNION
+  SELECT c.root,e.child FROM closure c CROSS JOIN LATERAL (
+   SELECT x.input_revision_id child FROM claim_contributions x WHERE x.brain_id=b AND x.revision_id=c.id
+   UNION
+   SELECT h.current_revision FROM claim_contributions x
+    JOIN claim_revisions r ON r.brain_id=x.brain_id AND r.id=x.input_revision_id
+    JOIN claims h ON h.brain_id=r.brain_id AND h.id=r.claim_id
+    WHERE x.brain_id=b AND x.revision_id=c.id
+  ) e
+ ), members AS MATERIALIZED (
+  SELECT DISTINCT c.id FROM closure c WHERE c.id IS NOT NULL
+ ), shape AS MATERIALIZED (
+  SELECT m.id,recollect_revision_supported(b,m.id) AS own,recollect_memory_exact_acyclic(b,m.id) AS acyclic,
+   (SELECT r.revision#>>'{content,kind}' FROM claim_revisions r WHERE r.brain_id=b AND r.id=m.id LIMIT 1) AS kind
+  FROM members m
+ ), structural AS MATERIALIZED (
+  SELECT q.id FROM qualified q WHERE NOT EXISTS(
+   SELECT 1 FROM closure c LEFT JOIN shape s ON s.id=c.id
+   WHERE c.root=q.id AND (c.id IS NULL OR (CASE WHEN c.id=c.root THEN false ELSE NOT s.own END)
+    OR NOT s.acyclic OR (c.id<>c.root AND s.kind='handover')) IS TRUE)
+ ), current_digest AS MATERIALIZED (
+  SELECT m.id,recollect_digest_current(b,m.id) AS fresh
+  FROM (SELECT DISTINCT c.id FROM closure c JOIN structural s ON s.id=c.root WHERE c.id IS NOT NULL) m
+ )
+ SELECT r.id,EXISTS(SELECT 1 FROM structural s WHERE s.id=r.id)
+  AND NOT EXISTS(SELECT 1 FROM closure c JOIN current_digest d ON d.id=c.id WHERE c.root=r.id AND NOT d.fresh)
+ FROM roots r
+$$;
+REVOKE ALL ON FUNCTION recollect_memory_supported_many(uuid,uuid[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION recollect_memory_supported_many(uuid,uuid[]) TO recollect_app;
