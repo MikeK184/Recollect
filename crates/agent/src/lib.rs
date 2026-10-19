@@ -43,14 +43,32 @@ pub struct StoredDevice {
 pub struct CredentialSlot {
     #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     account: String,
+    /// Explicit file-backed store for test fixtures and CI. Set only through
+    /// `RECOLLECT_CREDENTIAL_STORE_DIR`; normal installs never use it.
+    file: Option<std::path::PathBuf>,
     #[cfg(not(target_os = "macos"))]
     entry: keyring::Entry,
 }
 const COMPANION_SERVICE: &str = "recollect-companion";
+/// Directory that replaces the OS credential store when set. Intended for
+/// test fixtures that would otherwise prompt for Keychain access on every
+/// rebuilt binary. Files are private (0600) JSON, one per profile.
+pub const CREDENTIAL_STORE_DIR_VAR: &str = "RECOLLECT_CREDENTIAL_STORE_DIR";
 fn storage_error() -> anyhow::Error {
     anyhow!(
         "The OS credential store is unavailable or locked. Unlock it and retry; no file fallback is used."
     )
+}
+fn file_store_path(account: &str) -> Option<std::path::PathBuf> {
+    let dir = std::env::var_os(CREDENTIAL_STORE_DIR_VAR)?;
+    if dir.is_empty() {
+        return None;
+    }
+    let name: String = account
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect();
+    Some(std::path::PathBuf::from(dir).join(format!("{name}.json")))
 }
 impl CredentialSlot {
     pub fn new(endpoint: &str, profile: &str) -> Result<Self> {
@@ -59,15 +77,71 @@ impl CredentialSlot {
             "Use a local device profile between 1 and 80 printable bytes"
         );
         let account = format!("{endpoint}#{profile}");
+        let file = file_store_path(&account);
         #[cfg(target_os = "macos")]
-        return Ok(Self { account });
+        return Ok(Self { account, file });
         #[cfg(not(target_os = "macos"))]
         let entry =
             keyring::Entry::new(COMPANION_SERVICE, &account).map_err(|_| storage_error())?;
         #[cfg(not(target_os = "macos"))]
-        return Ok(Self { account, entry });
+        return Ok(Self {
+            account,
+            file,
+            entry,
+        });
+    }
+    fn file_load(path: &std::path::Path) -> Result<Option<StoredDevice>> {
+        match std::fs::read(path) {
+            Ok(data) => Ok(Some(serde_json::from_slice(&data).map_err(|_| {
+                anyhow!("This profile's stored credential is unreadable. Use forget, revoke it in Devices and pair again.")
+            })?)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(_) => Err(storage_error()),
+        }
+    }
+    fn file_save(path: &std::path::Path, device: &StoredDevice) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|_| storage_error())?;
+        }
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(path).map_err(|_| storage_error())?;
+        use std::io::Write;
+        file.write_all(serde_json::to_string(device)?.as_bytes())
+            .map_err(|_| storage_error())
+    }
+    fn file_forget(path: &std::path::Path) -> Result<()> {
+        match std::fs::remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(_) => Err(storage_error()),
+        }
+    }
+    /// Slot backed by one private file; used when the store directory is set.
+    #[doc(hidden)]
+    pub fn file_backed(path: std::path::PathBuf) -> Self {
+        #[cfg(target_os = "macos")]
+        return Self {
+            account: String::new(),
+            file: Some(path),
+        };
+        #[cfg(not(target_os = "macos"))]
+        return Self {
+            account: String::new(),
+            file: Some(path),
+            entry: keyring::Entry::new(COMPANION_SERVICE, "recollect-file-backed")
+                .expect("keyring entry handle"),
+        };
     }
     pub fn load(&self) -> Result<Option<StoredDevice>> {
+        if let Some(path) = &self.file {
+            return Self::file_load(path);
+        }
         #[cfg(target_os = "macos")]
         let data = os_store::load(COMPANION_SERVICE, &self.account)?;
         #[cfg(target_os = "macos")]
@@ -83,6 +157,9 @@ impl CredentialSlot {
         }
     }
     pub fn save(&self, device: &StoredDevice) -> Result<()> {
+        if let Some(path) = &self.file {
+            return Self::file_save(path, device);
+        }
         #[cfg(target_os = "macos")]
         return os_store::save(
             COMPANION_SERVICE,
@@ -96,6 +173,9 @@ impl CredentialSlot {
             .map_err(|_| storage_error())
     }
     pub fn forget(&self) -> Result<()> {
+        if let Some(path) = &self.file {
+            return Self::file_forget(path);
+        }
         #[cfg(target_os = "macos")]
         return match os_store::delete(COMPANION_SERVICE, &self.account) {
             Ok(_) => Ok(()),
@@ -383,4 +463,46 @@ async fn decode<T: DeserializeOwned>(response: reqwest::Response) -> Result<T> {
         .json()
         .await
         .map_err(|_| anyhow!("Recollect returned an unreadable response"))
+}
+
+#[cfg(test)]
+mod credential_file_store_tests {
+    use super::*;
+
+    #[test]
+    fn file_backed_slot_round_trips_without_the_os_store() {
+        let dir = std::env::temp_dir().join(format!("recollect-slot-{}", Uuid::new_v4()));
+        let slot = CredentialSlot::file_backed(dir.join("profile.json"));
+        assert!(slot.load().unwrap().is_none());
+        let device = StoredDevice {
+            endpoint: "http://127.0.0.1:1".into(),
+            device_id: Uuid::new_v4(),
+            token: Uuid::new_v4(),
+        };
+        slot.save(&device).unwrap();
+        let loaded = slot.load().unwrap().unwrap();
+        assert_eq!(loaded.device_id, device.device_id);
+        assert_eq!(loaded.token, device.token);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(dir.join("profile.json")).unwrap().permissions().mode();
+            assert_eq!(mode & 0o777, 0o600);
+        }
+        slot.forget().unwrap();
+        assert!(slot.load().unwrap().is_none());
+        slot.forget().unwrap();
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn store_path_is_sanitized_per_account() {
+        let dir = std::env::temp_dir().join("recollect-slot-path");
+        unsafe { std::env::set_var(CREDENTIAL_STORE_DIR_VAR, &dir) };
+        let path = file_store_path("http://h:1#profile/one").unwrap();
+        unsafe { std::env::remove_var(CREDENTIAL_STORE_DIR_VAR) };
+        assert_eq!(path.parent().unwrap(), dir);
+        assert_eq!(path.file_name().unwrap(), "http___h_1_profile_one.json");
+        assert!(file_store_path("x").is_none());
+    }
 }

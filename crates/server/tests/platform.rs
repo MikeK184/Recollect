@@ -1020,6 +1020,19 @@ impl Harness {
             .join(format!("{database}-artifacts"))
             .to_string_lossy()
             .into_owned();
+        // Fixture device credentials live in a private file store instead of
+        // the OS credential store, so neither this test binary nor the agent
+        // binaries it spawns prompt for Keychain access on every rebuild. The
+        // suite runs single-threaded (scripts/test-platform.sh), and spawn
+        // sites that clear the environment pass this variable through.
+        let credential_store = test_state.join(format!("{database}-credential-store"));
+        std::fs::create_dir_all(&credential_store).unwrap();
+        unsafe {
+            std::env::set_var(
+                recollect_agent::CREDENTIAL_STORE_DIR_VAR,
+                &credential_store,
+            );
+        }
         let pool = db::pool(&config.database_url).await.unwrap();
         recollect_server::privacy_journal::initialize(&admin, &config)
             .await

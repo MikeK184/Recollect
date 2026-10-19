@@ -15,6 +15,11 @@ fn native_environment(command: &mut tokio::process::Command) {
     if let Some(address) = std::env::var_os("DBUS_SESSION_BUS_ADDRESS") {
         command.env("DBUS_SESSION_BUS_ADDRESS", address);
     }
+    // The harness keeps fixture credentials in a private file store so the
+    // rebuilt binaries never prompt for the OS credential store.
+    if let Some(dir) = std::env::var_os(recollect_agent::CREDENTIAL_STORE_DIR_VAR) {
+        command.env(recollect_agent::CREDENTIAL_STORE_DIR_VAR, dir);
+    }
 }
 
 #[tokio::test]
