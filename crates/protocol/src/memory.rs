@@ -120,7 +120,7 @@ pub struct ClaimEvidencePage {
     pub total: i64,
     pub offset: i64,
 }
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Serialize, Deserialize, ToSchema)]
 pub struct ClaimView {
     pub revision: ClaimRevision,
     pub knowledge_until: Option<DateTime<Utc>>,

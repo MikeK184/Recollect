@@ -250,6 +250,22 @@ pub(crate) async fn selection_valid(
             .await?,
     )
 }
+/// Validate many selections with one statement; the result is index-aligned.
+pub(crate) async fn selections_valid(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    selections: &[&ScopeSelection],
+) -> Result<Vec<bool>> {
+    if selections.is_empty() {
+        return Ok(Vec::new());
+    }
+    let valid: Vec<(i64, bool)> = sqlx::query_as("SELECT t.n::bigint,recollect_selection_valid($1,t.s) FROM jsonb_array_elements($2) WITH ORDINALITY AS t(s,n) ORDER BY t.n")
+        .bind(brain)
+        .bind(sqlx::types::Json(selections))
+        .fetch_all(&mut **tx)
+        .await?;
+    Ok(valid.into_iter().map(|(_, v)| v).collect())
+}
 async fn snapshot(
     tx: &mut Tx<'_>,
     auth: &Auth,

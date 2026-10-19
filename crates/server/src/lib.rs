@@ -526,8 +526,14 @@ pub(crate) fn api_routes() -> Router<AppState> {
             "/brains/{brain}/recall",
             post(retrieval::recall).layer(DefaultBodyLimit::max(32768)),
         )
-        .route("/brains/{brain}/retrieval/feedback/context", post(retrieval::feedback::context).layer(DefaultBodyLimit::max(32768)))
-        .route("/brains/{brain}/retrieval/feedback", post(retrieval::feedback::record).layer(DefaultBodyLimit::max(8192)))
+        .route(
+            "/brains/{brain}/retrieval/feedback/context",
+            post(retrieval::feedback::context).layer(DefaultBodyLimit::max(32768)),
+        )
+        .route(
+            "/brains/{brain}/retrieval/feedback",
+            post(retrieval::feedback::record).layer(DefaultBodyLimit::max(8192)),
+        )
         .route(
             "/brains/{brain}/answer-requests",
             post(answers::create).layer(DefaultBodyLimit::max(32768)),
@@ -545,7 +551,10 @@ pub(crate) fn api_routes() -> Router<AppState> {
             "/brains/{brain}/organization/fields/view",
             post(knowledge_mapping::fields::view),
         )
-        .route("/brains/{brain}/organization/sources/view",post(knowledge_mapping::organization::source_view))
+        .route(
+            "/brains/{brain}/organization/sources/view",
+            post(knowledge_mapping::organization::source_view),
+        )
         .route(
             "/brains/{brain}/organization/view",
             post(knowledge_mapping::organization::view),
@@ -554,8 +563,14 @@ pub(crate) fn api_routes() -> Router<AppState> {
             "/brains/{brain}/organization/topics/{id}",
             axum::routing::put(knowledge_mapping::organization::topic),
         )
-        .route("/brains/{brain}/organization/aliases/view", post(knowledge_mapping::aliases::view))
-        .route("/brains/{brain}/organization/aliases/{id}", axum::routing::put(knowledge_mapping::aliases::decide))
+        .route(
+            "/brains/{brain}/organization/aliases/view",
+            post(knowledge_mapping::aliases::view),
+        )
+        .route(
+            "/brains/{brain}/organization/aliases/{id}",
+            axum::routing::put(knowledge_mapping::aliases::decide),
+        )
         .route("/brains/{brain}/graph/path", post(graph::path))
         .route("/brains/{brain}/graph/explore", post(graph::explore))
         .route(

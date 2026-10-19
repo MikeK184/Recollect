@@ -502,7 +502,8 @@ async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_supp
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    let mapping_context=crate::knowledge_mapping::production::learning_context(state,job,&run).await?;
+    let mapping_context =
+        crate::knowledge_mapping::production::learning_context(state, job, &run).await?;
     let response = gateway::invoke_for_policy(
         state,
         gateway::Context {

@@ -276,6 +276,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "064_mapping_overlapping_anchors",
         include_str!("../migrations/064_mapping_overlapping_anchors.sql"),
     ),
+    (
+        "065_set_based_recall",
+        include_str!("../migrations/065_set_based_recall.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

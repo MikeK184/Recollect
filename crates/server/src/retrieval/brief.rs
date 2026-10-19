@@ -2,6 +2,13 @@
 //! extra model call; all records pass the ordinary attributed item gate.
 use super::*;
 
+/// Whether ordinary recall also builds the scoped project brief/continuation.
+pub(super) fn requested(input: &RecallRequest) -> bool {
+    (input.project_brief || input.continuation.is_some())
+        && input.mode != "history"
+        && input.knowledge_at.is_none()
+}
+
 pub(super) async fn supplement(
     state: &AppState,
     tx: &mut Tx<'_>,
@@ -11,10 +18,7 @@ pub(super) async fn supplement(
     coverage: &mut RecallCoverage,
 ) -> Result<()> {
     let input = read.input;
-    if (!input.project_brief && input.continuation.is_none())
-        || input.mode == "history"
-        || input.knowledge_at.is_some()
-    {
+    if !requested(input) {
         return Ok(());
     }
     let mut strict = input.clone();
@@ -31,21 +35,19 @@ pub(super) async fn supplement(
         manifest: read.manifest,
     };
     let continuation = continuation(state, tx, auth, &strict_read, coverage).await?;
+    // Rank the pooled claims of this request under the strict mode. The pool
+    // holds every claim here (the brief does not depend on the query text) and
+    // the other gates are mode independent; only the status predicate differs.
     let sql = format!(
-        "{} SELECT matched.* FROM matched JOIN selected_claims family ON family.id=matched.revision_id WHERE kind='claim' AND status_eligible AND (revision_id=$11 OR ($12 AND data#>>'{{content,kind}}'<>'handover' AND (data#>>'{{content,kind}}'='decision' OR data#>>'{{content,context_role}}' IN ('decision','convention','constraint')))) AND ($13::timestamptz IS NULL OR recollect_validity_range(data#>'{{content,validity}}') @> $13) ORDER BY (revision_id=$11) DESC NULLS LAST, ((selection->>'environment_id' IS NOT NULL)::integer+jsonb_array_length(coalesce(selection->'repository_ids','[]'))+jsonb_array_length(coalesce(selection->'area_ids','[]'))) DESC,coalesce(data#>>'{{content,context_role}}','decision'),family.subject_key,family.predicate_key,matched.id LIMIT 500",
-        include_str!("../retrieval_candidates.sql")
+        "SELECT {} FROM recall_pool matched JOIN claim_revisions family ON family.id=matched.revision_id WHERE matched.kind='claim' AND recollect_claim_status_eligible(matched.data,$1) AND (matched.revision_id=$2 OR ($3 AND matched.data#>>'{{content,kind}}'<>'handover' AND (matched.data#>>'{{content,kind}}'='decision' OR matched.data#>>'{{content,context_role}}' IN ('decision','convention','constraint')))) AND ($4::timestamptz IS NULL OR recollect_validity_range(matched.data#>'{{content,validity}}') @> $4) ORDER BY (matched.revision_id=$2) DESC NULLS LAST, ((matched.selection->>'environment_id' IS NOT NULL)::integer+jsonb_array_length(coalesce(matched.selection->'repository_ids','[]'))+jsonb_array_length(coalesce(matched.selection->'area_ids','[]'))) DESC,coalesce(matched.data#>>'{{content,context_role}}','decision'),family.subject_key,family.predicate_key,matched.id LIMIT 500",
+        super::pool::CANDIDATE
+            .split(',')
+            .map(|c| format!("matched.{c}"))
+            .collect::<Vec<_>>()
+            .join(",")
     );
     let rows: Vec<Candidate> = sqlx::query_as(&sql)
-        .bind(read.brain)
-        .bind(read.at)
-        .bind(&input.query)
-        .bind(SqlJson(&input.selection))
-        .bind(input.collection_id)
-        .bind(read.manifest.cloned().map(SqlJson))
         .bind(&strict.mode)
-        .bind(input.exact.as_ref().map(|e| &e.kind))
-        .bind(input.exact.as_ref().map(|e| e.id))
-        .bind(&input.channels)
         .bind(continuation)
         .bind(input.project_brief)
         .bind(input.fact_at)
@@ -57,53 +59,60 @@ pub(super) async fn supplement(
     let mut eligible = 0;
     let mut count = 0;
     let mut brief_bytes = 2usize;
-    for row in rows {
-        let Some((mut item, deadline)) = item(state, tx, &strict_read, &row, coverage).await?
-        else {
-            continue;
-        };
-        if item
-            .claim
-            .as_ref()
-            .is_none_or(|c| !c.conflicting_claim_ids.is_empty() || !c.rule_ids.is_empty())
-        {
-            continue;
-        }
-        eligible += 1;
-        if eligible > 64 {
-            note(coverage, "project_brief_discovery_bounded");
-            break;
-        }
-        item.delivery_section = if Some(row.revision_id) == continuation {
-            "continuation"
-        } else {
-            "project_brief"
-        }
-        .into();
-        item.channels = vec![item.delivery_section.clone()];
-        item.score = 0.;
-        item.semantic_similarity = None;
-        item.graph_match = None;
-        if item.delivery_section == "project_brief" {
-            let n = serde_json::to_vec(&item).expect("typed brief item").len() + 1;
-            if count == 3 || brief_bytes + n > 1536 {
-                note(coverage, "project_brief_budget");
+    let mut gates = Gates::default();
+    'pages: for page in rows.chunks(128) {
+        gates.release();
+        let page_rows: Vec<&Candidate> = page.iter().collect();
+        gates.load(state, tx, &strict_read, &page_rows).await?;
+        for row in page {
+            let Some((mut item, deadline)) =
+                item_with(state, tx, &strict_read, row, coverage, &mut gates).await?
+            else {
+                continue;
+            };
+            if item
+                .claim
+                .as_ref()
+                .is_none_or(|c| !c.conflicting_claim_ids.is_empty() || !c.rule_ids.is_empty())
+            {
                 continue;
             }
-            count += 1;
-            brief_bytes += n;
-        } else {
-            note(coverage, "continuation_one_page");
+            eligible += 1;
+            if eligible > 64 {
+                note(coverage, "project_brief_discovery_bounded");
+                break 'pages;
+            }
+            item.delivery_section = if Some(row.revision_id) == continuation {
+                "continuation"
+            } else {
+                "project_brief"
+            }
+            .into();
+            item.channels = vec![item.delivery_section.clone()];
+            item.score = 0.;
+            item.semantic_similarity = None;
+            item.graph_match = None;
+            if item.delivery_section == "project_brief" {
+                let n = serde_json::to_vec(&item).expect("typed brief item").len() + 1;
+                if count == 3 || brief_bytes + n > 1536 {
+                    note(coverage, "project_brief_budget");
+                    continue;
+                }
+                count += 1;
+                brief_bytes += n;
+            } else {
+                note(coverage, "continuation_one_page");
+            }
+            ranked.push(semantic::Ranked {
+                item,
+                deadline,
+                exact: false,
+                alternatives: vec![],
+                lexical_rank: None,
+                semantic_rank: None,
+                graph_rank: None,
+            });
         }
-        ranked.push(semantic::Ranked {
-            item,
-            deadline,
-            exact: false,
-            alternatives: vec![],
-            lexical_rank: None,
-            semantic_rank: None,
-            graph_rank: None,
-        });
     }
     Ok(())
 }
@@ -157,27 +166,26 @@ async fn continuation(
     // Resolve ambiguity only among applicable, deliverable episodes. The same
     // collection/time/status/scope gate used by recall precedes this bounded scan.
     let sql = format!(
-        "{} SELECT m.*,p.coverage AS digest_coverage FROM matched m JOIN session_digest_claims d ON d.revision_id=m.revision_id AND d.brain_id=$1 JOIN session_digest_partitions p ON p.id=d.partition_id JOIN claims c ON c.id=d.claim_id AND c.brain_id=d.brain_id
-        WHERE m.kind='claim' AND m.status_eligible AND d.page=0 AND p.task_id=ANY($11)
-          AND p.actor_id=$12 AND p.device_id IS NOT DISTINCT FROM $13 AND p.selection=$4
-          AND p.manifest_revision_id IS NOT DISTINCT FROM $14 AND ($15::uuid IS NULL OR p.binding_id=$15)
+        "SELECT {},p.coverage AS digest_coverage FROM recall_pool m JOIN session_digest_claims d ON d.revision_id=m.revision_id AND d.brain_id=$1 JOIN session_digest_partitions p ON p.id=d.partition_id JOIN claims c ON c.id=d.claim_id AND c.brain_id=d.brain_id
+        WHERE m.kind='claim' AND recollect_claim_status_eligible(m.data,$2) AND d.page=0 AND p.task_id=ANY($3)
+          AND p.actor_id=$4 AND p.device_id IS NOT DISTINCT FROM $5 AND p.selection=$6
+          AND p.manifest_revision_id IS NOT DISTINCT FROM $7 AND ($8::uuid IS NULL OR p.binding_id=$8)
           AND c.current_revision=d.revision_id
-          AND ($16::timestamptz IS NULL OR recollect_validity_range(m.data#>'{{content,validity}}') @> $16)
-        ORDER BY p.id LIMIT 500", include_str!("../retrieval_candidates.sql"));
+          AND ($9::timestamptz IS NULL OR recollect_validity_range(m.data#>'{{content,validity}}') @> $9)
+        ORDER BY p.id LIMIT 500",
+        super::pool::CANDIDATE
+            .split(',')
+            .map(|c| format!("m.{c}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
     let rows: Vec<Episode> = sqlx::query_as(&sql)
         .bind(read.brain)
-        .bind(read.at)
-        .bind(&read.input.query)
-        .bind(SqlJson(&read.input.selection))
-        .bind(read.input.collection_id)
-        .bind(read.manifest.cloned().map(SqlJson))
         .bind(&read.input.mode)
-        .bind(read.input.exact.as_ref().map(|e| &e.kind))
-        .bind(read.input.exact.as_ref().map(|e| e.id))
-        .bind(&read.input.channels)
         .bind(&tasks)
         .bind(auth.user.id)
         .bind(auth.device_id)
+        .bind(SqlJson(&read.input.selection))
         .bind(read.input.manifest_revision_id)
         .bind(hint.and_then(|h| h.binding_id))
         .bind(read.input.fact_at)
@@ -188,8 +196,13 @@ async fn continuation(
         return Ok(None);
     }
     let mut selected = None;
+    let mut gates = Gates::default();
+    let page: Vec<&Candidate> = rows.iter().map(|r| &r.candidate).collect();
+    gates.load(state, tx, read, &page).await?;
     for row in rows {
-        let Some((item, _)) = item(state, tx, read, &row.candidate, coverage).await? else {
+        let Some((item, _)) =
+            item_with(state, tx, read, &row.candidate, coverage, &mut gates).await?
+        else {
             continue;
         };
         if item

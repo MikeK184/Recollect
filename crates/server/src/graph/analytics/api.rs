@@ -89,10 +89,12 @@ pub async fn get(
             r
         })
         .collect();
-    let total = sqlx::query_scalar("SELECT count(*) FROM analytics_reports WHERE purpose='topology' AND brain_id=$1")
-        .bind(brain)
-        .fetch_one(&mut *tx)
-        .await?;
+    let total = sqlx::query_scalar(
+        "SELECT count(*) FROM analytics_reports WHERE purpose='topology' AND brain_id=$1",
+    )
+    .bind(brain)
+    .fetch_one(&mut *tx)
+    .await?;
     let jobs:Vec<jobs::JobRow>=sqlx::query_as("SELECT * FROM jobs WHERE brain_id=$1 AND kind='graph.analyze' AND target_id IN (SELECT id FROM analytics_reports WHERE purpose='topology') ORDER BY created_at DESC,id DESC LIMIT 20").bind(brain).fetch_all(&mut *tx).await?;
     let cleanup_pending=sqlx::query_scalar("SELECT DISTINCT report_id FROM analytics_attempts WHERE brain_id=$1 AND cleaned_at IS NULL AND report_id IN (SELECT id FROM analytics_reports WHERE purpose='topology')").bind(brain).fetch_all(&mut *tx).await?;
     tx.commit().await?;

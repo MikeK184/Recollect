@@ -13,6 +13,7 @@ local capability does not establish a deployed or published service.
 | --- | --- |
 | [desktop-grouped-3d-graph.md](desktop-grouped-3d-graph.md) | shipped |
 | [retrieval-attributed-feedback.md](retrieval-attributed-feedback.md) | shipped |
+| [retrieval-set-based-read-path.md](retrieval-set-based-read-path.md) | shipped |
 | [mcp-native-skill-reload.md](mcp-native-skill-reload.md) | shipped |
 | [mcp-agent-coordination.md](mcp-agent-coordination.md) | shipped |
 | [mcp-managed-skills.md](mcp-managed-skills.md) | shipped |

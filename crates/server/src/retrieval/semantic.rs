@@ -12,9 +12,9 @@ const SCAN_LIMIT: usize = 5000;
 // import, before PostgreSQL has refreshed its cardinality statistics.
 // Apply readiness outside the unique lookup: with fresh statistics PostgreSQL
 // can otherwise scan the pending-work index once for every candidate instead.
-const SCOPED: &str = ", semantic_scoped AS MATERIALIZED (
-    SELECT m.*,e.embedding,e.truncated FROM matched m JOIN LATERAL (
-      SELECT e.* FROM semantic_entries e WHERE e.profile_id=$11
+const SCOPED: &str = "semantic_scoped AS MATERIALIZED (
+    SELECT m.*,e.embedding,e.truncated FROM recall_pool m JOIN LATERAL (
+      SELECT e.* FROM semantic_entries e WHERE e.profile_id=$2
       AND e.kind=CASE m.kind WHEN 'source_version' THEN 'source_chunk' WHEN 'claim' THEN 'claim_revision' ELSE m.kind END
       AND e.input_id=CASE WHEN m.kind='source_version' THEN m.chunk_id ELSE m.revision_id END
       LIMIT 1
@@ -33,19 +33,7 @@ fn scoped<'q, O>(
 where
     O: for<'r> sqlx::FromRow<'r, PgRow>,
 {
-    let input = context.input;
-    sqlx::query_as(sql)
-        .bind(context.brain)
-        .bind(context.at)
-        .bind(input.query.clone())
-        .bind(SqlJson(input.selection.clone()))
-        .bind(input.collection_id)
-        .bind(context.manifest.cloned().map(SqlJson))
-        .bind(input.mode.clone())
-        .bind(input.exact.as_ref().map(|e| e.kind.clone()))
-        .bind(input.exact.as_ref().map(|e| e.id))
-        .bind(input.channels.clone())
-        .bind(profile)
+    sqlx::query_as(sql).bind(context.brain).bind(profile)
 }
 
 pub(super) struct Admission {
@@ -87,9 +75,20 @@ pub(super) async fn prepare(
         "m.kind,m.revision_id,m.chunk_id",
     );
     let count = if let Some(profile) = &profile {
+        // Semantic scoring is independent of the query text: the whole eligible
+        // population, from one pass of the canonical candidate chain.
+        pool::build(
+            tx,
+            context,
+            pool::Breadth {
+                claims: true,
+                rest: true,
+            },
+            true,
+        )
+        .await?;
         let sql = format!(
-            "{}{identities} SELECT count(*)::bigint FROM (SELECT 1 FROM semantic_scoped LIMIT 5001) bounded",
-            include_str!("../retrieval_candidates.sql")
+            "WITH {identities} SELECT count(*)::bigint FROM (SELECT 1 FROM semantic_scoped LIMIT 5001) bounded"
         );
         let (count,): (i64,) = scoped(&sql, context, profile.id)
             .fetch_one(&mut **tx)
@@ -111,8 +110,7 @@ pub(super) async fn prepare(
     // rows without a vector remain visible as missing/partial index coverage.
     if let Some(profile) = &profile {
         let sql = format!(
-            "{}{identities} SELECT EXISTS(SELECT 1 FROM matched m WHERE m.status_eligible AND NOT EXISTS(SELECT 1 FROM semantic_scoped s WHERE s.kind=m.kind AND s.revision_id=m.revision_id AND coalesce(s.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)=coalesce(m.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)))",
-            include_str!("../retrieval_candidates.sql")
+            "WITH {identities} SELECT EXISTS(SELECT 1 FROM recall_pool m WHERE m.status_eligible AND NOT EXISTS(SELECT 1 FROM semantic_scoped s WHERE s.kind=m.kind AND s.revision_id=m.revision_id AND coalesce(s.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)=coalesce(m.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)))"
         );
         let (missing,): (bool,) = scoped(&sql, context, profile.id)
             .fetch_one(&mut **tx)
@@ -120,6 +118,11 @@ pub(super) async fn prepare(
         if missing {
             note(coverage, "semantic_scoped_coverage_partial");
         }
+        // The identity table is admission-only; the request's candidate pass is
+        // built (in this or the post-embedding transaction) with full content.
+        sqlx::query("DROP TABLE recall_pool")
+            .execute(&mut **tx)
+            .await?;
     }
     Ok(Admission {
         status: RecallSemantic {
@@ -240,10 +243,15 @@ pub(super) async fn ranked(
     let mut lexical_scores = BTreeMap::<(String, Uuid), f32>::new();
     // Ranking operates on fully qualified canonical items before applying the
     // caller's context budget. Channel scores never establish eligibility.
-    for row in baseline.iter().take(CANDIDATES) {
+    let mut gates = Gates::default();
+    let page: Vec<&Candidate> = baseline.iter().take(CANDIDATES).collect();
+    gates.load(state, tx, context, &page).await?;
+    for row in page {
         let key = (row.kind.clone(), row.id);
         coverage.examined += 1;
-        if let Some((mut item, deadline)) = item(state, tx, context, row, coverage).await? {
+        if let Some((mut item, deadline)) =
+            item_with(state, tx, context, row, coverage, &mut gates).await?
+        {
             for (matched, channel) in [(row.exact_match, "exact"), (row.lexical_match, "lexical")] {
                 if matched && !item.channels.iter().any(|c| c == channel) {
                     item.channels.push(channel.into());
@@ -295,10 +303,11 @@ pub(super) async fn ranked(
     if let (Some(vector), Some(profile)) =
         (vector, admission.and_then(|a| a.status.profile.as_ref()))
     {
-        let sql=format!("{}{SCOPED} SELECT kind,id,revision_id,chunk_id,label,text,recorded_at,selection,source_id,repository_id,
-          snapshot_id,revision,path,line_from,line_to,byte_from,byte_to,artifact_id,byte_length,processing,data,expires_at,exact_match,lexical_match,rank,
-          (1-(embedding<=>$12::text::vector))::real similarity,truncated FROM semantic_scoped
-          ORDER BY embedding<=>$12::text::vector,kind,id,chunk_id NULLS FIRST LIMIT 5001",include_str!("../retrieval_candidates.sql"));
+        let sql = format!(
+            "WITH {SCOPED} SELECT {},(1-(embedding<=>$3::text::vector))::real similarity,truncated FROM semantic_scoped
+          ORDER BY embedding<=>$3::text::vector,kind,id,chunk_id NULLS FIRST LIMIT 5001",
+            pool::CANDIDATE
+        );
         let encoded =
             serde_json::to_string(vector).map_err(|_| Error::invalid("Invalid query vector."))?;
         let rows: Vec<Scored> = scoped(&sql, context, profile.id)
@@ -312,7 +321,18 @@ pub(super) async fn ranked(
             ));
         }
         let mut semantic_rank = 0;
-        for scored in rows {
+        // Gates load one page at a time: rows beyond the 100-rank limit are
+        // never qualified, and a page is dropped once it has been read.
+        'rows: for (index, scored) in rows.iter().enumerate() {
+            if index % 128 == 0 {
+                gates.release();
+                let page: Vec<&Candidate> = rows[index..]
+                    .iter()
+                    .take(128)
+                    .map(|r| &r.candidate)
+                    .collect();
+                gates.load(state, tx, context, &page).await?;
+            }
             if !scored.similarity.is_finite() {
                 return Err(model_policy::failure(
                     "semantic_distance_unavailable",
@@ -323,7 +343,7 @@ pub(super) async fn ranked(
             if similarity < context.input.semantic_min_similarity.unwrap_or(0.0) {
                 continue;
             }
-            let row = scored.candidate;
+            let row = &scored.candidate;
             let key = (row.kind.clone(), row.id);
             if identities.get(&key).is_some_and(|r| {
                 r.semantic_rank.is_some()
@@ -336,7 +356,9 @@ pub(super) async fn ranked(
                 continue;
             }
             coverage.examined += 1;
-            let Some((mut item, deadline)) = item(state, tx, context, &row, coverage).await? else {
+            let Some((mut item, deadline)) =
+                item_with(state, tx, context, row, coverage, &mut gates).await?
+            else {
                 continue;
             };
             if item.kind == "source_version"
@@ -384,7 +406,7 @@ pub(super) async fn ranked(
             }
             if semantic_rank == CANDIDATES {
                 note(coverage, "semantic_candidate_limit");
-                break;
+                break 'rows;
             }
             semantic_rank += 1;
             item.channels = vec!["semantic".into()];

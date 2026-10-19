@@ -6,6 +6,8 @@ use recollect_server::{artifacts, worker};
 mod context;
 #[path = "retrieval/retention.rs"]
 mod retention;
+#[path = "retrieval/statements.rs"]
+mod statements;
 
 async fn source(h: &Harness, base: &str, login: &Login, title: &str, text: &str) -> Value {
     ok(

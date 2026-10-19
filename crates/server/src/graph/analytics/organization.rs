@@ -4,8 +4,8 @@
 use super::*;
 mod hybrid;
 use crate::knowledge_mapping::{
-    affinity::{self, Association, Projection, Vertex},
     EntityKind,
+    affinity::{self, Association, Projection, Vertex},
 };
 use crate::knowledge_mapping::{manual_intent, source_features};
 use std::{
@@ -96,7 +96,7 @@ async fn prepare_inner(
                 r.4.clone().unwrap_or_default(),
                 r.5.unwrap_or_default(),
                 r.6.clone().unwrap_or_default(),
-                r.7 .0,
+                r.7.0,
             )
         });
     let (recipe, gds_version) = selected.map_or((None, None), |r| (Some(r.0), Some(r.1)));
