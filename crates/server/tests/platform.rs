@@ -1007,6 +1007,15 @@ impl Harness {
                     .await
                     .unwrap();
             }
+            // Admission (migration 070) is one standalone function over helpers
+            // that predate every upgrade fixture. Install it so the fixture can
+            // serve requests before the test migrates forward, where the same
+            // text is applied again and replaces it unchanged.
+            let (_, admission) = db::MIGRATIONS
+                .iter()
+                .find(|(name, _)| *name == "070_brain_admission")
+                .unwrap();
+            sqlx::raw_sql(admission).execute(&mut *tx).await.unwrap();
             sqlx::raw_sql("GRANT SELECT ON recollect_migrations TO recollect_app")
                 .execute(&mut *tx)
                 .await
