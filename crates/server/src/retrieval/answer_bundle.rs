@@ -78,7 +78,8 @@ impl Bundle {
             .collect();
         let kinds: Vec<&str> = items.iter().map(|i| i.kind.as_str()).collect();
         let revisions: Vec<Uuid> = items.iter().map(|i| i.revision_id).collect();
-        let byte_from: Vec<Option<i32>> = spans.iter().map(|p| p.and_then(|p| p.byte_from)).collect();
+        let byte_from: Vec<Option<i32>> =
+            spans.iter().map(|p| p.and_then(|p| p.byte_from)).collect();
         let byte_to: Vec<Option<i32>> = spans.iter().map(|p| p.and_then(|p| p.byte_to)).collect();
         let mut rows: Vec<Candidate> = vec![];
         if !items.is_empty() {

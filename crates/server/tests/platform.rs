@@ -1030,10 +1030,7 @@ impl Harness {
         let credential_store = test_state.join(format!("{database}-credential-store"));
         std::fs::create_dir_all(&credential_store).unwrap();
         unsafe {
-            std::env::set_var(
-                recollect_agent::CREDENTIAL_STORE_DIR_VAR,
-                &credential_store,
-            );
+            std::env::set_var(recollect_agent::CREDENTIAL_STORE_DIR_VAR, &credential_store);
         }
         let pool = db::pool(&config.database_url).await.unwrap();
         recollect_server::privacy_journal::initialize(&admin, &config)
@@ -1825,9 +1822,14 @@ async fn worker_heartbeat_keeps_work_longer_than_the_lease() {
     let h = Harness::new().await;
     let login = h.login().await;
     assert_eq!(
-        h.call("POST", "/api/brains", Some(&login), json!({"name":"Long lease"}))
-            .await
-            .0,
+        h.call(
+            "POST",
+            "/api/brains",
+            Some(&login),
+            json!({"name":"Long lease"})
+        )
+        .await
+        .0,
         StatusCode::OK
     );
     let job = worker::claim(&h.state.pool, "interactive")

@@ -1300,6 +1300,9 @@ async fn mcp_management_credentials_owner_revision_files_and_library() {
     assert_eq!(semantic["batches"], json!([]));
     assert_eq!(semantic["total_batches"], 0);
     std::fs::set_permissions(private, std::fs::Permissions::from_mode(0o644)).unwrap();
+    // Static resolutions are cached while the bindings file is unchanged; the
+    // key file's mode is not part of that cache key.
+    resolver.invalidate().await;
     assert!(
         resolver
             .resolve(id, Some("fixture-read"), "central")
@@ -1313,6 +1316,7 @@ async fn mcp_management_credentials_owner_revision_files_and_library() {
     std::fs::set_permissions(private, std::fs::Permissions::from_mode(0o600)).unwrap();
     std::fs::remove_file(private).unwrap();
     std::os::unix::fs::symlink(&h.state.config.credential_file, private).unwrap();
+    resolver.invalidate().await;
     assert!(
         resolver
             .resolve(id, Some("fixture-read"), "central")
