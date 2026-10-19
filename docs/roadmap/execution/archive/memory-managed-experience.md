@@ -66,7 +66,7 @@ Work type: product
 - Shipped: Managed model/capture preset through shared Rust persistence, compatible old create receipts, one existing-Brain adoption action, compact navigation, simple Ask/search/notes, status-first settings, coding-agent setup and owner-only inert connector import. Deployed locally with exact recorded inventory preservation.
 - Not shipped: Explicit deferrals remain: arbitrary telemetry, connector marketplace, adaptive budgets, new ranking algorithms, existing-Brain bulk conversion and unrelated desktop acceptance.
 - New blockers: None.
-- Docs updated: Vision, managed experience, affected contracts, runbooks, [dated proof](../../../mappings/managed-memory-experience-2026-09-28.md), [handover](../../../../CONTINUE_HERE.md), epic and indexes.
+- Docs updated: Vision, managed experience, affected contracts, runbooks, [dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/managed-memory-experience-2026-09-28.md), [handover](../../../../CONTINUE_HERE.md), epic and indexes.
 - Validation: Two new API cases, three existing controlled native lifecycle/provider/MCP cases, 26 focused browser cases across documented runs, 21 unit cases with three live-Vault cases ignored, workspace clippy, generated schema, frontend type/design/build, governance and whitespace checks. Local migration/readiness and before/after data/grant/policy inventory equality passed. Initial failures, selector fixes, worker prerequisite and targeted reruns are recorded in the dated proof; broader desktop acceptance remains open.
 - Version: N/A; no release requested.
 - Commit: uncommitted.

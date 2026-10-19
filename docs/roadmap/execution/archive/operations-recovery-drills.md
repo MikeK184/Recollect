@@ -93,7 +93,7 @@ Work type: product
 - Not shipped: External deployment, global scheduler installation, universal
   capacity guarantees and integrated workload evaluation are outside this slice.
 - New blockers: None; the integrated evaluation successor still needs its contract.
-- Docs updated: ADR, contract, epic/indexes, [evidence](../../../mappings/recovery-2026-09-26.md),
+- Docs updated: ADR, contract, epic/indexes, [evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/recovery-2026-09-26.md),
   [runbook](../../../runbooks/recovery.md) and continuation record.
 - Validation: Actual SFTP and fresh-volume drills, nine refused preflights,
   failed upgrade, killed publication/operator, offline mirror continuity, final

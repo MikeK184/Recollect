@@ -74,7 +74,7 @@ Work type: product
 - Manual: Inspect desktop screenshots and a retained normal test-Brain investigation;
   compare existing Brain/model/job inventory before and after.
 - Acceptance: Complete the contract cases with evidence in the
-  [dated mapping](../../../mappings/retrieval-investigation-2026-09-22.md).
+  [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-investigation-2026-09-22.md).
 
 ## Closeout
 

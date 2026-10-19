@@ -14,7 +14,7 @@ Work type: product
 
 - [Desktop](../../../contracts/desktop-experience.md), [Knowledge](../../../contracts/desktop-knowledge-surface.md), [ADR 0017](../../../adr/0017-desktop-knowledge-and-ask-experience.md).
 - [Answers](../../../contracts/retrieval-answers.md), [graph](../../../contracts/graph-exploration.md).
-- User approved the [reviewed proposal](../../../research/brain-pages-ui-review-2026-10-03.md).
+- User approved the [reviewed proposal](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/brain-pages-ui-review-2026-10-03.md).
 
 ## Scope
 

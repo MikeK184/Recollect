@@ -1,14 +1,14 @@
 # Reference Checkout and Component Update Guidance
 
-Revised: 2026-09-13. This is guidance for future dependency/reference updates,
-not a report that an application upgrade was executed. The former proposal to
-fork Cognee and cognee-integrations as mandatory product foundations is superseded
-by the [independent Rust stack](../foundation/techstack.md).
+Reviewed: 2026-10-18. Recollect owns an implemented Rust product. Cognee, Atlas
+and claude-mem are research checkouts; their updates do not change the selected
+product stack or deployment.
 
 ## Repository ownership
 
 Recollect owns its application and documentation in this repository. The ignored
-cognee/ and agent-memory-atlas/ directories are independent reference checkouts.
+`references/cognee/`, `references/agent-memory-atlas/` and
+`references/claude-mem/` directories are independent reference checkouts.
 They are not submodules, required runtime services or destinations for Recollect
 product code. Preserve their histories, remotes and unrelated work.
 
@@ -30,7 +30,7 @@ repository rather than hidden inside an ignored reference checkout.
 
 ## Updating an implemented dependency
 
-Once application dependencies exist, use the owning implementation slice:
+For application dependency changes, use the owning implementation slice:
 
 1. Read current official interfaces, compatibility notes, licenses and migrations.
 2. Pin the selected compatible Rust/frontend/container/extractor versions and

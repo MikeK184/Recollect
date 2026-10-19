@@ -35,6 +35,8 @@ mod operations;
 pub use operations::*;
 mod pipeline;
 pub use pipeline::*;
+mod skills;
+pub use skills::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct User {
@@ -126,6 +128,8 @@ pub struct Job {
     pub progress: i16,
     pub attempts: i32,
     pub max_attempts: i32,
+    #[serde(default)]
+    pub preparation_deferrals: i32,
     pub error_code: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -472,3 +476,12 @@ pub struct SourceContent {
 }
 mod model;
 pub use model::*;
+
+mod coordination;
+pub use coordination::*;
+mod organization;
+pub use organization::*;
+mod organization_fields;
+pub use organization_fields::*;
+mod feedback;
+pub use feedback::*;

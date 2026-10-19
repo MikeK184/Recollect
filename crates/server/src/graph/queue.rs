@@ -41,18 +41,80 @@ pub(super) async fn enqueue(
     Ok(g)
 }
 
-#[utoipa::path(get,path="/api/brains/{brain}/graph",operation_id="graphStatus",params(("brain"=Uuid,Path),("offset"=Option<i64>,Query)),responses((status=200,body=GraphStatus)))]
+#[derive(Default, Deserialize)]
+pub struct StatusQuery {
+    pub offset: Option<i64>,
+    pub tracked_generation_ids: Option<String>,
+}
+
+fn tracked_ids(value: Option<&str>) -> Result<Vec<Uuid>> {
+    let Some(value) = value else {
+        return Ok(vec![]);
+    };
+    if value.is_empty() || value.len() > 3774 {
+        return Err(Error::invalid(
+            "Track at most 102 distinct non-nil generation UUIDs within 3774 bytes.",
+        ));
+    }
+    let mut seen = BTreeSet::new();
+    let mut ids = vec![];
+    for raw in value.split(',') {
+        let id = Uuid::parse_str(raw)
+            .map_err(|_| Error::invalid("Invalid tracked generation UUID list."))?;
+        if id.is_nil() || !seen.insert(id) || seen.len() > 102 {
+            return Err(Error::invalid(
+                "Track at most 102 distinct non-nil generation UUIDs within 3774 bytes.",
+            ));
+        }
+        ids.push(id);
+    }
+    Ok(ids)
+}
+
+// Inventory and exact-ID tracking use the same metadata-only availability rule.
+// The descriptor is never returned; unavailable repository inputs are removed
+// synthetically without mutating retained generation or job rows on this read.
+const STATUS_GENERATIONS: &str = "SELECT (to_jsonb(g)-'descriptor'-'descriptor_bytes') || CASE WHEN (g.kind='repository' AND NOT EXISTS(SELECT 1 FROM repository_snapshots s WHERE s.brain_id=g.brain_id AND s.id=g.snapshot_id AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active')) OR (g.kind='combined' AND EXISTS(SELECT 1 FROM unnest(g.input_snapshot_ids) x WHERE NOT EXISTS(SELECT 1 FROM repository_snapshots s WHERE s.brain_id=g.brain_id AND s.id=x AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'))) THEN jsonb_build_object('state','removed','error_code','graph_input_unavailable') ELSE '{}'::jsonb END FROM graph_generations g WHERE g.brain_id=$1";
+
+#[utoipa::path(get,path="/api/brains/{brain}/graph",operation_id="graphStatus",params(("brain"=Uuid,Path),("offset"=Option<i64>,Query),("tracked_generation_ids"=Option<String>,Query,description="Comma-separated list of at most 102 distinct non-nil generation UUIDs within 3774 bytes.",max_length=3774)),responses((status=200,body=GraphStatus)))]
 pub async fn get(
     State(state): State<AppState>,
     auth: Auth,
     Path(brain): Path<Uuid>,
-    Query(page): Query<publication::Page>,
+    Query(page): Query<StatusQuery>,
 ) -> Result<ResponseJson<GraphStatus>> {
-    let offset = publication::offset(&page)?;
+    let offset = publication::offset(&publication::Page {
+        offset: page.offset,
+    })?;
+    let tracked = tracked_ids(page.tracked_generation_ids.as_deref())?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
-    let generations:Vec<Json<GraphGeneration>>=sqlx::query_scalar("SELECT (to_jsonb(g)-'descriptor') || CASE WHEN (g.kind='repository' AND NOT EXISTS(SELECT 1 FROM repository_snapshots s WHERE s.brain_id=g.brain_id AND s.id=g.snapshot_id AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active')) OR (g.kind='combined' AND EXISTS(SELECT 1 FROM unnest(g.input_snapshot_ids) x WHERE NOT EXISTS(SELECT 1 FROM repository_snapshots s WHERE s.brain_id=g.brain_id AND s.id=x AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'))) THEN jsonb_build_object('state','removed','error_code','graph_input_unavailable') ELSE '{}'::jsonb END FROM graph_generations g WHERE brain_id=$1 ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
-        .bind(brain).bind(offset).fetch_all(&mut *tx).await?;
+    let generations: Vec<Json<GraphGeneration>> = sqlx::query_scalar(&format!(
+        "{STATUS_GENERATIONS} ORDER BY g.created_at DESC,g.id DESC LIMIT 20 OFFSET $2"
+    ))
+    .bind(brain)
+    .bind(offset)
+    .fetch_all(&mut *tx)
+    .await?;
+    let mut tracked_rows = BTreeMap::new();
+    if !tracked.is_empty() {
+        let rows: Vec<Json<GraphGeneration>> =
+            sqlx::query_scalar(&format!("{STATUS_GENERATIONS} AND g.id=ANY($2)"))
+                .bind(brain)
+                .bind(&tracked)
+                .fetch_all(&mut *tx)
+                .await?;
+        tracked_rows.extend(rows.into_iter().map(|Json(row)| (row.id, row)));
+    }
+    let mut tracked_generations = vec![];
+    let mut missing_tracked_generation_ids = vec![];
+    for id in tracked {
+        if let Some(generation) = tracked_rows.remove(&id) {
+            tracked_generations.push(generation);
+        } else {
+            missing_tracked_generation_ids.push(id);
+        }
+    }
     let total = sqlx::query_scalar("SELECT count(*) FROM graph_generations WHERE brain_id=$1")
         .bind(brain)
         .fetch_one(&mut *tx)
@@ -61,9 +123,13 @@ pub async fn get(
         .bind(brain).fetch_all(&mut *tx).await?;
     let memory_epoch = epoch(&mut tx, brain).await?;
     let link_epoch = combined::origin_epoch(&mut tx, brain).await?;
+    let organization_epoch = super::preparation_epoch(&mut tx, brain).await?;
     tx.commit().await?;
     Ok(ResponseJson(GraphStatus {
+        organization_epoch,
         generations: generations.into_iter().map(|g| g.0).collect(),
+        tracked_generations,
+        missing_tracked_generation_ids,
         jobs: jobs.into_iter().map(Into::into).collect(),
         total,
         offset,

@@ -166,7 +166,7 @@ an actual complete connector response, which does not itself verify every claime
 external effect. Caller history never bulk-returns raw results. Result reads
 require current Brain and profile Use authority and expire after one hour.
 
-The [dated evidence](../mappings/mcp-runtime-2026-09-22.md) records real central and
+The [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-runtime-2026-09-22.md) records real central and
 paired native stdio/Streamable HTTP calls, process cleanup, credential isolation,
 recovery and desktop behavior. Synthetic executables and definitions are installed
 only in owned disposable test databases. `./scripts/test-mcp-runtime.sh` exercises

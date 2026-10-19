@@ -67,6 +67,6 @@ Work type: product
 - Not shipped: Workspace/capture/MCP roles belong to their named successors; no shared or other-OS runtime proof is claimed.
 - New blockers: None.
 - Docs updated: Contract, pack, epic/indexes, device proof mapping, device/local-development runbooks and root README.
-- Validation: Six core Rust scenarios, one real OIDC scenario, four browser workflows including native OS-store persistence/revocation, generated frontend build, Clippy, rustfmt, governance lint and all 32 checker tests passed. Current local readiness, owner login and device-list call succeeded. See [device proof](../../../mappings/platform-device-pairing-proof-2026-09-14.md).
+- Validation: Six core Rust scenarios, one real OIDC scenario, four browser workflows including native OS-store persistence/revocation, generated frontend build, Clippy, rustfmt, governance lint and all 32 checker tests passed. Current local readiness, owner login and device-list call succeeded. See [device proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/platform-device-pairing-proof-2026-09-14.md).
 - Version: N/A: no release or strict versioning.
 - Commit: uncommitted.

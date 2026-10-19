@@ -16,7 +16,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const USAGE: &str = "Recollect plugin: connect --url URL --brain UUID [--token-stdin] [--with-runner] [--runner-id UUID] | status | disconnect | hook HOST | mcp | drain | runner | workspace discover|refresh|list [DIRECTORY] | scope ... | repository ...";
+pub const USAGE: &str = "Recollect plugin: connect --url URL --brain UUID [--token-stdin] [--with-runner] [--runner-id UUID] | status | disconnect | hook HOST | mcp | drain | runner | coordination announce|heartbeat|peers|inbox|ack|send|close|watch|status ... | skills list|fetch|save|discard|install|sync|reload|uninstall|status|leases ... | workspace discover|refresh|list [DIRECTORY] | scope ... | repository ...";
 
 fn option(args: &[String], name: &str) -> Result<Option<String>> {
     let found: Vec<_> = args
@@ -48,8 +48,16 @@ pub fn credential(config: &Config) -> Result<StoredDevice> {
 }
 
 pub(crate) async fn selected(
+    config: Config,
+    directory: &Path,
+) -> Result<(Config, Option<PathBuf>)> {
+    selected_with_network(config, directory, true).await
+}
+
+async fn selected_with_network(
     mut config: Config,
     directory: &Path,
+    network: bool,
 ) -> Result<(Config, Option<PathBuf>)> {
     let cwd = tokio::fs::canonicalize(directory).await?;
     let mut found = false;
@@ -72,11 +80,25 @@ pub(crate) async fn selected(
     config.brain = if let Ok(id) = selector.parse() {
         id
     } else {
+        let data = plugin_storage::root()?;
+        plugin_storage::directory(&data)?;
+        let path = data.join("workspace-selectors.sqlite");
+        plugin_storage::private_file(&path, false)?;
+        let db = rusqlite::Connection::open(path)?;
+        db.busy_timeout(Duration::from_millis(100))?;
+        db.execute_batch("CREATE TABLE IF NOT EXISTS selectors(endpoint TEXT,device TEXT,root TEXT,selector TEXT,brain TEXT,PRIMARY KEY(endpoint,device,root,selector));")?;
+        if !network {
+            let brain:String=db.query_row("SELECT brain FROM selectors WHERE endpoint=?1 AND device=?2 AND root=?3 AND selector=?4",rusqlite::params![config.endpoint,config.device.to_string(),root.to_string_lossy(),selector],|r|r.get(0)).map_err(|_|anyhow!("workspace_selector_needs_start"))?;
+            config.brain = brain.parse()?;
+            return Ok((config, Some(root)));
+        }
         let client = Client::new(&config.endpoint)?;
         let brains = client.brains(&credential(&config)?).await?;
         let matches: Vec<_> = brains.iter().filter(|b| b.name == selector).collect();
         ensure!(matches.len() == 1, "workspace_brain_ambiguous");
-        matches[0].id
+        let id = matches[0].id;
+        db.execute("INSERT INTO selectors VALUES(?1,?2,?3,?4,?5) ON CONFLICT(endpoint,device,root,selector) DO UPDATE SET brain=excluded.brain",rusqlite::params![config.endpoint,config.device.to_string(),root.to_string_lossy(),selector,id.to_string()])?;
+        id
     };
     Ok((config, Some(root)))
 }
@@ -244,7 +266,16 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         );
         bail!("plugin_migration_required");
     }
-    let (config, _) = selected(plugin_storage::config()?, &cwd).await?;
+    let boundary = matches!(
+        name,
+        "SessionStart"
+            | "UserPromptSubmit"
+            | "ContextRequest"
+            | "StepStart"
+            | "SubagentStart"
+            | "PostCompact"
+    );
+    let (config, _) = selected_with_network(plugin_storage::config()?, &cwd, boundary).await?;
     let root = plugin_storage::root()?;
     if host == "opencode" && name == "CoverageGap" {
         crate::capture::Inbox::open(
@@ -282,10 +313,6 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
     let client = Client::new(&config.endpoint)?.with_host(host);
     // Ordinary tool hooks never open the OS store or make a network request.
     // New sessions are established only at a documented start/prompt boundary.
-    let boundary = matches!(
-        name,
-        "SessionStart" | "UserPromptSubmit" | "ContextRequest" | "StepStart" | "SubagentStart"
-    );
     let mut resume_selection = None;
     let mut resume_task = None;
     if boundary && session.as_ref().is_some_and(|s| s.ended) {
@@ -403,12 +430,31 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         .await;
     }
     session.last_event_at = Utc::now();
+    let mut native_cleanup = None;
     if matches!(name, "SessionEnd" | "SubagentStop") {
         session.ended = true;
+        match crate::plugin_skills::native_cli::release_session(&config, &session) {
+            Ok(value) => native_cleanup = value,
+            Err(_) => eprintln!(
+                "Recollect kept native copies requiring inspection; native skill status reports their ownership."
+            ),
+        }
+        if crate::plugin_skills::discard_session(&root, &config, session.setup.task_id).is_err() {
+            eprintln!(
+                "Recollect kept locally changed skill copies; discard them explicitly after inspection."
+            );
+        }
     }
     plugin_storage::write(&state, &session)?;
     let launch = session.launch();
     let configured_secrets = secrets();
+    // Independent of capture policy: share only the bounded coordination
+    // projection. This is local enqueue/cache access, never network/keychain I/O.
+    if crate::plugin_coordination::observe(&root, &config, &session, &event, &configured_secrets)
+        .is_ok()
+    {
+        let _ = crate::plugin_coordination::wake(&root, session.id);
+    }
     let capture_scope_ready = if boundary && !session.setup.binding_id.is_nil() {
         launch
             .current()
@@ -440,7 +486,15 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         spawn("runner")?;
     }
     let mut output = json!({});
-    if needs_context && let Some(device) = device {
+    if let Some(snapshot) = native_cleanup {
+        output["recollectNativeSkillsSnapshot"] = snapshot;
+    }
+    let native_boundary = matches!(
+        name,
+        "SessionStart" | "UserPromptSubmit" | "PostCompact" | "ContextRequest" | "SubagentStart"
+    ) && event["recollect_capture_only"] != true
+        && !session.ended;
+    if let Some(device) = device.as_ref() {
         let query = event["prompt"]
             .as_str()
             .unwrap_or("Important decisions, facts and procedures for continuing this task");
@@ -450,21 +504,71 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             end -= 1;
         }
         query.truncate(end);
-        if !query.trim().is_empty()
-            && let Ok(Ok(context)) = tokio::time::timeout_at(
+        let recall = async {
+            if !needs_context || query.trim().is_empty() {
+                return None;
+            }
+            tokio::time::timeout_at(
                 deadline,
-                plugin_session::recall(&client, &device, &session, &query),
+                plugin_session::recall(&client, device, &session, &query),
             )
             .await
-        {
+            .ok()?
+            .ok()
+        };
+        let native = async {
+            if !native_boundary {
+                return None;
+            }
+            Some(
+                match tokio::time::timeout_at(
+                    deadline,
+                    crate::plugin_skills::native_cli::sync_session(
+                        &config, &client, device, &session,
+                    ),
+                )
+                .await
+                {
+                    Ok(Ok(snapshot)) => snapshot,
+                    _ => {
+                        json!({"state":"unavailable","native_loaded":false,"next_action":"Retry skills sync with a current read operation; inspect native skill status for conflicts."})
+                    }
+                },
+            )
+        };
+        let (context, native) = tokio::join!(recall, native);
+        if let Some(context) = context {
             output = plugin_session::output(name, &context);
+        }
+        if let Some(native) = native {
+            output["recollectNativeSkillsSnapshot"] = native;
         }
     }
     if host == "opencode" && capture_scope_ready && !session.setup.binding_id.is_nil() {
         output["recollectCaptureBinding"] = json!(launch.current()?);
         output["recollectCapturedEvent"] = json!(captured);
     }
-    Ok(plugin_session::bound_output(output))
+    let coordination_delivery_boundary = if host == "opencode" {
+        // Its execute.before callback consumes no hook return value. Leave
+        // notices queued until the context adapter actually adds them to system.
+        matches!(name, "UserPromptSubmit" | "ContextRequest")
+    } else {
+        matches!(
+            name,
+            "SessionStart"
+                | "UserPromptSubmit"
+                | "PreToolUse"
+                | "PostCompact"
+                | "ContextRequest"
+                | "SubagentStart"
+        )
+    };
+    if coordination_delivery_boundary
+        && let Ok(context) = crate::plugin_coordination::context(&root, &config, session.id)
+    {
+        output = crate::plugin_coordination::merge_output(output, name, &context);
+    }
+    Ok(plugin_session::native_output(output, host, name))
 }
 
 /// OS keychain calls and local filesystem calls can block synchronously, outside
@@ -765,8 +869,50 @@ pub async fn run(args: &[String]) -> Result<()> {
             .await;
         }
         "drain" => drain().await?,
+        "coordination-worker" => {
+            ensure!(args.len() == 2, "invalid_coordination_worker");
+            crate::plugin_coordination::worker(args[1].parse()?).await?
+        }
+        "coordination" => {
+            let (config, _) =
+                selected(plugin_storage::config()?, &std::env::current_dir()?).await?;
+            let client = Client::new(&config.endpoint)?;
+            crate::plugin_coordination::run(&config, &client, &credential(&config)?, &args[1..])
+                .await?
+        }
         "runner" => runner().await?,
         "status" => status().await?,
+        "skills" => {
+            let offline = args.get(1).is_some_and(|s| {
+                matches!(
+                    s.as_str(),
+                    "discard" | "status" | "leases" | "reload" | "uninstall"
+                )
+            });
+            let config = plugin_storage::config()?;
+            let config = if offline {
+                config
+            } else {
+                let directory = args
+                    .iter()
+                    .position(|s| s == "--directory")
+                    .and_then(|i| args.get(i + 1))
+                    .map(PathBuf::from)
+                    .unwrap_or(std::env::current_dir()?);
+                selected(config, &directory).await?.0
+            };
+            let client = Client::new(&config.endpoint)?;
+            let device = if offline {
+                StoredDevice {
+                    endpoint: config.endpoint.clone(),
+                    device_id: config.device,
+                    token: Uuid::nil(),
+                }
+            } else {
+                credential(&config)?
+            };
+            crate::plugin_skills::run(&config, &client, &device, &args[1..]).await?
+        }
         "disconnect" => {
             let mut config = plugin_storage::config()?;
             config.with_runner = false;

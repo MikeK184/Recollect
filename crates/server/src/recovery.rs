@@ -151,6 +151,10 @@ pub async fn release(admin: &PgPool, config: &Config) -> anyhow::Result<()> {
     let pool = db::pool(&config.database_url).await?;
     privacy_journal::barrier(&pool, config).await?;
     artifacts_available(admin, config).await?;
+    // Logical pg_dump/pg_restore does not preserve planner statistics. Rebuild
+    // them after privacy reconciliation and before admitting interactive reads.
+    // A failure leaves the durable hold in place for the explicit retry.
+    sqlx::query("ANALYZE").execute(admin).await?;
     tokio::fs::rename(&path, completed).await?;
     #[cfg(unix)]
     tokio::fs::File::open(path.parent().unwrap())

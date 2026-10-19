@@ -79,6 +79,21 @@ configuration stanza, graph hit or successful docs check does not prove a
 working product feature. Developer skills/MCPs and runtime Brain tools have
 different owners and evidence.
 
+## Reconcile partial progress
+
+For requests about what is done, half done or remaining, compare the full agreed
+scope with its acceptance evidence. Keep a concise capability summary in the
+existing epic index, linking to the owning packs and dated evidence. Distinguish
+implemented and locally validated work from failed quality gates, untested
+behavior and an installation that has not been updated. These descriptions do
+not introduce new pack statuses or close an unfinished parent slice.
+
+Give each remaining item its next action and completion gate. Correct stale
+present-tense summaries and closeouts together; retain earlier failures with
+their date and recipe identity. Keep project-specific scores and receipts in
+the owning docs, not in this skill, and do not rerun product or paid evaluations
+merely to refresh a documentation summary.
+
 ## Validate and report
 
 Run focused checks appropriate to the changed records and `./scripts/validate.sh`.

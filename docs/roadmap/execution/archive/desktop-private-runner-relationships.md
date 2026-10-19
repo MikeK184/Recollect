@@ -79,6 +79,6 @@ Work type: product
   13 CUA fixture checks, actual owner/reader API and browser reads, exact links,
   Add/Edit/Cancel, laptop/wide geometry and independent source/rendered review,
   readiness, governance32, CodeGraph and whitespace passed.
-- Evidence: [Dated acceptance](../../../mappings/private-runner-relationships-2026-10-06.md).
+- Evidence: [Dated acceptance](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/private-runner-relationships-2026-10-06.md).
 - Version: N/A; no release policy.
 - Commit: Uncommitted.

@@ -173,6 +173,9 @@ impl AgentService {
         if suffix.contains("{id}") {
             suffix = suffix.replace("{id}", &id(&arguments["id"])?.to_string());
         }
+        if suffix.contains("{event}") {
+            suffix = suffix.replace("{event}", &id(&arguments["event"])?.to_string());
+        }
         if suffix.contains("{version_id}") {
             suffix = suffix.replace("{version_id}", &id(&arguments["version_id"])?.to_string());
         }
@@ -211,8 +214,25 @@ impl AgentService {
                 | "memory.handover_status"
                 | "source.list"
                 | "source.inspect"
+                | "skills.list"
+                | "skills.fetch"
         ) {
             query.insert("operation_id".into(), arguments["operation_id"].clone());
+        }
+        if spec.tool.name == "skills.list"
+            && let Some(filter) = arguments.get("query")
+        {
+            query.insert("query".into(), filter.clone());
+        }
+        if spec.tool.name == "skills.fetch" {
+            if arguments.get("path").is_none() {
+                query.insert("entrypoint_only".into(), json!(true));
+            }
+            for field in ["version", "path"] {
+                if let Some(value) = arguments.get(field) {
+                    query.insert(field.into(), value.clone());
+                }
+            }
         }
         if !query.is_empty() {
             let mut encoded = reqwest::Url::parse("http://localhost/").map_err(|_| invalid())?;

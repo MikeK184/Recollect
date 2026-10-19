@@ -4,8 +4,8 @@ Status: complete
 
 ## Purpose
 
-Establish Recollect's strict documentation lifecycle, repo-local developer
-configuration, and the initial Cognee extension baseline supplied by the user.
+Maintain Recollect's documentation authority, current implementation guidance,
+repository-local developer configuration and public documentation site.
 
 ## Governing Sources
 
@@ -14,24 +14,18 @@ configuration, and the initial Cognee extension baseline supplied by the user.
 
 ## Dependencies and Boundaries
 
-The user initially approved the governance bootstrap, then supplied the product
-design and requested foundation documents plus upstream/tooling guidance.
-Keep the separate Cognee checkout untouched. Product implementation, commits,
-publishing, and deployment were deferred at bootstrap and later authorized by
-separate assignments. The 2026-09-26 instruction selected Apache-2.0 and
-a simpler README while keeping GitHub private at that time. On 2026-09-28,
-the GitHub API reports the existing repository as public; the current user
-requests peer README research and improved repository description/topics.
-This assignment updates documentation and discoverability metadata on that
-existing repository. Repository renaming and external deployment remain outside
-its scope. The later documentation-skills
-assignment belongs to the Developer Tooling epic; it lifts the bootstrap's
-deferral for the two requested documentation skills.
+Accepted ADRs/contracts govern behavior; epics and packs track delivery.
+Repository-local tooling and docs share the independent Rust product boundary.
+Reference checkouts stay ignored and unchanged. Apache-2.0, the Git remote and
+the GitHub Pages website are established; commit/push, app deployment and a new
+release policy are not implied by documentation maintenance. Developer tooling
+has its own epic and cannot silently register new global integrations.
 
 ## Slice Map
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
+| `repository-current-documentation` | shipped | contract-backed | pack | Remove superseded documentation and concepts, reconcile current status and retain auditable delivery history |
 | `repository-governance-bootstrap` | shipped | adr-backed, contract-backed | pack | Deliver lifecycle checks, roles, Context7, supplied product foundations, and upstream/tooling guidance |
 | `foundation-access-and-workspace-clarifications` | shipped | contract-backed | small-fix: bounded documentation clarification and fixture-isolation repair; no runtime change | Clarify dataset ownership, SSO group mapping, managed-operation enforcement, and workspace/developer configuration boundaries |
 | `repository-license-and-readme` | shipped | contract-backed | small-fix: established user license choice, README and package metadata; no runtime change | Apply Apache-2.0 consistently, simplify the entry point and retain private GitHub visibility with authentic history |
@@ -42,154 +36,19 @@ deferral for the two requested documentation skills.
 | `repository-readme-product-positioning` | shipped | contract-backed | small-fix: user-requested README copy refinement grounded in existing memory, environment, permission and runner contracts; no runtime or interface change | Lead with shared engineering memory, governed MCP tools and private execution as one self-hosted workflow |
 | `repository-product-docs-site` | shipped | contract-backed | pack | Branded product page and 27 canonical guides published through GitHub Pages, with successful Actions and live browser proof |
 
-## Clarification closeout
+## Current status
 
-The user's foundation review is reflected in all three baseline documents and
-their README. SSO is the authentication direction, with Entra ID as a provider
-candidate; ownership/provisioning, group synchronization, and active-operation
-revocation still require implementation contracts. No SSO or runtime access
-configuration was changed. The isolated checker fixture no longer inherits
-unrelated roadmap slices. `./scripts/validate.sh` passed governance lint and all
-32 tests. Version: N/A; commit: uncommitted.
+The governance lifecycle, repository-local developer setup, license and public
+documentation site are delivered. The documentation cleanup is complete;
+[its delivery record](../execution/archive/repository-current-documentation.md)
+records the removals and validation. Release/version automation remains undecided.
 
-## License and README closeout — 2026-09-26
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-- Planned: A short README and the user's selected Apache-2.0 license, committed
-  to the existing private GitHub repository.
-- Shipped: The official license text, license metadata inherited by all four
-  Rust crates and declared by the frontend, and a concise feature/setup guide.
-- Not shipped: Public visibility, repository renaming and history replacement.
-  The latest user instruction keeps everything private. The isolated privacy
-  preparation is retained locally; the original commit dates and history remain.
-- New blockers: None for this bounded documentation/metadata change. Any future
-  public release requires a fresh privacy review and explicit authorization.
-- Docs updated: Root README, continuation record and repository-governance index.
-- Validation: Governance lint and 32 checker tests; offline locked Cargo metadata
-  confirms Apache-2.0 for all four crates; frontend package/lock metadata agree;
-  dependency data is unchanged. License bytes match the
-  [official Apache text](https://www.apache.org/licenses/LICENSE-2.0.txt).
-  Context7 and the [Cargo Book](https://doc.rust-lang.org/cargo/reference/workspaces.html)
-  confirm member inheritance. No runtime code changed or service was restarted.
-- Version: N/A; this is not an application release.
-- Commit: Uncommitted during validation; commit/push to private `main` is included
-  in this assignment. See the containing Git history for the resulting revision.
+## Delivery evidence
 
-## README and discoverability closeout — 2026-09-28
-
-- Planned: Compare Cognee and related projects, improve the README entry point
-  and add relevant GitHub description/topics under the user's current request.
-- Shipped: Local README with the original brand, factual badges, use cases,
-  feature/integration tables and documentation navigation. GitHub's About
-  description and 19 relevant topics are applied and verified by a fresh API
-  read. The [comparison mapping](../../mappings/github-discoverability-2026-09-28.md)
-  records primary sources, topic choices, evidence and limits.
-- Not shipped: README/asset publication or the existing uncommitted desktop and
-  Compose work. Repository visibility was already public when inspected; this
-  task did not change it. Search ranking/indexing and runtime health are unmeasured.
-- New blockers: None for the requested metadata and local documentation work.
-- Docs updated: Root README and its SVG header, comparison mapping/index, and
-  repository-governance epic/index. The old license closeout remains historical.
-- Validation: Governance lint and 32 tests; 28 README local links/anchors and
-  valid SVG; successful GitHub Markdown rendering and local light/dark visual
-  review; `git diff --check`. Existing setup instructions and 207 unrelated
-  changed files are preserved. Repository name, visibility, default branch,
-  archive/disabled state and homepage match the pre-change API read.
-- Version: N/A; documentation and metadata only.
-- Commit: Uncommitted; GitHub metadata is live independently of a Git commit.
-
-## README workflow closeout — 2026-10-06
-
-- Planned: Refresh the GitHub entry point with visuals for the current agent,
-  environment/tool-group and private-runner flow; commit the newest local work.
-- Shipped: Three precise cream/ink/sage SVG workflows, a concise responsibility
-  table, current host/UI wording and local acceptance/remaining-work status.
-  [Evidence](../../mappings/readme-runner-workflows-2026-10-06.md) records rendered
-  PNGs and fresh source/documentation checks.
-- Not shipped: Push, release, deployment or renewed live runner proof. Docker was
-  stopped, so an isolated full browser test could not start. Prior UI/Ubuntu
-  observations remain dated evidence rather than current connectivity claims.
-- New blockers: None for the documentation/commit request.
-- Docs updated: Root README, SVG assets, evidence mapping/index, this epic/index
-  and continuation record. Existing product authority is unchanged by this slice.
-- Validation: Rendered README/all three diagrams; 39 local links/anchors; four
-  valid described SVGs; eight permission tests, two Rust tests, web build/type/design,
-  Rust/Python/shell checks, governance lint and 32 tests; whitespace and credential
-  scan. No model calls or installation writes.
-- Version: N/A; no release bump.
-- Commit: User-authorized local commit; see the containing Git history.
-
-## README concept imagery closeout — 2026-10-06
-
-- Planned: Replace the rejected README visuals with generated images matching
-  Recollect's approved light palette and compact product concepts.
-- Shipped: Three concept-based PNGs for agents, environment permissions and
-  private execution; README replacement, descriptive alt text and illustration
-  caption. [Evidence](../../mappings/readme-concept-imagery-2026-10-06.md) records
-  prompts, visual review and the rendered preview.
-- Not shipped: Runtime changes, deployment, push or renewed connectivity proof.
-- New blockers: None for this bounded image/documentation request.
-- Docs updated: README, assets, prompt provenance, mappings/index, this epic/index
-  and continuation record. Original artwork remains historical.
-- Validation: Three valid RGB PNGs; all eight preview images loaded without
-  horizontal overflow; 39 README links/anchors, governance lint and 32 tests,
-  and whitespace checks. Temporary preview resources were closed.
-- Version: N/A; no release bump.
-- Commit: User-authorized follow-up local commit; see the containing Git history.
-
-## Branded README workflow closeout — 2026-10-06
-
-- Planned: Add the original identity to all three visuals, preserve the approved
-  agent/private layouts and improve environment/service flow fidelity.
-- Shipped: Three v3 images; compact Development group, scope/placement badges,
-  agent/request/result arrows, original logo/mark references, README dispatch
-  clarification and descriptive alt text. [Evidence](../../mappings/readme-branded-workflows-2026-10-06.md)
-  records prompts, inputs and rendered review.
-- Not shipped: Product/runtime changes, deployment, push or connectivity proof.
-- New blockers: None for this bounded artwork/documentation refinement.
-- Docs updated: README, assets/provenance, mappings/index, this epic/index and
-  continuation record. Earlier artwork remains historical.
-- Validation: Three valid RGB PNGs; all eight preview images loaded without
-  horizontal overflow; readable environment capture, 39 README links/anchors,
-  governance lint/32 tests and whitespace checks. Temporary resources closed.
-- Version: N/A; no release bump.
-- Commit: Continuing user-authorized local commit; see containing Git history.
-
-## README product positioning closeout — 2026-10-06
-
-- Planned: Strengthen Recollect's README positioning around the combined value
-  established in the user's project comparison.
-- Shipped: A clearer headline and introduction plus a concise Why Recollect
-  section covering shared engineering memory, environment permissions, private
-  execution and data control. Existing concept images and setup guides remain
-  the visual and operating references.
-- Not shipped: New product capabilities, comparative performance claims or
-  exclusivity claims. Existing acceptance and deployment limits are retained.
-- New blockers: None for this bounded documentation change.
-- Docs updated: Root README and repository-governance epic/index.
-- Validation: All 39 README local file/anchor references; governance lint and
-  all 32 checker tests; whitespace checks. Claims checked against the accepted
-  memory, MCP catalogue and private-runner behavior and recorded local proofs.
-- Version: N/A; documentation only.
-- Commit: User-authorized commit and push to `origin/main`; see containing Git history.
-
-## Public product and docs website closeout — 2026-10-06
-
-- Planned: A branded product page and searchable documentation on GitHub Pages.
-- Shipped: Static VitePress website at
-  [Recollect](https://mikek184.github.io/Recollect/) and
-  [Documentation](https://mikek184.github.io/Recollect/docs/), with original
-  logo/fonts/illustrations, 27 canonical guides, local search, code highlighting,
-  copy controls, responsive layout and automatic main-branch publication.
-  The GitHub About homepage now links to the site.
-- Not shipped: Custom domain, analytics, application hosting or product runtime changes.
-- New blockers: None for the website; existing product acceptance limits remain separate.
-- Docs updated: Root/docs READMEs, site maintenance guide, accepted site contract,
-  [deployment evidence](../../mappings/public-product-docs-site-2026-10-06.md),
-  mappings/index, this epic/index and archived pack/execution indexes.
-- Validation: Locked clean install/build, 30 HTML routes and 1,484 local references,
-  desktop/mobile navigation/search/copy/layout, governance lint and 32 tests.
-  GitHub Actions build/deploy passed; live product/docs/deep guides and assets
-  return HTTPS 200; public search opens the correct private-runner anchor.
-- Version: N/A; no application release bump.
-- Commit: Website `696361919660688ebc850d86ea623421032230ca` pushed to `origin/main`;
-  publication closeout follows in the containing Git history.
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/repository-governance.md).
+Dated test/deployment observations are not a current runtime health claim.

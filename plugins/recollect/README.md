@@ -3,7 +3,8 @@
 The packaged plugin owns connection setup, native session capture and automatic
 memory recall. Start Codex, Claude Code or OpenCode normally after connecting.
 The [completed integration](../../docs/roadmap/execution/archive/mcp-plugin-session-memory.md)
-was verified through actual installed hosts. See the [evidence and platform limits](../../docs/mappings/plugin-session-memory-2026-10-01.md).
+was verified through actual installed hosts. Current source-workflow and rebuilt-binary acceptance limits are recorded in the
+[plugin workflow report](../../docs/mappings/plugin-workflow-repair-2026-10-07.md). See the [evidence and platform limits](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/plugin-session-memory-2026-10-01.md).
 
 ## Build an installable package
 
@@ -66,6 +67,79 @@ retries each original destination; it never relabels those events into the new
 Brain. Invalid connection attempts leave the previous configuration and credential
 intact. Credentials remain in the OS store; destination records contain references
 only. Explicit revocation, policy expiry and Brain deletion still fence delivery.
+
+## Shared Brain skills and instructions
+
+A rebuilt plugin advertises applicable manager-published guidance with its normal
+scoped context. The bundled `recollect-memory` skill uses `skills.list` and
+`skills.fetch` to load instructions and referenced text only when needed. Manage
+bundles under the Brain's **Agents → Skills** tab; optional MCP profile links grant
+no execution permission.
+
+The rebuilt plugin also synchronizes owned native Codex, Claude Code and OpenCode
+skills at supported task/context/scope boundaries. Temporary task references are
+the default; explicit `--persist` retains native and canonical copies. A shared
+workspace lease prevents conflicting Brain/environment installs across host kinds,
+and one session cannot clean another's active reference. Instructions are native
+skill wrappers retaining the original AGENTS resource; local AGENTS/CLAUDE files
+and unowned skills remain intact.
+
+The executable provides `skills install|sync|reload|uninstall|status|leases` beside
+`list|fetch|save|discard`. Native uninstall and canonical-cache discard are separate.
+Save alone remains a private cache operation. Reload reports placement/refresh
+state and any necessary host action; it never calls a copied file "loaded".
+See the [operator procedure](../../docs/runbooks/managed-skills.md) for exact
+commands, host reload differences, copy lifetimes and safe recovery, and the
+[native fixture proof](../../docs/mappings/native-skill-reload-host-proof-2026-10-18.md)
+for actual installed-host evidence. Fixtures use isolated homes and synthetic
+providers; this source change does not upgrade your installed package or deployed
+server, and deleting files cannot retract an existing conversation's context.
+
+## Peer coordination
+
+A rebuilt plugin publishes a bounded goal and current task scope to the Brain's
+coordination controller. Supported `Edit`, `Write`, `MultiEdit`, and `apply_patch`
+hooks enqueue planned repository-relative paths. Shell text is not interpreted as
+a reliable file list. Canonical Git origins must already be registered in the
+Brain; unknown paths remain unannounced. No source file contents are uploaded for
+coordination, and a peer agreement grants no tool or file-write permission.
+The current checkout's registered canonical origin supplies topic context before
+the first edit, without changing the task's selected scope. Unknown origins are
+reported as incomplete context, never matched by a folder basename.
+
+An owned background worker receives authenticated SSE and falls back to the
+durable inbox. Prompt, pre-tool, resume and context hooks show attributed advisory
+notices with account, coding host, device and environment. Delivery is at the next
+supported host boundary; no idle turn or mid-generation interruption is promised.
+OpenCode consumes peer context at its context callback, keeping pre-tool notices
+queued until that callback can inject them.
+Without a native hook for 90 seconds the worker stops heartbeats and presence
+expires. Long silent tools may therefore appear inactive. Known access denial
+clears cached peer events, and offline injection requires recent authentication.
+
+The bundled runtime exposes:
+
+```sh
+recollect-plugin coordination peers
+recollect-plugin coordination inbox --session SESSION_UUID --after 0
+recollect-plugin coordination watch --session SESSION_UUID
+recollect-plugin coordination status --session SESSION_UUID
+recollect-plugin coordination send < peer-message.json
+```
+
+`watch` shows readable peer notices on stderr; protocol/command JSON stays on
+stdout. `send` reads the contract's message JSON (`id`, `from_session_id`,
+`to_session_id`, `kind`, `text`, `reply_to`) from stdin. Keep the same message UUID
+when retrying uncertain delivery. Proposal acceptance requires a referenced
+proposal. `announce` similarly reads the typed session declaration from stdin;
+normal native sessions announce automatically. `heartbeat`, `ack` and `close`
+are also available. Use the exact session UUID supplied by the hook, never a
+directory's most recent unrelated task. See the
+[coordination contract](../../docs/contracts/mcp-agent-coordination.md) for limits
+and the distinction between receipt, hook output and model understanding.
+
+This source addition does not upgrade an already installed package. Native hook
+fixtures, actual installed-host delivery and live deployment have separate proof.
 
 ## Advanced direct HTTP transport
 

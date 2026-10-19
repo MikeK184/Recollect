@@ -64,7 +64,7 @@ authorizes repairing only test-Brain's Recollect integration outside this reposi
 ## Closeout
 
 - Planned: credential/configuration repair, concrete setup instructions and installed-host proof.
-- Shipped: test-Brain's Recollect config now reads its credential from macOS Keychain through Codex's standard helper. Installed Codex 0.157.1 completed a real workspace read. The setup dialog gives Keychain and explicit environment instructions and is deployed locally as image 385793c54044. [Evidence](../../../mappings/mcp-auth-repair-2026-09-28.md).
+- Shipped: test-Brain's Recollect config now reads its credential from macOS Keychain through Codex's standard helper. Installed Codex 0.157.1 completed a real workspace read. The setup dialog gives Keychain and explicit environment instructions and is deployed locally as image 385793c54044. [Evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-auth-repair-2026-09-28.md).
 - Not shipped: OAuth and published capture plugin.
 - New blockers: none.
 - Docs updated: Agent MCP contract/runbook, dated evidence, continuation handoff, epic and execution indexes.

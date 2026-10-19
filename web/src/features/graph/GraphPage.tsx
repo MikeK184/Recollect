@@ -6,16 +6,34 @@ import { useBrain } from "../../app/context";
 import { PageHeader } from "../../components/PageHeader";
 import { useKnowledgeSelection } from "../knowledge/selection";
 import { useBrainSearch } from "../../app/useBrainSearch";
+import { OrganizationPanel } from "./OrganizationPanel";
+import { organizationScope } from "./organization-scope";
 import "./graph.css";
 
 export function GraphPage() {
   const brain = useBrain();
   const { select } = useKnowledgeSelection();
   const [search, patch] = useBrainSearch();
-  const perspective = search.perspective ?? "knowledge";
+  const evidenceLink = !!(
+    search.claim ||
+    search.source ||
+    search.center ||
+    search.snapshot ||
+    search.manifest ||
+    search.kind === "repository" ||
+    search.kind === "combined"
+  );
+  const perspective =
+    search.perspective === "provenance"
+      ? "provenance"
+      : search.tab === "evidence" ||
+          (search.tab !== "organization" && evidenceLink)
+        ? "knowledge"
+        : "organization";
+  const scope = organizationScope(search);
   useEffect(() => {
     select(
-      perspective === "provenance"
+      perspective !== "knowledge"
         ? null
         : search.claim
           ? { kind: "memory", id: search.claim }
@@ -43,12 +61,28 @@ export function GraphPage() {
             aria-label="Graph perspective"
             value={perspective}
             data={[
+              { value: "organization", label: "Topics" },
               { value: "knowledge", label: "Evidence" },
               { value: "provenance", label: "Contributions" },
             ]}
             onChange={(next) => {
               patch({
                 perspective: next === "provenance" ? "provenance" : null,
+                tab:
+                  next === "knowledge"
+                    ? "evidence"
+                    : next === "organization"
+                      ? "organization"
+                      : null,
+                ...(next === "organization"
+                  ? {
+                      center: null,
+                      claim: null,
+                      source: null,
+                      version: null,
+                      revision: null,
+                    }
+                  : {}),
                 ...(next === "knowledge" && search.snapshot
                   ? {
                       kind: "repository",
@@ -79,7 +113,33 @@ export function GraphPage() {
           />
         }
       />
-      {perspective === "knowledge" ? (
+      {perspective === "organization" ? (
+        <OrganizationPanel
+          key={`${brain.id}:${JSON.stringify(scope)}`}
+          brain={brain}
+          scope={scope}
+          onScopeChange={(next) =>
+            patch({
+              kind: "knowledge",
+              repositories: next.selection.repository_ids,
+              repository: null,
+              areas: next.selection.area_ids,
+              area: null,
+              environment: next.selection.environment_id,
+              collection: next.collection_id,
+              manifest: next.manifest_revision_id,
+              fact: next.fact_at,
+              mode: next.mode,
+              center: null,
+              claim: null,
+              source: null,
+              version: null,
+              revision: null,
+              tab: "organization",
+            })
+          }
+        />
+      ) : perspective === "knowledge" ? (
         <GraphPanel key={brain.id} brain={brain} />
       ) : (
         <GraphProvenance key={brain.id} brain={brain} />

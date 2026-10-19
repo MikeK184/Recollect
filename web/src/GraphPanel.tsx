@@ -1,5 +1,5 @@
 import { iconSize } from "./design/tokens";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useBrainSearch, type BrainSearch } from "./app/useBrainSearch";
 import {
   Network,
@@ -39,6 +39,12 @@ import { ClaimDialog, EvidenceDialog } from "./ClaimsPanel";
 import { useIdempotency } from "./useIdempotency";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { GraphExplorer } from "./GraphExplorer";
+import {
+  invalidatesScene,
+  sceneGenerationIds,
+  verifySceneStatus,
+  type SceneGenerations,
+} from "./graph-generation-status";
 import { useContentDeadline } from "./useContentDeadline";
 
 type Scope = components["schemas"]["GraphSelection"];
@@ -126,7 +132,9 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   const [snapshotOffset, setSnapshotOffset] = useState(0);
   const [manifestOffset, setManifestOffset] = useState(0);
   const [start, setStart] = useState("");
-  const [initialExploration, setInitialExploration] = useState<components["schemas"]["GraphExploration"] | undefined>();
+  const [initialExploration, setInitialExploration] = useState<
+    components["schemas"]["GraphExploration"] | undefined
+  >();
   const [end, setEnd] = useState("");
   const [direction, setDirection] = useState("outgoing");
   const [hops, setHops] = useState(6);
@@ -144,7 +152,26 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     evidence?: Evidence;
   } | null>(null);
   const idem = useIdempotency();
+  const [generationError, setGenerationError] = useState<Error | null>(null);
+  const sceneRevision = useRef(0);
+  const acceptedScene = useRef<SceneGenerations | null>(null);
+  const [scene, setScene] = useState<SceneGenerations | null>(null);
+  const sceneStarted = useCallback(() => {
+    sceneRevision.current++;
+    acceptedScene.current = null;
+    setScene(null);
+  }, []);
+  const sceneAccepted = useCallback((next: SceneGenerations) => {
+    sceneRevision.current++;
+    acceptedScene.current = next;
+    setScene(next);
+    setGenerationError(null);
+  }, []);
   function clear() {
+    setGenerationError(null);
+    sceneRevision.current++;
+    acceptedScene.current = null;
+    setScene(null);
     setInitialExploration(undefined);
     setSubmitted(null);
     setPathSubmitted(null);
@@ -153,6 +180,9 @@ export function GraphPanel({ brain }: { brain: Brain }) {
     void cache.cancelQueries({ queryKey: ["graph-path", brain.id] });
     void cache.cancelQueries({ queryKey: ["graph-explore", brain.id] });
     void cache.cancelQueries({ queryKey: ["graph-entities", brain.id] });
+    void cache.cancelQueries({
+      queryKey: ["graph-generation-status", brain.id],
+    });
   }
   function change(next: Scope) {
     clear();
@@ -199,6 +229,10 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                 String(event.query.queryKey[0]),
               )))
         ) {
+          sceneRevision.current++;
+          acceptedScene.current = null;
+          setScene(null);
+          setInitialExploration(undefined);
           setSubmitted(null);
           setPathSubmitted(null);
           setDetail(null);
@@ -220,14 +254,57 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         }),
       ),
   });
+  const trackedIds = scene ? sceneGenerationIds(scene) : [];
+  const generationStatus = useQuery({
+    queryKey: ["graph-generation-status", brain.id, trackedIds],
+    enabled: !!scene,
+    retry: false,
+    gcTime: 0,
+    refetchInterval: 3000,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ signal }) => {
+      const revision = sceneRevision.current;
+      try {
+        const observed = result(
+          await client.GET("/api/brains/{brain}/graph", {
+            params: {
+              path: { brain: brain.id },
+              query: { tracked_generation_ids: trackedIds.join(",") },
+            },
+            signal,
+          }),
+        );
+        verifySceneStatus(scene!, observed);
+        return { observed, revision };
+      } catch (error) {
+        if (
+          !signal.aborted &&
+          revision === sceneRevision.current &&
+          acceptedScene.current
+        ) {
+          clear();
+          setGenerationError(
+            error instanceof Error
+              ? error
+              : new Error(
+                  "The graph inputs could not be verified. Load the graph again.",
+                ),
+          );
+        }
+        throw error;
+      }
+    },
+  });
   useEffect(() => {
-    clear();
-  }, [status.data?.memory_epoch, status.data?.link_epoch]);
-  useEffect(() => {
-    if (status.error) {
+    const response = generationStatus.data;
+    if (
+      response &&
+      response.revision === sceneRevision.current &&
+      acceptedScene.current &&
+      invalidatesScene(acceptedScene.current, response.observed)
+    )
       clear();
-    }
-  }, [status.error]);
+  }, [generationStatus.data]);
   const catalogue = useQuery({
     queryKey: ["workspace", brain.id, "graph"],
     queryFn: async () =>
@@ -308,11 +385,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       status.data?.link_epoch,
     ],
     enabled:
-      drawer === "entities" &&
-      !!submitted &&
-      !!read.data &&
-      !read.isError &&
-      !status.isError,
+      drawer === "entities" && !!submitted && !!read.data && !read.isError,
     gcTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
@@ -320,7 +393,11 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       result(
         await client.POST("/api/brains/{brain}/graph/view", {
           params: { path: { brain: brain.id } },
-          body: { scope: submitted!.scope, offset: entityOffset, windowed: true },
+          body: {
+            scope: submitted!.scope,
+            offset: entityOffset,
+            windowed: true,
+          },
           signal,
         }),
       ),
@@ -345,6 +422,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   function load(page = 0, center = route.center ?? null) {
     if (missingExactSelection(scope)) return;
     initialRead.current = scopeKey;
+    setGenerationError(null);
+    sceneStarted();
     const next = {
       nonce: crypto.randomUUID(),
       scope: structuredClone(scope),
@@ -363,9 +442,13 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           const exploration = result(
             await client.POST("/api/brains/{brain}/graph/explore", {
               params: { path: { brain: brain.id } },
-              body: { scope: next.scope, center,
-                direction: route.direction ?? "outgoing", max_hops: route.hops ?? 1,
-                windowed: !center || (route.hops ?? 1) === 1 },
+              body: {
+                scope: next.scope,
+                center,
+                direction: route.direction ?? "outgoing",
+                max_hops: route.hops ?? 1,
+                windowed: !center || (route.hops ?? 1) === 1,
+              },
               signal,
             }),
           );
@@ -546,7 +629,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
   }
   const availableGroups = groups.data?.groups ?? [];
   const readable =
-    submitted && read.data && !read.error && !status.error && !readExpired
+    submitted && read.data && !read.error && !readExpired
       ? read.data
       : undefined;
   const needsSelection = missingExactSelection(scope);
@@ -666,7 +749,11 @@ export function GraphPanel({ brain }: { brain: Brain }) {
           <Badge variant="light">{scope.relations.map(label).join(", ")}</Badge>
         )}
       </div>
-      <Failure error={status.error ?? read.error} />
+      <Failure
+        error={
+          read.error ?? generationError ?? (!readable ? status.error : null)
+        }
+      />
       {read.isFetching && (
         <Group role="status" my="lg">
           <Loader size="sm" />
@@ -714,7 +801,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
             onExplore={(center, direction, hops) =>
               patchRoute({ center, direction, hops })
             }
-            expectedMemoryEpoch={status.data?.memory_epoch}
+            onReadStarted={sceneStarted}
+            onViewAccepted={sceneAccepted}
             onStart={(key) => {
               setStart(key);
               setPathSubmitted(null);
@@ -1091,7 +1179,8 @@ export function GraphPanel({ brain }: { brain: Brain }) {
               <SimpleGrid cols={{ base: 1, md: 2 }}>
                 {entities.data.nodes.map((n) => node(n, true))}
               </SimpleGrid>
-              {(entities.data.next_offset != null || entities.data.offset > 0) && (
+              {(entities.data.next_offset != null ||
+                entities.data.offset > 0) && (
                 <Group>
                   <Button
                     disabled={!entities.data.offset}
@@ -1103,9 +1192,7 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                     {entities.data.nodes.length} eligible entities in this page
                   </Text>
                   <Button
-                    disabled={
-                      entities.data.next_offset == null
-                    }
+                    disabled={entities.data.next_offset == null}
                     onClick={() => setEntityOffset(entities.data!.next_offset!)}
                   >
                     More entities
@@ -1136,27 +1223,29 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         size="lg"
       >
         <Stack>
-          {readable && (
+          {scene && (
             <>
               <Group>
-                <Badge>{label(readable.state)}</Badge>
+                <Badge>{label(scene.state)}</Badge>
                 <Text size="sm">
-                  {readable.total_nodes} eligible entities ·{" "}
-                  {readable.total_edges} eligible relationships
+                  {scene.total_nodes} eligible entities · {scene.total_edges}{" "}
+                  eligible relationships
                 </Text>
               </Group>
               <Text size="xs" style={{ overflowWrap: "anywhere" }}>
-                Generation {readable.generation.id} · input epoch{" "}
-                {readable.generation.input_epoch} ·{" "}
-                {scope.kind === "combined" ? "origin epoch" : "memory epoch"}{" "}
-                {scope.kind === "combined"
-                  ? status.data?.link_epoch
-                  : readable.memory_epoch}
+                Generation {scene.generation.id} · input epoch{" "}
+                {scene.generation.input_epoch} ·{" "}
+                {scene.scope.kind === "combined"
+                  ? "origin epoch"
+                  : "memory epoch"}{" "}
+                {scene.scope.kind === "combined"
+                  ? scene.generation.input_epoch
+                  : scene.memory_epoch}
               </Text>
-              {scope.kind === "combined" && (
+              {scene.scope.kind === "combined" && (
                 <Stack gap="xs">
                   <Text fw={600}>Exact repository inputs</Text>
-                  {readable.inputs.map((input) => (
+                  {scene.inputs.map((input) => (
                     <Text
                       key={input.id}
                       size="xs"
@@ -1165,13 +1254,13 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                       Snapshot {input.snapshot_id} · generation {input.id}
                     </Text>
                   ))}
-                  {!!readable.link_issues_total && (
+                  {!!scene.link_issues_total && (
                     <Alert color="yellow" title="Unresolved repository links">
                       <Text size="sm">
-                        Showing {readable.link_issues.length} of{" "}
-                        {readable.link_issues_total} eligible source records.
+                        Showing {scene.link_issues.length} of{" "}
+                        {scene.link_issues_total} eligible source records.
                       </Text>
-                      {readable.link_issues.map((issue) => (
+                      {scene.link_issues.map((issue) => (
                         <Text
                           key={issue.source}
                           size="xs"
@@ -1184,12 +1273,12 @@ export function GraphPanel({ brain }: { brain: Brain }) {
                   )}
                 </Stack>
               )}
-              {readable.coverage.partial && (
+              {scene.coverage.partial && (
                 <Alert color="yellow">
-                  {readable.coverage.reasons.map(label).join(" · ")}
+                  {scene.coverage.reasons.map(label).join(" · ")}
                 </Alert>
               )}
-              {!readable.total_nodes && (
+              {!scene.total_nodes && (
                 <Text>No entities are eligible in this view.</Text>
               )}
             </>

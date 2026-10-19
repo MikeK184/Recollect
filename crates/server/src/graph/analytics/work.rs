@@ -2,21 +2,21 @@ use super::*;
 use crate::worker::{self, Failure};
 use std::time::Duration;
 
-async fn ready<'a>(
+pub(super) async fn ready<'a>(
     state: &'a AppState,
     job: &ClaimedJob,
 ) -> Result<(Tx<'a>, AnalyticsReport, Auth)> {
     let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
     db::require_writer(&mut tx, job.brain_id).await?;
     lease(&mut tx, job).await?;
-    let r = report(&mut tx, job.brain_id, job.target_id).await?;
+    let r = internal_report(&mut tx, job.brain_id, job.target_id).await?;
     if r.job_id != job.id || r.state != "running" {
         return Err(changed());
     }
     let auth = job_auth(&mut tx, job).await?;
     Ok((tx, r, auth))
 }
-async fn progress(state: &AppState, job: &ClaimedJob, entry: &journal::Entry) -> Result<()> {
+pub(super) async fn progress(state: &AppState, job: &ClaimedJob, entry: &journal::Entry) -> Result<()> {
     let live: bool = sqlx::query_scalar("SELECT recollect_analytics_attempt_live($1,$2)")
         .bind(job.id)
         .bind(job.lease_token)
@@ -62,12 +62,18 @@ async fn run(state: &AppState, job: &ClaimedJob, armed: &mut Option<journal::Ent
                 "Previous analytical scratch cleanup must finish before allocation.",
             )
         })?;
+    let mut routing=db::preparation_tx(&state.pool,job.actor_id,job.device_id).await?;
+    let purpose: String=sqlx::query_scalar("SELECT purpose FROM analytics_reports WHERE brain_id=$1 AND id=$2").bind(job.brain_id).bind(job.target_id).fetch_one(&mut *routing).await?;
+    routing.commit().await?;
+    if purpose=="organization" {return organization::run(state,job,armed).await;}
+    if purpose=="organization_shadow" {return shadow::run(state,job,armed).await;}
+    let e = journal::arm(state, job).await?;
+    *armed = Some(e.clone());
     let (mut tx, r, auth) = ready(state, job).await?;
     let operation = r.selection.as_ref().and_then(|s| s.operation_id);
     current(state, &mut tx, &auth, &r, operation).await?;
     let d = descriptor(&mut tx, job.brain_id, r.id).await?;
-    let e = journal::arm(state, &mut tx, job).await?;
-    *armed = Some(e.clone());
+    journal::insert(&mut tx, &e).await?;
     tx.commit().await?;
     let mut calculation = Box::pin(native::calculate(state, &r, &d, &e));
     let mut interval = tokio::time::interval(Duration::from_secs(1));

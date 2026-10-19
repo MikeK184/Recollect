@@ -1,43 +1,47 @@
-# Research and design studies
+# Current research and evaluation inputs
 
-These are retained studies and proposals, not implementation authority. Accepted
-ADRs/contracts and their owning execution packs govern product changes.
+Accepted ADRs/contracts and [active packs](../roadmap/execution/active/README.md)
+govern implementation. The [current roadmap](../roadmap/epics/index.md) is the
+single status and priority entry point.
 
-- [Automatic entity mapping, topics and usable graphs, 2026-10-09](automatic-knowledge-mapping-plan-2026-10-09.md) —
-  two-agent current-product and Cognee/Graphify audit, with Graphiti/GLiNER
-  comparison; approved source-linked entities, reversible aliases, automatic
-  topics, progressive navigation and a proof suite requiring no paid API calls.
-  Implementation is staged in progress; semantic successor features are not
-  delivered and graph performance acceptance stays open. The
-  [dated progress](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
-  separates native graph preparation proof from a local extractor run that
-  failed its development precision/recall gates.
+- [Frozen attributed utility experiment](attributed-utility-offline-fixtures-2026-10-18.json):
+  12 development/eight held-out ranking queries, explicit attribution, repeated
+  votes, correction/erasure, foreign-scope and mistaken-feedback controls. This
+  tests bounded scorer behavior; it cannot establish real helpfulness quality.
 
-- [Memory product improvement plan, 2026-10-08](memory-product-improvement-plan-2026-10-08.md) —
-  two-agent benchmark/code audit and read-only normal-runtime graph/migration proof;
-  proposed evidence-window, progressive graph, automatic learning/time/topic and
-  scaling phases with a frozen, unexecuted [holdout manifest](memory-product-holdout-manifest-2026-10-08.json).
-  Larger phases remain proposed. The bounded first batch has local implementation
-  and normal-installation evidence in the [first-batch proof](../mappings/memory-quality-first-batch-proof-2026-10-08.md);
-  unresolved graph performance acceptance remains open.
+- [Independent graph organization adversarial fixtures](graph-organization-adversarial-fixtures-2026-10-18.json):
+  frozen 12-development/eight-held-out Unicode, long-input, alias/relation,
+  negation/history, scope and overlapping-topic cases; no extractor score claimed.
+- [Fresh grouping holdout](graph-organization-fresh-heldout-v1-2026-10-18.json):
+  twelve separate untouched documents frozen before development parameter
+  selection. Keep these out of fitting; real extraction and vector output remain
+  unmeasured. Endpoint gold is unannotated, rather than implicitly empty.
+- [Frozen blind label review rubric](graph-organization-blind-label-rubric-v1-2026-10-18.json):
+  independent source fidelity, scope/time/authority and navigation-usefulness
+  ratings, blinded arm/partition presentation and complete failure denominators.
+  Authored without corpus content or model outputs; bind its hash before the
+  remaining real campaign. It never substitutes for producer or grouping gates.
+- [Canonical reconciliation controls](automatic-reconciliation-native-controls-v3-2026-10-18.json):
+  six explicit update, historical/negative, duplicate, unrelated and protected
+  human-memory cases. V3 records actual source attribution and actor metadata;
+  prior frozen versions remain linked through exact supersession hashes.
 
-- [Automated memory improvement plan, 2026-10-07](automated-memory-improvement-plan-2026-10-07.md) —
-  two-agent Muse/current-code comparison, source-support guard, automatic session
-  digests, scoped context and bounded cross-session corrections; approved for
-  staged implementation and now locally delivered with archived packs, preserving
-  fully automatic routine operation and existing authority/lifecycle.
-- [Synthetic installed-model support observations, 2026-10-07](automatic-memory-support-results-2026-10-07.json) —
-  separate v1/v2 failures and final v3 comparison, frozen case metrics and private
-  receipt hashes; semantic limits and independent audits are recorded in the
-  [implementation mapping](../mappings/memory-source-support-staging-2026-10-07.md).
+- [Automatic organization plan](automatic-knowledge-mapping-plan-2026-10-09.md):
+  authorized Rust entities, reversible aliases, overlapping topics, bounded graph
+  navigation and incremental lifecycle. Implementation and acceptance remain open;
+  the local GLiNER experiment failed its quality gate.
+- [Remaining product improvement proposal](memory-product-improvement-plan-2026-10-08.md):
+  outstanding quality, temporal, scale and reliability ideas, with implemented
+  first-batch work distinguished from proposed follow-ups.
+- [Frozen organization fixtures](automatic-knowledge-mapping-fixtures-2026-10-09.json):
+  development/held-out extraction annotations; do not change them to improve a score.
+- [Frozen memory-product holdout](memory-product-holdout-manifest-2026-10-08.json):
+  preserved inputs for comparable future evaluation; not evidence of a completed run.
+- [Automatic support model results](automatic-memory-support-results-2026-10-07.json):
+  versioned synthetic observations supporting the
+  [automatic-memory proof](../mappings/memory-source-support-staging-2026-10-07.md).
 
-- [Browser management review, 2026-10-05](browser-management-review-2026-10-05.md) —
-  ten-comment live/source audit, independent review, tool-group concept and
-  proposed implementation order; application changes remain unimplemented.
-
-- [Brain pages UI review, 2026-10-03](brain-pages-ui-review-2026-10-03.md) —
-  current-view audit, independent UI review and proposed dashboard/knowledge
-  layout with concrete scaling boundaries.
-- [claude-mem study, 2026-10-03](claude-mem-study-2026-10-03.md) — memory hooks,
-  recall and UX mechanics; adoption ideas remain in the owning epic's deferred
-  research backlog.
+Completed UI proposals, the delivered automatic-memory design and the earlier
+claude-mem comparison were removed as duplicate current guidance. Their chosen
+behavior is in contracts, runbooks and delivery packs; original studies remain
+in the [fixed Git snapshot](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research).

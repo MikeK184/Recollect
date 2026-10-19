@@ -7,10 +7,19 @@ use serde_json::Value;
 mod api;
 mod journal;
 mod native;
+mod organization;
 mod work;
+pub mod shadow;
 pub use api::{__path_get, __path_queue, __path_view, get, queue, view};
-pub use journal::{erase, initialize, reconcile, run_once};
+pub use journal::{erase, initialize, reconcile};
 pub use work::execute;
+
+pub async fn run_once(state: &AppState) -> anyhow::Result<usize> {
+    sqlx::query("SELECT recollect_shadow_maintain()").execute(&state.pool).await?;
+    let cleaned=journal::run_once(state).await?;
+    let queued=organization::schedule(state).await.map_err(|e|anyhow::anyhow!("Organization scheduling failed: {}",e.1))?;
+    Ok(cleaned+queued)
+}
 
 const NODES: usize = 10_000;
 const EDGES: usize = 50_000;
@@ -118,6 +127,11 @@ async fn selected(
     Ok(input)
 }
 async fn report(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<AnalyticsReport> {
+    let public:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM analytics_reports WHERE brain_id=$1 AND id=$2 AND purpose='topology')").bind(brain).bind(id).fetch_one(&mut **tx).await?;
+    if !public{return Err(Error::missing());}
+    internal_report(tx,brain,id).await
+}
+async fn internal_report(tx: &mut Tx<'_>, brain: Uuid, id: Uuid) -> Result<AnalyticsReport> {
     let row:Option<Json<AnalyticsReport>>=sqlx::query_scalar("SELECT to_jsonb(r)-'descriptor'-'scores' FROM analytics_reports r WHERE brain_id=$1 AND id=$2")
       .bind(brain).bind(id).fetch_optional(&mut **tx).await?;
     row.map(|r| r.0).ok_or_else(Error::missing)

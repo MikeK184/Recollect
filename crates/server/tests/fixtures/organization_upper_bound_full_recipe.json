@@ -1,0 +1,30 @@
+{
+  "name": "graph-organization-gold-upper-bound-full-publication-1",
+  "input_mode": "gold_upper_bound",
+  "corpus_path": "docs/research/graph-organization-adversarial-fixtures-2026-10-18.json",
+  "corpus_sha256": "a0ecfe7dd692c2517f00035c0be7205841e27e7b17551f7a21580edc6d1c916c",
+  "scorer_sha256": "a86fe1ddeda85e26150dbd4091f37c24c4f0d2621b4877e2faa1e04f1aaaadcd",
+  "native": {
+    "recipe": "entity-idf-bipartite-leiden-1",
+    "gds_version": "2026.08.1",
+    "random_seed": 42,
+    "concurrency": 1,
+    "gamma": 1.0,
+    "theta": 0.01,
+    "tolerance": 0.0001,
+    "max_levels": 10,
+    "affinity": "Per-source technology/concept deduplication; ln(1+N/df) bipartite edge; no person/environment/boilerplate hub; no Rust clustering; actual canonical publication and qualified API labels.",
+    "publication": "Exact synthetic provenance fixture stages input, queues real knowledge.map, executes production publication plus entity facets, then actual native worker. Native weighted baseline includes qualified community AND entity_facet memberships; record each family."
+  },
+  "scopes": "Distinct real canonical Brains alpha/beta; distinct repository infra/audit/identity and environment DEV/PROD/STAGING records inside each Brain. Unknown is absent and never a shared metadata identity.",
+  "metadata": "Separate overlapping facets for each known exact canonical repository/environment; names from actual canonical rows and typed field proof; no inferred text metadata.",
+  "entity_overlap": "Separate overlapping facets for each exact eligible technology/concept identity in the same Brain. Gold source spans pass real candidate validation/storage. No alias inference or new identity merging.",
+  "unsupported_language": "h07 remains unsupported in source mention/native/entity pipelines and in every denominator. Metadata availability is reported independently.",
+  "eligible_vector": "NOT MEASURED: no real compatible retained vectors exist in this independent gold fixture; no vector fabrication or new embedding call.",
+  "label_rubric": "Frozen independent scorer checks exact eligible member gold technology/concept span and literal label, or declared canonical field provenance. General semantic usefulness remains manual_review_required.",
+  "held_out": "One combined native cohort per Brain, fixed recipe/scorer before observing any result; no threshold tuning or production qualification from this upper-bound run.",
+  "model_calls": 0,
+  "production_recipe_qualified": false,
+  "original_recipe_sha256": "0ab6bf091b0128e48fb61db6ae67d1b58420e7751935bd0d645df048475b0b1d",
+  "fixture_correction": "Original fixture manually published gold inputs and measured communities only. Corrected fixture queues actual knowledge.map production publication and compares native communities PLUS existing overlapping entity facets. Original receipt/recipe/scores retained. No GDS, IDF, parser, kind, identity, matching or threshold changes; no held-out tuning; no production qualification."
+}

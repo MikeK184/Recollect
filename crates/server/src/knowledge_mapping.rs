@@ -4,9 +4,41 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
+pub mod affinity;
+pub mod aliases;
+pub mod fields;
+pub mod manual_intent;
+pub mod organization;
+pub mod producer;
+pub mod production;
+pub mod source_features;
 pub mod storage;
+pub(crate) mod topic_labels;
 
 pub const SOURCE_SCHEMA: &str = "source-mentions-1";
+/// Source-described navigation candidates only, never accepted assertions.
+/// Provider JSON schema and native validation share this exact vocabulary.
+pub const RELATION_KINDS: &[&str] = &[
+    "uses",
+    "configured_by",
+    "depends_on",
+    "located_in",
+    "implements",
+    "related_to",
+    "does_not_use",
+    "has_owner",
+];
+// The known old adapter keeps its original semantic vocabulary. Retaining the
+// wire shape does not reinterpret an old receipt under new adapter behavior.
+const LEGACY_RELATION_KINDS: &[&str] = &[
+    "uses",
+    "configured_by",
+    "depends_on",
+    "located_in",
+    "implements",
+    "related_to",
+];
+pub const LOCAL_KEY_PATTERN: &str = "^[A-Za-z0-9_.-]{1,80}$";
 const MAX_SOURCE_BYTES: usize = 2 * 1024 * 1024;
 const MAX_OUTPUT_BYTES: usize = 256 * 1024;
 
@@ -45,7 +77,7 @@ impl EntityKind {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct MentionSpan {
     pub byte_start: usize,
@@ -53,7 +85,7 @@ pub struct MentionSpan {
     pub quote: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct MentionCandidate {
     pub key: String,
@@ -62,7 +94,7 @@ pub struct MentionCandidate {
     pub confidence: f64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct AliasCandidate {
     pub left: String,
@@ -70,7 +102,7 @@ pub struct AliasCandidate {
     pub span: MentionSpan,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct RelationCandidate {
     pub from: String,
@@ -79,7 +111,7 @@ pub struct RelationCandidate {
     pub span: MentionSpan,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct SourceCandidates {
     pub schema: String,
@@ -204,10 +236,12 @@ pub fn source_candidates(
     }
     for relation in &candidates.relations {
         pair(&relation.from, &relation.to, &relation.span)?;
-        if !matches!(
-            relation.relation.as_str(),
-            "uses" | "configured_by" | "depends_on" | "located_in" | "implements" | "related_to"
-        ) {
+        let vocabulary = if candidates.adapter_revision == "learning-quote-anchors-1" {
+            LEGACY_RELATION_KINDS
+        } else {
+            RELATION_KINDS
+        };
+        if !vocabulary.contains(&relation.relation.as_str()) {
             return Err(CandidateFailure::InvalidSchema);
         }
     }

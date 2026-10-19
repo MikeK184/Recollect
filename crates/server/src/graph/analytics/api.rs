@@ -33,11 +33,11 @@ pub async fn queue(
         if let Some(saved)=commands::reserve(&mut tx,key.as_deref(),"graph.analyze",json!({"brain":brain,"input":input})).await? {
             tx.commit().await?;return Ok(ResponseJson(saved));
         }
-        let (total,pending):(i64,i64)=sqlx::query_as("SELECT count(*),count(*) FILTER(WHERE state IN ('queued','running')) FROM analytics_reports WHERE brain_id=$1")
+        let (total,pending):(i64,i64)=sqlx::query_as("SELECT count(*),count(*) FILTER(WHERE state IN ('queued','running')) FROM analytics_reports WHERE purpose='topology' AND brain_id=$1")
           .bind(brain).fetch_one(&mut *tx).await?;
         if pending>=20 {return Err(Error(StatusCode::TOO_MANY_REQUESTS,"analytics_queue_full","This Brain already has 20 pending analyses. Wait for work to finish."));}
         if total>=100 {
-            let removed=sqlx::query("DELETE FROM analytics_reports WHERE brain_id=$1 AND id IN (SELECT r.id FROM analytics_reports r WHERE r.brain_id=$1 AND r.state NOT IN ('queued','running') AND NOT EXISTS(SELECT 1 FROM analytics_attempts a WHERE a.report_id=r.id AND a.cleaned_at IS NULL) ORDER BY created_at,id LIMIT $2)")
+            let removed=sqlx::query("DELETE FROM analytics_reports WHERE purpose='topology' AND brain_id=$1 AND id IN (SELECT r.id FROM analytics_reports r WHERE r.purpose='topology' AND r.brain_id=$1 AND r.state NOT IN ('queued','running') AND NOT EXISTS(SELECT 1 FROM analytics_attempts a WHERE a.report_id=r.id AND a.cleaned_at IS NULL) ORDER BY created_at,id LIMIT $2)")
               .bind(brain).bind(total-99).execute(&mut *tx).await?;
             if removed.rows_affected()<(total-99) as u64 {return Err(failure("analytics_cleanup_pending","Retained analysis cleanup must finish before another report can be queued."));}
         }
@@ -71,7 +71,7 @@ pub async fn get(
     let offset = publication::offset(&page)?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_role(&mut tx, brain, false).await?;
-    let saved:Vec<Json<AnalyticsReport>>=sqlx::query_scalar("SELECT to_jsonb(r)-'descriptor'-'scores' FROM analytics_reports r WHERE brain_id=$1 ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
+    let saved:Vec<Json<AnalyticsReport>>=sqlx::query_scalar("SELECT to_jsonb(r)-'descriptor'-'scores' FROM analytics_reports r WHERE r.purpose='topology' AND brain_id=$1 ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $2")
       .bind(brain).bind(offset).fetch_all(&mut *tx).await?;
     let epoch = analytics_epoch(&mut tx, brain).await?;
     let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
@@ -89,12 +89,12 @@ pub async fn get(
             r
         })
         .collect();
-    let total = sqlx::query_scalar("SELECT count(*) FROM analytics_reports WHERE brain_id=$1")
+    let total = sqlx::query_scalar("SELECT count(*) FROM analytics_reports WHERE purpose='topology' AND brain_id=$1")
         .bind(brain)
         .fetch_one(&mut *tx)
         .await?;
-    let jobs:Vec<jobs::JobRow>=sqlx::query_as("SELECT * FROM jobs WHERE brain_id=$1 AND kind='graph.analyze' ORDER BY created_at DESC,id DESC LIMIT 20").bind(brain).fetch_all(&mut *tx).await?;
-    let cleanup_pending=sqlx::query_scalar("SELECT DISTINCT report_id FROM analytics_attempts WHERE brain_id=$1 AND cleaned_at IS NULL").bind(brain).fetch_all(&mut *tx).await?;
+    let jobs:Vec<jobs::JobRow>=sqlx::query_as("SELECT * FROM jobs WHERE brain_id=$1 AND kind='graph.analyze' AND target_id IN (SELECT id FROM analytics_reports WHERE purpose='topology') ORDER BY created_at DESC,id DESC LIMIT 20").bind(brain).fetch_all(&mut *tx).await?;
+    let cleanup_pending=sqlx::query_scalar("SELECT DISTINCT report_id FROM analytics_attempts WHERE brain_id=$1 AND cleaned_at IS NULL AND report_id IN (SELECT id FROM analytics_reports WHERE purpose='topology')").bind(brain).fetch_all(&mut *tx).await?;
     tx.commit().await?;
     Ok(ResponseJson(AnalyticsStatus {
         reports,
@@ -122,6 +122,8 @@ pub async fn view(
         if input.offset>NODES {return Err(Error::invalid("The report offset exceeds its result limit."));}
         let mut tx=auth.tx(&state.pool).await?;
         db::require_role(&mut tx,brain,false).await?;
+        let public:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM analytics_reports WHERE brain_id=$1 AND id=$2 AND purpose='topology')").bind(brain).bind(id).fetch_one(&mut *tx).await?;
+        if !public{return Err(Error::missing());}
         let mut r=report(&mut tx,brain,id).await?;
         if let Some(mut scope)=r.selection.clone(){
             scope.operation_id=input.operation_id;
@@ -133,7 +135,7 @@ pub async fn view(
         if r.state=="ready" {
             match current(&state,&mut tx,&auth,&r,input.operation_id).await {
                 Ok(graph)=>{
-                    let scores:Option<Json<Vec<Score>>>=sqlx::query_scalar("SELECT scores FROM analytics_reports WHERE brain_id=$1 AND id=$2").bind(brain).bind(id).fetch_one(&mut *tx).await?;
+                    let scores:Option<Json<Vec<Score>>>=sqlx::query_scalar("SELECT scores FROM analytics_reports WHERE purpose='topology' AND brain_id=$1 AND id=$2").bind(brain).bind(id).fetch_one(&mut *tx).await?;
                     if let Some(Json(scores))=scores {
                         if scores.len()!=graph.nodes.len(){return Err(failure("analytics_result_invalid","The saved result does not match its complete input."));}
                         for value in scores.into_iter().skip(input.offset).take(100){

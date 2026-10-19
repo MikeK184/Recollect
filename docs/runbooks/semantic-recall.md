@@ -44,7 +44,7 @@ the displayed semantic score follows its original fragment and the other lexical
 match is qualified. **Copy attributed context** includes provenance in the budget.
 
 **Minimum semantic similarity** is an optional explicit filter, default zero. The
-[fixed-corpus results](../mappings/semantic-retrieval-2026-09-15.md) show improved
+[fixed-corpus results](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/semantic-retrieval-2026-09-15.md) show improved
 paraphrase recall and unrelated returns on unsupported questions. A numerical cutoff
 does not establish a reliable answer or replace inspection of evidence.
 
@@ -100,5 +100,5 @@ cargo test -p recollect-server --test platform models::semantic -- --ignored --t
 ```
 
 These automated fixtures use a controlled provider, with no actual OpenAI charge.
-The [implementation mapping](../mappings/semantic-retrieval-2026-09-15.md) separately
+The [implementation mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/semantic-retrieval-2026-09-15.md) separately
 records the real-model corpus, browser/native checks, usage, limits and local demo.

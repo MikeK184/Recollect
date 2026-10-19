@@ -69,7 +69,7 @@ Work type: product
 ## Closeout
 
 - Planned: Tiered sidebar, Knowledge surface, shared lineage inspector, graph chrome reorganization, list density treatment, historical filters and the assurance band.
-- Shipped: Locally delivered on 2026-10-01. Tiered sidebar, one Knowledge surface and canonical lineage inspector, exact cross-view selection, explicit record-history actions, readable graph chrome, list density and active-first Brain/device lists. Optional correction handlers are preserved behind the inspector; autonomous learning needs no human approval. The standing band is shared with the assurance slice. See the [continuation evidence](../../../mappings/desktop-continuation-2026-10-01.md).
+- Shipped: Locally delivered on 2026-10-01. Tiered sidebar, one Knowledge surface and canonical lineage inspector, exact cross-view selection, explicit record-history actions, readable graph chrome, list density and active-first Brain/device lists. Optional correction handlers are preserved behind the inspector; autonomous learning needs no human approval. The standing band is shared with the assurance slice. See the [continuation evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-continuation-2026-10-01.md).
 - Not shipped: Ask behavior remains held in desktop-ask-primary. Extra small-screen and keyboard/focus polish is optional under the user’s 2026-10-01 decision.
 - New blockers: None for this slice. Unrelated desktop acceptance packs and the held Ask slice remain open.
 - Docs updated: Governing desktop priority amendment, dated evidence, desktop/agent/capture runbooks as applicable, this pack, owning epic and epic/execution indexes, and CONTINUE_HERE.md.

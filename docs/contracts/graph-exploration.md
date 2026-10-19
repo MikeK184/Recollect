@@ -2,16 +2,16 @@
 
 Status: accepted
 
-The [October 3 presentation correction](#flat-graph-correction--2026-10-03)
-retains a flat 2D graph and recorded contributions. The canonical query, scope
-and display bounds below remain authoritative.
+The October 18 [grouped 3D contract](graph-grouped-3d-navigation.md) supersedes
+the October 3 renderer-only flat correction. The canonical query, contribution,
+scope and display bounds below remain authoritative in both dimensions.
 
 ## Source
 
 The user's authorized full-product implementation includes browser graph,
 path and impact exploration. This contract refines [ADR 0007](../adr/0007-canonical-graph-projections.md),
 [canonical traversal](graph-projection-and-traversal.md), [combined inputs](graph-cross-repository-views.md),
-and [analytics](graph-analytics.md). The [interface evidence](../mappings/graph-exploration-interfaces-2026-09-22.md)
+and [analytics](graph-analytics.md). The [interface evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-exploration-interfaces-2026-09-22.md)
 records the native query probe and renderer choice. These are routine choices
 within the accepted independent Rust and Neo4j baseline.
 
@@ -71,6 +71,27 @@ refresh cannot leave an old graph appearing current. Existing evidence dialogs
 remain canonical reads. Desktop UI controls must handle long repository labels
 and provide an understandable empty, no-path, loading,
 unavailable, capacity or no-access state.
+
+Status polling can track exact loaded projection identities independently of the
+paginated generation inventory. Extend the existing graph status GET with optional
+`tracked_generation_ids`, a comma-separated list of at most 102 distinct non-nil
+UUIDs within a bounded 3,774-byte parameter. Reject oversized or malformed lists;
+do not scan arbitrary history pages. Return additive, default-empty
+`tracked_generations` and `missing_tracked_generation_ids` fields while preserving
+the existing 20-row inventory, offset, total, jobs and epochs. Require the same
+Brain read authority and apply the existing unavailable-input/removed semantics
+to tracked rows. An ID outside the authorized Brain is missing, indistinguishable
+from an absent ID. Never return descriptors, source labels or native contents.
+
+The browser tracks the actual accepted scene's main generation and exact input
+generations (a combined view has at most 100 repository inputs). Terminal or
+explicitly missing tracked rows clear the dependent scene, path and inspector;
+queued work and unrelated generations alone do not. An ID absent only from the
+inventory page is not deletion evidence. Associate each poll with its accepted
+view/load revision so an older response cannot clear a newer explicit parent or
+centered exploration read. This metadata check performs no traversal, rebuild,
+model work or automatic replay of the prior graph request. Older status callers
+and stored JSON without the new fields retain their existing behavior.
 
 ## Acceptance
 

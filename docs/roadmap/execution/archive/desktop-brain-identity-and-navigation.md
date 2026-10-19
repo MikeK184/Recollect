@@ -63,7 +63,7 @@ Work type: product
 ## Closeout
 
 - Planned: Authorized chooser/icon/navigation changes and approved personal grouped Agents list.
-- Shipped: Direct Brain chooser, uploaded normalized icons, personal Agents grouped by used Brain, shared-Brain contributor metadata and Agents access drawer with pairing redirects. Rebuilt and verified on the existing local stack; [dated evidence](../../../mappings/desktop-brain-identity-2026-10-03.md).
+- Shipped: Direct Brain chooser, uploaded normalized icons, personal Agents grouped by used Brain, shared-Brain contributor metadata and Agents access drawer with pairing redirects. Rebuilt and verified on the existing local stack; [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-brain-identity-2026-10-03.md).
 - Not shipped: TV completion and overall visual epic closeout remain separate; no external release.
 - New blockers: None.
 - Docs updated: Desktop/pairing contracts, epic/index, archived pack/index, mappings/index and handoff.

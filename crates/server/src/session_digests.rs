@@ -13,129 +13,213 @@ enum Preflight {
     Omitted(&'static str),
 }
 
-#[derive(Deserialize)]
-struct Partition {
+#[derive(Deserialize, PartialEq)]
+pub(crate) struct Partition {
     id: Uuid,
     selection: ScopeSelection,
     manifest_revision_id: Option<Uuid>,
     observed_receipt: i64,
 }
 
-pub(crate) async fn schedule(
+/// A complete contributor/page calculation from one provisional snapshot.
+/// It is never persisted and cannot authorize publication by itself.
+pub(crate) struct PreparedPartition {
+    partition: Partition,
+    pages: Vec<(Vec<Uuid>, (usize, usize))>,
+    coverage: serde_json::Value,
+    deadline: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+pub(crate) enum PageOutcome {
+    Resolved(usize, bool),
+    Deferred,
+}
+
+pub(crate) async fn partition(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    policy: Uuid,
+    id: Uuid,
+) -> Result<Option<Partition>> {
+    let row: Option<Json<Partition>> = sqlx::query_scalar("SELECT to_jsonb(p) FROM session_digest_partitions p
+      WHERE p.brain_id=$1 AND p.id=$3 AND p.privacy_state='active'
+      AND (recollect_digest_task_closed(p.brain_id,p.id) OR NOT EXISTS(SELECT 1 FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id WHERE d.partition_id=p.id AND e.received_at>clock_timestamp()-interval '5 minutes'))
+      AND NOT EXISTS(SELECT 1 FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id JOIN source_versions v ON v.id=e.source_version_id AND v.brain_id=e.brain_id
+       WHERE d.partition_id=p.id AND (v.processing IN ('pending','processing','queued') OR EXISTS(SELECT 1 FROM learning_runs l WHERE l.brain_id=$1 AND l.source_version_id=v.id AND l.policy_id=$2 AND l.state IN ('queued','running'))))")
+        .bind(brain).bind(policy).bind(id).fetch_optional(&mut **tx).await?;
+    Ok(row.map(|r| r.0))
+}
+
+pub(crate) async fn prepare_partition(
     state: &AppState,
     tx: &mut Tx<'_>,
     brain: Uuid,
-    actor: Uuid,
     policy: &ModelPolicyVersion,
-    limit: usize,
-) -> Result<usize> {
-    if limit == 0
-        || model_policy::permits(
-            state,
-            &policy.policy,
-            "synthesis",
-            &["claim".into(), "query".into()],
-        )
-        .is_err()
+    id: Uuid,
+) -> Result<Option<PreparedPartition>> {
+    if model_policy::permits(
+        state,
+        &policy.policy,
+        "synthesis",
+        &["claim".into(), "query".into()],
+    )
+    .is_err()
         || model_policy::permits(state, &policy.policy, "extraction", &["claim".into()]).is_err()
     {
-        return Ok(0);
+        return Ok(None);
     }
-    // Only server-authenticated capture bindings supply a partition. No latest
-    // session guess, filesystem inspection, or summary of another summary.
-    sqlx::query("SELECT recollect_digest_discover($1)")
-        .bind(brain)
-        .execute(&mut **tx)
-        .await?;
-    let partitions: Vec<Json<Partition>> = sqlx::query_scalar("SELECT to_jsonb(p) FROM session_digest_partitions p
-      WHERE p.brain_id=$1 AND p.privacy_state='active' AND (recollect_digest_task_closed(p.brain_id,p.id) OR NOT EXISTS(SELECT 1 FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id WHERE d.partition_id=p.id AND e.received_at>clock_timestamp()-interval '5 minutes'))
-      AND NOT EXISTS(SELECT 1 FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id JOIN source_versions v ON v.id=e.source_version_id AND v.brain_id=e.brain_id
-       WHERE d.partition_id=p.id AND (v.processing IN ('pending','processing','queued') OR EXISTS(SELECT 1 FROM learning_runs l WHERE l.brain_id=$1 AND l.source_version_id=v.id AND l.policy_id=$2 AND l.state IN ('queued','running'))))
-      ORDER BY (p.observed_receipt>p.covered_receipt) DESC,p.last_checked_at,p.id LIMIT 100")
-        .bind(brain).bind(policy.change_id).fetch_all(&mut **tx).await?;
-    let mut queued = 0;
-    for Json(p) in partitions {
-        sqlx::query(
-            "UPDATE session_digest_partitions SET last_checked_at=clock_timestamp() WHERE id=$1",
-        )
-        .bind(p.id)
-        .execute(&mut **tx)
-        .await?;
-        let rows: Vec<Json<ClaimRevision>> = sqlx::query_scalar("SELECT DISTINCT r.revision FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id
+    let Some(p) = partition(tx, brain, policy.change_id, id).await? else {
+        return Ok(None);
+    };
+    let rows: Vec<Json<ClaimRevision>> = sqlx::query_scalar("SELECT DISTINCT r.revision FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id
           JOIN learning_runs l ON l.brain_id=e.brain_id AND l.source_version_id=e.source_version_id AND l.state IN ('succeeded','removed')
           JOIN claims c ON c.brain_id=l.brain_id AND c.id=ANY(l.claim_ids) JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
           WHERE d.partition_id=$1 AND r.revision#>>'{content,kind}'<>'handover' AND r.revision#>'{content,selection}'=$2
            AND r.revision#>>'{content,manifest_revision_id}' IS NOT DISTINCT FROM $3::text
            AND r.revision->>'review'='accepted' AND recollect_memory_supported(r.brain_id,r.id)
           ORDER BY r.revision LIMIT 500")
-            .bind(p.id).bind(Json(&p.selection)).bind(p.manifest_revision_id.map(|m|m.to_string())).fetch_all(&mut **tx).await?;
-        let scan_bounded = rows.len() == 500;
-        let mut eligible = Vec::new();
-        for Json(r) in rows {
-            let v = memory::view(state, tx, r, chrono::Utc::now(), None).await?;
-            if v.eligibility.investigation
-                && v.eligibility.rule_ids.is_empty()
-                && v.revision.content.freshness == "current"
-            {
-                eligible.push(v);
-            }
+        .bind(p.id).bind(Json(&p.selection)).bind(p.manifest_revision_id.map(|m|m.to_string())).fetch_all(&mut **tx).await?;
+    let scan_bounded = rows.len() == 500;
+    let mut eligible = Vec::new();
+    let ids: Vec<Uuid> = rows.iter().map(|r| r.0.id).collect();
+    let deadline = sqlx::query_scalar(
+        "SELECT min(recollect_memory_deadline($1,input.id)) FROM unnest($2::uuid[]) input(id)",
+    )
+    .bind(brain)
+    .bind(&ids)
+    .fetch_one(&mut **tx)
+    .await?;
+    for Json(r) in rows {
+        let v = memory::view(state, tx, r, chrono::Utc::now(), None).await?;
+        if v.eligibility.investigation
+            && v.eligibility.rule_ids.is_empty()
+            && v.revision.content.freshness == "current"
+        {
+            eligible.push(v);
         }
-        eligible.sort_by_key(|v| v.revision.id);
-        // A page is a whole-input budget, never a clipped assertion. Empty pages
-        // record coverage but cannot preserve a formerly complete old digest.
-        let eligible_count = eligible.len();
-        let mut omitted = 0usize;
-        let mut omissions = std::collections::BTreeMap::<&str, usize>::new();
-        let mut pages: Vec<(Vec<Uuid>, (usize, usize))> = vec![];
-        let mut page = Vec::new();
-        let mut allowance = (0, 0);
-        for v in eligible {
-            let mut trial = page.clone();
-            trial.push(v.revision.id);
-            if let Preflight::Fits(n) = preflight(state, tx, brain, &p, &trial, policy).await? {
-                page = trial;
-                allowance = n;
-                continue;
-            }
-            if !page.is_empty() {
-                pages.push((std::mem::take(&mut page), allowance));
-            }
-            let single = vec![v.revision.id];
-            match preflight(state, tx, brain, &p, &single, policy).await? {
-                Preflight::Fits(n) => {
-                    page = single;
-                    allowance = n;
-                }
-                Preflight::Omitted(reason) => {
-                    omitted += 1;
-                    *omissions.entry(reason).or_default() += 1;
-                }
-            }
+    }
+    eligible.sort_by_key(|v| v.revision.id);
+    let eligible_count = eligible.len();
+    let mut omitted = 0usize;
+    let mut omissions = std::collections::BTreeMap::<&str, usize>::new();
+    let mut pages = Vec::new();
+    let mut page = Vec::new();
+    let mut allowance = (0, 0);
+    for v in eligible {
+        let mut trial = page.clone();
+        trial.push(v.revision.id);
+        if let Preflight::Fits(n) = preflight(state, tx, brain, &p, &trial, policy).await? {
+            page = trial;
+            allowance = n;
+            continue;
         }
         if !page.is_empty() {
-            pages.push((page, allowance));
+            pages.push((std::mem::take(&mut page), allowance));
         }
-        sqlx::query("UPDATE session_digest_partitions SET coverage=$2 WHERE id=$1")
-            .bind(p.id).bind(Json(serde_json::json!({"eligible":eligible_count,"omitted":omitted,"bounded_scan":scan_bounded,"pages":pages.len(),"omissions":omissions}))).execute(&mut **tx).await?;
-        for (page, (ids, allowance)) in pages.iter().enumerate() {
-            if ids.is_empty() {
-                continue;
+        let single = vec![v.revision.id];
+        match preflight(state, tx, brain, &p, &single, policy).await? {
+            Preflight::Fits(n) => {
+                page = single;
+                allowance = n;
             }
-            let previous: Option<(Uuid,Uuid)> = sqlx::query_as("SELECT d.claim_id,c.current_revision FROM session_digest_claims d JOIN claims c ON c.id=d.claim_id AND c.brain_id=d.brain_id WHERE d.partition_id=$1 AND d.page=$2")
+            Preflight::Omitted(reason) => {
+                omitted += 1;
+                *omissions.entry(reason).or_default() += 1;
+            }
+        }
+    }
+    if !page.is_empty() {
+        pages.push((page, allowance));
+    }
+    let coverage = serde_json::json!({"eligible":eligible_count,"omitted":omitted,"bounded_scan":scan_bounded,"pages":pages.len(),"omissions":omissions});
+    Ok(Some(PreparedPartition {
+        partition: p,
+        pages,
+        coverage,
+        deadline,
+    }))
+}
+
+pub(crate) fn pages(prepared: &PreparedPartition) -> usize {
+    prepared.pages.len()
+}
+
+pub(crate) async fn current_partition(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    policy: Uuid,
+    prepared: &PreparedPartition,
+) -> Result<bool> {
+    let now: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
+        .fetch_one(&mut **tx)
+        .await?;
+    Ok(!prepared.deadline.is_some_and(|d| d <= now)
+        && partition(tx, brain, policy, prepared.partition.id)
+            .await?
+            .as_ref()
+            == Some(&prepared.partition))
+}
+
+/// Publish one complete page only. The caller holds fresh authority and the
+/// unchanged preparation epoch; expensive partition discovery is already done.
+pub(crate) async fn publish_page(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    policy: &ModelPolicyVersion,
+    prepared: &PreparedPartition,
+    page: usize,
+    allow_queue: bool,
+) -> Result<PageOutcome> {
+    let p = &prepared.partition;
+    let (ids, allowance) = &prepared.pages[page];
+    if !current_partition(tx, brain, policy.change_id, prepared).await? {
+        return Ok(PageOutcome::Deferred);
+    }
+    // Wall-clock expiry can change without an epoch increment. Revalidate the
+    // complete exact page, including input fences and every retained support.
+    if !matches!(preflight(state, tx, brain, p, ids, policy).await?, Preflight::Fits(n) if n == *allowance)
+    {
+        return Ok(PageOutcome::Deferred);
+    }
+    crate::handovers::scope(
+        state,
+        tx,
+        brain,
+        actor,
+        None,
+        &HandoverInput {
+            title: "Session continuation".into(),
+            contributions: ids.clone(),
+            operation_id: None,
+        },
+    )
+    .await?;
+    if ids.is_empty() {
+        return Ok(PageOutcome::Resolved(0, false));
+    }
+    let previous: Option<(Uuid,Uuid)> = sqlx::query_as("SELECT d.claim_id,c.current_revision FROM session_digest_claims d JOIN claims c ON c.id=d.claim_id AND c.brain_id=d.brain_id WHERE d.partition_id=$1 AND d.page=$2")
                 .bind(p.id).bind(page as i32).fetch_optional(&mut **tx).await?;
-            if let Some((claim, base)) = previous {
-                let old = memory::current(tx, brain, claim).await?;
-                if old.id != base
-                    || !crate::autonomous::maintained(&old)
-                    || !crate::memory_rules::matching(tx, &old, false)
-                        .await?
-                        .is_empty()
-                {
-                    sqlx::query("UPDATE session_digest_pages SET active=false WHERE partition_id=$1 AND page=$2").bind(p.id).bind(page as i32).execute(&mut **tx).await?;
-                    continue;
-                }
-            }
-            let existing: Option<(Uuid,bool)> = sqlx::query_as("SELECT g.id,g.privacy_state='active' AND (EXISTS(
+    if let Some((claim, base)) = previous {
+        let old = memory::current(tx, brain, claim).await?;
+        if old.id != base
+            || !crate::autonomous::maintained(&old)
+            || !crate::memory_rules::matching(tx, &old, false)
+                .await?
+                .is_empty()
+        {
+            sqlx::query(
+                "UPDATE session_digest_pages SET active=false WHERE partition_id=$1 AND page=$2",
+            )
+            .bind(p.id)
+            .bind(page as i32)
+            .execute(&mut **tx)
+            .await?;
+            return Ok(PageOutcome::Resolved(0, false));
+        }
+    }
+    let existing: Option<(Uuid,bool)> = sqlx::query_as("SELECT g.id,g.privacy_state='active' AND (EXISTS(
                   WITH RECURSIVE recovery AS (
                     SELECT r.id,r.state,r.error_code,r.automatic_attempt,r.local_recoveries,r.job_id,0 depth
                     UNION ALL SELECT child.id,child.state,child.error_code,child.automatic_attempt,child.local_recoveries,child.job_id,parent.depth+1
@@ -154,84 +238,86 @@ pub(crate) async fn schedule(
                         AND EXISTS(SELECT 1 FROM model_requests m WHERE m.brain_id=g.brain_id AND m.operation_id=coalesce(stage.assessment_operation_id,candidate.id) AND m.state IN ('succeeded','failed') AND NOT m.suppressed))))
                 ) OR EXISTS(SELECT 1 FROM session_digest_claims d JOIN claims c ON c.id=d.claim_id AND c.brain_id=d.brain_id WHERE d.generation_id=g.id AND d.revision_id=c.current_revision)) FROM session_digest_generations g JOIN handover_runs r ON r.id=g.run_id AND r.brain_id=g.brain_id WHERE g.partition_id=$1 AND g.page=$2 AND g.contributors=$3 AND g.policy_id=$4 AND g.version='session-digest-1' AND (g.base_revision_id IS NOT DISTINCT FROM $5 OR EXISTS(SELECT 1 FROM session_digest_claims d JOIN claims c ON c.id=d.claim_id AND c.brain_id=d.brain_id WHERE d.generation_id=g.id AND d.revision_id=c.current_revision)) ORDER BY g.created_at DESC LIMIT 1")
                 .bind(p.id).bind(page as i32).bind(ids).bind(policy.change_id).bind(previous.map(|x|x.1)).fetch_optional(&mut **tx).await?;
-            if let Some((generation, reusable)) = existing {
-                if !reusable {
-                    sqlx::query("UPDATE session_digest_pages SET active=false WHERE partition_id=$1 AND page=$2").bind(p.id).bind(page as i32).execute(&mut **tx).await?;
-                    sqlx::query("UPDATE session_digest_partitions SET coverage=coverage||jsonb_build_object('generation_outcome','terminal_unchanged_inputs') WHERE id=$1").bind(p.id).execute(&mut **tx).await?;
-                    continue;
-                }
-                // A newer receipt does not change immutable model inputs. Once
-                // settlement proves exact contributors unchanged, advance only
-                // their coverage authorization; no provider replay.
-                sqlx::query("UPDATE session_digest_generations SET receipt=$2 WHERE id=$1 AND privacy_state='active'")
-                    .bind(generation).bind(p.observed_receipt).execute(&mut **tx).await?;
-                sqlx::query("INSERT INTO session_digest_pages(brain_id,partition_id,page,generation_id) VALUES($1,$2,$3,$4) ON CONFLICT(partition_id,page) DO UPDATE SET generation_id=EXCLUDED.generation_id,active=true")
-                    .bind(brain).bind(p.id).bind(page as i32).bind(generation).execute(&mut **tx).await?;
-                sqlx::query("UPDATE session_digest_claims SET covered_receipt=$3 WHERE partition_id=$1 AND generation_id=$2")
-                    .bind(p.id).bind(generation).bind(p.observed_receipt).execute(&mut **tx).await?;
-                continue;
-            }
-            if queued == limit {
-                return Ok(queued);
-            }
-            let input = HandoverInput {
-                title: "Session continuation".into(),
-                contributions: ids.clone(),
-                operation_id: None,
-            };
-            let (selection, _) =
-                crate::handovers::scope(state, tx, brain, actor, None, &input).await?;
-            if selection != p.selection {
-                continue;
-            }
-            jobs::capacity(tx, brain).await?;
-            let run = Uuid::new_v4();
-            let audit = db::audit(
-                tx,
-                actor,
-                brain,
-                "handover.queue",
-                run,
-                "automatic_session_digest",
+    if let Some((generation, reusable)) = existing {
+        if !reusable {
+            sqlx::query(
+                "UPDATE session_digest_pages SET active=false WHERE partition_id=$1 AND page=$2",
             )
-            .await?;
-            let job =
-                jobs::enqueue_work(tx, actor, brain, audit, run, "handover.generate", "model")
-                    .await?;
-            sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id) VALUES($1,$2,'Session continuation',$3,$4,$5,$6,$7,'queued',true,$8,$9)")
-                .bind(run).bind(brain).bind(ids).bind(Json(&p.selection)).bind(policy.change_id).bind(actor).bind(job).bind(previous.map(|x|x.0)).bind(previous.map(|x|x.1)).execute(&mut **tx).await?;
-            for id in ids {
-                sqlx::query(
-                    "INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)",
-                )
-                .bind(run)
-                .bind(brain)
-                .bind(id)
-                .execute(&mut **tx)
-                .await?;
-            }
-            let generation = Uuid::new_v4();
-            sqlx::query("INSERT INTO session_digest_generations(id,brain_id,partition_id,page,contributors,policy_id,receipt,run_id,candidate_bytes,candidate_overhead,base_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)")
-                .bind(generation).bind(brain).bind(p.id).bind(page as i32).bind(ids).bind(policy.change_id).bind(p.observed_receipt).bind(run).bind(allowance.0 as i32).bind(allowance.1 as i32).bind(previous.map(|x|x.1)).execute(&mut **tx).await?;
-            sqlx::query("INSERT INTO session_digest_pages(brain_id,partition_id,page,generation_id) VALUES($1,$2,$3,$4) ON CONFLICT(partition_id,page) DO UPDATE SET generation_id=EXCLUDED.generation_id,active=true")
-                .bind(brain).bind(p.id).bind(page as i32).bind(generation).execute(&mut **tx).await?;
-            queued += 1;
-        }
-        // Pages which disappeared cannot claim fresh coverage.
-        sqlx::query(
-            "UPDATE session_digest_pages SET active=false WHERE partition_id=$1 AND page>=$2",
-        )
-        .bind(p.id)
-        .bind(pages.len() as i32)
-        .execute(&mut **tx)
-        .await?;
-        sqlx::query("UPDATE session_digest_partitions SET covered_receipt=$2 WHERE id=$1")
             .bind(p.id)
-            .bind(p.observed_receipt)
+            .bind(page as i32)
             .execute(&mut **tx)
             .await?;
+            sqlx::query("UPDATE session_digest_partitions SET coverage=coverage||jsonb_build_object('generation_outcome','terminal_unchanged_inputs') WHERE id=$1").bind(p.id).execute(&mut **tx).await?;
+            return Ok(PageOutcome::Resolved(0, true));
+        }
+        // A newer receipt does not change immutable model inputs. Once
+        // settlement proves exact contributors unchanged, advance only
+        // their coverage authorization; no provider replay.
+        sqlx::query("UPDATE session_digest_generations SET receipt=$2 WHERE id=$1 AND privacy_state='active'")
+                    .bind(generation).bind(p.observed_receipt).execute(&mut **tx).await?;
+        sqlx::query("INSERT INTO session_digest_pages(brain_id,partition_id,page,generation_id) VALUES($1,$2,$3,$4) ON CONFLICT(partition_id,page) DO UPDATE SET generation_id=EXCLUDED.generation_id,active=true")
+                    .bind(brain).bind(p.id).bind(page as i32).bind(generation).execute(&mut **tx).await?;
+        sqlx::query("UPDATE session_digest_claims SET covered_receipt=$3 WHERE partition_id=$1 AND generation_id=$2")
+                    .bind(p.id).bind(generation).bind(p.observed_receipt).execute(&mut **tx).await?;
+        return Ok(PageOutcome::Resolved(0, false));
     }
-    Ok(queued)
+    if !allow_queue {
+        return Ok(PageOutcome::Deferred);
+    }
+    jobs::capacity(tx, brain).await?;
+    let run = Uuid::new_v4();
+    let audit = db::audit(
+        tx,
+        actor,
+        brain,
+        "handover.queue",
+        run,
+        "automatic_session_digest",
+    )
+    .await?;
+    let job =
+        jobs::enqueue_work(tx, actor, brain, audit, run, "handover.generate", "model").await?;
+    sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id) VALUES($1,$2,'Session continuation',$3,$4,$5,$6,$7,'queued',true,$8,$9)")
+                .bind(run).bind(brain).bind(ids).bind(Json(&p.selection)).bind(policy.change_id).bind(actor).bind(job).bind(previous.map(|x|x.0)).bind(previous.map(|x|x.1)).execute(&mut **tx).await?;
+    for id in ids {
+        sqlx::query(
+            "INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)",
+        )
+        .bind(run)
+        .bind(brain)
+        .bind(id)
+        .execute(&mut **tx)
+        .await?;
+    }
+    let generation = Uuid::new_v4();
+    sqlx::query("INSERT INTO session_digest_generations(id,brain_id,partition_id,page,contributors,policy_id,receipt,run_id,candidate_bytes,candidate_overhead,base_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)")
+                .bind(generation).bind(brain).bind(p.id).bind(page as i32).bind(ids).bind(policy.change_id).bind(p.observed_receipt).bind(run).bind(allowance.0 as i32).bind(allowance.1 as i32).bind(previous.map(|x|x.1)).execute(&mut **tx).await?;
+    sqlx::query("INSERT INTO session_digest_pages(brain_id,partition_id,page,generation_id) VALUES($1,$2,$3,$4) ON CONFLICT(partition_id,page) DO UPDATE SET generation_id=EXCLUDED.generation_id,active=true")
+                .bind(brain).bind(p.id).bind(page as i32).bind(generation).execute(&mut **tx).await?;
+    return Ok(PageOutcome::Resolved(1, false));
+}
+
+pub(crate) async fn finish_partition(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    policy: Uuid,
+    prepared: &PreparedPartition,
+    terminal: bool,
+) -> Result<()> {
+    if !current_partition(tx, brain, policy, prepared).await? {
+        return Ok(());
+    }
+    // This runs only after every page completed. A deferred page or timeout must
+    // never retire a previous page or claim successful empty coverage.
+    let mut coverage = prepared.coverage.clone();
+    if terminal {
+        coverage["generation_outcome"] = "terminal_unchanged_inputs".into();
+    }
+    sqlx::query("UPDATE session_digest_partitions SET coverage=$2,last_checked_at=clock_timestamp(),covered_receipt=$3 WHERE id=$1 AND brain_id=$4")
+        .bind(prepared.partition.id).bind(Json(&coverage)).bind(prepared.partition.observed_receipt).bind(brain).execute(&mut **tx).await?;
+    sqlx::query("UPDATE session_digest_pages SET active=false WHERE partition_id=$1 AND page>=$2 AND brain_id=$3")
+        .bind(prepared.partition.id).bind(prepared.pages.len() as i32).bind(brain).execute(&mut **tx).await?;
+    Ok(())
 }
 
 async fn preflight(

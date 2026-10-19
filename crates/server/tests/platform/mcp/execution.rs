@@ -757,6 +757,10 @@ async fn local_native(http: bool, private: bool, plugin: bool) {
                 std::env::var_os("DBUS_SESSION_BUS_ADDRESS")
                     .map(|value| ("DBUS_SESSION_BUS_ADDRESS", value)),
             )
+            .envs(
+                std::env::var_os(recollect_agent::CREDENTIAL_STORE_DIR_VAR)
+                    .map(|value| (recollect_agent::CREDENTIAL_STORE_DIR_VAR, value)),
+            )
             .env("RECOLLECT_URL", &endpoint)
             .env("RECOLLECT_DEVICE_PROFILE", &profile_name)
             .args([
@@ -822,6 +826,10 @@ async fn local_native(http: bool, private: bool, plugin: bool) {
                 .envs(
                     std::env::var_os("DBUS_SESSION_BUS_ADDRESS")
                         .map(|value| ("DBUS_SESSION_BUS_ADDRESS", value)),
+                )
+                .envs(
+                    std::env::var_os(recollect_agent::CREDENTIAL_STORE_DIR_VAR)
+                        .map(|value| (recollect_agent::CREDENTIAL_STORE_DIR_VAR, value)),
                 )
                 .env("RECOLLECT_URL", &endpoint)
                 .env("RECOLLECT_DEVICE_PROFILE", &profile_name)

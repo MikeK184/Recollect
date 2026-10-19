@@ -133,7 +133,7 @@ expiry; this does not claim immediate invalidation of already issued credentials
 
 ## Verification and recovery
 
-The [dated mapping](../mappings/mcp-vault-private-2026-09-22.md) distinguishes
+The [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-vault-private-2026-09-22.md) distinguishes
 Enterprise KV/Proxy proof from local dynamic issuance/renewal proof. The Enterprise
 cluster cannot route back to the Mac fixture database. Its authorized namespace
 and auth setup must remain in place; never revoke tokens or delete it as cleanup.

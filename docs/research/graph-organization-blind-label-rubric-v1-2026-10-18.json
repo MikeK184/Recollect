@@ -1,0 +1,82 @@
+{
+  "schema": "recollect.blind-topic-label-review-1",
+  "status": "frozen-before-real-remaining111-output",
+  "purpose": "Independent semantic label usefulness review, separate from deterministic source provenance, grouping scores, canonical mutation and producer qualification.",
+  "corpus_contents_or_provider_outputs_used_to_author_rubric": false,
+  "reviewer": {
+    "independent_of_prompt_parameter_selection": true,
+    "no_provider_call_or_paid_judge_required": true,
+    "record_identity_and_review_time": true
+  },
+  "admission": {
+    "require_exact_campaign_recipe_and_rubric_hashes": true,
+    "require_durable_development_selection_before_fresh_review": true,
+    "failed_development_selection": "Do not open or rate fresh held-out outputs; report fresh label usefulness as not measured.",
+    "require_complete_qualified_group_members_and_label_provenance": true,
+    "missing_or_truncated_review_packet": "Record unreviewable, retain its denominator and do not pass the arm."
+  },
+  "blinding": {
+    "review_packet": [
+      "Opaque review-group and source identifiers",
+      "The exact displayed label and its source-basis kind",
+      "All qualified contributor titles and exact source excerpts needed to judge that label",
+      "The same current source scope, temporal and evidence-class qualifications the user is permitted to see"
+    ],
+    "withhold_until_ratings_are_durable": [
+      "Engine arm and algorithm-generated group identifiers",
+      "Model, prompt and development parameter identities",
+      "Gold topic annotations and development/held-out partition",
+      "Pair, assignment, provenance-pass and performance scores",
+      "Any other reviewer's rating"
+    ],
+    "order": "Use a fixed deterministic shuffled order derived from the frozen campaign recipe and opaque group identifiers; record the order hash before review.",
+    "reveal": "Write and fsync the complete independent ratings and packet-order hash before joining arm names, partitions or gold metrics. Never change a rating because an arm or metric is revealed."
+  },
+  "dimensions": [
+    {
+      "id": "source_fidelity",
+      "pass": "The label describes the subject actually supported by the qualified contributors. It does not introduce a relationship, actor, cause or qualifier absent from those sources.",
+      "fail": "The label describes an unsupported subject, only an unrelated outlier, or an inference the supplied evidence does not support."
+    },
+    {
+      "id": "scope_time_and_authority",
+      "pass": "The label fits the visible source scope and temporal meaning and does not present an assertion, historical event, hypothesis or generated suggestion as accepted operational truth.",
+      "fail": "The label conflates customer/repository/environment instances or implies unsupported current status, action, approval or verification."
+    },
+    {
+      "id": "navigation_usefulness",
+      "pass": "The label gives a reader a recognizable, source-backed subject or canonical scope with which to find the displayed contributors. An exact term facet or descriptive source title may be useful, including for one source, without claiming a multi-source community.",
+      "fail": "The label is only an opaque identifier, boilerplate or a generic name that does not help identify the displayed subject, or is so misleadingly broad or narrow that it directs the reader to the wrong material."
+    }
+  ],
+  "rating_record": {
+    "required": [
+      "Opaque review-group identifier",
+      "Reviewer identity and timestamp",
+      "Pass, fail or unreviewable for every dimension",
+      "A short source-referenced rationale for every dimension",
+      "Exact review packet, packet-order, campaign and rubric hashes"
+    ],
+    "no_truth_promotion_or_canonical_mutation": true
+  },
+  "aggregation": {
+    "denominator": "Every emitted group in every declared arm and evaluated partition, including failed, missing and unreviewable packets. Document assignment, empty arms and unavailable arms remain separate recorded outcomes.",
+    "group_pass": "All three dimensions pass and the independent rating is complete.",
+    "arm_usefulness_pass": "At least one group was reviewable, every emitted group has a complete rating, and every group passes. Any failed or unreviewable group prevents a usefulness pass; an average cannot hide a misleading label.",
+    "comparison_completeness": "Retain every declared baseline arm even when it fails. A failed baseline does not prevent comparison completion and does not grant a pass to the selected candidate.",
+    "no_groups_or_unavailable_arm": "Not measured, never a vacuous pass.",
+    "report": [
+      "Group and source counts for each arm and partition",
+      "Pass, fail and unreviewable counts for each dimension",
+      "Every individual rationale and failed group",
+      "Blindness limitations or packet omissions",
+      "Source/pair/assignment metrics alongside, rather than replacing, semantic review"
+    ]
+  },
+  "invariants": [
+    "Do not tune a prompt, threshold, grouping recipe or label rule from fresh held-out review.",
+    "Do not rewrite corpus labels, omit failures or rescue rejected mappings to obtain a pass.",
+    "This rubric never activates a producer, community recipe, online ranking or normal-installation policy.",
+    "Passing label review alone does not prove extraction quality, canonical mutation/support quality, identity safety, answer quality or the full product objective."
+  ]
+}

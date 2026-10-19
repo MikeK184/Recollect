@@ -2,6 +2,14 @@
 
 Status: accepted
 
+October 18 guidance amendment: [ADR 0022](../adr/0022-brain-managed-skills.md)
+extends Brain coordination with manager-published skills and instruction bundles,
+environment applicability, optional advisory MCP associations, dynamic fetch and
+explicit temporary/persistent local copies. The later same-day native harness
+extension adds owned workspace registration and verified host reload/activation.
+Automatic executable skill learning
+and public marketplace distribution remain deferred.
+
 October 1 integration amendment: [ADR 0018](../adr/0018-plugin-managed-agent-memory.md) packages the Rust local memory runtime inside host plugins. Separate companion setup is replaced by plugin-managed capture and recall; independent execution remains an explicit optional runner. Existing backend and evidence guarantees remain.
 
 Revised baseline: 2026-09-13, incorporating the user's approved Atlas-informed
@@ -79,6 +87,7 @@ be Brain-wide, and handovers can span multiple repositories or areas.
 | Procedures | Runbooks with tested conditions, successes, failures and provenance |
 | Session memory | Sanitized supported conversations and tool observations, plus selected durable findings |
 | MCP connections and profiles | Approved tools, targets, permissions, credential references and execution locations |
+| Shared agent guidance | Manager-published skills/instructions, applicability, revision history and on-demand consumption |
 
 Named collections provide dataset-like source organization, import, processing,
 update tracking, retrieval and removal within a Brain. They reuse the Brain's
@@ -437,4 +446,4 @@ Defer adaptive decay/tier promotion, learned retrieval gates, automatic executab
 skill learning, external-source writeback and a general plugin marketplace.
 Keep useful runbooks and explicit review from the start. Atlas informs the design;
 it supplies neither a complete implementation nor measured proof of superiority.
-See the [foundation research mapping](../mappings/atlas-foundation-decisions-2026-09-13.md).
+See the [foundation research mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-foundation-decisions-2026-09-13.md).

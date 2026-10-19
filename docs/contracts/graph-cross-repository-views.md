@@ -10,7 +10,7 @@ Status: accepted
 [workspace scope](evidence-workspace-scope.md) and the
 [graph epic](../roadmap/epics/graph-intelligence.md). The active full-product goal
 authorizes these routine decisions within the accepted foundations. The
-[reference review](../mappings/cross-repository-interfaces-2026-09-15.md) records
+[reference review](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/cross-repository-interfaces-2026-09-15.md) records
 why exact source evidence is required and which existing libraries are reused.
 
 ## Contract

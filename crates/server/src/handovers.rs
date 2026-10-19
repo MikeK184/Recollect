@@ -77,6 +77,21 @@ pub(crate) async fn scope(
         }
     }
     let combined = procedures::combined(&rows)?;
+    let source_ids: Vec<Uuid> = combined
+        .1
+        .iter()
+        .filter(|support| support.kind == "source_version")
+        .map(|support| support.id)
+        .collect();
+    let source_fenced: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM unnest($2::uuid[]) input(id) WHERE recollect_source_model_fenced($1,input.id))",
+    ).bind(brain).bind(&source_ids).fetch_one(&mut **tx).await?;
+    if source_fenced {
+        return Err(model_policy::failure(
+            "model_input_fenced",
+            "A handover source or its exact ancestor is fenced from model transmission.",
+        ));
+    }
     if device.is_some() && input.operation_id.is_none() {
         return Err(Error::forbidden());
     }
@@ -572,124 +587,141 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     Ok(())
 }
 
-pub(crate) async fn refresh(
+pub(crate) struct PreparedRefresh {
+    revision: Uuid,
+    old: ClaimRevision,
+    input: HandoverInput,
+}
+
+/// Discover and fully qualify one current refresh candidate in a read-only
+/// snapshot. Every contribution and compatible scope is kept complete.
+pub(crate) async fn prepare_refresh(
     state: &AppState,
     tx: &mut Tx<'_>,
     brain: Uuid,
     actor: Uuid,
     p: &ModelPolicyVersion,
-    limit: usize,
+    revision: Uuid,
+) -> Result<Option<PreparedRefresh>> {
+    if model_policy::permits(
+        state,
+        &p.policy,
+        "synthesis",
+        &["claim".into(), "query".into()],
+    )
+    .is_err()
+    {
+        return Ok(None);
+    }
+    let row: Option<SqlJson<ClaimRevision>> = sqlx::query_scalar(
+        "SELECT r.revision FROM claim_revisions r JOIN claims c ON c.current_revision=r.id AND c.brain_id=r.brain_id
+         WHERE r.brain_id=$1 AND r.id=$2 AND r.revision->>'origin'='model_synthesized'
+         AND NOT EXISTS(SELECT 1 FROM session_digest_claims d WHERE d.brain_id=c.brain_id AND d.claim_id=c.id)
+         AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
+         AND EXISTS(SELECT 1 FROM claim_contributions d JOIN claim_revisions old ON old.id=d.input_revision_id
+           JOIN claims input ON input.id=old.claim_id WHERE d.revision_id=r.id AND input.current_revision<>old.id)")
+        .bind(brain).bind(revision).fetch_optional(&mut **tx).await?;
+    let Some(SqlJson(old)) = row else {
+        return Ok(None);
+    };
+    if !autonomous::maintained(&old) || !memory_rules::matching(tx, &old, false).await?.is_empty() {
+        return Ok(None);
+    }
+    let Some(handover) = &old.content.handover else {
+        return Ok(None);
+    };
+    let mut inputs = Vec::new();
+    for id in &handover.contributions {
+        let Some(input) = procedures::exact(tx, brain, *id).await? else {
+            return Ok(None);
+        };
+        match memory::current(tx, brain, input.claim_id).await {
+            Ok(current) => inputs.push(current.id),
+            Err(e) if matches!(e.0, StatusCode::GONE | StatusCode::NOT_FOUND) => return Ok(None),
+            Err(e) => return Err(e),
+        }
+    }
+    inputs.sort_unstable();
+    let input = HandoverInput {
+        title: old.content.subject.clone(),
+        contributions: inputs,
+        operation_id: None,
+    };
+    let (selection, _) = match scope(state, tx, brain, actor, None, &input).await {
+        Ok(value) => value,
+        Err(e)
+            if matches!(
+                e.0,
+                StatusCode::BAD_REQUEST
+                    | StatusCode::FORBIDDEN
+                    | StatusCode::CONFLICT
+                    | StatusCode::GONE
+                    | StatusCode::NOT_FOUND
+            ) =>
+        {
+            return Ok(None);
+        }
+        Err(e) => return Err(e),
+    };
+    if selection != old.content.selection {
+        return Ok(None);
+    }
+    Ok(Some(PreparedRefresh {
+        revision,
+        old,
+        input,
+    }))
+}
+
+pub(crate) async fn publish_refresh(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    actor: Uuid,
+    p: &ModelPolicyVersion,
+    prepared: &PreparedRefresh,
 ) -> Result<usize> {
-    if limit == 0
-        || model_policy::permits(
-            state,
-            &p.policy,
-            "synthesis",
-            &["claim".into(), "query".into()],
-        )
-        .is_err()
+    let Some(fresh) = prepare_refresh(state, tx, brain, actor, p, prepared.revision).await? else {
+        return Ok(0);
+    };
+    if serde_json::to_value(&fresh.input).expect("typed refresh")
+        != serde_json::to_value(&prepared.input).expect("typed refresh")
     {
         return Ok(0);
     }
-    let rows:Vec<SqlJson<ClaimRevision>>=sqlx::query_scalar(
-        "SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision
-         WHERE c.brain_id=$1 AND r.revision->>'origin'='model_synthesized' AND NOT EXISTS(SELECT 1 FROM session_digest_claims d WHERE d.brain_id=c.brain_id AND d.claim_id=c.id)
-         AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
-         AND EXISTS(SELECT 1 FROM claim_contributions d JOIN claim_revisions old ON old.id=d.input_revision_id
-           JOIN claims input ON input.id=old.claim_id WHERE d.revision_id=r.id AND input.current_revision<>old.id)
-         ORDER BY r.recorded_at,r.id LIMIT 500")
-        .bind(brain).fetch_all(&mut **tx).await?;
-    let mut queued = 0;
-    for SqlJson(old) in rows {
-        if !autonomous::maintained(&old)
-            || !memory_rules::matching(tx, &old, false).await?.is_empty()
-        {
-            continue;
-        }
-        let Some(handover) = &old.content.handover else {
-            continue;
-        };
-        let mut inputs = Vec::new();
-        let mut valid = true;
-        for id in &handover.contributions {
-            let Some(input) = procedures::exact(tx, brain, *id).await? else {
-                valid = false;
-                break;
-            };
-            match memory::current(tx, brain, input.claim_id).await {
-                Ok(current) => inputs.push(current.id),
-                Err(e) if matches!(e.0, StatusCode::GONE | StatusCode::NOT_FOUND) => {
-                    valid = false;
-                    break;
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        if !valid {
-            continue;
-        }
-        inputs.sort_unstable();
-        let input = HandoverInput {
-            title: old.content.subject.clone(),
-            contributions: inputs,
-            operation_id: None,
-        };
-        let (selection, _) = match scope(state, tx, brain, actor, None, &input).await {
-            Ok(v) => v,
-            Err(e)
-                if matches!(
-                    e.0,
-                    StatusCode::BAD_REQUEST
-                        | StatusCode::FORBIDDEN
-                        | StatusCode::CONFLICT
-                        | StatusCode::GONE
-                        | StatusCode::NOT_FOUND
-                ) =>
-            {
-                continue;
-            }
-            Err(e) => return Err(e),
-        };
-        if selection != old.content.selection {
-            continue;
-        }
-        let exists:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM handover_runs WHERE brain_id=$1 AND base_revision_id=$2 AND policy_id=$3 AND contributions=$4 AND automatic)")
+    let old = &fresh.old;
+    let input = &fresh.input;
+    let exists:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM handover_runs WHERE brain_id=$1 AND base_revision_id=$2 AND policy_id=$3 AND contributions=$4 AND automatic)")
             .bind(brain).bind(old.id).bind(p.change_id).bind(&input.contributions).fetch_one(&mut **tx).await?;
-        if exists {
-            continue;
-        }
-        let count: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM claim_revisions WHERE claim_id=$1")
-                .bind(old.claim_id)
-                .fetch_one(&mut **tx)
-                .await?;
-        if count >= 1000 {
-            continue;
-        }
-        jobs::capacity(tx, brain).await?;
-        let id = Uuid::new_v4();
-        let audit = db::audit(tx, actor, brain, "handover.queue", id, "automatic_refresh").await?;
-        let job =
-            jobs::enqueue_work(tx, actor, brain, audit, id, "handover.generate", "model").await?;
-        sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'queued',true,$9,$10)")
-            .bind(id).bind(brain).bind(&input.title).bind(&input.contributions).bind(SqlJson(&selection))
-            .bind(p.change_id).bind(actor).bind(job).bind(old.claim_id).bind(old.id).execute(&mut **tx).await?;
-        for id_input in &input.contributions {
-            sqlx::query(
-                "INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)",
-            )
-            .bind(id)
-            .bind(brain)
-            .bind(id_input)
-            .execute(&mut **tx)
-            .await?;
-        }
-        queued += 1;
-        if queued == limit {
-            break;
-        }
+    if exists {
+        return Ok(0);
     }
-    Ok(queued)
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM claim_revisions WHERE claim_id=$1")
+        .bind(old.claim_id)
+        .fetch_one(&mut **tx)
+        .await?;
+    if count >= 1000 {
+        return Ok(0);
+    }
+    jobs::capacity(tx, brain).await?;
+    let id = Uuid::new_v4();
+    let audit = db::audit(tx, actor, brain, "handover.queue", id, "automatic_refresh").await?;
+    let job = jobs::enqueue_work(tx, actor, brain, audit, id, "handover.generate", "model").await?;
+    sqlx::query("INSERT INTO handover_runs(id,brain_id,title,contributions,selection,policy_id,actor_id,job_id,state,automatic,claim_id,base_revision_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'queued',true,$9,$10)")
+            .bind(id).bind(brain).bind(&input.title).bind(&input.contributions).bind(SqlJson(&old.content.selection))
+            .bind(p.change_id).bind(actor).bind(job).bind(old.claim_id).bind(old.id).execute(&mut **tx).await?;
+    for id_input in &input.contributions {
+        sqlx::query(
+            "INSERT INTO handover_run_inputs(run_id,brain_id,revision_id) VALUES($1,$2,$3)",
+        )
+        .bind(id)
+        .bind(brain)
+        .bind(id_input)
+        .execute(&mut **tx)
+        .await?;
+    }
+
+    Ok(1)
 }
 pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<(), Failure> {
     let result = worker::with_lease(&state.pool, job, run_job(state, job)).await?;

@@ -28,9 +28,17 @@ mod agents;
 mod brain_admission;
 #[path = "platform/brain_icons.rs"]
 mod brain_icons;
+#[path = "platform/coordination.rs"]
+mod coordination;
 #[path = "platform/managed.rs"]
 mod managed;
+#[path = "platform/skills.rs"]
+mod skills;
+#[path = "platform/skills_capacity.rs"]
+mod skills_capacity;
 
+#[path = "platform/feedback.rs"]
+mod feedback;
 #[path = "platform/graph.rs"]
 mod graph;
 #[path = "platform/knowledge_mapping.rs"]
@@ -43,8 +51,12 @@ mod memory;
 mod models;
 #[path = "platform/operations.rs"]
 mod operations;
+#[path = "platform/organization_fields.rs"]
+mod organization_fields;
 #[path = "platform/publication.rs"]
 mod publication;
+#[path = "platform/reconciliation_controls.rs"]
+mod reconciliation_controls;
 #[path = "platform/recovery.rs"]
 mod recovery;
 #[path = "platform/retention.rs"]
@@ -894,18 +906,78 @@ impl Harness {
         Self::new_through(db::MIGRATIONS.len()).await
     }
     async fn new_through(migrations: usize) -> Self {
+        Self::new_through_fixture(migrations, false).await
+    }
+    /// Isolated identities for the six semantic admission regression fixtures.
+    async fn new_semantic_admission() -> Self {
+        Self::new_through_fixture(db::MIGRATIONS.len(), true).await
+    }
+    fn semantic_admission_state_dir() -> std::path::PathBuf {
+        std::env::var_os("RECOLLECT_TEST_STATE_DIR")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../.cache/semantic-admission/synthetic-state")
+            })
+    }
+    fn prepare_semantic_admission_state_dir() -> std::path::PathBuf {
+        use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
+        unsafe extern "C" {
+            fn getuid() -> u32;
+        }
+        let path = Self::semantic_admission_state_dir();
+        for directory in [
+            path.parent().expect("Semantic state parent"),
+            path.as_path(),
+        ] {
+            if !directory.exists() {
+                std::fs::DirBuilder::new()
+                    .recursive(true)
+                    .mode(0o700)
+                    .create(directory)
+                    .expect("Create private semantic fixture directory");
+            }
+            let metadata =
+                std::fs::symlink_metadata(directory).expect("Inspect semantic fixture directory");
+            assert!(metadata.is_dir() && !metadata.file_type().is_symlink());
+            assert_eq!(metadata.uid(), unsafe { getuid() });
+            assert_eq!(metadata.permissions().mode() & 0o777, 0o700);
+        }
+        path.canonicalize()
+            .expect("Resolve private semantic fixture state")
+    }
+    async fn new_through_fixture(migrations: usize, semantic_admission: bool) -> Self {
         let mut config = Config::from_env()
             .expect("Use ./scripts/test-platform.sh with repository-owned databases");
+        // Validate the scoped state before creating a database. Existing tests
+        // retain their original state path and configured identity behavior.
+        let semantic_state = semantic_admission.then(Self::prepare_semantic_admission_state_dir);
         let admin_url = std::env::var("DATABASE_ADMIN_URL").expect("DATABASE_ADMIN_URL required");
         let root = db::pool(&admin_url).await.unwrap();
-        let database = format!("recollect_test_{}", Uuid::new_v4().simple());
+        let database = if semantic_admission {
+            config.owner_username = format!("lease-rehearsal-{}", Uuid::new_v4().simple());
+            config.owner_password = Uuid::new_v4().to_string();
+            format!("recollect_lease_rehearsal_{}", Uuid::new_v4().simple())
+        } else {
+            format!("recollect_test_{}", Uuid::new_v4().simple())
+        };
+        let ownership_comment = if semantic_admission {
+            format!("Recollect semantic lease rehearsal {database}")
+        } else {
+            "Recollect disposable integration test created by crates/server/tests/platform.rs"
+                .into()
+        };
         sqlx::query(&format!("CREATE DATABASE {database}"))
             .execute(&root)
             .await
             .unwrap();
         eprintln!("Disposable Recollect test database: {database}");
-        sqlx::query(&format!("COMMENT ON DATABASE {database} IS 'Recollect disposable integration test created by crates/server/tests/platform.rs'"))
-            .execute(&root).await.unwrap();
+        sqlx::query(&format!(
+            "COMMENT ON DATABASE {database} IS '{ownership_comment}'"
+        ))
+        .execute(&root)
+        .await
+        .unwrap();
         let mut url = reqwest::Url::parse(&admin_url).unwrap();
         url.set_path(&database);
         let admin = db::pool(url.as_str()).await.unwrap();
@@ -933,9 +1005,11 @@ impl Harness {
         let mut url = reqwest::Url::parse(&config.database_url).unwrap();
         url.set_path(&database);
         config.database_url = url.to_string();
-        let test_state = std::env::var_os("RECOLLECT_TEST_STATE_DIR")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| ".cache".into());
+        let test_state = semantic_state.unwrap_or_else(|| {
+            std::env::var_os("RECOLLECT_TEST_STATE_DIR")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| ".cache".into())
+        });
         config.credential_file = test_state
             .join(format!("{database}-credentials.json"))
             .to_string_lossy()
@@ -948,6 +1022,19 @@ impl Harness {
             .join(format!("{database}-artifacts"))
             .to_string_lossy()
             .into_owned();
+        // Fixture device credentials live in a private file store instead of
+        // the OS credential store, so neither this test binary nor the agent
+        // binaries it spawns prompt for Keychain access on every rebuild. The
+        // suite runs single-threaded (scripts/test-platform.sh), and spawn
+        // sites that clear the environment pass this variable through.
+        let credential_store = test_state.join(format!("{database}-credential-store"));
+        std::fs::create_dir_all(&credential_store).unwrap();
+        unsafe {
+            std::env::set_var(
+                recollect_agent::CREDENTIAL_STORE_DIR_VAR,
+                &credential_store,
+            );
+        }
         let pool = db::pool(&config.database_url).await.unwrap();
         recollect_server::privacy_journal::initialize(&admin, &config)
             .await
@@ -1045,7 +1132,7 @@ impl Harness {
         // These identities come only from this harness's UUID-owned database.
         // Failed fixtures do not reach finish and remain available for diagnosis.
         let brains: Vec<Uuid> = sqlx::query_scalar(
-            "SELECT brain_id FROM graph_generations UNION SELECT brain_id FROM privacy_requests",
+            "SELECT brain_id FROM graph_generations UNION SELECT brain_id FROM privacy_requests UNION SELECT brain_id FROM analytics_attempts UNION SELECT brain_id FROM analytics_reports WHERE gds_version IS NOT NULL",
         )
         .fetch_all(&self.admin)
         .await

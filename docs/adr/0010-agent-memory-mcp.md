@@ -42,7 +42,7 @@ automatically replayed. Memory already delivered to a host cannot be retracted;
 new requests enforce current retention/erasure and carry availability deadlines.
 
 The [contract](../contracts/mcp-memory-and-workspace-tools.md) defines concrete
-tools, scope and host behavior. The [mapping](../mappings/mcp-tools-2026-09-22.md)
+tools, scope and host behavior. The [mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-tools-2026-09-22.md)
 records interfaces and actual proof separately.
 
 ## Supersession

@@ -35,7 +35,7 @@ guard, so a delayed import cannot recreate an erased entity after cleanup.
 
 The user authorized the complete roadmap and routine decisions within the
 [foundations](../foundation/README.md). The [graph contract](../contracts/graph-projection-and-traversal.md)
-and [interface evidence](../mappings/graph-interfaces-2026-09-15.md) specify the
+and [interface evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-interfaces-2026-09-15.md) specify the
 testable boundary. The actual local Query API already proved an eligible longer
 path survives exclusion of an intermediate node on the shorter route.
 
@@ -48,7 +48,7 @@ graph directly; explicit scope limits and timeouts protect ordinary recall.
 Cross-repository linking, analytics, graph exploration and retrieval fusion keep
 their separate roadmap owners. No new model call, hash or strict version
 handshake is introduced; [ADR 0003](0003-product-runtime.md) remains applicable.
-The [Cognee/Atlas reuse review](../mappings/graph-reuse-review-2026-09-15.md)
+The [Cognee/Atlas reuse review](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-reuse-review-2026-09-15.md)
 records the libraries and implementation patterns reused, and the differences
 that require Recollect's canonical authority boundary. Analytics and graph
 rendering must use established engines/libraries rather than new implementations

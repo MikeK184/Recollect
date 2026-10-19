@@ -114,7 +114,7 @@ Work type: product
   gates, ANN and generated answers remain the explicitly named later/deferred work.
 - New blockers: None.
 - Docs updated: Semantic contract, interface and
-  [implementation mapping](../../../mappings/semantic-retrieval-2026-09-15.md),
+  [implementation mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/semantic-retrieval-2026-09-15.md),
   semantic/canonical recall runbooks, Atlas audit, exact synthetic corpus, README,
   owning epic and roadmap/contract/mapping/runbook/execution indexes.
 - Validation: Context7 and official pgvector/OpenAI/PostgreSQL/Query interfaces

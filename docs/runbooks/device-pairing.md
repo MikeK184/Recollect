@@ -44,7 +44,7 @@ uses `--runner-id UUID`. See [scoped tools](agent-memory-tools.md).
 The commands below operate the earlier standalone companion profile. Keep that
 credential while draining any original capture queue; plugin setup does not
 silently copy or revoke it. Previous companion proof does not establish the new
-packaged install: use the [plugin evidence mapping](../mappings/plugin-session-memory-2026-10-01.md)
+packaged install: use the [plugin evidence mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/plugin-session-memory-2026-10-01.md)
 for current acceptance status.
 
 ### Legacy prerequisites

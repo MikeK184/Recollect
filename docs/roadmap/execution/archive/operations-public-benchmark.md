@@ -60,7 +60,7 @@ Work type: product
 ## Closeout
 
 - Planned: public retrieval baseline and lifecycle evidence.
-- Shipped: Frozen 50-question/491-document pooled HotpotQA harness, lexical and semantic reports, measured usage/latency and focused lifecycle proof. [Dated evidence](../../../mappings/public-memory-benchmark-2026-09-28.md).
+- Shipped: Frozen 50-question/491-document pooled HotpotQA harness, lexical and semantic reports, measured usage/latency and focused lifecycle proof. [Dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/public-memory-benchmark-2026-09-28.md).
 - Not shipped: full BEAM, LongMemEval, learning/generation leaderboard comparison.
 - New blockers: None.
 - Docs updated: Evaluation contract, benchmark runbook, dated mapping, owning epic and indexes.

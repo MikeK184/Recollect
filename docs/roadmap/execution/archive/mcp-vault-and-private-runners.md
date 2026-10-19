@@ -70,7 +70,7 @@ Work type: product
   stdio/HTTP/native/desktop flows and affected runtime/workspace/governance checks.
 - Manual: Inspect desktop and compare normal data around migration.
 - Acceptance: Full contract proof in the
-  [mapping](../../../mappings/mcp-vault-private-2026-09-22.md) before archive.
+  [mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-vault-private-2026-09-22.md) before archive.
 
 ## Closeout
 
