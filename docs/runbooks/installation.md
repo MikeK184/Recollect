@@ -189,6 +189,34 @@ Central container tools require their binaries and any selected Proxy socket to
 be available there. Native local/private runners retain their own OS credentials
 and paths; an unused provider is never required for another connection.
 
+## Outbound TLS from the application image
+
+The API verifies model-provider and OIDC HTTPS calls against the image's system
+trust store, which is why `ca-certificates` stays in the image. Check a built image
+without configuration, a database or a key:
+
+```sh
+docker run --rm recollect-product:local tls-probe
+```
+
+Expect `{"tls":"ok","stage":"http","status":401}` and exit 0: the unauthenticated
+OpenAI model list answers 401 only after the TLS handshake and certificate check
+succeed. Add an HTTPS URL to probe another endpoint, such as an OIDC issuer.
+The negative control must fail with exit 1:
+
+```sh
+docker run --rm -e SSL_CERT_FILE=/dev/null recollect-product:local tls-probe
+# {"tls":"failed","stage":"roots","status":null}
+```
+
+`roots` means the trust store did not load, `connect` that the host has no route to
+the endpoint, `handshake` that its certificate is not trusted, and `http` that TLS
+worked but the exchange failed afterwards. For a provider with a private CA, mount the
+CA bundle into the API container and set `SSL_CERT_FILE` to it through an operator
+override; OIDC discovery then trusts that CA as well. The check needs outbound network
+access. `scripts/test-installation-runtime.py` runs it inside the running API container
+and tolerates only a `connect` failure on a host with no outbound route.
+
 ## Native companions and private certificate trust
 
 Build a bundle for the current host without editing its PATH or global settings:

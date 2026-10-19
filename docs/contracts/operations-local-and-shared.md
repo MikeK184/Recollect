@@ -65,6 +65,20 @@ bridge. Invalid/missing selected files fail explicitly; never disable TLS
 verification. Generated host settings freeze the selected absolute CA path.
 This is client-local trust, without a machine-global certificate installation.
 
+The server's own outbound HTTPS calls (model providers, OIDC discovery and token
+exchange) share one client that verifies against the system trust store and, on
+Linux, `SSL_CERT_FILE` and `SSL_CERT_DIR`. The product image therefore keeps
+`ca-certificates`; on Linux a missing or empty store fails client construction at
+startup, not at the first call. `recollect-server tls-probe [URL]` proves that path without
+configuration, a database or a credential: it builds the same client, requests one
+HTTPS URL (the unauthenticated OpenAI model list by default) and treats any HTTP
+response, including 401, as success. It prints one JSON line
+`{"tls":"ok|failed","stage":"roots|connect|handshake|http","status":<code|null>}`
+with no URL, header, body or error text, and exits 0 on success, 1 on failure and 2
+for a URL that is not `https://`. `roots` means the trust store could not be loaded,
+`connect` that no connection or response arrived, `handshake` that the TLS handshake or
+certificate verification was rejected, and `http` that TLS was established.
+
 Invited-account passwords are stored only as Argon2id hashes
 ([ADR 0024](../adr/0024-local-password-hashing.md)) in the application's private
 account-credential file in both profiles; shared HTTPS never accepts plaintext

@@ -46,6 +46,10 @@ Configure the ignored `.env` with `RECOLLECT_OIDC_ISSUER`,
 Register the exact callback `{RECOLLECT_PUBLIC_ORIGIN}/api/auth/oidc/callback` with
 the provider. Use a single-tenant HTTPS issuer; loopback HTTP is permitted for
 the isolated integration fixture. Do not paste credentials into documentation.
+Discovery and token calls trust the same roots as the rest of the server (the system store and
+`SSL_CERT_FILE`/`SSL_CERT_DIR`), so a provider behind a private CA needs that CA in the
+API container; confirm the issuer with `recollect-server tls-probe https://ISSUER/` (see
+[installation](installation.md#outbound-tls-from-the-application-image)).
 
 `RECOLLECT_OIDC_SCOPES` defaults to `profile groups`. Entra registrations should
 use `profile`, enable the required group claim and set their tenant-specific

@@ -54,6 +54,7 @@ mod support_excerpts;
 pub mod team;
 mod text_rules;
 pub mod throttle;
+pub mod tls_probe;
 mod web;
 pub mod worker;
 pub mod workspace;
@@ -69,6 +70,17 @@ use axum::{
 use std::{sync::Arc, time::Duration};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
+
+/// The one outbound HTTPS client policy: a five-second timeout, no redirects and
+/// the system trust store (`SSL_CERT_FILE` and `SSL_CERT_DIR` on Linux). The
+/// server, OIDC discovery and `recollect-server tls-probe` all build from it, so
+/// the probe proves the trust path the service uses. Building it fails when the
+/// root store is empty, which makes a missing trust store a startup error.
+pub fn http_client() -> reqwest::ClientBuilder {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .redirect(reqwest::redirect::Policy::none())
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -94,10 +106,7 @@ impl AppState {
         Ok(Self {
             pool,
             config: Arc::new(config),
-            http: reqwest::Client::builder()
-                .timeout(Duration::from_secs(5))
-                .redirect(reqwest::redirect::Policy::none())
-                .build()?,
+            http: http_client().build()?,
             login_attempts: Default::default(),
             start_attempts: Default::default(),
             device_touched: Default::default(),

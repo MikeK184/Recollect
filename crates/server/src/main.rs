@@ -13,6 +13,11 @@ async fn main() -> anyhow::Result<()> {
     if command == "mcp-supervise" {
         return Ok(recollect_mcp_runtime::supervisor::run().await?);
     }
+    if command == "tls-probe" {
+        // Needs neither configuration nor a database: it runs where the image's
+        // trust store must work, before anything else is loaded.
+        std::process::exit(recollect_server::tls_probe::command(std::env::args().nth(2)).await);
+    }
     if command == "openapi" {
         println!("{}", ApiDoc::openapi().to_pretty_json()?);
         return Ok(());

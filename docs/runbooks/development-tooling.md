@@ -135,6 +135,43 @@ native paths. For documentation or public-guide changes also run
 [Pages workflow](../../.github/workflows/pages.yml) builds the site and runs
 governance validation; it publishes static documentation, not the app.
 
+## Duplicate Rust dependencies
+
+`cargo tree -d --workspace -e normal,build --target all` lists every crate that
+resolves to more than one version. Reviewed 2026-10-19: after the
+`platform-oidc-shared-tls` and `platform-dependency-dedupe` slices, 30 crate names
+(63 versions) remain, down from 32 (68). The slices removed reqwest 0.12 with its
+bundled roots (OIDC now shares the workspace's reqwest 0.13 client), hashlink 0.9,
+hashbrown 0.14 and, from `Cargo.lock`, flume, sha1, sqlx-mysql and sqlx-sqlite. Every
+duplicate left is pinned by an upstream crate rather than by a Recollect direct
+dependency, so the next pass starts here:
+
+| Duplicated crates | Held back by | Unblocks when |
+| --- | --- | --- |
+| base64 0.21, thiserror 1 | openidconnect 4.0.1 and oauth2 5.0.0, both the latest releases | a new openidconnect, or replacing it |
+| rand 0.8, rand_core 0.6, the older RustCrypto line (sha2, digest, hmac, hkdf 0.10 to 0.12, cpufeatures 0.2) | openidconnect/oauth2 (p256, rsa, ed25519) and sqlx-postgres 0.8.6 (SCRAM, md-5); both must move, and the newer line that argon2 0.6 and keyring's secret-service use is not the cause | openidconnect and sqlx 0.9 |
+| getrandom 0.2 | ring 0.17 (rustls) and oauth2 | those crates moving to getrandom 0.3 or later |
+| hashbrown 0.15, foldhash 0.1, webpki-roots 0.26 (with its 1.0 re-export), windows-sys/targets 0.48, redox_syscall 0.9 | sqlx 0.8.6 (sqlx-core, sqlx-postgres through etcetera and whoami) | the separate sqlx 0.9 slice (about 3,137 call sites); sqlx also verifies database TLS with bundled webpki roots, not the system store |
+| getrandom 0.3 and r-efi 5 | jsonschema 0.57 to 0.59 through ahash 0.8 | ahash or jsonschema moving to getrandom 0.4 |
+| miniz_oxide 0.8 and 0.9 | png 0.18 (image 0.25.10): its own and flate2's | a png release on one miniz_oxide |
+| syn 2 and syn 3, darling 0.24 | async-trait, rmcp, zbus and darling are on syn 3; most other macros on syn 2 | the ecosystem finishing the syn 3 move |
+| base64 0.22 and 0.23 | axum and hyper-util on 0.22; reqwest, rmcp and a2a on 0.23 | axum and hyper-util moving to 0.23 |
+| windows-sys 0.52 and 0.61 (Windows only) | ring, rustls and the platform verifier on 0.52 | those crates moving to 0.61 |
+
+Two constraints shaped the last pass:
+
+- rusqlite 0.33 and later share `links = "sqlite3"` with sqlx-sqlite 0.8, whose
+  `libsqlite3-sys ^0.30` cannot coexist with rusqlite's newer one. Cargo admits
+  sqlx-sqlite to the lockfile resolution through the facade's weak features
+  (`sqlx-sqlite?/uuid`, `?/chrono`, `?/json`) even though SQLite is never built, so
+  the workspace enables `uuid`, `chrono` and `json` on `sqlx-core` and
+  `sqlx-postgres` directly. Keep that split until sqlx moves: sqlx-sqlite 0.9 accepts
+  `libsqlite3-sys <0.38`, so with the facade features restored the highest compatible
+  rusqlite is 0.39, not 0.40.
+- rusqlite uses `default-features = false, features = ["bundled"]`. The statement
+  cache and hashlink arrive only with its `cache` feature, and no Recollect code
+  calls `prepare_cached`.
+
 ## Supply-chain pins
 
 Everything the repository pulls from outside is pinned, and `scripts/check-pins.py`

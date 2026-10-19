@@ -238,9 +238,7 @@ impl Client {
                 !roots.is_empty() && roots.len() <= 16,
                 "agent_ca_file_invalid"
             );
-            for root in roots {
-                http = http.add_root_certificate(root);
-            }
+            http = http.tls_certs_merge(roots);
         }
         let http = http.build()?;
         Ok(Self {

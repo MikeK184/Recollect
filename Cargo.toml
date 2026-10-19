@@ -15,7 +15,15 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "derive"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "derive"] }
+# The value-type features (uuid, chrono, json) are enabled on the driver crates
+# directly, not through the sqlx facade. The facade spells them `sqlx-sqlite?/uuid`
+# and so on, and Cargo's lockfile resolver then admits sqlx-sqlite, whose
+# libsqlite3-sys ^0.30 conflicts with rusqlite 0.33 and later (both `links = "sqlite3"`).
+# SQLite is never built. sqlx 0.9 still accepts only libsqlite3-sys <0.38, so keep
+# this split (or hold rusqlite at 0.39) when moving to it.
+sqlx-core = { version = "0.8", default-features = false, features = ["uuid", "chrono", "json"] }
+sqlx-postgres = { version = "0.8", default-features = false, features = ["uuid", "chrono", "json"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6", features = ["fs", "trace", "limit"] }
 tracing = "0.1"

@@ -15,7 +15,9 @@ use openidconnect::{core::*, *};
 use recollect_protocol::{AuthOptions, User};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::BTreeMap, sync::Arc, time::Duration, time::Instant};
+use std::{
+    collections::BTreeMap, future::Future, pin::Pin, sync::Arc, time::Duration, time::Instant,
+};
 use uuid::Uuid;
 
 /// Provider metadata (endpoints and signing keys) stays valid this long unless
@@ -66,14 +68,51 @@ fn unavailable() -> Error {
         "Organization sign-in is unavailable. Retry or use a local account.",
     )
 }
-// openidconnect/oauth2 still drive reqwest 0.12; keep its client separate from the
-// workspace reqwest while preserving the shared no-redirect, 5 s transport limits.
-fn oidc_http() -> Result<openidconnect::reqwest::Client> {
-    openidconnect::reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .redirect(openidconnect::reqwest::redirect::Policy::none())
-        .build()
-        .map_err(|_| unavailable())
+/// Upper bound on one provider response (discovery document, key set or token
+/// response): generous for real providers, bounded against a broken or hostile one.
+const RESPONSE_LIMIT: usize = 1024 * 1024;
+
+/// The OpenID Connect library's HTTP transport, over the server's shared client.
+///
+/// `openidconnect` 4 and `oauth2` 5 ship only a reqwest 0.12 transport, which
+/// bundles its own roots and ignores the system trust store and `SSL_CERT_FILE`.
+/// This newtype (the orphan rule forbids implementing the library trait for
+/// `reqwest::Client` here) sends the same requests through `AppState::http`, so
+/// provider calls share its trust store, five-second timeout, no-redirect policy
+/// and connection pool, and one reqwest version serves the whole workspace.
+struct SharedHttp(reqwest::Client);
+impl<'c> AsyncHttpClient<'c> for SharedHttp {
+    type Error = HttpClientError<reqwest::Error>;
+    type Future =
+        Pin<Box<dyn Future<Output = std::result::Result<HttpResponse, Self::Error>> + Send + 'c>>;
+    fn call(&'c self, request: HttpRequest) -> Self::Future {
+        Box::pin(async move {
+            let mut response = self
+                .0
+                .execute(request.try_into().map_err(Box::new)?)
+                .await
+                .map_err(Box::new)?;
+            let mut builder = openidconnect::http::Response::builder()
+                .status(response.status())
+                .version(response.version());
+            for (name, value) in response.headers() {
+                builder = builder.header(name, value);
+            }
+            let mut body = Vec::new();
+            while let Some(chunk) = response.chunk().await.map_err(Box::new)? {
+                if body.len() + chunk.len() > RESPONSE_LIMIT {
+                    return Err(HttpClientError::Other(
+                        "provider response exceeded its bounded size".into(),
+                    ));
+                }
+                body.extend_from_slice(&chunk);
+            }
+            builder.body(body).map_err(HttpClientError::Http)
+        })
+    }
+}
+fn oidc_http(state: &AppState) -> SharedHttp {
+    SharedHttp(state.http.clone())
 }
 async fn metadata(state: &AppState, refresh: bool) -> Result<CoreProviderMetadata> {
     let settings = state.config.oidc.as_ref().ok_or_else(unavailable)?;
@@ -87,7 +126,7 @@ async fn metadata(state: &AppState, refresh: bool) -> Result<CoreProviderMetadat
     }
     let discovered = CoreProviderMetadata::discover_async(
         IssuerUrl::new(settings.issuer.clone()).map_err(|_| unavailable())?,
-        &oidc_http()?,
+        &oidc_http(state),
     )
     .await
     .map_err(|_| unavailable())?;
@@ -257,7 +296,7 @@ async fn finish(state: &AppState, headers: &HeaderMap, input: Callback) -> Resul
         .exchange_code(AuthorizationCode::new(code))
         .map_err(|_| unavailable())?
         .set_pkce_verifier(PkceCodeVerifier::new(verifier))
-        .request_async(&oidc_http()?)
+        .request_async(&oidc_http(state))
         .await
         .map_err(|_| Error::unauthorized())?;
     let id_token = tokens.id_token().ok_or_else(Error::unauthorized)?;
@@ -313,4 +352,75 @@ async fn finish(state: &AppState, headers: &HeaderMap, input: Callback) -> Resul
         .insert(header::LOCATION, header::HeaderValue::from_static("/"));
     *response.body_mut() = axum::body::Body::empty();
     Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    /// Answers every request on a loopback port with `head` and `body`.
+    async fn serve(head: &'static str, body: Vec<u8>) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/discovery", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            while let Ok((mut stream, _)) = listener.accept().await {
+                let body = body.clone();
+                tokio::spawn(async move {
+                    let mut request = [0u8; 1024];
+                    let _ = stream.read(&mut request).await;
+                    let response = format!(
+                        "HTTP/1.1 {head}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    );
+                    let _ = stream.write_all(response.as_bytes()).await;
+                    let _ = stream.write_all(&body).await;
+                    let _ = stream.shutdown().await;
+                });
+            }
+        });
+        url
+    }
+    fn get(url: &str) -> HttpRequest {
+        openidconnect::http::Request::builder()
+            .uri(url)
+            .body(Vec::new())
+            .unwrap()
+    }
+    fn transport() -> SharedHttp {
+        SharedHttp(crate::http_client().build().unwrap())
+    }
+
+    #[tokio::test]
+    async fn the_shared_transport_returns_status_headers_and_body() {
+        let url = serve(
+            "200 OK\r\nContent-Type: application/json",
+            b"{\"ok\":1}".to_vec(),
+        )
+        .await;
+        let response = transport().call(get(&url)).await.unwrap();
+        assert_eq!(response.status(), 200);
+        assert_eq!(response.headers()["content-type"], "application/json");
+        assert_eq!(response.body(), b"{\"ok\":1}");
+    }
+
+    #[tokio::test]
+    async fn the_shared_transport_does_not_follow_redirects() {
+        let url = serve(
+            "302 Found\r\nLocation: http://127.0.0.1:9/elsewhere",
+            Vec::new(),
+        )
+        .await;
+        let response = transport().call(get(&url)).await.unwrap();
+        assert_eq!(response.status(), 302);
+    }
+
+    #[tokio::test]
+    async fn the_shared_transport_bounds_a_provider_response() {
+        let url = serve("200 OK", vec![b'x'; RESPONSE_LIMIT + 1]).await;
+        assert!(transport().call(get(&url)).await.is_err());
+        let at_limit = serve("200 OK", vec![b'x'; RESPONSE_LIMIT]).await;
+        let response = transport().call(get(&at_limit)).await.unwrap();
+        assert_eq!(response.body().len(), RESPONSE_LIMIT);
+    }
 }

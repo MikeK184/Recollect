@@ -12,7 +12,7 @@ http = "1"
 jsonschema = { version = "0.57", default-features = false }
 keyring = "4"
 process-wrap = { version = "10", features = ["tokio1"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.40", default-features = false, features = ["bundled"] }
 recollect-protocol.workspace = true
 reqwest = { workspace = true, features = ["stream"] }
 rmcp = { version = "3.4", default-features = false, features = ["client", "transport-child-process", "transport-streamable-http-client-reqwest", "reqwest"] }
@@ -29,6 +29,8 @@ nix = { version = "0.31", features = ["signal", "process", "user"] }
 
 [dev-dependencies]
 sqlx.workspace = true
+sqlx-core.workspace = true
+sqlx-postgres.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 axum.workspace = true
 rmcp = { version = "3.4", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
