@@ -431,6 +431,66 @@ test("an equal exploration request restores the camera, a different scene fits a
   expect(f.errors).toEqual([]);
 });
 
+test("a background generation poll keeps the renderer and its camera", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fitted = await camera(page);
+  const moved = await camera(page, [
+    fitted[0] + 80,
+    fitted[1] + 60,
+    fitted[2] + 40,
+  ]);
+  await f.canvas.evaluate((element) => {
+    (element as HTMLElement & { cameraProbe?: string }).cameraProbe = "kept";
+  });
+  const reads = f.state.explores;
+  // Two heartbeats verify the accepted scene against the server. Neither may
+  // remount the canvas, refit the camera or issue another exploration read.
+  await heartbeat(f);
+  await heartbeat(f);
+  expect(
+    await f.canvas.evaluate(
+      (element) =>
+        (element as HTMLElement & { cameraProbe?: string }).cameraProbe,
+    ),
+  ).toBe("kept");
+  (await camera(page)).forEach((value, axis) =>
+    expect(value).toBeCloseTo(moved[axis], 1),
+  );
+  expect(f.state.explores).toBe(reads);
+  expect(f.errors).toEqual([]);
+});
+
+test("a scene replaced after a superseded generation starts with a fresh camera", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fitted = await camera(page);
+  const moved = await camera(page, [
+    fitted[0] + 80,
+    fitted[1] + 60,
+    fitted[2] + 40,
+  ]);
+  // The superseded generation discards the scene with its explorer, and with it
+  // the camera session; only an explicit read brings a new scene back.
+  f.state.generations = [{ ...f.original, state: "superseded" }, f.replacement];
+  await expect(f.canvas).toHaveCount(0, { timeout: 6500 });
+  f.state.current = f.replacement;
+  await page
+    .getByRole("button", { name: "Load graph view", exact: true })
+    .click();
+  await expect(f.canvas).toHaveAttribute("data-layout-ready", "true");
+  const fresh = await camera(page);
+  expect(fresh.some((value, axis) => Math.abs(value - moved[axis]) > 1)).toBe(
+    true,
+  );
+  fresh.forEach((value, axis) => expect(value).toBeCloseTo(fitted[axis], 0));
+  expect(f.errors).toEqual([]);
+});
+
 async function heartbeat(f: Awaited<ReturnType<typeof fixture>>) {
   const before = f.state.tracked.filter((ids) => ids.length > 0).length;
   await expect
