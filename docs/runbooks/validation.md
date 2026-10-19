@@ -41,6 +41,9 @@ dependencies. It runs no integration, platform or browser tests.
   non-failing warning.
 - Presence of the Codex configuration and role files; their contents and the
   MCP stanzas are not compared (see the development tooling runbook).
+- `scripts/tests/test_clean_test_databases.py`: the cleanup script's name filter
+  accepts only `recollect_test_<32 hex>` / `recollect_ui_<32 hex>` (no database is
+  contacted).
 - Parent-repo ignore rule for the separate Cognee checkout.
 - `scripts/check-pins.py`: every Dockerfile `FROM`, Compose `image:` and known
   third-party script image is `name:tag@sha256:<digest>` and every GitHub Actions

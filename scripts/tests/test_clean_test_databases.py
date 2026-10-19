@@ -1,5 +1,7 @@
 """Only databases the test harnesses create may ever be listed or dropped."""
+import contextlib
 import importlib.util
+import io
 from pathlib import Path
 import unittest
 from unittest import mock
@@ -66,10 +68,12 @@ class DropTests(unittest.TestCase):
         self.assertEqual((dropped, failed), ([quiet], [busy]))
 
     def test_dry_run_drops_nothing(self):
+        output = io.StringIO()
         with mock.patch.object(cleaner, 'listing', return_value=([f'recollect_test_{HEX}'], [])), \
-                mock.patch.object(cleaner, 'drop') as drop:
+                mock.patch.object(cleaner, 'drop') as drop, contextlib.redirect_stdout(output):
             self.assertEqual(cleaner.main([]), 0)
         drop.assert_not_called()
+        self.assertIn('would drop: ' + f'recollect_test_{HEX}', output.getvalue())
 
 
 if __name__ == '__main__':
