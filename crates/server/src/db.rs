@@ -475,23 +475,26 @@ pub async fn preparation_tx(
     Ok(tx)
 }
 
+/// In-transaction Brain checks for callers that already hold an open
+/// transaction (platform tests and probes). Application code admits through
+/// [`admission::brain_tx`] or [`admission::admit_in`], which these wrap.
 pub async fn require_role(
     tx: &mut Transaction<'_, Postgres>,
     brain: Uuid,
     admin: bool,
 ) -> Result<String> {
-    lock_brain(tx, brain, admin).await?;
-    let role: Option<String> = sqlx::query_scalar("SELECT recollect_role($1)")
-        .bind(brain)
-        .fetch_one(&mut **tx)
-        .await?;
-    match role {
-        None => Err(crate::error::Error::missing()),
-        Some(role) if admin && role != "admin" => Err(crate::error::Error::forbidden()),
-        Some(role) => Ok(role),
-    }
+    let access = if admin {
+        admission::BrainAccess::admin(admission::Archived::Allow)
+    } else {
+        admission::BrainAccess::READ
+    };
+    let role = admission::admit_in(tx, brain, &access).await?;
+    Ok(role.as_str().to_owned())
 }
 
+/// The raw Brain lock, for a deliberate re-lock inside a transaction that was
+/// already admitted (for example `jobs::capacity`) and for lock probes. A first
+/// lock comes from admission, never from this function.
 pub async fn lock_brain(
     tx: &mut Transaction<'_, Postgres>,
     brain: Uuid,
@@ -509,19 +512,7 @@ pub async fn lock_brain(
 }
 
 pub async fn require_writer(tx: &mut Transaction<'_, Postgres>, brain: Uuid) -> Result<()> {
-    lock_brain(tx, brain, true).await?;
-    let archived: Option<bool> = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
-        .bind(brain)
-        .fetch_optional(&mut **tx)
-        .await?;
-    let archived = archived.ok_or_else(crate::error::Error::missing)?;
-    let role = require_role(tx, brain, false).await?;
-    if !matches!(role.as_str(), "writer" | "admin") {
-        return Err(crate::error::Error::forbidden());
-    }
-    if archived {
-        return Err(admission::evidence_archived());
-    }
+    admission::admit_in(tx, brain, &admission::BrainAccess::WRITE).await?;
     Ok(())
 }
 
