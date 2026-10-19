@@ -47,7 +47,7 @@ cleanup() {
 }
 trap cleanup EXIT
 ./scripts/docker.sh run -d --name "$fixture-db" --network "$fixture" --network-alias fixture-db \
-  --label io.recollect.owner=mcp-host-test --env-file "$fixture_env" \
+  --label io.recollect.owner=mcp-host-test --env-file "$fixture_env" --shm-size=256m \
   -v "$PWD/infra/postgres-init.sh:/docker-entrypoint-initdb.d/recollect.sh:ro" \
   pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d > /dev/null
 for attempt in {1..60}; do

@@ -31,6 +31,9 @@ services:
       retries: 30
     mem_limit: ${RECOLLECT_POSTGRES_MEMORY:-1g}
     cpus: ${RECOLLECT_POSTGRES_CPUS:-2}
+    # Docker's 64 MB /dev/shm made parallel queries fail with SQLSTATE 53100
+    # ("could not resize shared memory segment"); the pool then timed out.
+    shm_size: 256m
     pids_limit: 256
     restart: unless-stopped
     stop_grace_period: 90s
