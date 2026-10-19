@@ -109,6 +109,17 @@ impl CredentialSlot {
     }
 }
 
+/// Default whole-request budget. Large uploads pass `payload_timeout` instead.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Whole-request budget for a body of `bytes`: the default plus time at a floor
+/// of 128 KiB/s, so a 24 MiB publication is not capped by the ordinary budget.
+pub fn payload_timeout(bytes: usize) -> Duration {
+    REQUEST_TIMEOUT + Duration::from_secs((bytes / (128 * 1024)) as u64)
+}
+
+#[derive(Clone)]
 pub struct Client {
     pub endpoint: String,
     http: reqwest::Client,
@@ -133,7 +144,8 @@ impl Client {
         );
         let endpoint = url.as_str().trim_end_matches('/').to_owned();
         let mut http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(5))
+            .connect_timeout(CONNECT_TIMEOUT)
+            .timeout(REQUEST_TIMEOUT)
             .redirect(reqwest::redirect::Policy::none());
         if let Some(pem) = recollect_mcp_runtime::agent_tls::configured_pem()? {
             let roots = reqwest::Certificate::from_pem_bundle(&pem)
@@ -166,9 +178,34 @@ impl Client {
         token: Option<Uuid>,
         body: Option<serde_json::Value>,
     ) -> Result<reqwest::Response> {
+        self.send_inner(method, path, token, body, None).await
+    }
+    /// Like `send` with an explicit whole-request timeout (e.g. `payload_timeout`).
+    pub async fn send_with_timeout(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        token: Option<Uuid>,
+        body: Option<serde_json::Value>,
+        timeout: Duration,
+    ) -> Result<reqwest::Response> {
+        self.send_inner(method, path, token, body, Some(timeout))
+            .await
+    }
+    async fn send_inner(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        token: Option<Uuid>,
+        body: Option<serde_json::Value>,
+        timeout: Option<Duration>,
+    ) -> Result<reqwest::Response> {
         let mut request = self
             .http
             .request(method, format!("{}{path}", self.endpoint));
+        if let Some(timeout) = timeout {
+            request = request.timeout(timeout);
+        }
         if let Some(host) = &self.host {
             request = request.header("x-recollect-host", host);
         }
@@ -383,4 +420,17 @@ async fn decode<T: DeserializeOwned>(response: reqwest::Response) -> Result<T> {
         .json()
         .await
         .map_err(|_| anyhow!("Recollect returned an unreadable response"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uploads_get_a_payload_sized_budget_beyond_the_default() {
+        assert_eq!(payload_timeout(0), REQUEST_TIMEOUT);
+        let upload = payload_timeout(recollect_protocol::PUBLICATION_MAX_BYTES);
+        assert!(upload > Duration::from_secs(120), "{upload:?}");
+        assert!(payload_timeout(1024 * 1024) < upload);
+    }
 }

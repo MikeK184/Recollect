@@ -8,6 +8,7 @@ use axum::{
 use recollect_protocol::{
     ManagedSkillFile, ManagedSkillKind, ManagedSkillSummary, ScopeSnapshot, WorkspaceTask,
 };
+use reqwest::Method;
 use std::sync::{Arc, Mutex};
 
 struct Fixture {
@@ -324,7 +325,7 @@ async fn failed_member_fetch_never_prunes_complete_owned_snapshot() {
     f.install();
     state.lock().unwrap().fail_bundle = Some(f.bundles[1].skill.id);
     assert!(
-        sync_session_at(
+        sync_session_standalone(
             &f.root,
             &f.config,
             &Client::new(&f.config.endpoint).unwrap(),
@@ -350,7 +351,7 @@ async fn op_creation_revocation_retracts_only_this_device_preserving_peer() {
     };
     native::install(&peerscope, Uuid::new_v4(), &f.bundles[..1], false).unwrap();
     state.lock().unwrap().op_status = 401;
-    let output = sync_session_at(
+    let output = sync_session_standalone(
         &f.root,
         &f.config,
         &Client::new(&f.config.endpoint).unwrap(),
@@ -382,7 +383,7 @@ async fn scope_change_offline_releases_old_refs_and_clears_host_snapshot() {
     f.session.scope.id = Uuid::new_v4();
     f.session.scope.created_at += chrono::Duration::milliseconds(1);
     f.session.scope.selection.environment_id = Some(Uuid::new_v4());
-    let output = sync_session_at(
+    let output = sync_session_standalone(
         &f.root,
         &f.config,
         &Client::new(&f.config.endpoint).unwrap(),
@@ -400,7 +401,7 @@ async fn closed_operation_and_timeout_do_not_allow_delayed_export() {
     let (state, task) = server(&mut f).await;
     f.install();
     state.lock().unwrap().op_status = 409;
-    let output = sync_session_at(
+    let output = sync_session_standalone(
         &f.root,
         &f.config,
         &Client::new(&f.config.endpoint).unwrap(),
@@ -417,7 +418,7 @@ async fn closed_operation_and_timeout_do_not_allow_delayed_export() {
         s.slow = true;
     }
     let start = std::time::Instant::now();
-    let timed_out = sync_session_at(
+    let timed_out = sync_session_standalone(
         &f.root,
         &f.config,
         &Client::new(&f.config.endpoint).unwrap(),
@@ -437,13 +438,13 @@ async fn sync_installs_complete_snapshot_and_disable_prunes_eligible_exports() {
     let mut f = Fixture::new();
     let (state, task) = server(&mut f).await;
     let client = Client::new(&f.config.endpoint).unwrap();
-    let output = sync_session_at(&f.root, &f.config, &client, &f.device(), &f.session)
+    let output = sync_session_standalone(&f.root, &f.config, &client, &f.device(), &f.session)
         .await
         .unwrap();
     assert_eq!(output["native_loaded"], false);
     assert_eq!(native::status(&f.scope()).unwrap().entries.len(), 2);
     state.lock().unwrap().bundles.clear();
-    sync_session_at(&f.root, &f.config, &client, &f.device(), &f.session)
+    sync_session_standalone(&f.root, &f.config, &client, &f.device(), &f.session)
         .await
         .unwrap();
     assert!(native::status(&f.scope()).unwrap().entries.is_empty());
@@ -490,7 +491,7 @@ async fn offline_scope_change_preserves_another_tasks_native_catalog() {
     f.session.scope.id = Uuid::new_v4();
     f.session.scope.created_at += chrono::Duration::milliseconds(1);
     f.session.scope.selection.environment_id = Some(Uuid::new_v4());
-    let output = sync_session_at(
+    let output = sync_session_standalone(
         &f.root,
         &f.config,
         &Client::new(&f.config.endpoint).unwrap(),
@@ -530,7 +531,7 @@ async fn delayed_old_scope_fetch_or_denial_cannot_recreate_exports_or_overwrite_
         let old_device = f.device();
         let old_session = f.session.clone();
         let old = tokio::spawn(async move {
-            sync_session_at(
+            sync_session_standalone(
                 &old_root,
                 &old_config,
                 &Client::new(&old_config.endpoint).unwrap(),
@@ -644,7 +645,7 @@ async fn retry_after_scope_withdrawal_interrupted_before_publication_clears_cach
             s.operation.scope = f.session.scope.clone();
             s.op_status = 503;
         }
-        let output = sync_session_at(
+        let output = sync_session_standalone(
             &f.root,
             &f.config,
             &Client::new(&f.config.endpoint).unwrap(),

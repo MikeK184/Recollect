@@ -49,6 +49,33 @@ original destination and credential reference; it does not move old evidence int
 the new Brain. Optional independent execution uses `connect --with-runner` and is
 unrelated to capture delivery.
 
+### Hook behaviour under load
+
+- **Concurrent hooks.** Claude Code may run hooks of one session at the same time.
+  A hook waits for the session's state lock (up to the hook deadline minus three
+  seconds) instead of dropping its event. If the wait runs out, the event is lost
+  but counted as a `capture_hook_contended` gap in `status`.
+- **Per-event cost.** Ordinary tool hooks no longer rewrite `runtime-path`
+  unless the executable moved, no longer rescan legacy host configuration (that
+  check runs at session-start/prompt boundaries), and start a delivery worker
+  only when events are queued or a session has ended. The optional runner is
+  launched at boundaries only. The session file is rewritten when its content
+  changes or at most once a minute for activity.
+- **Idle drains.** A drain with nothing queued refreshes a Brain's cached capture
+  policy only when it is older than ten minutes (the cache stays valid for 24 hours).
+- **One retrieval per boundary.** Recall and native skill synchronization share a
+  single retrieval operation and guidance catalogue per prompt boundary.
+- **Session records.** Closed session files move to `sessions/closed/` and come
+  back automatically if the host resumes that session. Registry rows and closed
+  files are deleted 30 days after the last event; an open session older than that
+  is treated as ended so its task closes first.
+- **Timeouts.** Service requests have a 5 s connect and 30 s total budget;
+  repository publication uploads scale with the bundle size.
+- **Configured secrets.** Environment variables named like `KEY`, `TOKEN`,
+  `PASSWORD` or `SECRET` are redacted only if their value is at least 8 bytes,
+  not a path or common flag word, and mixes character classes (or is 24+ bytes).
+  `TOKENIZERS_PARALLELISM=false` no longer redacts every "false".
+
 ## Legacy capture setup and queue migration
 
 The procedures below describe the earlier companion-managed launch. Use them to

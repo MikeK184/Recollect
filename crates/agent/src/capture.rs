@@ -535,6 +535,14 @@ impl Inbox {
         let rows = statement.query_map([now.timestamp()], |r| r.get::<_, String>(0))?;
         rows.map(|r| Ok(serde_json::from_str(&r?)?)).collect()
     }
+    /// Cheap probe for the hook path: is any event waiting for delivery?
+    pub fn has_pending(&self) -> Result<bool> {
+        Ok(self.db.query_row(
+            "SELECT EXISTS(SELECT 1 FROM events WHERE state='pending')",
+            [],
+            |r| r.get(0),
+        )?)
+    }
     pub fn cached_bindings(&self) -> Result<Vec<CachedCaptureBinding>> {
         let mut statement = self
             .db

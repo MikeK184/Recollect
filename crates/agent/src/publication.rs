@@ -479,12 +479,7 @@ async fn prepare_inner(mut options: Preparation<'_>) -> Result<PublicationInput>
 pub fn configured_secrets() -> Vec<String> {
     std::env::vars()
         .filter_map(|(key, value)| {
-            let name = key.to_ascii_uppercase();
-            (value.len() >= 4
-                && ["KEY", "TOKEN", "PASSWORD", "SECRET"]
-                    .iter()
-                    .any(|s| name.contains(s)))
-            .then_some(value)
+            recollect_protocol::environment_secret(&key, &value).then_some(value)
         })
         .collect()
 }

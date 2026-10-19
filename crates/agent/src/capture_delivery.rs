@@ -27,6 +27,9 @@ pub struct DrainReport {
     /// completion so offline companion copies stay visibly incomplete.
     pub deletion_fences: Vec<privacy::DeletionFence>,
 }
+/// Idle drains skip the per-Brain policy refresh while the cached one is newer.
+const IDLE_REFRESH_AFTER: chrono::Duration = chrono::Duration::minutes(10);
+
 fn failed(status: reqwest::StatusCode, code: Option<&str>) -> (&'static str, bool) {
     if status.is_server_error() || status == reqwest::StatusCode::TOO_MANY_REQUESTS {
         return ("server_unavailable", true);
@@ -76,12 +79,24 @@ pub async fn run_once(
     if let Some(brain) = focus {
         brains.insert(brain);
     }
-    // Idle independent drain also refreshes cached permission for its next hook.
+    // An idle independent drain also refreshes cached permission for the next
+    // hook, but only for Brains whose cached policy has aged past the interval:
+    // refreshing costs several requests per Brain and the cache is valid for a day.
     if brains.is_empty() {
+        let now = Utc::now();
+        let mut newest: BTreeMap<Uuid, chrono::DateTime<Utc>> = BTreeMap::new();
         for binding in &saved {
-            brains.insert(binding.binding.brain_id);
-            if brains.len() == 20 {
-                break;
+            let at = newest
+                .entry(binding.binding.brain_id)
+                .or_insert(binding.synchronized_at);
+            *at = (*at).max(binding.synchronized_at);
+        }
+        for (brain, at) in newest {
+            if now - at > IDLE_REFRESH_AFTER {
+                brains.insert(brain);
+                if brains.len() == 20 {
+                    break;
+                }
             }
         }
     }

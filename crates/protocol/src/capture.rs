@@ -284,34 +284,90 @@ pub fn sanitize_captured_event(
         }
         .into(),
     );
+    let content = event.content.take();
+    apply_policy(event, content, policy, secrets, &Origin::Admission, managed);
+    Ok(())
+}
+
+/// How an event reached policy application.
+enum Origin {
+    /// Fresh from a host hook. The caller has already redacted structured tool
+    /// payloads and measured the exclusions that need the raw payload.
+    Local {
+        tool_redacted: bool,
+        raw_content_excluded: bool,
+        tool_input_excluded: bool,
+    },
+    /// Revalidated wire event, trusted for nothing: everything is re-derived.
+    Admission,
+}
+
+/// The single policy pipeline for captured text: kind and content exclusions,
+/// attribution coverage, redaction and the size bound. `content` is the
+/// pre-sanitization text; the result is stored in `event.content`.
+fn apply_policy(
+    event: &mut CapturedHook,
+    mut content: Option<String>,
+    policy: &CapturePolicy,
+    secrets: &[String],
+    origin: &Origin,
+    managed: bool,
+) {
+    let kind = event.kind.clone();
+    let kind = kind.as_str();
     if !policy.kinds.iter().any(|k| k == kind) {
         event.coverage.push("excluded_event_kind".into());
-        event.content = None;
+        content = None;
     } else if kind == "lifecycle" {
-        event.content = None;
+        content = None;
     } else if kind == "tool_result"
         && (event
             .tool_name
             .as_ref()
             .is_some_and(|t| policy.excluded_tools.contains(t) || own_mcp_tool(t))
-            || event
-                .content
-                .as_ref()
-                .is_some_and(|s| excluded_tool_envelope(&Value::String(s.clone()), 0)))
+            || match origin {
+                Origin::Local {
+                    tool_input_excluded,
+                    ..
+                } => *tool_input_excluded,
+                Origin::Admission => content
+                    .as_ref()
+                    .is_some_and(|s| excluded_tool_envelope(&Value::String(s.clone()), 0)),
+            })
     {
         event.coverage.push("excluded_tool_content".into());
-        event.content = None;
-    } else if policy
+        content = None;
+    } else if matches!(
+        origin,
+        Origin::Local {
+            raw_content_excluded: true,
+            ..
+        }
+    ) || policy
         .excluded_content
         .iter()
-        .any(|term| event.content.as_ref().is_some_and(|s| s.contains(term)))
+        .any(|term| content.as_ref().is_some_and(|s| s.contains(term)))
     {
         event.coverage.push("excluded_content".into());
-        event.content = None;
+        content = None;
     }
-    if event.turn_id.is_none() && kind != "lifecycle" && !managed {
-        event.coverage.push("missing_turn_identity".into());
-        event.coverage.push("ambiguous_attribution".into());
+    // No flag beyond the host-coverage marker and nothing to keep: content is
+    // simply missing (as opposed to excluded or dropped for attribution below).
+    let missing_content = event.coverage.len() == 1
+        && content.as_ref().is_none_or(|s| s.is_empty())
+        && kind != "lifecycle";
+    match origin {
+        Origin::Admission => {
+            if event.turn_id.is_none() && kind != "lifecycle" && !managed {
+                event.coverage.push("missing_turn_identity".into());
+                event.coverage.push("ambiguous_attribution".into());
+            }
+        }
+        Origin::Local { .. } => {
+            if kind != "lifecycle" && event.turn_id.is_none() {
+                event.coverage.push("missing_turn_identity".into());
+            }
+        }
     }
     if event.host_event == "SubagentStop" && event.agent_id.is_none() {
         event.coverage.push("ambiguous_attribution".into());
@@ -325,23 +381,34 @@ pub fn sanitize_captured_event(
                 | "excluded_content"
         )
     }) {
-        event.content = None;
+        content = None;
     }
-    if let Some(text) = event.content.take().filter(|s| !s.is_empty()) {
-        let mut safe = if kind == "tool_result" {
-            match serde_json::from_str::<Value>(&text) {
-                Ok(value) => serde_json::to_string_pretty(&sanitize_value(&value, secrets, 0))
-                    .map_err(|_| "invalid_capture_event")?,
-                Err(_) => sanitize_capture_text(&text, secrets), // Host text may already be truncated.
+    if let Some(text) = content.filter(|s| !s.is_empty()) {
+        let mut safe = match origin {
+            // Host text may already be truncated, so a payload that does not
+            // parse is still redacted as text.
+            Origin::Admission if kind == "tool_result" => {
+                match serde_json::from_str::<Value>(&text) {
+                    Ok(value) => serde_json::to_string_pretty(&sanitize_value(&value, secrets, 0))
+                        .unwrap_or_else(|_| sanitize_capture_text(&text, secrets)),
+                    Err(_) => sanitize_capture_text(&text, secrets),
+                }
             }
-        } else {
-            sanitize_capture_text(&text, secrets)
+            _ => sanitize_capture_text(&text, secrets),
         };
-        if safe != text {
+        let tool_redacted = matches!(
+            origin,
+            Origin::Local {
+                tool_redacted: true,
+                ..
+            }
+        );
+        if safe != text || tool_redacted {
             event.coverage.push("redacted".into());
         }
-        if safe.len() > policy.max_event_bytes as usize {
-            let mut end = policy.max_event_bytes as usize;
+        let limit = policy.max_event_bytes as usize;
+        if safe.len() > limit {
+            let mut end = limit;
             while !safe.is_char_boundary(end) {
                 end -= 1;
             }
@@ -349,10 +416,11 @@ pub fn sanitize_captured_event(
             event.coverage.push("truncated".into());
         }
         event.content = Some(safe);
+    } else if matches!(origin, Origin::Local { .. }) && missing_content {
+        event.coverage.push("missing_content".into());
     }
     event.coverage.sort();
     event.coverage.dedup();
-    Ok(())
 }
 
 /// Managed receipts are already bounded and credential-redacted by the runtime.
@@ -438,6 +506,69 @@ pub fn sanitize_capture_text(text: &str, secrets: &[String]) -> String {
         safe = pattern.replace_all(&safe, "[redacted]").into_owned();
     }
     safe
+}
+/// Names that look credential-bearing but are configuration switches or paths.
+const NON_SECRET_NAMES: &[&str] = &[
+    "TOKENIZERS_PARALLELISM",
+    "GPG_KEY_ID",
+    "SSH_KEY_PATH",
+    "KEYBOARD_LAYOUT",
+    "KEYCHAIN_PATH",
+];
+const NON_SECRET_SUFFIXES: &[&str] = &["_FILE", "_PATH", "_DIR", "_FILENAME", "_NAME", "_ID"];
+const NON_SECRET_VALUES: &[&str] = &[
+    "true",
+    "false",
+    "null",
+    "none",
+    "yes",
+    "no",
+    "on",
+    "off",
+    "enabled",
+    "disabled",
+    "production",
+    "development",
+    "localhost",
+];
+
+/// Should an environment variable's value be redacted as a configured secret?
+/// A variable named like KEY/TOKEN/PASSWORD/SECRET qualifies only when its value
+/// is at least 8 bytes, has no whitespace, is not a path or a common word/flag,
+/// and either mixes character classes or is long enough to be random. This keeps
+/// `TOKENIZERS_PARALLELISM=false` from redacting every "false" in captured text.
+pub fn environment_secret(name: &str, value: &str) -> bool {
+    let name = name.to_ascii_uppercase();
+    if !["KEY", "TOKEN", "PASSWORD", "SECRET"]
+        .iter()
+        .any(|part| name.contains(part))
+        || NON_SECRET_NAMES.contains(&name.as_str())
+        || NON_SECRET_SUFFIXES.iter().any(|s| name.ends_with(s))
+    {
+        return false;
+    }
+    if value.len() < 8
+        || value.chars().any(char::is_whitespace)
+        || value.starts_with(['/', '~'])
+        || value.starts_with("./")
+        || NON_SECRET_VALUES.contains(&value.to_ascii_lowercase().as_str())
+    {
+        return false;
+    }
+    let classes = [
+        value.chars().any(|c| c.is_ascii_lowercase()),
+        value.chars().any(|c| c.is_ascii_uppercase()),
+        value.chars().any(|c| c.is_ascii_digit()),
+        value.chars().any(|c| !c.is_ascii_alphanumeric()),
+    ]
+    .iter()
+    .filter(|present| **present)
+    .count();
+    let distinct = value
+        .chars()
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
+    distinct >= 4 && (classes >= 2 || value.len() >= 24)
 }
 fn secret_key(key: &str) -> bool {
     let key = key.to_ascii_lowercase().replace('-', "_");
@@ -610,7 +741,7 @@ pub fn normalize_capture_hook(
         .ok_or("missing_capture_event")?;
     let mut tool_redacted = false;
     let mut raw_content_excluded = false;
-    let (kind, mut content) = match name {
+    let (kind, content) = match name {
         "UserPromptSubmit" => (
             "prompt",
             v.get("prompt").and_then(Value::as_str).map(str::to_owned),
@@ -675,57 +806,38 @@ pub fn normalize_capture_hook(
         coverage: vec!["partial_host_coverage".into()],
         captured_at: at,
     };
-    if !policy.kinds.iter().any(|k| k == kind) {
-        event.coverage.push("excluded_event_kind".into());
-        content = None;
-    } else if kind == "tool_result"
-        && (event
-            .tool_name
-            .as_ref()
-            .is_some_and(|t| policy.excluded_tools.contains(t) || own_mcp_tool(t))
-            || v.get("tool_input").is_some_and(excluded_tool_input))
-    {
-        event.coverage.push("excluded_tool_content".into());
-        content = None;
-    } else if raw_content_excluded
-        || policy
-            .excluded_content
-            .iter()
-            .any(|term| content.as_ref().is_some_and(|s| s.contains(term)))
-    {
-        event.coverage.push("excluded_content".into());
-        content = None;
-    }
-    if let Some(text) = content.filter(|s| !s.is_empty()) {
-        let mut safe = sanitize_capture_text(&text, secrets);
-        if safe != text || tool_redacted {
-            event.coverage.push("redacted".into());
-        }
-        let limit = policy.max_event_bytes as usize;
-        if safe.len() > limit {
-            let mut end = limit;
-            while !safe.is_char_boundary(end) {
-                end -= 1;
-            }
-            safe.truncate(end);
-            event.coverage.push("truncated".into());
-        }
-        event.content = Some(safe);
-    } else if kind != "lifecycle" && event.coverage.len() == 1 {
-        event.coverage.push("missing_content".into());
-    }
-    if kind != "lifecycle" && event.turn_id.is_none() {
-        event.coverage.push("missing_turn_identity".into());
-    }
-    if name == "SubagentStop" && event.agent_id.is_none() {
-        event.coverage.push("ambiguous_attribution".into());
-        event.content = None;
-    }
+    let origin = Origin::Local {
+        tool_redacted,
+        raw_content_excluded,
+        tool_input_excluded: kind == "tool_result"
+            && v.get("tool_input").is_some_and(excluded_tool_input),
+    };
+    apply_policy(&mut event, content, policy, secrets, &origin, false);
     Ok(event)
 }
 
 #[cfg(test)]
+mod parity;
+#[cfg(test)]
 mod tests {
+    #[test]
+    fn environment_secret_rejects_flags_and_paths_but_keeps_real_tokens() {
+        use super::environment_secret as secret;
+        assert!(!secret("TOKENIZERS_PARALLELISM", "false"));
+        assert!(!secret("HF_TOKEN_ENABLED", "disabled"));
+        assert!(!secret("API_KEY", "false"));
+        assert!(!secret("SOME_SECRET", "development"));
+        assert!(!secret("SSH_KEY_FILE", "Ab1xYz_90kLmNopq"));
+        assert!(!secret("GITHUB_TOKEN", "/Users/me/.config/gh/token"));
+        assert!(!secret("API_KEY", "short1A"));
+        assert!(!secret("HOME", "ghp_abcdefghijklmnop1234"));
+        assert!(secret("GITHUB_TOKEN", "ghp_AbCdEf0123456789xyzXYZ"));
+        assert!(secret("db_password", "correct-Horse-9-battery"));
+        assert!(secret("SESSION_SECRET", "a3f9c2d17b5e48a6b0c1d2e3f4a5b6c7"));
+        let found = ["false", "a plain false statement"]
+            .map(|text| super::sanitize_capture_text(text, &[]));
+        assert_eq!(found, ["false", "a plain false statement"]);
+    }
     #[test]
     fn structured_exact_redaction_covers_scalar_values_and_keeps_unrelated_numbers() {
         let input =

@@ -104,7 +104,17 @@ fn private_permissions(meta: &fs::Metadata) -> Result<()> {
     Ok(())
 }
 
+/// Default cap for small control files (config, session state, pointers).
+pub const STATE_BYTES: u64 = 65536;
+/// Cap for published native catalogues. Matches the 1 MiB the writer allows, so
+/// a catalogue that was legitimately written can always be read back.
+pub const CATALOGUE_BYTES: u64 = 1024 * 1024;
+
 pub fn read<T: DeserializeOwned>(path: &Path) -> Result<T> {
+    read_limited(path, STATE_BYTES)
+}
+
+pub fn read_limited<T: DeserializeOwned>(path: &Path, limit: u64) -> Result<T> {
     check_directory(
         path.parent()
             .ok_or_else(|| anyhow!("invalid_plugin_state"))?,
@@ -112,7 +122,7 @@ pub fn read<T: DeserializeOwned>(path: &Path) -> Result<T> {
     )?;
     let meta = fs::symlink_metadata(path)?;
     ensure!(
-        meta.is_file() && !meta.is_symlink() && meta.len() <= 65536,
+        meta.is_file() && !meta.is_symlink() && meta.len() <= limit,
         "invalid_plugin_state"
     );
     private_permissions(&meta)?;
@@ -233,18 +243,25 @@ pub fn runtime_pointer() -> Result<()> {
         executable.is_absolute() && !path.chars().any(char::is_control),
         "invalid_plugin_runtime"
     );
-    let temporary = root.join(format!("runtime-{}.tmp", Uuid::new_v4()));
-    let mut file = private_file(&temporary, true)?;
-    use std::io::Write;
-    writeln!(file, "{path}")?;
-    file.sync_all()?;
     let destination = root.join("runtime-path");
+    // Every hook calls this. Rewrite (two fsyncs) only when the pointer changed.
     if let Ok(meta) = fs::symlink_metadata(&destination) {
         ensure!(
             meta.is_file() && !meta.is_symlink(),
             "unsafe_plugin_runtime"
         );
+        if meta.len() <= 4096
+            && private_permissions(&meta).is_ok()
+            && fs::read_to_string(&destination).is_ok_and(|c| c.trim_end_matches('\n') == path)
+        {
+            return Ok(());
+        }
     }
+    let temporary = root.join(format!("runtime-{}.tmp", Uuid::new_v4()));
+    let mut file = private_file(&temporary, true)?;
+    use std::io::Write;
+    writeln!(file, "{path}")?;
+    file.sync_all()?;
     fs::rename(temporary, destination)?;
     fs::File::open(&root)?.sync_all()?;
     Ok(())
@@ -284,6 +301,30 @@ mod tests {
             assert!(directory(&root).is_err());
             fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).unwrap();
         }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn catalogue_reads_use_the_same_cap_as_snapshot_writes() {
+        let root = crate::publication::project_root()
+            .join(".cache")
+            .join(format!("plugin-storage-{}", Uuid::new_v4()));
+        directory(&root).unwrap();
+        let path = root.join("catalogue.json");
+        // Larger than the 64 KiB control-file cap, smaller than the 1 MiB snapshot cap.
+        write(
+            &path,
+            &serde_json::json!({"entries":"x".repeat(200 * 1024)}),
+        )
+        .unwrap();
+        assert!(read::<serde_json::Value>(&path).is_err());
+        assert!(read_limited::<serde_json::Value>(&path, CATALOGUE_BYTES).is_ok());
+        write(
+            &path,
+            &serde_json::json!({"entries":"x".repeat(2 * 1024 * 1024)}),
+        )
+        .unwrap();
+        assert!(read_limited::<serde_json::Value>(&path, CATALOGUE_BYTES).is_err());
         fs::remove_dir_all(root).unwrap();
     }
 }

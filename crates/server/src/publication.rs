@@ -117,12 +117,7 @@ pub(crate) fn configured_secrets(state: &AppState) -> Vec<String> {
         values.push(key.clone());
     }
     values.extend(std::env::vars().filter_map(|(key, value)| {
-        let key = key.to_ascii_uppercase();
-        (value.len() >= 4
-            && ["KEY", "TOKEN", "PASSWORD", "SECRET"]
-                .iter()
-                .any(|p| key.contains(p)))
-        .then_some(value)
+        recollect_protocol::environment_secret(&key, &value).then_some(value)
     }));
     values
 }
