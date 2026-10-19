@@ -98,7 +98,38 @@ inaccessible Brain content on 401/403/404 and refreshes permission state; hidden
 buttons alone are not authorization. Profile permissions remain separate and are
 implemented in the MCP slices.
 
-### Optional single-organization OIDC
+### Admission order
+
+Every request or worker transaction that touches one Brain is admitted by one typed
+function (`db::admission`) after authentication, costs one database statement and
+answers in one order on every surface:
+
+1. Transport, with no database read: a browser-only surface refuses a paired device
+   with 403 `browser_required`, and a device-only surface refuses a browser with 403
+   `device_required` ("This endpoint requires a paired device.").
+2. Principal: an unknown, disabled or revoked account, device or browser session is 401.
+3. Visibility: a Brain the caller cannot see, or that no longer exists (a deleted Brain
+   included), is 404 before any lock is taken, so neither locking nor the status
+   reveals whether a Brain exists. A 404 never becomes a 403.
+4. Role: a caller below the surface's floor (`reader < writer < admin`, from ownership,
+   direct and group grants) is 403 `forbidden`.
+5. Archive: a surface that refuses archived Brains answers 409 `brain_archived`, always
+   with that one code, and only after the role check passed. A non-administrator member
+   of an archived Brain on an administrator-only surface is therefore 403, never 409.
+   Reads of an archived Brain stay open, except where a surface says otherwise (skills
+   for anyone but a browser administrator, coordination and MCP execution discovery).
+6. Surface locks and checks follow admission: the MCP catalogue lock, profile rights,
+   idempotency receipts, capacity and preconditions.
+
+The role and the archive flag are read after the Brain lock wait, so they reflect
+whatever committed while the caller queued. Reads take the shared Brain lock and
+writes and administrator changes take it exclusively; the lock namespace is the one
+used by durable work. A Brain deleted, or a grant removed, while the caller waited is
+404, and a database failure is 503 `database_unavailable`. A surface may bound the
+lock wait (`lock_timeout`) or the whole transaction (`statement_timeout`) before it
+starts. Provisional preparation reads use the read-only snapshot variant, which checks
+the same role without taking the lock.
+
 
 Environment inputs are `RECOLLECT_OIDC_ISSUER`, `RECOLLECT_OIDC_CLIENT_ID` and
 `RECOLLECT_OIDC_CLIENT_SECRET`; all three or none must be supplied. Use an exact
@@ -153,7 +184,11 @@ The optional provider is not required by `./scripts/dev.sh`.
 Real HTTP handlers plus non-owner PostgreSQL prove invitation replay/expiry/reset,
 local login and disabled-account denial, denied non-owner administration,
 cross-Brain isolation, ownership/direct/group combinations, group expiry/overage,
-removal and worker revocation with permitted controls. Prove that stored values are
+removal and worker revocation with permitted controls. Prove the admission order with
+a golden status matrix across principals (administrator, writer, reader, non-member,
+disabled, revoked device), both transports and active, archived and deleted Brains,
+the Brain lock each admission holds, and role and archive state read after the lock
+wait. Prove that stored values are
 Argon2id PHC strings, that a legacy plaintext file is converted at startup while
 the account can still sign in, that a wrong password is rejected, and that a
 group/other-readable or symlinked credential file returns 503 at sign-in. Exercise a real local OIDC
