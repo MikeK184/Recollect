@@ -1,4 +1,5 @@
 //! One canonical read boundary for native, browser and future MCP recall.
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState, artifacts,
     auth::Auth,
@@ -666,12 +667,14 @@ async fn execute(
         }
     }
     publication::safe_payload(state, &json!(input.query))?;
-    let mut tx = auth.tx(&state.pool).await?;
-    sqlx::query("SET LOCAL statement_timeout='2s'")
-        .execute(&mut *tx)
-        .await?;
-    crate::db::lock_brain(&mut tx, brain, false).await?;
-    crate::db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        auth,
+        brain,
+        BrainAccess::READ.with_statement_timeout(Duration::from_secs(2)),
+    )
+    .await?
+    .tx;
     let scope_id = authority(&mut tx, auth, brain, &input).await?;
     let at = match input.knowledge_at {
         Some(at) => at,
@@ -808,12 +811,14 @@ async fn execute(
                 answer,
             )
             .await?;
-            tx = auth.tx(&state.pool).await?;
-            sqlx::query("SET LOCAL statement_timeout='2s'")
-                .execute(&mut *tx)
-                .await?;
-            crate::db::lock_brain(&mut tx, brain, false).await?;
-            crate::db::require_role(&mut tx, brain, false).await?;
+            tx = admission::brain_tx(
+                &state.pool,
+                auth,
+                brain,
+                BrainAccess::READ.with_statement_timeout(Duration::from_secs(2)),
+            )
+            .await?
+            .tx;
             authority(&mut tx, auth, brain, &input).await?;
             selected_manifest(&mut tx, brain, &input, at).await?;
             semantic::recheck(state, &mut tx, brain, admission).await?;

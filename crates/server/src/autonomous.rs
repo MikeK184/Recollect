@@ -1,5 +1,6 @@
 //! Standing Brain policy drives bounded scheduling; model output never acquires
 //! human-review or tool-execution authority.
+use crate::db::admission::{self, Admitted, BrainAccess, Role};
 use crate::{
     AppState, db, error::Result, learning, memory, memory_evidence::Tx, model_gateway as gateway,
     model_policy,
@@ -173,13 +174,15 @@ async fn shadow_source_device(state: &AppState, run: &LearningRun, device: Uuid)
     if run.manifest_revision_id.is_some() {
         return Ok(false);
     }
-    let mut tx = db::preparation_tx(&state.pool, run.actor_id, Some(device)).await?;
-    if !matches!(
-        db::require_role(&mut tx, run.brain_id, false)
-            .await?
-            .as_str(),
-        "writer" | "admin"
-    ) {
+    let Admitted { mut tx, role, .. } = admission::brain_preparation_tx(
+        &state.pool,
+        run.actor_id,
+        Some(device),
+        run.brain_id,
+        BrainAccess::READ,
+    )
+    .await?;
+    if role < Role::Writer {
         return Ok(false);
     }
     let origins: Vec<(Uuid, Json<ScopeSelection>, String)> = sqlx::query_as(

@@ -1,7 +1,8 @@
 //! Provisional preparation and short, independently committed maintenance work.
 //! Cursors store only scheduling progress; all publication uses fresh authority.
+use crate::db::admission::{self, Admitted, BrainAccess, Role};
 use crate::{
-    AppState, db,
+    AppState,
     error::{Error, Result},
     graph,
     memory_evidence::Tx,
@@ -87,14 +88,15 @@ impl Cursor {
         actor: Uuid,
         kind: &'static str,
     ) -> Result<Option<(Tx<'a>, ModelPolicyVersion, Self)>> {
-        let mut tx = db::preparation_tx(&state.pool, actor, None).await?;
-        sqlx::query("SET LOCAL statement_timeout='1s'")
-            .execute(&mut *tx)
-            .await?;
-        if !matches!(
-            db::require_role(&mut tx, brain, false).await?.as_str(),
-            "writer" | "admin"
-        ) {
+        let Admitted { mut tx, role, .. } = admission::brain_preparation_tx(
+            &state.pool,
+            actor,
+            None,
+            brain,
+            BrainAccess::READ.with_statement_timeout(Duration::from_secs(1)),
+        )
+        .await?;
+        if role < Role::Writer {
             return Ok(None);
         }
         let p = model_policy::current(state, &mut tx, brain).await?;
@@ -157,15 +159,18 @@ impl Cursor {
         state: &'a AppState,
         epoch: bool,
     ) -> Result<Option<(Tx<'a>, ModelPolicyVersion)>> {
-        let mut tx = db::actor_tx(&state.pool, self.actor).await?;
-        sqlx::query("SET LOCAL statement_timeout='750ms'")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("SET LOCAL lock_timeout='250ms'")
-            .execute(&mut *tx)
-            .await?;
         let started = Instant::now();
-        db::require_writer(&mut tx, self.brain).await?;
+        let mut tx = admission::brain_tx_as(
+            &state.pool,
+            self.actor,
+            None,
+            self.brain,
+            BrainAccess::WRITE
+                .with_statement_timeout(Duration::from_millis(750))
+                .with_lock_timeout(Duration::from_millis(250)),
+        )
+        .await?
+        .tx;
         tracing::debug!(brain_id=%self.brain,kind=self.kind,lock_wait_ms=started.elapsed().as_millis(),
             "Autonomous maintenance writer admitted");
         let p = model_policy::current(state, &mut tx, self.brain).await?;
@@ -237,11 +242,15 @@ pub async fn prepare_digest(
         }
         cursor.next = Some(id);
         let result = tokio::time::timeout(PREPARE_TIME, async {
-            let mut tx = db::preparation_tx(&state.pool, actor, None).await?;
-            sqlx::query("SET LOCAL statement_timeout='1s'")
-                .execute(&mut *tx)
-                .await?;
-            db::require_role(&mut tx, brain, false).await?;
+            let mut tx = admission::brain_preparation_tx(
+                &state.pool,
+                actor,
+                None,
+                brain,
+                BrainAccess::READ.with_statement_timeout(Duration::from_secs(1)),
+            )
+            .await?
+            .tx;
             let current = model_policy::current(state, &mut tx, brain).await?;
             if current.change_id != policy.change_id || !enabled(state, &current, actor) {
                 return Ok(None);
@@ -305,11 +314,15 @@ pub async fn prepare_handovers(
         }
         cursor.next = Some(id);
         let result = tokio::time::timeout(PREPARE_TIME, async {
-            let mut tx = db::preparation_tx(&state.pool, actor, None).await?;
-            sqlx::query("SET LOCAL statement_timeout='1s'")
-                .execute(&mut *tx)
-                .await?;
-            db::require_role(&mut tx, brain, false).await?;
+            let mut tx = admission::brain_preparation_tx(
+                &state.pool,
+                actor,
+                None,
+                brain,
+                BrainAccess::READ.with_statement_timeout(Duration::from_secs(1)),
+            )
+            .await?
+            .tx;
             let p = model_policy::current(state, &mut tx, brain).await?;
             if p.change_id != policy.change_id || !enabled(state, &p, actor) {
                 return Ok(None);

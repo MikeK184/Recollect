@@ -410,14 +410,17 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
 
 /// Short exclusive-lock pass: housekeeping, discovery and the choice of work.
 async fn survey(state: &AppState, brain: Uuid, actor: Uuid) -> Result<Option<Survey>> {
-    let mut tx = db::actor_tx(&state.pool, actor).await?;
     // Give up on a Brain whose admission lock is held elsewhere instead of
     // pinning this connection for the rest of the Brain's budget.
-    sqlx::query("SET LOCAL lock_timeout='2s'")
-        .execute(&mut *tx)
-        .await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        actor,
+        None,
+        brain,
+        BrainAccess::WRITE.with_lock_timeout(std::time::Duration::from_secs(2)),
+    )
+    .await?
+    .tx;
     cleanup(&mut tx, brain).await?;
     let p = model_policy::current(state, &mut tx, brain).await?;
     if p.created_by != Some(actor)
@@ -511,12 +514,15 @@ async fn publish(
     survey: Survey,
     prepared: Option<Prepared>,
 ) -> Result<usize> {
-    let mut tx = db::actor_tx(&state.pool, actor).await?;
-    sqlx::query("SET LOCAL lock_timeout='2s'")
-        .execute(&mut *tx)
-        .await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        actor,
+        None,
+        brain,
+        BrainAccess::WRITE.with_lock_timeout(std::time::Duration::from_secs(2)),
+    )
+    .await?
+    .tx;
     let (p, profile) = (&survey.policy, &survey.profile);
     // A changed policy or profile head replans on the next pass.
     if model_policy::current(state, &mut tx, brain)

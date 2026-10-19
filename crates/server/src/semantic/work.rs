@@ -1,4 +1,5 @@
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     db,
     worker::{self, ClaimedJob, Failure},
@@ -101,8 +102,15 @@ async fn prepare(
     state: &AppState,
     job: &ClaimedJob,
 ) -> Result<(i64, ModelPolicyVersion, Vec<Uuid>)> {
-    let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::require_role(&mut tx, job.brain_id, false).await?;
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::READ,
+    )
+    .await?
+    .tx;
     let epoch = crate::graph::preparation_epoch(&mut tx, job.brain_id).await?;
     let (_, policy, entries) = inspect(state, job, &mut tx).await?;
     inspect_inputs(state, job, &mut tx, &policy, &entries).await?;
@@ -118,9 +126,15 @@ async fn ready<'a>(
     job: &ClaimedJob,
 ) -> Result<(Tx<'a>, SemanticBatch, Vec<Uuid>)> {
     let prepared = prepare(state, job).await.ok();
-    let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
-    db::lock_brain(&mut tx, job.brain_id, true).await?;
-    db::require_writer(&mut tx, job.brain_id).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        job.actor_id,
+        job.device_id,
+        job.brain_id,
+        BrainAccess::WRITE,
+    )
+    .await?
+    .tx;
     lease(&mut tx, job).await?;
     let (batch, policy, entries) = inspect(state, job, &mut tx).await?;
     let proven = match prepared {

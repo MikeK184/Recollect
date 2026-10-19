@@ -1,5 +1,6 @@
 //! Reviewed adapter compatibility is separate from account-listed availability.
 use super::*;
+use crate::db::admission::{self, Admitted, Archived, BrainAccess};
 use std::{
     collections::{HashMap, HashSet},
     time::{Duration, Instant},
@@ -374,11 +375,21 @@ async fn catalogue(
     refresh: bool,
     query: CatalogueQuery,
 ) -> Result<Json<ModelCatalogue>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, refresh).await?;
+    // A refresh needs an administrator under the exclusive lock; the browser
+    // check and the archived refusal follow admission, in that order.
+    let access = if refresh {
+        BrainAccess::admin(Archived::Allow)
+    } else {
+        BrainAccess::READ
+    };
+    let Admitted {
+        mut tx, archived, ..
+    } = admission::brain_tx(&state.pool, &auth, brain, access).await?;
     if refresh {
         auth.require_browser()?;
-        db::require_writer(&mut tx, brain).await?;
+        if archived {
+            return Err(admission::evidence_archived());
+        }
     }
     let provider = query
         .provider
