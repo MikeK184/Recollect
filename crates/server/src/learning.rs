@@ -461,7 +461,9 @@ async fn existing(
     brain: Uuid,
     content: &ClaimContent,
 ) -> Result<Option<ClaimRevision>> {
-    let rows:Vec<SqlJson<ClaimRevision>>=sqlx::query_scalar("SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1 AND r.subject_key=$2 AND r.predicate_key=$3 AND r.value_key=$4 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' AND recollect_memory_supported(r.brain_id,r.id) ORDER BY r.recorded_at LIMIT 500")
+    let rows:Vec<SqlJson<ClaimRevision>>=sqlx::query_scalar("WITH base AS MATERIALIZED (SELECT r.id,r.revision,r.recorded_at FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1 AND r.subject_key=$2 AND r.predicate_key=$3 AND r.value_key=$4 AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'),
+        gate AS MATERIALIZED (SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT b.id FROM base b)) s WHERE s.supported)
+        SELECT b.revision FROM base b WHERE b.id IN (SELECT revision_id FROM gate) ORDER BY b.recorded_at LIMIT 500")
         .bind(brain).bind(memory_policy::assertion_key(&content.subject,true)).bind(memory_policy::assertion_key(&content.predicate,true)).bind(memory_policy::assertion_key(&content.value,false)).fetch_all(&mut **tx).await?;
     Ok(rows.into_iter().map(|r| r.0).find(|r| {
         r.content.selection == content.selection

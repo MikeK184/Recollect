@@ -142,6 +142,19 @@ exist in the Brain and remain logically active. Delivery deadlines use the same
 closure, including repository snapshot time rather than manifest creation time;
 logical expiry invalidates cached context before background cleanup runs.
 
+One SQL predicate decides support for every consumer. For a caller subject to
+row-level security it answers only for a current member of the Brain: a
+non-member, and a revision of another Brain, is never supported. Owner-rights
+database maintenance, such as the privacy closure, evaluates the same predicate
+without a Brain actor and unfiltered, as before. Set-oriented consumers ask the
+batch form, which returns the single-revision verdict for each distinct revision
+from one shared closure; it never changes a verdict or the dependency semantics
+above. The predicate reads tables as the database owner after that one
+membership test, so every table it reads must have only Brain-membership read
+policies. A restrictive or narrower read policy on such a table would be
+bypassed and must instead become an explicit check in the predicate; an
+automated policy guard fails on it.
+
 Audit backfill reaches historical revisions required by current roots recursively.
 Assessment prerequisites use the exact immutable contribution lineage. Changed
 current heads are recorded as delivery/privacy dependencies, never substituted

@@ -168,7 +168,8 @@ const CLAIMS: &str="WITH authority_ids AS MATERIALIZED (
  AND r.revision#>>'{content,freshness}'<>'superseded'
  AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
 ) , current_claims AS MATERIALIZED (
- SELECT r.* FROM authority_roots r WHERE recollect_memory_supported(r.brain_id,r.id)
+ SELECT r.* FROM authority_roots r WHERE r.id IN (
+  SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT a.id FROM authority_roots a)) s WHERE s.supported)
 )";
 async fn knowledge(tx: &mut Tx<'_>, brain: Uuid) -> Result<Descriptor> {
     let claims: Vec<(Uuid, Uuid)> = sqlx::query_as(&format!(

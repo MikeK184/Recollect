@@ -71,14 +71,17 @@ pub(crate) async fn prepare_partition(
     let Some(p) = partition(tx, brain, policy.change_id, id).await? else {
         return Ok(None);
     };
-    let rows: Vec<Json<ClaimRevision>> = sqlx::query_scalar("SELECT DISTINCT r.revision FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id
+    // Support is evaluated once for the revisions that passed the cheap filters,
+    // sharing one dependency closure, rather than once per joined row.
+    let rows: Vec<Json<ClaimRevision>> = sqlx::query_scalar("WITH base AS MATERIALIZED (SELECT DISTINCT r.id,r.revision FROM session_digest_events d JOIN capture_events e ON e.id=d.event_id
           JOIN learning_runs l ON l.brain_id=e.brain_id AND l.source_version_id=e.source_version_id AND l.state IN ('succeeded','removed')
           JOIN claims c ON c.brain_id=l.brain_id AND c.id=ANY(l.claim_ids) JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
           WHERE d.partition_id=$1 AND r.revision#>>'{content,kind}'<>'handover' AND r.revision#>'{content,selection}'=$2
            AND r.revision#>>'{content,manifest_revision_id}' IS NOT DISTINCT FROM $3::text
-           AND r.revision->>'review'='accepted' AND recollect_memory_supported(r.brain_id,r.id)
-          ORDER BY r.revision LIMIT 500")
-        .bind(p.id).bind(Json(&p.selection)).bind(p.manifest_revision_id.map(|m|m.to_string())).fetch_all(&mut **tx).await?;
+           AND r.revision->>'review'='accepted'
+         ), gate AS MATERIALIZED (SELECT s.revision_id FROM recollect_memory_supported_many($4,ARRAY(SELECT b.id FROM base b)) s WHERE s.supported)
+          SELECT b.revision FROM base b WHERE b.id IN (SELECT revision_id FROM gate) ORDER BY b.revision LIMIT 500")
+        .bind(p.id).bind(Json(&p.selection)).bind(p.manifest_revision_id.map(|m|m.to_string())).bind(brain).fetch_all(&mut **tx).await?;
     let scan_bounded = rows.len() == 500;
     let mut eligible = Vec::new();
     let ids: Vec<Uuid> = rows.iter().map(|r| r.0.id).collect();
@@ -453,7 +456,7 @@ pub(crate) async fn check(
         return Ok(());
     };
     let id = g["id"].as_str().unwrap().parse::<Uuid>().unwrap();
-    let (active,desired,coverage,heads):(bool,bool,bool,bool)=sqlx::query_as("SELECT g.privacy_state='active' AND p.privacy_state='active', EXISTS(SELECT 1 FROM session_digest_pages desired WHERE desired.partition_id=p.id AND desired.page=g.page AND desired.generation_id=g.id AND desired.active), g.receipt=p.observed_receipt, g.contributors=(SELECT contributions FROM handover_runs WHERE id=g.run_id AND brain_id=g.brain_id) AND NOT EXISTS(SELECT 1 FROM unnest(g.contributors) i LEFT JOIN claim_revisions r ON r.id=i AND r.brain_id=g.brain_id LEFT JOIN claims c ON c.id=r.claim_id AND c.brain_id=g.brain_id WHERE c.current_revision IS DISTINCT FROM i OR NOT recollect_memory_supported(g.brain_id,i)) FROM session_digest_generations g JOIN session_digest_partitions p ON p.id=g.partition_id WHERE g.id=$1")
+    let (active,desired,coverage,heads):(bool,bool,bool,bool)=sqlx::query_as("SELECT g.privacy_state='active' AND p.privacy_state='active', EXISTS(SELECT 1 FROM session_digest_pages desired WHERE desired.partition_id=p.id AND desired.page=g.page AND desired.generation_id=g.id AND desired.active), g.receipt=p.observed_receipt, g.contributors=(SELECT contributions FROM handover_runs WHERE id=g.run_id AND brain_id=g.brain_id) AND NOT EXISTS(SELECT 1 FROM unnest(g.contributors) i LEFT JOIN claim_revisions r ON r.id=i AND r.brain_id=g.brain_id LEFT JOIN claims c ON c.id=r.claim_id AND c.brain_id=g.brain_id WHERE c.current_revision IS DISTINCT FROM i OR NOT coalesce(i IN (SELECT s.revision_id FROM recollect_memory_supported_many(g.brain_id,g.contributors) s WHERE s.supported),false)) FROM session_digest_generations g JOIN session_digest_partitions p ON p.id=g.partition_id WHERE g.id=$1")
         .bind(id).fetch_one(&mut **tx).await?;
     if !active {
         return Err(crate::retention::unavailable());

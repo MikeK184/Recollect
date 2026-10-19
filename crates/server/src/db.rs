@@ -289,6 +289,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../migrations/067_review_accounting_and_intents.sql"),
     ),
     (
+        "068_support_gate_definer",
+        include_str!("../migrations/068_support_gate_definer.sql"),
+    ),
+    (
         "069_graph_verification_stamp",
         include_str!("../migrations/069_graph_verification_stamp.sql"),
     ),

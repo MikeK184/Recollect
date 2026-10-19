@@ -63,6 +63,20 @@ graph_claims AS MATERIALIZED (
             "AND claim_id IN (SELECT claim_id FROM graph_requested_claims)",
         )
         .replace("/* graph_window_ctes */", WINDOWS)
+        // Latest snapshot/manifest per logical identity, for the identities the
+        // requested facts and manifests belong to (whole histories retained).
+        .replace(
+            "/* recall_window:fact_snapshots */",
+            "AND s.id IN (SELECT snapshot_id FROM graph_facts)",
+        )
+        .replace(
+            "/* recall_window:known_snapshots */",
+            "AND repository_id IN (SELECT s.repository_id FROM repository_snapshots s WHERE s.brain_id=$1 AND s.id IN (SELECT snapshot_id FROM graph_facts))",
+        )
+        .replace(
+            "/* recall_window:known_manifests */",
+            "AND manifest_id IN (SELECT m.manifest_id FROM manifest_revisions m WHERE m.brain_id=$1 AND m.id IN (SELECT id FROM graph_manifests))",
+        )
         .replace("/* graph_window:claims */ known_claims", "graph_claims")
         .replace(
             "/* graph_window:sources */ source_knowledge",

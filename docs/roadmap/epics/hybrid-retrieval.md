@@ -73,6 +73,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `desktop-ask-primary` | shipped | adr-backed, contract-backed | archived | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
 | `ask-chat-conversation` | shipped | contract-backed | archived | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
 | `retrieval-set-based-read-path` | shipped | contract-backed | archived | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
+| `retrieval-support-gate-cost` | shipped | contract-backed | archived | Application-role support gate 60-66 ms to 3-4 ms per revision (0.75 ms batched) with identical verdicts, owner-rights callers unchanged, and field paging repaired; proven by native equivalence, policy-guard and cost tests and a 218-test subset with no new failure against its baseline |
 
 ## Completion Criteria
 
@@ -91,6 +92,8 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 ## Current status
 
 The original exact/lexical/semantic/graph consumers and cited Ask are delivered. Source-window/history corrections and semantic discovery query repair are committed in f2673d7. The measured discovery query improved from about 18–20 s to 225–334 ms on the retained fixture; this is not an end-to-end quality score. The October 18 attributed-feedback slice is locally delivered: current native qualification/privacy cases and the frozen zero-call comparison pass. The toy comparison retains two bad promotions; it does not demonstrate real helpfulness or qualify the failed organization model. Production ranking activation, typed-time and ANN changes remain separate decisions.
+
+The October 19 support-gate slice evaluates the unchanged support predicate as the database owner after one Brain membership test and gives set-oriented consumers a batch form; it also removes a plan-dependent timeout from the organization field view's candidate statement. Retrieval behavior and ranking are unchanged.
 
 See the [current roadmap](index.md) for priorities and the
 [active packs](../execution/active/README.md) for exact remaining acceptance.

@@ -624,7 +624,8 @@ async fn original_support_predicates_match(h: &Harness, brain: Uuid) {
         OR
         recollect_revision_supported($1,id) IS DISTINCT FROM pg_temp.original_revision_supported($1,id)
         OR recollect_pre_digest_supported($1,id) IS DISTINCT FROM pg_temp.original_pre_digest_supported($1,id)
-        OR recollect_memory_supported($1,id) IS DISTINCT FROM pg_temp.original_memory_supported($1,id)")
+        OR recollect_memory_supported($1,id) IS DISTINCT FROM pg_temp.original_memory_supported($1,id)
+        OR recollect_memory_supported_core($1,id) IS DISTINCT FROM pg_temp.original_memory_supported($1,id)")
         .bind(brain).fetch_one(&mut *tx).await.unwrap();
     assert_eq!(
         mismatches, 0,
@@ -650,13 +651,10 @@ async fn reviewed(h: &Harness, owner: &Login, base: &str, r: &Value) -> Value {
     ok(h,"POST",&format!("{base}/claims/{}/review",r["claim_id"].as_str().unwrap()),owner,
        json!({"base_revision":r["id"],"action":"accept","reason":"Explicit isolated synthetic human review","content":null,"revalidation_basis":null})).await["claims"][0]["revision"].clone()
 }
+/// The support verdict, after asserting that the scalar, batch, owner-rights and
+/// non-member results through each caller kind equal the previous body.
 async fn guard(h: &Harness, base: &str, r: &Value) -> bool {
-    sqlx::query_scalar("SELECT recollect_memory_supported($1,$2)")
-        .bind(brain_id(base))
-        .bind(uuid(&r["id"]))
-        .fetch_one(&h.admin)
-        .await
-        .unwrap()
+    crate::support_gate::checked(h, brain_id(base), uuid(&r["id"])).await
 }
 async fn direct_audit_fixture() -> (
     Harness,

@@ -20,11 +20,11 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
 ), known_claims AS (
   SELECT DISTINCT ON(claim_id) * FROM claim_revisions
   WHERE brain_id=$1 AND recorded_at<=$2 /* graph_window:claim_histories */ ORDER BY claim_id,recorded_at DESC
-), /* graph_window_ctes */ selected_claims AS (
+), /* graph_window_ctes */ claim_scope AS MATERIALIZED (
   -- Apply the same exact manifest boundary as claim_manifest before any
   -- channel ranks or counts claim representations. Keep the canonical view
   -- recheck as well; similarity and projection coverage cannot supply scope.
-  SELECT r.* FROM /* graph_window:claims */ known_claims r WHERE recollect_memory_supported(r.brain_id,r.id) AND ($6::jsonb IS NULL OR (
+  SELECT r.* FROM /* graph_window:claims */ known_claims r WHERE ($6::jsonb IS NULL OR (
     NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(r.revision#>'{content,selection,repository_ids}') repo
       WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements($6->'entries') entry
         WHERE entry->>'repository_id'=repo))
@@ -47,6 +47,12 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
               AND jsonb_build_object('repository_id',old_entry->'repository_id','revision',old_entry->'revision',
                 'snapshot_id',old_entry->'snapshot_id','config_paths',coalesce(old_entry->'config_paths','[]'::jsonb))=selected_entry))))
   ))
+), claim_support AS MATERIALIZED (
+  -- One shared dependency closure for every claim the exact manifest boundary
+  -- kept, instead of one support evaluation per row.
+  SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT c.id FROM claim_scope c)) s WHERE s.supported
+), selected_claims AS (
+  SELECT r.* FROM claim_scope r WHERE r.id IN (SELECT revision_id FROM claim_support)
 ), known_sources AS (
   SELECT DISTINCT ON(source_id) id FROM source_knowledge
   WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY source_id,recorded_at DESC,id DESC
@@ -56,6 +62,15 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
 ), known_manifests AS (
   SELECT DISTINCT ON(manifest_id) id FROM manifest_revisions
   WHERE brain_id=$1 AND created_at<=$2 /* recall_window:known_manifests */ ORDER BY manifest_id,created_at DESC,id DESC
+), fact_snapshots AS MATERIALIZED (
+  -- Snapshot metadata is protected by row-level security and its retention and
+  -- scope gates depend on the snapshot alone. Evaluate them once per snapshot
+  -- the (windowed) facts belong to, so a join planned as a nested loop cannot
+  -- repeat that work for every fact and snapshot pair.
+  SELECT s.* FROM repository_snapshots s
+  WHERE s.brain_id=$1 AND s.created_at<=$2 /* recall_window:fact_snapshots */
+    AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
+    AND recollect_recall_scope(jsonb_build_object('repository_ids',jsonb_build_array(s.repository_id)),$4)
 ), candidates AS (
   SELECT 'claim'::text kind,r.claim_id id,r.id revision_id,NULL::uuid chunk_id,
     r.revision#>>'{content,subject}' label,
@@ -115,11 +130,9 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     NULL,NULL,NULL,NULL,NULL,0,'ready',f.record,f.recall_vector,
     recollect_retention_deadline(s.brain_id,'repository',s.created_at),
     ($3<>'' AND ($3=f.record->>'name' OR $3=coalesce(f.record->>'file',f.record#>>'{source,path}',f.record->>'path'))),true
-  FROM /* graph_window:facts */ repository_facts f JOIN repository_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
-  WHERE f.brain_id=$1 AND s.created_at<=$2
+  FROM /* graph_window:facts */ repository_facts f JOIN fact_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
+  WHERE f.brain_id=$1
     AND $5::uuid IS NULL AND $7 IN ('investigation','history')
-    AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
-    AND recollect_recall_scope(jsonb_build_object('repository_ids',jsonb_build_array(s.repository_id)),$4)
     AND (($6::jsonb IS NOT NULL AND EXISTS(SELECT 1 FROM jsonb_array_elements($6->'entries') entry
       WHERE entry->>'repository_id'=s.repository_id::text AND entry->>'snapshot_id'=s.id::text
         AND (coalesce(entry->'config_paths','[]'::jsonb)='[]'::jsonb OR EXISTS(
