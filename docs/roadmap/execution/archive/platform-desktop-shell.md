@@ -14,7 +14,7 @@ Work type: product
 
 - [ADR 0014](../../../adr/0014-desktop-experience-and-answers.md)
 - [Desktop contract](../../../contracts/desktop-experience.md)
-- [Approved tokens](../../desktop-experience/design-system.md)
+- [Approved tokens](../../../foundation/design-system.md)
 - [Team access](../../../contracts/platform-team-access.md) and [devices](../../../contracts/platform-device-pairing.md)
 - [Owning epic](../../epics/product-platform.md)
 

@@ -15,7 +15,7 @@ read projection for truthful activity presentation. Desktop-first; no mobile red
 ## Governing Sources
 
 - [Desktop contract](../../contracts/desktop-experience.md) (amended 2026-10-03: visual language and motion)
-- [Design system document](../desktop-experience/design-system.md)
+- [Design system document](../../foundation/design-system.md)
 - [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (reference for terminal-card, TV and live-feed visual language; not implementation authority)
 - [ADR 0014: desktop experience and answers](../../adr/0014-desktop-experience-and-answers.md)
 

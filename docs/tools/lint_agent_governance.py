@@ -183,6 +183,17 @@ class Validator:
                 require(bool(body) and "Pending content:" not in body and not PLACEHOLDER.search(body), file, "accepted foundation still contains empty or placeholder content")
                 accepted.add(file)
 
+        # Other foundation documents (for example the design system) carry their
+        # own Status and may govern once accepted.
+        for file in self.records("docs/foundation"):
+            if Path(file).stem not in FOUNDATIONS:
+                status = self.metadata(file, "Status")
+                require(status in {"pending", "accepted"}, file, "foundation status must be pending or accepted")
+                if status == "pending":
+                    pending.append(file)
+                else:
+                    accepted.add(file)
+
         for directory, headings in (
             ("docs/adr", ("Decision", "Why", "Consequences", "Supersession")),
             ("docs/contracts", ("Source", "Contract", "Acceptance", "Explicit Deferrals")),

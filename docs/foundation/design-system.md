@@ -8,14 +8,14 @@ cream/ink/sage palette while retaining the new motion and visual features.
 Scope: desktop browser UI, light theme only; implementation follows the
 desktop contract.
 
-The [desktop contract](../../contracts/desktop-experience.md) makes these tokens
+The [desktop contract](../contracts/desktop-experience.md) makes these tokens
 and shared visual rules authoritative for the redesign. Use the original Recollect SVG mark/wordmark/favicon in `web/public/brand/`.
 Use one Lucide size/stroke convention and shared icon map; generated concept icons
 are illustrative and do not justify per-page variants.
 
 ## Reference and authority
 
-Keep the accepted [stack](../../foundation/techstack.md): React, TypeScript,
+Keep the accepted [stack](techstack.md): React, TypeScript,
 Vite, Mantine, TanStack Query/Router and Rust static same-origin delivery.
 The user accepted retaining this stack; no replacement framework is needed.
 Atlas is a visual/research reference, not product authority.
@@ -180,9 +180,9 @@ web/public/{fonts,licenses}/
 Use Mantine `createTheme`, provider CSS-variable resolver and shared component
 extensions. Force light mode; do not scatter colors/radii/fonts through TSX or
 target generated Mantine class names. Buttons, inputs, selects, menus, dialogs,
-drawers, tabs and tables share defaults. The implemented [theme](../../../web/src/design/theme.ts),
-[tokens](../../../web/src/design/tokens.ts) and development-only
-[component entry](../../../web/design.html) replace the former thin teal/Inter theme.
+drawers, tabs and tables share defaults. The implemented [theme](../../web/src/design/theme.ts),
+[tokens](../../web/src/design/tokens.ts) and development-only
+[component entry](../../web/design.html) replace the former thin teal/Inter theme.
 The [dated asset evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md)
 records actual fonts, licenses, SVGs and validation limits.
 
@@ -262,7 +262,7 @@ Mockup review alone is not functional, runtime, or accessibility acceptance.
 
 ## Approved management layout — 2026-10-05
 
-The [accepted management amendment](../../contracts/desktop-experience.md#approved-management-concepts--2026-10-05)
+The [accepted management amendment](../contracts/desktop-experience.md#approved-management-concepts--2026-10-05)
 and retained six-image concept set guide Connections, setup, global Connectors,
 Privacy, AI permissions and Agents. Use the existing serif headings, cream surfaces,
 ink actions, sage selections and shared icons. Reuse semantic tokens in
@@ -287,5 +287,5 @@ matching the six final approved PNGs. Measure composition at 1586 × 992 and
 verify practical desktop widths. Keep the original brand and true inventory,
 but reproduce header alignment, typography hierarchy, icon weights, compact
 fields and card grouping. Prior structural acceptance does not establish visual
-fidelity. The [follow-up pack](../execution/archive/desktop-management-vision-fidelity.md)
+fidelity. The [follow-up pack](../roadmap/execution/archive/desktop-management-vision-fidelity.md)
 requires independent inspection of fresh actual captures and fixes.

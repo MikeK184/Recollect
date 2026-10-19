@@ -9,7 +9,7 @@ documentation maintenance has its own delivery record.
 - [Active packs](execution/active/README.md) specify unfinished acceptance.
 - [Execution lifecycle](execution/README.md) governs scoped implementation.
 - [Archived packs](execution/archive/README.md) retain delivered scope and proof.
-- [Desktop design system](desktop-experience/design-system.md) governs the
+- [Desktop design system](../foundation/design-system.md) governs the
   current light desktop presentation; [desktop operation](../runbooks/desktop-experience.md)
   describes the implemented navigation.
 

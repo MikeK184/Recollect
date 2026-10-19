@@ -13,7 +13,7 @@ Work type: product
 ## Governing Sources
 
 - [Desktop contract](../../../contracts/desktop-experience.md) (amended 2026-10-03: visual language and motion section)
-- [Design system document](../../desktop-experience/design-system.md) (updated by this pack)
+- [Design system document](../../../foundation/design-system.md) (updated by this pack)
 - [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (warm-dark token reference: base #1a1916 / cards #252320, per-category accents with low-alpha tints)
 - [Owning epic](../../epics/desktop-visual-experience.md)
 
@@ -74,7 +74,7 @@ Work type: product
   - Deviations, recorded: violet secondary brightened `#8b5cf6` → `#9b7ff5` so badge text on its tint meets WCAG AA (4.82:1 vs 3.54:1); category hues chosen where the pack left them open — source = primary amber `#f97316`, graph-node = green `#4ade80`, tool-call = pink `#f472b6`; brand SVG recolor (allowed by scope: "adjust if invisible on dark"); `check-design.mjs` needed no change (it asserts structure — shared colors/fonts, four pinned fonts + licenses, self-contained SVGs — not specific values).
 - Not shipped: Nothing in scope. Pipeline view, terminal cards and ambient mode remain later slices per the epic; mobile layout work is out of scope.
 - New blockers: None.
-- Docs updated: `docs/roadmap/desktop-experience/design-system.md` — warm dark palette section (canvas/surfaces/ink/borders/accent values), category accent table with tint alphas, motion system section (durations, easings, stagger, primitive classes, reduced-motion rule), and refreshed contrast ratios.
+- Docs updated: `docs/foundation/design-system.md` — warm dark palette section (canvas/surfaces/ink/borders/accent values), category accent table with tint alphas, motion system section (durations, easings, stagger, primitive classes, reduced-motion rule), and refreshed contrast ratios.
 - Validation:
   - `cd web && npm run typecheck` — PASS (includes the design check).
   - `./scripts/validate.sh` — PASS.

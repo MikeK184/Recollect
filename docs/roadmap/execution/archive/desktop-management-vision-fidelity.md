@@ -15,7 +15,7 @@ Work type: product
 ## Governing Sources
 
 - [Desktop contract](../../../contracts/desktop-experience.md)
-- [Design system](../../desktop-experience/design-system.md)
+- [Design system](../../../foundation/design-system.md)
 - [Catalogue contract](../../../contracts/mcp-catalogue-and-profiles.md)
 - [Runtime credentials](../../../contracts/mcp-runtime-and-credentials.md)
 - [Retention](../../../contracts/memory-retention-and-erasure.md)
