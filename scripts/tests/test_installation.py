@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import ssl
+import shutil
 import subprocess
 import unittest
 import uuid
@@ -87,6 +88,25 @@ class InstallationProof(unittest.TestCase):
                 self.assertFalse(any(value in serialized for value in services["api"]["environment"].values()
                                      if value and (len(value) > 20 and value not in (saved["origin"], "/run/recollect/mcp-bindings.json"))),
                                  "Configuration summary must not contain runtime values")
+
+    def test_text_model_has_no_default_and_is_written_only_when_explicitly_given(self):
+        def runtime(args):
+            self.initialize(args)
+            path = install.directory(args.name)
+            self.addCleanup(shutil.rmtree, path, True)
+            return (path / "runtime.env").read_text()
+        unset = runtime(self.args("personal", "-nomodel"))
+        self.assertNotIn("RECOLLECT_TEXT_MODEL", unset)
+        self.assertNotIn("gpt-5.6-luna", unset)
+        self.assertIn("RECOLLECT_EMBEDDING_MODEL='text-embedding-3-large'", unset)
+        args = self.args("personal", "-model")
+        args.text_model = "gpt-4.1-mini"
+        self.assertIn("RECOLLECT_TEXT_MODEL='gpt-4.1-mini'", runtime(args))
+        invalid = self.args("personal", "-badmodel")
+        invalid.text_model = "bad model;rm"
+        with self.assertRaisesRegex(ValueError, "text model name"):
+            self.initialize(invalid)
+        self.assertFalse(install.directory(invalid.name).exists())
 
     def test_conflicts_partial_state_and_administrative_environment_are_explicit(self):
         args = self.args("personal", "-bad")
