@@ -156,7 +156,7 @@ pub async fn inspect_http_metadata_with_headers(
             .max_concurrent_requests(1)
             .control_request_timeout(Duration::from_secs(2));
         config.retry_config = Arc::new(NeverRetry::default());
-        let transport = StreamableHttpClientTransport::with_client(BoundedHttp(http), config);
+        let transport = StreamableHttpClientTransport::with_client(BoundedHttp(http, None), config);
         let mut service = ()
             .serve_with_lifecycle(
                 transport,

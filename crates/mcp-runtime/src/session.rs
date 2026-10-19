@@ -202,8 +202,10 @@ impl Connected {
                             .map_err(|_| RuntimeError("credential_destination_invalid"))?,
                     );
                 }
-                let transport =
-                    StreamableHttpClientTransport::with_client(BoundedHttp(http), config);
+                let transport = StreamableHttpClientTransport::with_client(
+                    BoundedHttp(http, Some(credentials.clone())),
+                    config,
+                );
                 handler.serve_with_lifecycle(transport, lifecycle).await
             }
             _ => return Err(RuntimeError("provider_transport_unsupported")),

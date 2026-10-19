@@ -5,10 +5,9 @@ use std::{
     future::Future,
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, Weak,
         atomic::{AtomicBool, Ordering},
     },
-    time::{Duration, Instant, SystemTime},
 };
 use tokio::{io::AsyncReadExt, sync::Mutex};
 use uuid::Uuid;
@@ -102,6 +101,12 @@ pub struct ResolvedCredentials {
     pub(crate) environment: BTreeMap<String, String>,
     pub(crate) headers: BTreeMap<String, String>,
     pub(crate) secrets: Vec<String>,
+    /// The resolver cache entry this resolution may be dropped from.
+    origin: Option<Origin>,
+}
+struct Origin {
+    cache: Weak<Cache>,
+    key: Key,
 }
 
 impl ResolvedCredentials {
@@ -113,7 +118,26 @@ impl ResolvedCredentials {
             environment: BTreeMap::new(),
             headers: BTreeMap::new(),
             secrets: vec![],
+            origin: None,
         })
+    }
+    /// An upstream refused these credentials (HTTP 401 or 403). Drop this
+    /// connection's cached resolution so the next operation resolves again and
+    /// gets a fresh generation, even when the stored value has not changed, and
+    /// no running instance keeps serving a refused credential. The call that met
+    /// the rejection is not retried.
+    pub(crate) async fn rejected(&self) {
+        let Some(origin) = &self.origin else { return };
+        let Some(cache) = origin.cache.upgrade() else {
+            return;
+        };
+        let mut cache = cache.lock().await;
+        if cache
+            .get(&origin.key)
+            .is_some_and(|current| current.generation == self.generation)
+        {
+            cache.remove(&origin.key);
+        }
     }
     pub fn sanitize(&self, value: &serde_json::Value) -> serde_json::Value {
         crate::sanitize(value, &self.secrets)
@@ -174,53 +198,27 @@ impl Drop for CredentialOperation {
     }
 }
 type Key = (Uuid, String, String);
-/// A static resolution is reused while the bindings file is unchanged, so a
-/// managed call does not pay a keychain or local-file round trip. The age bound
-/// still picks up a rotated secret whose binding did not change. Bindings with a
-/// Vault reference are never reused this way: Vault is the authority for its
-/// values, and an outage must fail rather than serve a stale one.
-const STATIC_REUSE: Duration = Duration::from_secs(60);
-#[derive(Clone, PartialEq)]
-struct Fingerprint(Option<SystemTime>, u64);
-struct Cached {
-    fingerprint: Option<Fingerprint>,
-    /// Local secret files the resolution read; a hit is served only while each
-    /// is still a private, owner-held regular file (the same gate as reading).
-    local_files: Vec<PathBuf>,
-    resolved_at: Instant,
-    credentials: Arc<ResolvedCredentials>,
-}
-/// Cheap re-check of the file gate without reading: a key file that was
-/// loosened or replaced by a symlink is refused on the next call, not after
-/// the reuse window.
-fn local_files_private(paths: &[PathBuf]) -> bool {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        paths.iter().all(|path| {
-            std::fs::symlink_metadata(path).is_ok_and(|m| {
-                m.is_file()
-                    && m.mode() & 0o077 == 0
-                    && m.uid() == nix::unistd::Uid::effective().as_raw()
-            })
-        })
-    }
-    #[cfg(not(unix))]
-    paths.is_empty()
-}
+type Cache = Mutex<BTreeMap<Key, Arc<ResolvedCredentials>>>;
+/// Every operation resolves each secret again: environment values cannot change
+/// without a restart, OS-store lookups take milliseconds, local reference files
+/// microseconds, and Vault is never cached. The cache holds only the latest
+/// resolution of each connection so that an unchanged value returns the same
+/// object (and generation) after the read; a running instance is then not
+/// restarted for nothing, while a rotated value yields a fresh generation.
 pub struct CredentialResolver {
     path: Option<PathBuf>,
-    cache: Mutex<BTreeMap<Key, Cached>>,
+    cache: Arc<Cache>,
 }
 impl CredentialResolver {
     pub fn new(path: Option<PathBuf>) -> Self {
         Self {
             path,
-            cache: Mutex::new(BTreeMap::new()),
+            cache: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
-    /// Forget cached static resolutions so the next resolve reads every secret
-    /// source again, for example straight after a rotation.
+    /// Forget the cached resolutions so the next resolve returns a fresh
+    /// generation even for unchanged values. Rotation does not need this: every
+    /// resolve already reads each secret source.
     pub async fn invalidate(&self) {
         self.cache.lock().await.clear();
     }
@@ -252,22 +250,7 @@ impl CredentialResolver {
             .path
             .as_ref()
             .ok_or(RuntimeError("credential_binding_missing"))?;
-        let metadata = tokio::fs::metadata(path)
-            .await
-            .map_err(|_| RuntimeError("credential_binding_unavailable"))?;
-        if !metadata.is_file() {
-            return Err(RuntimeError("credential_binding_invalid"));
-        }
-        let fingerprint = Fingerprint(metadata.modified().ok(), metadata.len());
         let key = (connection, alias.to_owned(), runner.to_owned());
-        if let Some(cached) = self.cache.lock().await.get(&key)
-            && cached.fingerprint.as_ref() == Some(&fingerprint)
-            && cached.resolved_at.elapsed() < STATIC_REUSE
-            && cached.credentials.reusable()
-            && local_files_private(&cached.local_files)
-        {
-            return Ok(cached.credentials.clone());
-        }
         let file = tokio::fs::File::open(path)
             .await
             .map_err(|_| RuntimeError("credential_binding_unavailable"))?;
@@ -302,15 +285,11 @@ impl CredentialResolver {
             return Err(RuntimeError("credential_binding_invalid"));
         }
         let mut sources = BTreeSet::new();
-        let mut local_files = BTreeSet::new();
         for reference in binding
             .environment
             .values()
             .chain(binding.headers.values().map(|h| &h.source))
         {
-            if let SecretReference::LocalFile { path, .. } = reference {
-                local_files.insert(path.clone());
-            }
             if let SecretReference::Vault { source, field } = reference {
                 if source.is_empty()
                     || source.len() > 120
@@ -326,7 +305,6 @@ impl CredentialResolver {
         if sources.len() > 8 {
             return Err(RuntimeError("credential_binding_invalid"));
         }
-        let vault_sources = sources.len();
         let mut acquired = BTreeMap::new();
         for name in sources {
             let source = file
@@ -343,6 +321,10 @@ impl CredentialResolver {
             environment: BTreeMap::new(),
             headers: BTreeMap::new(),
             secrets: vec![],
+            origin: Some(Origin {
+                cache: Arc::downgrade(&self.cache),
+                key: key.clone(),
+            }),
         };
         for (name, reference) in binding.environment {
             if !environment_destination(&name) {
@@ -375,30 +357,20 @@ impl CredentialResolver {
         if !resolved.leases.is_empty() {
             return Ok(Arc::new(resolved));
         }
-        let reusable = vault_sources == 0;
+        // The same values keep the same object, so a running compatible
+        // instance is not restarted; a rotated value gets a fresh generation.
+        // An upstream-rejected resolution is dropped by `rejected`, so it is
+        // never found here and the unchanged value still gets a fresh one.
         let mut cache = self.cache.lock().await;
-        if let Some(old) = cache.get_mut(&key) {
-            if old.credentials.environment == resolved.environment
-                && old.credentials.headers == resolved.headers
-            {
-                old.fingerprint = reusable.then_some(fingerprint);
-                old.local_files = local_files.iter().cloned().collect();
-                old.resolved_at = Instant::now();
-                return Ok(old.credentials.clone());
+        if let Some(old) = cache.get(&key) {
+            if old.environment == resolved.environment && old.headers == resolved.headers {
+                return Ok(old.clone());
             }
         } else if cache.len() >= 1000 {
             return Err(RuntimeError("credential_cache_capacity"));
         }
         let resolved = Arc::new(resolved);
-        cache.insert(
-            key,
-            Cached {
-                fingerprint: reusable.then_some(fingerprint),
-                local_files: local_files.into_iter().collect(),
-                resolved_at: Instant::now(),
-                credentials: resolved.clone(),
-            },
-        );
+        cache.insert(key, resolved.clone());
         Ok(resolved)
     }
 }
@@ -538,66 +510,173 @@ async fn resolve(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
+    /// A private local-file binding whose value the test can rotate.
+    #[cfg(unix)]
+    struct Fixture {
+        directory: std::path::PathBuf,
+        values: std::path::PathBuf,
+        bindings: std::path::PathBuf,
+        connection: Uuid,
+        secret: Uuid,
+        resolver: CredentialResolver,
+    }
+    #[cfg(unix)]
+    fn write_private(path: &std::path::Path, body: serde_json::Value) {
+        std::fs::write(path, serde_json::to_vec(&body).unwrap()).unwrap();
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    #[cfg(unix)]
+    impl Fixture {
+        fn new(first: &str) -> Self {
+            let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../.cache/mcp-credential-cache-proof")
+                .join(Uuid::new_v4().to_string());
+            std::fs::create_dir_all(&directory).unwrap();
+            let (connection, secret) = (Uuid::new_v4(), Uuid::new_v4());
+            let values = directory.join("values.json");
+            write_private(&values, serde_json::json!({ secret.to_string(): first }));
+            let bindings = directory.join("bindings.json");
+            write_private(
+                &bindings,
+                serde_json::json!({"bindings":[{"connection_id":connection,"alias":"fixture",
+                    "runner_reference":"central","environment":{"FIXTURE_CREDENTIAL":
+                    {"provider":"local_file","path":values,"key":secret}}}]}),
+            );
+            let resolver = CredentialResolver::new(Some(bindings.clone()));
+            Self {
+                directory,
+                values,
+                bindings,
+                connection,
+                secret,
+                resolver,
+            }
+        }
+        fn rotate(&self, value: &str) {
+            write_private(
+                &self.values,
+                serde_json::json!({ self.secret.to_string(): value }),
+            );
+        }
+        async fn resolve(&self) -> Result<Arc<ResolvedCredentials>> {
+            self.resolver
+                .resolve(self.connection, Some("fixture"), "central")
+                .await
+        }
+    }
+    #[cfg(unix)]
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.directory);
+        }
+    }
+
     #[cfg(unix)]
     #[tokio::test]
-    async fn unchanged_static_bindings_do_not_touch_the_secret_source_again() {
-        use super::*;
-        use std::os::unix::fs::PermissionsExt;
-        let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../.cache/mcp-credential-cache-proof")
-            .join(Uuid::new_v4().to_string());
-        std::fs::create_dir_all(&directory).unwrap();
-        let (connection, secret) = (Uuid::new_v4(), Uuid::new_v4());
-        let values = directory.join("values.json");
-        let write_private = |path: &std::path::Path, body: serde_json::Value| {
-            std::fs::write(path, serde_json::to_vec(&body).unwrap()).unwrap();
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
-        };
-        write_private(
-            &values,
-            serde_json::json!({ secret.to_string(): "first-secret" }),
-        );
-        let bindings = directory.join("bindings.json");
-        write_private(
-            &bindings,
-            serde_json::json!({"bindings":[{"connection_id":connection,"alias":"fixture",
-                "runner_reference":"central","environment":{"FIXTURE_CREDENTIAL":
-                {"provider":"local_file","path":values,"key":secret}}}]}),
-        );
-        let resolver = CredentialResolver::new(Some(bindings.clone()));
-        let first = resolver
-            .resolve(connection, Some("fixture"), "central")
-            .await
-            .unwrap();
-        // Changing the source behind an unchanged bindings file proves the second
-        // resolve never read it: only the first value can come back.
-        write_private(
-            &values,
-            serde_json::json!({ secret.to_string(): "second-secret" }),
-        );
-        let second = resolver
-            .resolve(connection, Some("fixture"), "central")
-            .await
-            .unwrap();
-        assert!(Arc::ptr_eq(&first, &second));
-        assert_eq!(second.environment["FIXTURE_CREDENTIAL"], "first-secret");
-        resolver.invalidate().await;
-        let third = resolver
-            .resolve(connection, Some("fixture"), "central")
-            .await
-            .unwrap();
-        assert_eq!(third.environment["FIXTURE_CREDENTIAL"], "second-secret");
-        assert_ne!(first.generation, third.generation);
-        // A changed bindings file is never served from the cache.
-        write_private(&bindings, serde_json::json!({"bindings":[]}));
+    async fn rotated_values_are_resolved_on_the_next_call_and_unchanged_ones_keep_their_object() {
+        let fixture = Fixture::new("first-secret");
+        let first = fixture.resolve().await.unwrap();
+        assert_eq!(first.environment["FIXTURE_CREDENTIAL"], "first-secret");
+        // Unchanged values return the same object and generation, so a running
+        // compatible instance is not restarted for nothing.
+        let same = fixture.resolve().await.unwrap();
+        assert!(Arc::ptr_eq(&first, &same));
+        // A rotation behind an unchanged bindings file is seen by the very next
+        // call, with a fresh generation and no invalidation. The old object
+        // keeps its own values for operations still using it.
+        fixture.rotate("second-secret");
+        let second = fixture.resolve().await.unwrap();
+        assert!(!Arc::ptr_eq(&first, &second));
+        assert_eq!(second.environment["FIXTURE_CREDENTIAL"], "second-secret");
+        assert_ne!(first.generation, second.generation);
+        assert_eq!(first.environment["FIXTURE_CREDENTIAL"], "first-secret");
+        assert!(Arc::ptr_eq(&second, &fixture.resolve().await.unwrap()));
+        // A loosened or replaced key file is refused on the next call.
+        std::fs::set_permissions(&fixture.values, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(fixture.resolve().await.is_err());
+        std::fs::set_permissions(&fixture.values, std::fs::Permissions::from_mode(0o600)).unwrap();
+        assert!(fixture.resolve().await.is_ok());
+        // A changed bindings file is never served from the cache either.
+        write_private(&fixture.bindings, serde_json::json!({"bindings":[]}));
         assert!(matches!(
-            resolver
-                .resolve(connection, Some("fixture"), "central")
-                .await,
+            fixture.resolve().await,
             Err(RuntimeError("credential_binding_missing"))
         ));
-        std::fs::remove_dir_all(directory).unwrap();
     }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn an_upstream_rejection_drops_only_that_resolution_from_the_cache() {
+        let fixture = Fixture::new("first-secret");
+        let first = fixture.resolve().await.unwrap();
+        first.rejected().await;
+        assert!(fixture.resolver.cache.lock().await.is_empty());
+        // The value is unchanged but the next operation still gets a fresh
+        // generation, so no running instance keeps a refused credential.
+        let second = fixture.resolve().await.unwrap();
+        assert!(!Arc::ptr_eq(&first, &second));
+        assert_ne!(first.generation, second.generation);
+        // A late rejection of the superseded resolution leaves the new entry.
+        first.rejected().await;
+        assert!(Arc::ptr_eq(&second, &fixture.resolve().await.unwrap()));
+        // Resolutions that never came from a resolver have nothing to drop.
+        ResolvedCredentials::anonymous().rejected().await;
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn an_upstream_401_or_403_drops_the_entry_and_is_not_retried() {
+        use rmcp::transport::streamable_http_client::StreamableHttpClient;
+        use std::sync::atomic::AtomicUsize;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let fixture = Fixture::new("first-secret");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let served = requests.clone();
+        let server = tokio::spawn(async move {
+            for status in ["401 Unauthorized", "403 Forbidden"] {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut seen = vec![0u8; 8192];
+                let _ = stream.read(&mut seen).await.unwrap();
+                served.fetch_add(1, Ordering::SeqCst);
+                let reply =
+                    format!("HTTP/1.1 {status}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n");
+                stream.write_all(reply.as_bytes()).await.unwrap();
+            }
+        });
+        let ping: rmcp::model::ClientJsonRpcMessage =
+            serde_json::from_value(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"ping"}))
+                .unwrap();
+        for expected in 1..=2 {
+            let credentials = fixture.resolve().await.unwrap();
+            let http = crate::http::BoundedHttp(reqwest::Client::new(), Some(credentials.clone()));
+            let Err(error) = http
+                .post_message(
+                    format!("http://{address}/mcp").into(),
+                    ping.clone(),
+                    None,
+                    None,
+                    Default::default(),
+                )
+                .await
+            else {
+                panic!("an upstream rejection fails the call");
+            };
+            assert!(
+                error.to_string().contains("provider_auth_rejected"),
+                "{error}"
+            );
+            assert_eq!(requests.load(Ordering::SeqCst), expected, "no retry");
+            assert!(fixture.resolver.cache.lock().await.is_empty());
+        }
+        server.await.unwrap();
+    }
+
     #[test]
     fn credential_destinations_cannot_change_loading_or_http_routing() {
         for name in [
