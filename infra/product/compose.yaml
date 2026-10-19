@@ -23,8 +23,7 @@ x-app: &app
 
 services:
   postgres:
-    # pgvector/pgvector:pg17
-    image: pgvector/pgvector@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
     healthcheck:
       test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -U recollect_admin -d recollect -Atqc 'SELECT 1'"]
       interval: 5s
@@ -37,8 +36,7 @@ services:
     stop_grace_period: 90s
     logging: *logging
   neo4j:
-    # neo4j:2026.08
-    image: neo4j@sha256:d8f4c156caa3af76499134947deb11d13042e471d9733060449f2a01eb7a248e
+    image: neo4j:2026.08@sha256:d8f4c156caa3af76499134947deb11d13042e471d9733060449f2a01eb7a248e
     environment:
       NEO4J_PLUGINS: '["graph-data-science"]'
       NEO4J_dbms_security_procedures_unrestricted: "gds.*"

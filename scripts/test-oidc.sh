@@ -16,7 +16,7 @@ cleanup() {
   if [[ -n "$RECOLLECT_DEX_ID" ]]; then ./scripts/docker.sh rm -f "$RECOLLECT_DEX_ID" >/dev/null; fi
 }
 trap cleanup EXIT
-RECOLLECT_DEX_ID="$(./scripts/docker.sh run -d --rm --name "$RECOLLECT_DEX_NAME" --label recollect.test=oidc --memory=256m -p 127.0.0.1:5556:5556 -e DEX_CLIENT_SECRET -v "$PWD/infra/dex-test.yaml:/etc/dex/config.yaml:ro" ghcr.io/dexidp/dex:v2.45.1 dex serve /etc/dex/config.yaml)"
+RECOLLECT_DEX_ID="$(./scripts/docker.sh run -d --rm --name "$RECOLLECT_DEX_NAME" --label recollect.test=oidc --memory=256m -p 127.0.0.1:5556:5556 -e DEX_CLIENT_SECRET -v "$PWD/infra/dex-test.yaml:/etc/dex/config.yaml:ro" ghcr.io/dexidp/dex:v2.45.1@sha256:8499afd690c437f52301efd2b05b2455da5bd2dfc20332cd697dc9937f808462 dex serve /etc/dex/config.yaml)"
 for attempt in {1..100}; do
   if curl -fsS "$RECOLLECT_OIDC_ISSUER/.well-known/openid-configuration" >/dev/null 2>&1; then break; fi
   sleep 0.1

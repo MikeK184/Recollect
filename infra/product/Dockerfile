@@ -1,5 +1,4 @@
-# rust:1.94-slim-bookworm
-FROM rust@sha256:cf9dd0ec73e75f827fe59123fff9dc65af1a1c8363c3c31ee8d7f8ad0b6a5fb2 AS server
+FROM rust:1.94-slim-bookworm@sha256:cf9dd0ec73e75f827fe59123fff9dc65af1a1c8363c3c31ee8d7f8ad0b6a5fb2 AS server
 WORKDIR /build
 ARG RECOLLECT_BUILD_REVISION=development
 ARG RECOLLECT_BUILD_TIME=unknown
@@ -10,8 +9,7 @@ COPY crates ./crates
 RUN cargo build --locked --release -p recollect-server \
     && target/release/recollect-server openapi > /build/openapi.json
 
-# node:22-bookworm-slim
-FROM node@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS web
+FROM node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS web
 WORKDIR /build/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -19,8 +17,7 @@ COPY web/ ./
 COPY --from=server /build/openapi.json /build/.cache/openapi.json
 RUN npm run generate && npm run build
 
-# debian:bookworm-slim
-FROM debian@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 ARG RECOLLECT_BUILD_REVISION=development
 ARG RECOLLECT_BUILD_TIME=unknown
 LABEL org.opencontainers.image.revision=$RECOLLECT_BUILD_REVISION org.opencontainers.image.created=$RECOLLECT_BUILD_TIME

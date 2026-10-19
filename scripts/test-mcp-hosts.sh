@@ -49,7 +49,7 @@ trap cleanup EXIT
 ./scripts/docker.sh run -d --name "$fixture-db" --network "$fixture" --network-alias fixture-db \
   --label io.recollect.owner=mcp-host-test --env-file "$fixture_env" \
   -v "$PWD/infra/postgres-init.sh:/docker-entrypoint-initdb.d/recollect.sh:ro" \
-  pgvector/pgvector:pg17 > /dev/null
+  pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d > /dev/null
 for attempt in {1..60}; do
   if ./scripts/docker.sh exec "$fixture-db" pg_isready -U recollect_admin -d recollect > /dev/null 2>&1; then break; fi
   sleep 1
@@ -66,7 +66,7 @@ done
   -e NEO4J_server_memory_heap_initial__size=512m \
   -e NEO4J_server_memory_heap_max__size=1G \
   -e NEO4J_server_memory_pagecache_size=512m \
-  neo4j:2026.08 > /dev/null
+  neo4j:2026.08@sha256:d8f4c156caa3af76499134947deb11d13042e471d9733060449f2a01eb7a248e > /dev/null
 for attempt in {1..180}; do
   if ./scripts/docker.sh exec "$fixture-graph" wget -q --spider http://localhost:7474 > /dev/null 2>&1; then break; fi
   if [[ "$(./scripts/docker.sh inspect --format '{{.State.Running}}' "$fixture-graph")" != true ]]; then

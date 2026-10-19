@@ -14,5 +14,5 @@ mkdir -p "$fixture_dir/cargo" "$fixture_dir/target"
   -w /workspace \
   -e CARGO_HOME=/fixture/cargo -e CARGO_TARGET_DIR=/fixture/target \
   -e CARGO_BUILD_JOBS=3 -e CARGO_INCREMENTAL=0 -e CARGO_PROFILE_DEV_DEBUG=0 \
-  rust:1.94-slim-bookworm \
+  rust:1.94-slim-bookworm@sha256:cf9dd0ec73e75f827fe59123fff9dc65af1a1c8363c3c31ee8d7f8ad0b6a5fb2 \
   sh -c 'cargo build --locked -p recollect-agent --bin recollect-plugin && cp /fixture/target/debug/recollect-plugin /fixture/recollect-plugin'
