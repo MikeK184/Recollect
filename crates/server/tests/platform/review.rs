@@ -24,6 +24,39 @@ async fn reviewed(h: &Harness, base: &str, login: &Login, r: &Value, input: Valu
     ok(h, "POST", &format!("{}/review", url(base, r)), login, input).await["claims"][0]["revision"]
         .clone()
 }
+/// Fixture verdict standing in for the support-audit worker: a succeeded
+/// `source-support-3` assessment under the Brain's policy head, so an
+/// unreviewed proposal becomes usable knowledge without review or a model call.
+pub(super) async fn supported(h: &Harness, base: &str, owner: &Login, r: &Value) -> Value {
+    let brain: Uuid = base.rsplit('/').next().unwrap().parse().unwrap();
+    let head: Option<Uuid> =
+        sqlx::query_scalar("SELECT policy_id FROM model_policy_heads WHERE brain_id=$1")
+            .bind(brain)
+            .fetch_optional(&h.admin)
+            .await
+            .unwrap();
+    if head.is_none() {
+        let settings = ok(
+            h,
+            "GET",
+            &format!("{base}/models/policy"),
+            owner,
+            Value::Null,
+        )
+        .await;
+        ok(h, "PUT", &format!("{base}/models/policy"), owner,
+            json!({"base_change":settings["current"]["change_id"],"policy":settings["current"]["policy"]})).await;
+    }
+    let revision: Uuid = r["id"].as_str().unwrap().parse().unwrap();
+    sqlx::query("INSERT INTO memory_support_assessments(id,brain_id,revision_id,policy_id,verifier_version,actor_id,state,disposition,reason,finished_at)
+        SELECT gen_random_uuid(),p.brain_id,$2,p.policy_id,'source-support-3',(SELECT id FROM accounts WHERE installation_owner),'succeeded','supported','Synthetic fixture verdict.',clock_timestamp()
+        FROM model_policy_heads p WHERE p.brain_id=$1")
+        .bind(brain).bind(revision).execute(&h.admin).await.unwrap();
+    r.clone()
+}
+pub(super) async fn accepted(h: &Harness, base: &str, login: &Login, r: &Value) -> Value {
+    reviewed(h, base, login, r, action(r, "accept")).await
+}
 async fn eligibility(h: &Harness, base: &str, login: &Login, r: &Value) -> Value {
     ok(h, "GET", &url(base, r), login, Value::Null).await["selected"]["eligibility"].clone()
 }
@@ -389,6 +422,9 @@ async fn review_conflict_dispositions_and_atomic_stale_resolution() {
                 )
                 .await,
             );
+        }
+        for c in &claims {
+            supported(&h, &base, &_owner, c).await;
         }
         let e = eligibility(&h, &base, &writer, &claims[0]).await;
         assert_eq!(e["conflicting_claim_ids"].as_array().unwrap().len(), 2);

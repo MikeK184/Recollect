@@ -333,18 +333,19 @@ async fn schedule_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<us
         return Ok(0);
     }
     let prepare_until = tokio::time::Instant::now() + Duration::from_secs(5);
-    let prepared = tokio::time::timeout_at(prepare_until, prepare(state, brain, actor, None))
-        .await
-        .map_err(|_| {
-            failure(
-                "analytics_preparation_timeout",
-                "Organization preparation exceeded its bounded window.",
-            )
-        })?;
+    let prepared =
+        tokio::time::timeout_at(prepare_until, Box::pin(prepare(state, brain, actor, None)))
+            .await
+            .map_err(|_| {
+                failure(
+                    "analytics_preparation_timeout",
+                    "Organization preparation exceeded its bounded window.",
+                )
+            })?;
     let p = match prepared {
         Ok(p) => p,
         Err(e) if e.1 == "organization_vector_corrupt" => {
-            reconcile_without_machine(
+            Box::pin(reconcile_without_machine(
                 state,
                 brain,
                 actor,
@@ -352,14 +353,14 @@ async fn schedule_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<us
                 prepare_until,
                 "failed",
                 Some("corrupt"),
-            )
+            ))
             .await?;
             return Err(e);
         }
         Err(e) => return Err(e),
     };
     if p.recipe.is_none() || p.projection.nodes.is_empty() {
-        return reconcile_without_machine(
+        return Box::pin(reconcile_without_machine(
             state,
             brain,
             actor,
@@ -371,10 +372,10 @@ async fn schedule_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<us
                 "empty"
             },
             p.vector_coverage.as_deref(),
-        )
+        ))
         .await;
     }
-    tokio::time::timeout(Duration::from_millis(1500),async {
+    tokio::time::timeout(Duration::from_millis(1500),Box::pin(async {
     let mut tx = db::device_tx(&state.pool, actor, None).await?;
     db::require_writer(&mut tx, brain).await?;
     sqlx::query("SET LOCAL statement_timeout='1000ms'")
@@ -426,7 +427,7 @@ async fn schedule_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<us
     .await?;
     tx.commit().await?;
     Ok(1)
-    }).await.map_err(|_|failure("analytics_publication_timeout","Organization scheduling exceeded its bounded writer window."))?
+    })).await.map_err(|_|failure("analytics_publication_timeout","Organization scheduling exceeded its bounded writer window."))?
 }
 
 async fn reconcile_without_machine(
@@ -438,28 +439,34 @@ async fn reconcile_without_machine(
     status: &str,
     vector_coverage: Option<&str>,
 ) -> Result<usize> {
-    let auth = intent_prepare(until, actor_auth(state, actor, None)).await?;
-    let (epoch,current_revision)=intent_prepare(until,async {
+    let auth = intent_prepare(until, Box::pin(actor_auth(state, actor, None))).await?;
+    let (epoch,current_revision)=intent_prepare(until,Box::pin(async {
         let mut read = db::preparation_tx(&state.pool, actor, None).await?;
         let snapshot:(i64,i64)=sqlx::query_as("SELECT b.analytics_epoch,o.revision FROM brains b JOIN knowledge_organization_outbox o ON o.brain_id=b.id WHERE b.id=$1").bind(brain).fetch_one(&mut *read).await?;
         read.commit().await?;
         Ok(snapshot)
-    }).await?;
+    })).await?;
     if revision != Some(current_revision) {
         return Err(changed());
     }
     let saved = intent_prepare(
         until,
-        manual_intent::prepare_saved(state, &auth, brain, epoch),
+        Box::pin(manual_intent::prepare_saved(state, &auth, brain, epoch)),
     )
     .await?;
     let changed_topics = !saved.topic_ids().is_empty();
     let manual = intent_prepare(
         until,
-        manual_intent::prepare_publication(state, &auth, brain, saved, &[]),
+        Box::pin(manual_intent::prepare_publication(
+            state,
+            &auth,
+            brain,
+            saved,
+            &[],
+        )),
     )
     .await?;
-    tokio::time::timeout(Duration::from_millis(1500),async {
+    tokio::time::timeout(Duration::from_millis(1500),Box::pin(async {
         let mut tx=db::device_tx(&state.pool,actor,None).await?;
         db::require_writer(&mut tx,brain).await?;
         sqlx::query("SET LOCAL statement_timeout='750ms'").execute(&mut *tx).await?;
@@ -476,7 +483,7 @@ async fn reconcile_without_machine(
         deadline(&mut tx,manual.deadline()).await?;
         tx.commit().await?;
         Ok(0)
-    }).await.map_err(|_|failure("analytics_publication_timeout","Human organization reconciliation exceeded its bounded writer window."))?
+    })).await.map_err(|_|failure("analytics_publication_timeout","Human organization reconciliation exceeded its bounded writer window."))?
 }
 
 pub(super) async fn schedule(state: &AppState) -> Result<usize> {
@@ -486,7 +493,7 @@ pub(super) async fn schedule(state: &AppState) -> Result<usize> {
             .await?;
     let mut count = 0;
     for (brain, actor) in brains {
-        match schedule_brain(state, brain, actor).await {
+        match Box::pin(schedule_brain(state, brain, actor)).await {
             Ok(n) => count += n,
             Err(e) => tracing::warn!(brain_id=%brain,code=e.1,"Weighted organization is waiting"),
         }
@@ -532,9 +539,9 @@ pub(super) async fn run(
     // Native scores are provisional. The publication implementation rechecks
     // the entire exact cohort, then uses a fresh short authenticated writer.
     if p.features.is_some() {
-        hybrid::publish(state, job, &p, &d, output).await
+        Box::pin(hybrid::publish(state, job, &p, &d, output)).await
     } else {
-        publish(state, job, &p, &d, output).await
+        Box::pin(publish(state, job, &p, &d, output)).await
     }
 }
 
@@ -577,17 +584,22 @@ async fn publish(
     let prepare_until = tokio::time::Instant::now() + Duration::from_secs(5);
     let current = intent_prepare(
         prepare_until,
-        prepare(state, job.brain_id, job.actor_id, job.device_id),
+        Box::pin(prepare(state, job.brain_id, job.actor_id, job.device_id)),
     )
     .await?;
     let auth = intent_prepare(
         prepare_until,
-        actor_auth(state, job.actor_id, job.device_id),
+        Box::pin(actor_auth(state, job.actor_id, job.device_id)),
     )
     .await?;
     let saved = intent_prepare(
         prepare_until,
-        manual_intent::prepare_saved(state, &auth, job.brain_id, p.epoch),
+        Box::pin(manual_intent::prepare_saved(
+            state,
+            &auth,
+            job.brain_id,
+            p.epoch,
+        )),
     )
     .await?;
     if p.gds_version.as_deref() != Some(output.version.as_str()) {
@@ -605,7 +617,7 @@ async fn publish(
     {
         return Err(changed());
     }
-    let (old, old_changes) = intent_prepare(prepare_until, async {
+    let (old, old_changes) = intent_prepare(prepare_until, Box::pin(async {
     let mut read = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
     let rows: Vec<(Uuid,Uuid)>=sqlx::query_as("SELECT DISTINCT t.id,i.source_version_id FROM knowledge_topics t JOIN knowledge_topic_memberships m ON m.topic_id=t.id AND m.brain_id=t.brain_id JOIN knowledge_mapping_inputs i ON i.id=m.input_id AND i.brain_id=m.brain_id WHERE t.brain_id=$1 AND t.kind='community' AND m.input_id=ANY($2) ORDER BY t.id,i.source_version_id")
         .bind(job.brain_id).bind(p.inputs.iter().map(|(i,_)|*i).collect::<Vec<_>>()).fetch_all(&mut *read).await?;
@@ -628,7 +640,7 @@ async fn publish(
     .collect();
     read.commit().await?;
     Ok((old, old_changes))
-    }).await?;
+    })).await?;
     let indices: BTreeMap<_, _> = d
         .nodes
         .iter()
@@ -740,10 +752,16 @@ async fn publish(
     let cohorts: Vec<_> = cohorts.into_values().collect();
     let manual = intent_prepare(
         prepare_until,
-        manual_intent::prepare_publication(state, &auth, job.brain_id, saved, &cohorts),
+        Box::pin(manual_intent::prepare_publication(
+            state,
+            &auth,
+            job.brain_id,
+            saved,
+            &cohorts,
+        )),
     )
     .await?;
-    tokio::time::timeout(Duration::from_millis(1500),async {
+    tokio::time::timeout(Duration::from_millis(1500),Box::pin(async {
     let (mut tx,r,_)=work::ready(state,job).await?;
     sqlx::query("SET LOCAL statement_timeout='1000ms'").execute(&mut *tx).await?;
     sqlx::query("SET LOCAL lock_timeout='250ms'").execute(&mut *tx).await?;
@@ -778,5 +796,5 @@ async fn publish(
     deadline(&mut tx,[p.deadline,p.authority_deadline,manual.deadline(),Some(lease_until)].into_iter().flatten().min()).await?;
     tx.commit().await?;
     Ok(())
-    }).await.map_err(|_|failure("analytics_publication_timeout","Organization publication exceeded its bounded writer window."))?
+    })).await.map_err(|_|failure("analytics_publication_timeout","Organization publication exceeded its bounded writer window."))?
 }

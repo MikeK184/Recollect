@@ -20,7 +20,7 @@ use std::{
 };
 
 fn fixture() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/examples/mcp-fixture")
+    crate::profile_dir().join("examples/mcp-fixture")
 }
 fn execution_manifest() -> McpDefinitionManifest {
     assert!(fixture().is_file(), "Build the mcp-fixture example first");
@@ -739,8 +739,7 @@ async fn local_native(http: bool, private: bool, plugin: bool) {
         }
     }
     let _saved = Forget(slot);
-    let binary =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/recollect-agent");
+    let binary = crate::profile_dir().join("recollect-agent");
     assert!(binary.is_file(), "Build recollect-agent first");
     let mut input = body(&connection, &profile);
     input["arguments"] = json!({"text":"paired native execution"});

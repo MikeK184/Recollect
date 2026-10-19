@@ -274,7 +274,7 @@ async fn claim_manifests_preserve_independent_environment_applicability() {
     let response = restarted
         .oneshot(
             Request::builder()
-                .uri(format!("{base}/claims"))
+                .uri(format!("{base}/claims?mode=history"))
                 .header("cookie", &writer.cookie)
                 .body(Body::empty())
                 .unwrap(),
@@ -377,6 +377,14 @@ async fn claims_temporal_history_eligibility_scope_and_evidence_changes() {
     let detail_url = format!("{url}/{claim}");
     let detail = h.call("GET", &detail_url, Some(&reader), Value::Null).await;
     assert_eq!(detail.0, StatusCode::OK, "{}", detail.1);
+    assert_eq!(detail.1["selected"]["eligibility"]["investigation"], false);
+    assert!(
+        detail.1["selected"]["eligibility"]["reasons"]
+            .to_string()
+            .contains("source_support_not_current")
+    );
+    crate::review::supported(&h, &base, &owner, &first).await;
+    let detail = h.call("GET", &detail_url, Some(&reader), Value::Null).await;
     assert_eq!(detail.1["selected"]["eligibility"]["investigation"], true);
     assert_eq!(
         detail.1["selected"]["eligibility"]["strict_accepted"],
@@ -431,6 +439,7 @@ async fn claims_temporal_history_eligibility_scope_and_evidence_changes() {
             || (b.0 == StatusCode::OK && a.0 == StatusCode::CONFLICT)
     );
     let second = if a.0 == StatusCode::OK { a.1 } else { b.1 };
+    crate::review::supported(&h, &base, &owner, &second).await;
     assert!(
         parse(second["recorded_at"].as_str().unwrap())
             > parse(first["recorded_at"].as_str().unwrap())

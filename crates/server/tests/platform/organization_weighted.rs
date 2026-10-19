@@ -22,7 +22,21 @@ async fn select_recipe_version(h: &Harness, base: &str, version: &str) -> Uuid {
         .unwrap();
     id
 }
-pub(super) async fn mapped(
+/// The long tests below call these helpers many times. Constructing their futures
+/// inside a plain function and returning them boxed keeps each large future out
+/// of the caller's debug-build stack frame (and off its stack), so the test body
+/// fits the default 2 MiB test-thread stack.
+pub(super) fn mapped<'a>(
+    h: &'a Harness,
+    owner: &'a Login,
+    base: &'a str,
+    p: &'a Provider,
+    text: &'a str,
+    other: bool,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Uuid> + 'a>> {
+    Box::pin(mapped_inner(h, owner, base, p, text, other))
+}
+async fn mapped_inner(
     h: &Harness,
     owner: &Login,
     base: &str,
@@ -46,7 +60,13 @@ pub(super) async fn mapped(
     while worker::run_once(&h.state, "heavy").await.unwrap() {}
     source["version"]["id"].as_str().unwrap().parse().unwrap()
 }
-async fn calculate(h: &Harness, brain: Uuid) -> Uuid {
+fn calculate(
+    h: &Harness,
+    brain: Uuid,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Uuid> + '_>> {
+    Box::pin(calculate_inner(h, brain))
+}
+async fn calculate_inner(h: &Harness, brain: Uuid) -> Uuid {
     assert!(analytics::run_once(&h.state).await.unwrap() > 0);
     let report:Uuid=sqlx::query_scalar("SELECT id FROM analytics_reports WHERE brain_id=$1 AND purpose='organization' AND state='queued'")
         .bind(brain).fetch_one(&h.admin).await.unwrap();

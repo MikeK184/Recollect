@@ -42,8 +42,7 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
         }
     }
     let _saved = Forget(slot);
-    let executable =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/recollect-agent");
+    let executable = crate::profile_dir().join("recollect-agent");
     let work = PathBuf::from(&h.state.config.artifact_dir).join("bridge-work");
     tokio::fs::create_dir_all(work.join(".recollect"))
         .await

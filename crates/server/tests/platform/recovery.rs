@@ -206,13 +206,24 @@ pub(crate) fn fixture_script(root: &Path, arguments: &[&str], script: &str) -> V
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
+/// JSON written by `python3 scripts/start-recovery-fixture.py`. ./scripts/test-platform.sh
+/// skips the SFTP cases when it is unset, so only a direct run reaches this panic.
+pub(crate) fn recovery_fixture() -> String {
+    std::env::var("RECOLLECT_TEST_RECOVERY_FIXTURE").expect(
+        "RECOLLECT_TEST_RECOVERY_FIXTURE is not set: start the owned SFTP fixture with \
+         `python3 scripts/start-recovery-fixture.py` and export the printed JSON path \
+         (docs/runbooks/local-development.md), or run ./scripts/test-platform.sh, which \
+         reports these cases as NOT RUN without it",
+    )
+}
+
 pub(crate) fn mirror_fixture(installation: Uuid) -> Value {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
         .parent()
         .unwrap();
-    let fixture = std::env::var("RECOLLECT_TEST_RECOVERY_FIXTURE").unwrap();
+    let fixture = recovery_fixture();
     fixture_script(
         root,
         &[&fixture, &installation.to_string()],
@@ -244,7 +255,7 @@ async fn remote_erasure_failure_denies_locally_and_retries_one_encrypted_entry()
         .unwrap()
         .parent()
         .unwrap();
-    let fixture = std::env::var("RECOLLECT_TEST_RECOVERY_FIXTURE").unwrap();
+    let fixture = recovery_fixture();
     let installation: Uuid = sqlx::query_scalar("SELECT id FROM privacy_installation")
         .fetch_one(&h.admin)
         .await

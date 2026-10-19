@@ -1,0 +1,6 @@
+# Bare `cargo test` runs the deeply nested native-worker futures on 8 MiB test-thread
+# stacks instead of the 2 MiB default (scripts/test-platform.sh sets the same floor).
+# `[env]` never overrides a variable that is already set, so RUST_MIN_STACK=2097152
+# still reproduces the default-stack behaviour.
+[env]
+RUST_MIN_STACK = "8388608"

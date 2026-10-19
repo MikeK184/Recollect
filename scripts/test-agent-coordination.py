@@ -123,7 +123,7 @@ class Fixture:
         self.save()
         docker("run", "-d", "--name", self.state["database"],
                "--label", "io.recollect.owner=" + OWNER, "--env-file", str(envfile),
-               "-p", "127.0.0.1::5432", "-v",
+               "--shm-size=256m", "-p", "127.0.0.1::5432", "-v",
                str(ROOT / "infra/postgres-init.sh") + ":/docker-entrypoint-initdb.d/recollect.sh:ro",
                "pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d")
         port = docker("port", self.state["database"], "5432/tcp").split(":")[-1]

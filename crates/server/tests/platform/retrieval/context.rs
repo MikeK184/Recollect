@@ -40,6 +40,7 @@ async fn recall_context_lineage_preserves_retained_excerpts_all_supports_and_dep
     );
     input["content"]["supports"].as_array_mut().unwrap().push(json!({"kind":"source_version","id":independent["version"]["id"],"line_from":null,"line_to":null}));
     let claim = ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+    super::super::review::supported(&h, &base, &owner, &claim).await;
     processed(&h).await;
     let query = json!({"query":"Lineage","context_bytes":32768,"limit":20});
     let all = recall(&h, &base, &owner, query.clone()).await;

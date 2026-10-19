@@ -575,7 +575,7 @@ async fn capture_admission_replay_original_scope_and_standing_learning() {
             .await
             .map_err(|e| e.1)
             .unwrap(),
-        1
+        2
     );
     model_job(&h).await;
     let revised = runs(&h, &owner, &base).await;
@@ -742,7 +742,7 @@ async fn capture_admission_replay_original_scope_and_standing_learning() {
         h.bearer("POST", &publish_url, &token, input).await.0,
         StatusCode::UNAUTHORIZED
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(p.calls.load(Ordering::SeqCst), 4);
     server.abort();
     h.finish().await;
 }

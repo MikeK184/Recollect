@@ -64,8 +64,8 @@ async fn mcp_plugin_native_capture_and_recall() {
     let endpoint = format!("http://{}", listener.local_addr().unwrap());
     let router = h.router.clone();
     let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let executable = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/debug/recollect-plugin")
+    let executable = crate::profile_dir()
+        .join("recollect-plugin")
         .canonicalize()
         .unwrap();
     let brain = ok(
@@ -475,8 +475,8 @@ async fn mcp_plugin_capture_learns_and_fresh_session_recalls_with_compaction() {
     let endpoint = format!("http://{}", listener.local_addr().unwrap());
     let router = h.router.clone();
     let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let executable = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/debug/recollect-plugin")
+    let executable = crate::profile_dir()
+        .join("recollect-plugin")
         .canonicalize()
         .unwrap();
     for host in ["codex", "claude_code", "opencode"] {
@@ -698,8 +698,7 @@ async fn mcp_plugin_hook_deadline_includes_blocking_input() {
         std::env::var("RECOLLECT_MCP_HOST_FIXTURE").as_deref(),
         Ok("1")
     );
-    let binary =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/recollect-plugin");
+    let binary = crate::profile_dir().join("recollect-plugin");
     let data =
         PathBuf::from("/workspace/.cache").join(format!("plugin-deadline-{}", Uuid::new_v4()));
     let mut child = Command::new(binary)
@@ -795,8 +794,8 @@ async fn mcp_plugin_reconnect_preserves_old_queued_authority_and_failed_setup() 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let endpoint = format!("http://{}", listener.local_addr().unwrap());
     let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let binary = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/debug/recollect-plugin")
+    let binary = crate::profile_dir()
+        .join("recollect-plugin")
         .canonicalize()
         .unwrap();
     let data = PathBuf::from(&h.state.config.artifact_dir).join("reconnect");

@@ -58,7 +58,9 @@ cargo run -p recollect-server -- serve
 
 After server interface changes run `./scripts/generate-api.sh`, then
 `npm --prefix web run build`. Generation checks for duplicate operation IDs before
-building the typed client.
+building the typed client. The committed `web/src/api-schema.d.ts` is the output of
+the locked generator (`openapi-typescript` 7.13.0), so regenerating without an API
+change leaves it byte-identical.
 The browser is served from `web/dist` at the same origin. The Brain **Sources** route
 supports imports, source history and overlapping views; see
 [source evidence](evidence-collections.md). Artifacts live under
@@ -87,8 +89,12 @@ manifest-selected repositories and parsed pinned dependency links.
 
 ## Verification
 
-The platform suite requires the owned encrypted-recovery fixture as well as
-PostgreSQL/Neo4j. Prepare it once for a test run:
+The platform suite needs PostgreSQL/Neo4j. Two encrypted-recovery cases
+(`remote_erasure_failure_denies_locally_and_retries_one_encrypted_entry` and
+`recovery_analytics_ownership_is_mirrored_before_native_work_and_retained_for_restore`)
+also need the owned SFTP fixture. Without it the platform script skips them and
+prints `NOT RUN: <names> (no SFTP fixture; ...)` before and after the run, so a
+passing summary does not claim they ran. To run them, prepare the fixture once:
 
 ```sh
 python3 scripts/setup-recovery-tools.py
@@ -97,15 +103,33 @@ python3 scripts/start-recovery-fixture.py
 export RECOLLECT_TEST_RECOVERY_FIXTURE=/absolute/path/printed/fixture.json
 ```
 
-The fixture command prints its exact private JSON path and owned container name.
-After the tests, remove that named fixture container and its generated directory;
-do not use a blanket database/container cleanup. Failed fixture databases and
-independent journals must remain until their owned graph work is absent. The
-platform script builds the required native MCP example and fails early if the
-SFTP fixture was not selected. Native coding-host tests use their separate
+`RECOLLECT_TEST_REQUIRE_RECOVERY=1` restores the strict early refusal when the
+fixture is not selected, for a complete pre-release run. The fixture command prints
+its exact private JSON path and owned container name. After the tests, remove that
+named fixture container and its generated directory; do not use a blanket
+database/container cleanup. Failed fixture databases and independent journals must
+remain until their owned graph work is absent. The platform script builds the
+required native MCP example and passes extra arguments (name filters, `--exact`) to
+the test binary. Native coding-host tests use their separate
 `./scripts/test-mcp-hosts.sh` fixture. Run the graph/interruption tests without
 concurrent builds or other full suites so their short controlled pauses remain
 meaningful.
+
+Test helper executables (`mcp-fixture`, `recollect-agent`, `recollect-plugin`) are
+found next to the running test binary, so `CARGO_TARGET_DIR` or `build.target-dir`
+work; `./scripts/test-ui.sh` reads the directory from `cargo metadata` and, for an
+`.env` written before `setup-local.sh` recorded `COMPOSE_FILE`, defaults it to the
+same two Compose files. Per-test
+state (credentials, artifacts, erasure journals) lives under
+`<target>/debug/test-state` unless `RECOLLECT_TEST_STATE_DIR` names another
+directory, and is removed with the database on success. The scripts and the
+repository's `.cargo/config.toml` set `RUST_MIN_STACK` to 8 MiB because the long
+native-worker tests nest large debug-build futures; export your own value to
+override it (the config never replaces an existing variable). Failed runs keep their
+`recollect_test_*` / `recollect_ui_*` databases for diagnosis; list them with
+`python3 scripts/clean-test-databases.py` and, once no test run is active, drop the
+idle ones with `--drop`. It matches only those two exact name patterns and never
+touches the installed Brain's database.
 
 ```sh
 curl -fsS http://127.0.0.1:8787/health/ready
@@ -165,6 +189,10 @@ Optional OIDC signed exchange and its full browser workflow are checked with
 
 - Database unavailable: inspect `./scripts/docker.sh compose ps`. PostgreSQL's
   health check executes a database query, detecting incomplete initialization.
+  `could not resize shared memory segment` (SQLSTATE 53100) followed by pool
+  timeouts means `/dev/shm` was too small for parallel queries; the Compose
+  service sets `shm_size: 256m`, which takes effect when the container is next
+  recreated.
 - Graph degraded: confirm the GDS plugin loaded and the configured graph target
   is reachable. Recollect does not label a failed Query API call connected.
 - Login failed: verify local environment names without printing passwords.

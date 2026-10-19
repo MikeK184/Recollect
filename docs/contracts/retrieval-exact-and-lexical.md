@@ -140,7 +140,9 @@ Short/empty pages caused by withheld candidates remain explicit;
 the endpoint does not claim exhaustive search. Return candidate-limit, processing,
 missing-source and budget coverage flags rather than padding with ineligible data.
 
-Each fragment is at most 2 KiB on UTF-8 boundaries, with truncation labeled.
+Each fragment is at most 4 KiB on UTF-8 boundaries, with truncation labeled: the
+original 2 KiB clip was replaced by whole canonical source chunks of up to 4,096
+bytes in the 2026-10-08 amendment below.
 The complete serialized model-context object, including attribution and the
 data-only instruction, must fit the requested context-byte budget. Whole results
 that do not fit are omitted with a budget flag; do not strip provenance to fit.

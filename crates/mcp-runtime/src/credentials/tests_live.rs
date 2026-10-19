@@ -15,8 +15,15 @@ use std::time::{Duration, Instant};
 fn repository() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
+/// `<target>/<profile>/examples/mcp-fixture` next to this test executable
+/// (`.../deps/<name>-<hash>`), so CARGO_TARGET_DIR and build.target-dir apply.
 fn fixture() -> PathBuf {
-    repository().join("target/debug/examples/mcp-fixture")
+    std::env::current_exe()
+        .expect("test executable path")
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("<target>/<profile>")
+        .join("examples/mcp-fixture")
 }
 fn directory() -> PathBuf {
     let path = repository()

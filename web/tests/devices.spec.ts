@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { spawn, execFile, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
+import { profileBinary } from "./profile-binary";
 
 test("opaque pairing codes survive numeric and exponent-shaped URL parsing", async ({
   page,
@@ -43,7 +44,7 @@ test("browser approves a native companion, persists its OS credential and revoke
   page,
 }) => {
   test.setTimeout(75_000);
-  const binary = resolve("../target/debug/recollect-agent");
+  const binary = profileBinary("recollect-agent");
   const env = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,

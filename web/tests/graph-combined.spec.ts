@@ -6,6 +6,7 @@ import { mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
+import { profileBinary } from "./profile-binary";
 
 test("committed HCL publications supply combined graph paths and browser evidence", async ({
   page,
@@ -15,7 +16,7 @@ test("committed HCL publications supply combined graph paths and browser evidenc
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const root = resolve(`../.cache/cross-graph-proof/browser-${randomUUID()}`);
-  const binary = resolve("../target/debug/recollect-agent");
+  const binary = profileBinary("recollect-agent");
   const env = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,

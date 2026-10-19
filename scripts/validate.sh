@@ -20,6 +20,7 @@ python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_memo
 python3 -B "$RECOLLECT_ROOT/scripts/check-pins.py"
 python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_check_pins.py' -v
 python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_download_pins.py' -v
+python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_clean_test_databases.py' -v
 
 if [[ "$run_code" -eq 1 ]]; then
   (cd "$RECOLLECT_ROOT" && cargo test --workspace --lib)

@@ -75,10 +75,10 @@ async fn run(state: &AppState, job: &ClaimedJob, armed: &mut Option<journal::Ent
             .await?;
     routing.commit().await?;
     if purpose == "organization" {
-        return organization::run(state, job, armed).await;
+        return Box::pin(organization::run(state, job, armed)).await;
     }
     if purpose == "organization_shadow" {
-        return shadow::run(state, job, armed).await;
+        return Box::pin(shadow::run(state, job, armed)).await;
     }
     let e = journal::arm(state, job).await?;
     *armed = Some(e.clone());
@@ -150,14 +150,17 @@ async fn run(state: &AppState, job: &ClaimedJob, armed: &mut Option<journal::Ent
 pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<(), Failure> {
     let mut armed = None;
     let work = async {
-        tokio::time::timeout(Duration::from_secs(120), run(state, job, &mut armed))
-            .await
-            .map_err(|_| {
-                failure(
-                    "analytics_attempt_timeout",
-                    "This analysis exceeded its 120-second attempt limit.",
-                )
-            })?
+        tokio::time::timeout(
+            Duration::from_secs(120),
+            Box::pin(run(state, job, &mut armed)),
+        )
+        .await
+        .map_err(|_| {
+            failure(
+                "analytics_attempt_timeout",
+                "This analysis exceeded its 120-second attempt limit.",
+            )
+        })?
     };
     let result = worker::with_lease(&state.pool, job, work).await;
     // Dropping an HTTP future does not terminate native work. Retain ownership

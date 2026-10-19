@@ -24,17 +24,22 @@ pub(super) async fn publish(
     let prepare_until = tokio::time::Instant::now() + Duration::from_secs(5);
     let current = intent_prepare(
         prepare_until,
-        prepare(state, job.brain_id, job.actor_id, job.device_id),
+        Box::pin(prepare(state, job.brain_id, job.actor_id, job.device_id)),
     )
     .await?;
     let auth = intent_prepare(
         prepare_until,
-        actor_auth(state, job.actor_id, job.device_id),
+        Box::pin(actor_auth(state, job.actor_id, job.device_id)),
     )
     .await?;
     let saved = intent_prepare(
         prepare_until,
-        manual_intent::prepare_saved(state, &auth, job.brain_id, p.epoch),
+        Box::pin(manual_intent::prepare_saved(
+            state,
+            &auth,
+            job.brain_id,
+            p.epoch,
+        )),
     )
     .await?;
     if p.gds_version.as_deref() != Some(output.version.as_str()) {
@@ -54,7 +59,7 @@ pub(super) async fn publish(
     }
     let features = p.features.as_ref().ok_or_else(changed)?;
     let source_ids: Vec<_> = features.sources.iter().map(|s| s.id).collect();
-    let (old, changes) = intent_prepare(prepare_until, async {
+    let (old, changes) = intent_prepare(prepare_until, Box::pin(async {
     let mut tx = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
     // Legacy membership transfer is possible only through exact immutable
     // version AND captured context equality, never a title/entity resemblance.
@@ -79,7 +84,7 @@ pub(super) async fn publish(
     .collect();
     tx.commit().await?;
     Ok((old, changes))
-    }).await?;
+    })).await?;
     let indices: BTreeMap<_, _> = d
         .nodes
         .iter()
@@ -169,7 +174,7 @@ pub(super) async fn publish(
             cohort.sources.push(*input);
         }
     }
-    let mappings=intent_prepare(prepare_until,async {
+    let mappings=intent_prepare(prepare_until,Box::pin(async {
         let mut membership_read = db::preparation_tx(&state.pool, job.actor_id, job.device_id).await?;
         sqlx::query("SET LOCAL statement_timeout='4000ms'").execute(&mut *membership_read).await?;
         sqlx::query("SET LOCAL recollect.bulk_qualification=on").execute(&mut *membership_read).await?;
@@ -177,7 +182,7 @@ pub(super) async fn publish(
         .bind(job.brain_id).bind(&topic_ids).bind(&input_ids).bind(p.inputs.iter().map(|(i,_)|*i).collect::<Vec<_>>()).bind(cohort_map.keys().copied().collect::<Vec<_>>()).fetch_all(&mut *membership_read).await?;
         membership_read.commit().await?;
         Ok(mappings)
-    }).await?;
+    })).await?;
     for (topic, input, entity) in mappings {
         cohort_map
             .get_mut(&topic)
@@ -188,10 +193,16 @@ pub(super) async fn publish(
     let cohorts: Vec<_> = cohort_map.into_values().collect();
     let manual = intent_prepare(
         prepare_until,
-        manual_intent::prepare_publication(state, &auth, job.brain_id, saved, &cohorts),
+        Box::pin(manual_intent::prepare_publication(
+            state,
+            &auth,
+            job.brain_id,
+            saved,
+            &cohorts,
+        )),
     )
     .await?;
-    tokio::time::timeout(Duration::from_millis(1500),async {
+    tokio::time::timeout(Duration::from_millis(1500),Box::pin(async {
         let(mut tx,r,_)=work::ready(state,job).await?;
         sqlx::query("SET LOCAL statement_timeout='1000ms'").execute(&mut *tx).await?;
         sqlx::query("SET LOCAL lock_timeout='250ms'").execute(&mut *tx).await?;
@@ -239,5 +250,5 @@ pub(super) async fn publish(
         db::audit(&mut tx,job.actor_id,job.brain_id,"organization.publish",job.target_id,"ready").await?;
         deadline(&mut tx,[p.deadline,p.authority_deadline,manual.deadline(),Some(lease)].into_iter().flatten().min()).await?;
         tx.commit().await?;Ok(())
-    }).await.map_err(|_|failure("analytics_publication_timeout","Organization publication exceeded its bounded writer window."))?
+    })).await.map_err(|_|failure("analytics_publication_timeout","Organization publication exceeded its bounded writer window."))?
 }

@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { profileBinary } from "./profile-binary";
 
 test("owner manages a Brain, recovers a request error and signs out on desktop at 1280 pixels", async ({
   page,
@@ -58,9 +59,7 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
   await expect(
     refreshJob.getByRole("button", { name: "Cancel job" }),
   ).toBeVisible();
-  await promisify(execFile)("../target/debug/recollect-server", [
-    "worker-once",
-  ]);
+  await promisify(execFile)(profileBinary("recollect-server"), ["worker-once"]);
   await expect(
     processing.getByText("Up to date", { exact: true }),
   ).toBeVisible();

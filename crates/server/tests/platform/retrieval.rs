@@ -388,9 +388,10 @@ async fn recall_preserves_native_scope_manifests_time_and_erasure() {
         "first knowledge",
     );
     let earlier = ok(&h, "POST", &format!("{base}/claims"), &owner, input.clone()).await;
+    super::review::supported(&h, &base, &owner, &earlier).await;
     input["base_revision"] = earlier["id"].clone();
     input["content"]["value"] = json!("late knowledge");
-    ok(
+    let late = ok(
         &h,
         "PUT",
         &format!("{base}/claims/{}", earlier["claim_id"].as_str().unwrap()),
@@ -398,6 +399,7 @@ async fn recall_preserves_native_scope_manifests_time_and_erasure() {
         input,
     )
     .await;
+    super::review::supported(&h, &base, &owner, &late).await;
     let then=recall(&h,&base,&owner,json!({"query":"Temporal value","knowledge_at":earlier["recorded_at"],"fact_at":"2026-01-15T00:00:00Z"})).await;
     assert!(then["context"].to_string().contains("first knowledge"));
     assert!(!then["context"].to_string().contains("late knowledge"));
@@ -530,6 +532,7 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
     input["content"]["validity"] =
         json!({"kind":"unknown","from":null,"to":null,"precision":"unknown"});
     let proposed = ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+    super::review::supported(&h, &base, &owner, &proposed).await;
     assert!(has(
         &recall(&h, &base, &owner, json!({"query":"Amber"})).await,
         &proposed["claim_id"]
@@ -782,10 +785,12 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
         &h,
         &base,
         &owner,
-        json!({"query":"EVIDENCE_LIMIT","context_bytes":4096}),
+        // A whole source chunk is up to 4,096 bytes (2026-10-08 amendment), so a
+        // chunk plus its attribution cannot fit a 4 KiB budget; 8 KiB can.
+        json!({"query":"EVIDENCE_LIMIT","context_bytes":8192}),
     )
     .await;
-    assert!(has(&bounded, &large["version"]["id"]));
+    assert!(has(&bounded, &large["version"]["id"]), "{bounded}");
     assert!(has(&bounded, &second_source["version"]["id"]));
     assert!(
         bounded["coverage"]["reasons"]
@@ -793,13 +798,13 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
             .contains("candidate_limit")
     );
     assert!(bounded["coverage"]["examined"].as_u64().unwrap() <= 100);
-    assert!(bounded["context_bytes"].as_u64().unwrap() <= 4096);
+    assert!(bounded["context_bytes"].as_u64().unwrap() <= 8192);
     assert!(
         bounded["context"]["items"][0]["text"]
             .as_str()
             .unwrap()
             .len()
-            <= 2048
+            <= 4096
     );
     eprintln!(
         "Recall corpus: 3/3 initial positive controls; bounded UTF-8 recall {} ms, {} context bytes, {} candidates.",
@@ -838,7 +843,10 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
             "ELIGIBILITY_CROWD",
             &format!("Unreviewed candidate {n}"),
         );
-        ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+        let crowd = ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+        // Supported but unreviewed: ineligible for strict recall, yet eligible to
+        // reach the canonical gates, which is what must not crowd out the control.
+        super::review::supported(&h, &base, &owner, &crowd).await;
     }
     let eligibility_control = recall(
         &h,
