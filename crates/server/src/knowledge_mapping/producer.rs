@@ -1,6 +1,7 @@
 //! Retain validated output until a release-qualified producer can use it.
 //! This module never invokes a provider or changes a standing model policy.
 use super::{SourceCandidates, production, source_candidates, storage};
+use crate::db::admission::{self, BrainAccess, Role};
 use crate::{
     AppState, db,
     error::{Error, Result},
@@ -100,13 +101,15 @@ async fn promote(
     device: Option<Uuid>,
     id: Uuid,
 ) -> Result<bool> {
-    let mut tx = db::preparation_tx(&state.pool, actor, device).await?;
-    if !matches!(
-        db::require_role(&mut tx, brain, false).await?.as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        actor,
+        device,
+        brain,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL statement_timeout='750ms'")
         .execute(&mut *tx)
         .await?;
@@ -137,14 +140,17 @@ async fn promote(
             Error::invalid("Invalid retained mapping source.")
         })?;
     tx.commit().await?;
-    let mut tx = db::device_tx(&state.pool, actor, device).await?;
-    sqlx::query("SET LOCAL statement_timeout='750ms'")
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("SET LOCAL lock_timeout='250ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx_as(
+        &state.pool,
+        actor,
+        device,
+        brain,
+        BrainAccess::WRITE
+            .with_statement_timeout(std::time::Duration::from_millis(750))
+            .with_lock_timeout(std::time::Duration::from_millis(250)),
+    )
+    .await?
+    .tx;
     graph::preparation_unchanged(&mut tx, brain, epoch).await?;
     let Some((fresh, _, _)) = current(&mut tx, brain, actor, device, id).await? else {
         return Ok(false);

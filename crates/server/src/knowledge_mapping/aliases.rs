@@ -1,5 +1,6 @@
 //! Independently attributed, reversible source-described equivalence links.
 //! A supported alias never merges original entity IDs or creates accepted truth.
+use crate::db::admission::{self, BrainAccess};
 use crate::{
     AppState,
     auth::Auth,
@@ -440,11 +441,16 @@ pub async fn decide(
             "This exact canonical source does not match the supported standalone positive-equivalence form. Keep it pending or reject it.",
         ));
     }
-    let mut tx = auth.publication_tx(&state.pool).await?;
-    sqlx::query("SET LOCAL statement_timeout='750ms'")
-        .execute(&mut *tx)
-        .await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::WRITE
+            .with_statement_timeout(Duration::from_millis(750))
+            .with_session_recheck(),
+    )
+    .await?
+    .tx;
     fresh(&mut tx, &auth, brain, &prepared).await?;
     let payload = json!({"brain_id":brain,"candidate_id":id,"command":input});
     if let Some(saved) =
