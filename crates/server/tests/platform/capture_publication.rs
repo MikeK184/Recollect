@@ -141,9 +141,15 @@ async fn publication_rechecks_rules_expiry_and_lease_without_inheriting_old_raw_
     model_job(&h).await;
     let failed = runs(&h, &owner, &base).await["items"][0].clone();
     assert_eq!(failed["state"], "failed", "{failed}");
-    assert_eq!(
-        failed["error_code"], "learning_input_expired",
-        "Must reach the final publication fence: {failed}"
+    // The source expires during publication. The staged-support deadline
+    // check (`content_removed`) precedes the final input-deadline fence
+    // (`learning_input_expired`); either discards the output unpublished.
+    assert!(
+        matches!(
+            failed["error_code"].as_str(),
+            Some("content_removed" | "learning_input_expired")
+        ),
+        "Expiry during publication must be fenced: {failed}"
     );
     assert_eq!(
         ok(&h, "GET", &claim_url, &owner, Value::Null).await["selected"]["revision"]["id"],

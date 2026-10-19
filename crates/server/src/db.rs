@@ -302,6 +302,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "070_brain_admission",
         include_str!("../migrations/070_brain_admission.sql"),
     ),
+    (
+        "071_learning_basis_support_boundary",
+        include_str!("../migrations/071_learning_basis_support_boundary.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {
