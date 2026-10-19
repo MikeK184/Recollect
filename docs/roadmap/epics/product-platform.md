@@ -1,6 +1,6 @@
 # Product Platform and Access
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -73,7 +73,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
 | `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 | `platform-local-credential-hardening` | shipped | adr-backed, contract-backed | archived | Invited local passwords stored only as Argon2id hashes (ADR 0024), legacy plaintext converted at startup or sign-in and the credential file read fail-closed (503); proven by 5 unit tests, a new platform test, a real `serve` startup run, and unchanged auth/team/MCP platform subsets (30 pass, the same 13 unrelated failures as before the change) |
-| `platform-brain-admission` | in-progress | contract-backed | pack | One typed Brain admission (transport, principal, visibility, role, archive fence, lock) in one round trip replacing five per-surface helpers and about 110 inline checks, with a golden status matrix and one deliberate unification of archived/forbidden outcomes |
+| `platform-brain-admission` | shipped | contract-backed | archived | One typed Brain admission (`db::admission`, migration 070): every Brain-scoped request or worker transaction admits in one statement in the order transport, principal 401, visibility 404, role 403, archive 409 `brain_archived`, with lock and statement timeouts as access options; the five helpers, all 159 `require_role`/`require_writer` sites and 15 of 17 standalone `lock_brain` calls moved, and 41 golden-matrix cells flipped on purpose; proven by the 363-cell status matrix (green and unchanged after the move, then flipped), pg_locks equivalence, one-statement and timeout platform tests, 9 admission unit tests, the full platform run (314 of 335 pass at HEAD; the 21 failures also fail on main) and the unchanged 40-test MCP, coordination, skills, workspace, publication and evidence subset |
 
 ## Completion Criteria
 
@@ -90,7 +90,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 
 ## Current status
 
-Accounts, Brain permissions, auditable durable commands, device identity and canonical Brain deletion are delivered. The original platform slices have no unfinished acceptance in this epic. New automatic mapping must extend existing isolation/deletion behavior under the graph organization pack. The `platform-brain-admission` refactor (2026-10-19) is in progress: part 1 adds one typed admission and moves the five per-surface helpers without behaviour change; part 2 migrates the inline sites and unifies archived/forbidden outcomes. It changes no role, grant or isolation rule.
+Accounts, Brain permissions, auditable durable commands, device identity and canonical Brain deletion are delivered. The original platform slices have no unfinished acceptance in this epic. New automatic mapping must extend existing isolation/deletion behavior under the graph organization pack. The `platform-brain-admission` refactor (2026-10-19) is delivered: one typed admission serves every Brain-scoped request and worker transaction in the order recorded in the [team access contract](../../contracts/platform-team-access.md#admission-order), every surface answers an archived Brain with 409 `brain_archived` after the role check, and no role, grant or isolation rule changed. The open-transaction helpers `db::require_role` and `db::require_writer` remain as thin wrappers for platform tests only.
 
 See the [current roadmap](index.md) for priorities and the
 [active packs](../execution/active/README.md) for exact remaining acceptance.

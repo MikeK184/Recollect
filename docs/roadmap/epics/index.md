@@ -12,7 +12,7 @@ numbers below are dated observations until replacement proof is recorded.
 | --- | --- | --- |
 | [repository-governance.md](repository-governance.md) | complete | Current documentation, governance and public website delivered |
 | [developer-tooling.md](developer-tooling.md) | complete | Repository-local Rust Analyzer MCP, Graft and documentation skills |
-| [product-platform.md](product-platform.md) | active | Accounts, Brain access, durable work, installation identity and canonical Brain deletion are delivered; the typed Brain admission refactor is in progress |
+| [product-platform.md](product-platform.md) | complete | Accounts, Brain access, durable work, installation identity, canonical Brain deletion and one typed Brain admission |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Versioned sources, collections, workspace scope, capture and repository publication |
 | [memory-lifecycle.md](memory-lifecycle.md) | active | Existing automatic learning/digests/correction delivered; derived mapping privacy remains an active dependency |
 | [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Delivered recall baseline, set-based read path (lexical index windows, one candidate pass per transaction, set gating) and locally validated attributed-feedback offline comparison; production ranking fixed |
