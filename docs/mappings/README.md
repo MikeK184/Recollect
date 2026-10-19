@@ -9,6 +9,7 @@ connectivity, pricing or performance guarantees.
 | --- | --- |
 | [Agent coordination proof](agent-coordination-proof-2026-10-18.md) | Focused validation and final synthetic macOS/Ubuntu acceptance, with host and deployment limits |
 | [A2A and agent coordination research](agent-coordination-a2a-research-2026-10-18.md) | Current protocol envelope, host-delivery boundaries and Recollect controller responsibilities |
+| [Graph native verification](graph-native-verification-2026-10-19.md) | Neo4j query plans before and after the generation indexes, Query API requests per read, and the actual-Neo4j seal, deep-check and rebuild receipts |
 | [Graph organization evidence receipts](graph-organization-implementation-2026-10-18.md) | Frozen corpus identities and hashes, the four paid campaigns' approvals, calls, spend and failures, and local proof receipts; carries no status tracker |
 | [Native skill reload successor](native-skill-reload-host-proof-2026-10-18.md) | Actual Codex/Claude/OpenCode native activation/reload, shared-root scope leases and temporary/retained lifecycle proof |
 | [Dynamic skill and host consumption research](managed-skills-host-consumption-2026-10-18.md) | Official host consumption/reload research and local HTTP/MCP, plugin-cache, manager UI and public-guide proof |

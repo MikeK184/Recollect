@@ -188,6 +188,25 @@ pub(super) async fn schema(config: &Config, http: &reqwest::Client) -> Result<()
     ] {
         query(config,http,&format!("CREATE CONSTRAINT {name} IF NOT EXISTS FOR (n:{label}) REQUIRE {properties} IS UNIQUE"),json!({}),&[]).await?;
     }
+    // Generation-owned relationships are counted, verified and cleaned by their
+    // `generation` property. Without an index each of those statements scans
+    // every RECOLLECT_GRAPH_EDGE of every Brain (PROFILE: relationship type
+    // scan). The composite index serves exact verification, which names the
+    // generation and a batch of edge ids; a composite index is not used for the
+    // `generation`-only counts and deletes, so both are needed.
+    for (name, properties) in [
+        ("recollect_graph_edge_generation", "r.generation"),
+        ("recollect_graph_edge_generation_id", "r.generation, r.id"),
+    ] {
+        query(
+            config,
+            http,
+            &format!("CREATE INDEX {name} IF NOT EXISTS FOR ()-[r:RECOLLECT_GRAPH_EDGE]-() ON ({properties})"),
+            json!({}),
+            &[],
+        )
+        .await?;
+    }
     Ok(())
 }
 /// Native writes are fenced independently of a dropped Rust future. The job's
@@ -344,6 +363,144 @@ pub(crate) async fn verify_generation(state: &AppState, g: &GraphGeneration) -> 
     )
     .await
 }
+/// What PostgreSQL says a ready generation looks like natively: the lease token
+/// of the import that sealed it and the membership/relationship counts verified
+/// before readiness. A read compares this with Neo4j in one request; any
+/// difference falls back to exact verification of the selected entities.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Seal {
+    pub id: Uuid,
+    pub token: Option<Uuid>,
+    pub nodes: i64,
+    pub edges: i64,
+}
+
+/// One request per read counts every relationship of its generations by index
+/// seek (about 0.5 microseconds each); very large combined reads split so each
+/// statement stays far inside the three-second server bound.
+const SEAL_EDGES: i64 = 1_000_000;
+const SEAL: &str = "UNWIND $generations AS id OPTIONAL MATCH (g:RecollectGraphGeneration {brain:$brain,id:id}) \
+    RETURN id, g.import_token AS token, g.import_open AS open, \
+    CASE WHEN g IS NULL THEN -1 ELSE COUNT{(g)-[:RECOLLECT_GRAPH_MEMBER]->()} END AS members, \
+    COUNT{()-[r:RECOLLECT_GRAPH_EDGE]->() WHERE r.generation=id AND r.brain=$brain} AS edges";
+
+/// Pure comparison of the seal response with the canonical expectation. A
+/// generation passes only when its sealing token matches, its import is closed
+/// and both counts equal the stored ones. A missing generation (members -1), an
+/// open import or a different token is a mismatch, not an error; only a response
+/// that does not have the requested shape is invalid.
+pub(crate) fn sealed(expected: &[Seal], rows: &[Vec<Value>]) -> Result<bool> {
+    let invalid = || {
+        failure(
+            "graph_response_invalid",
+            "The graph seal response was malformed.",
+        )
+    };
+    let mut native = BTreeMap::new();
+    for row in rows {
+        let [id, token, open, members, edges] = row.as_slice() else {
+            return Err(invalid());
+        };
+        let id = id.as_str().ok_or_else(invalid)?;
+        let known = (
+            token.as_str().map(str::to_owned),
+            open.as_bool(),
+            members.as_i64().ok_or_else(invalid)?,
+            edges.as_i64().ok_or_else(invalid)?,
+        );
+        if !(token.is_null() || token.is_string()) || !(open.is_null() || open.is_boolean()) {
+            return Err(invalid());
+        }
+        if native.insert(id, known).is_some() {
+            return Err(invalid());
+        }
+    }
+    if native.len() != expected.len() {
+        return Err(invalid());
+    }
+    Ok(expected.iter().all(|e| {
+        native
+            .get(e.id.to_string().as_str())
+            .is_some_and(|(token, open, members, edges)| {
+                e.token
+                    .is_some_and(|t| token.as_deref() == Some(t.to_string().as_str()))
+                    && *open == Some(false)
+                    && *members == e.nodes
+                    && *edges == e.edges
+            })
+    }))
+}
+
+/// `Ok(false)` means "not provably intact": callers verify exactly or fail
+/// closed. Transport and shape failures stay errors.
+pub(crate) async fn seal_check(state: &AppState, brain: Uuid, expected: &[Seal]) -> Result<bool> {
+    let mut groups: Vec<&[Seal]> = vec![];
+    let (mut start, mut edges) = (0, 0);
+    for (position, seal) in expected.iter().enumerate() {
+        if position > start && edges + seal.edges > SEAL_EDGES {
+            groups.push(&expected[start..position]);
+            (start, edges) = (position, 0);
+        }
+        edges += seal.edges;
+    }
+    if start < expected.len() {
+        groups.push(&expected[start..]);
+    }
+    for group in groups {
+        let ids: Vec<_> = group.iter().map(|s| s.id).collect();
+        let rows = query(
+            &state.config,
+            &state.http,
+            SEAL,
+            json!({"brain":brain,"generations":ids}),
+            &["id", "token", "open", "members", "edges"],
+        )
+        .await?;
+        if !sealed(group, &rows)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Exhaustive check of one ready generation against its complete frozen
+/// descriptor, for periodic maintenance and never for a read. A sealed
+/// generation must still carry its token with the stored counts; one published
+/// before tokens were recorded (`token` None) has its counts compared with the
+/// descriptor instead. `graph_import_mismatch` means damage; any other error is
+/// an outage that proves nothing.
+pub(crate) async fn verify_full(
+    state: &AppState,
+    g: &GraphGeneration,
+    d: &Descriptor,
+    token: Option<Uuid>,
+) -> Result<()> {
+    if token.is_some() {
+        let seal = Seal {
+            id: g.id,
+            token,
+            nodes: g.node_count,
+            edges: g.edge_count,
+        };
+        if !seal_check(state, g.brain_id, std::slice::from_ref(&seal)).await? {
+            return Err(failure(
+                "graph_import_mismatch",
+                "The imported graph did not match its canonical descriptors.",
+            ));
+        }
+    } else {
+        verify_generation(state, g).await?;
+        verify_counts(state, g, d).await?;
+    }
+    for batch in d.nodes.chunks(500) {
+        verify_nodes(state, g, batch).await?;
+    }
+    for batch in d.edges.chunks(500) {
+        verify_edges(state, g, batch).await?;
+    }
+    Ok(())
+}
+
 pub(crate) async fn verify_edges(
     state: &AppState,
     g: &GraphGeneration,
@@ -377,7 +534,8 @@ pub(crate) async fn verify_counts(
     g: &GraphGeneration,
     d: &Descriptor,
 ) -> Result<()> {
-    count(state,"MATCH (:RecollectGraphGeneration {brain:$brain,id:$generation})-[r:RECOLLECT_GRAPH_MEMBER]->() RETURN count(r) AS count",json!({"brain":g.brain_id,"generation":g.id}),d.nodes.len()).await?;
+    // COUNT{} reads the node's relationship degree instead of expanding it.
+    count(state,"MATCH (g:RecollectGraphGeneration {brain:$brain,id:$generation}) RETURN COUNT{(g)-[:RECOLLECT_GRAPH_MEMBER]->()} AS count",json!({"brain":g.brain_id,"generation":g.id}),d.nodes.len()).await?;
     count(state,"MATCH ()-[r:RECOLLECT_GRAPH_EDGE {brain:$brain,generation:$generation}]->() RETURN count(r) AS count",json!({"brain":g.brain_id,"generation":g.id}),d.edges.len()).await
 }
 
@@ -584,4 +742,126 @@ pub(super) async fn reach(
                 })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn seal(nodes: i64, edges: i64) -> Seal {
+        Seal {
+            id: Uuid::new_v4(),
+            token: Some(Uuid::new_v4()),
+            nodes,
+            edges,
+        }
+    }
+    /// The row a healthy sealed generation produces.
+    fn healthy(s: &Seal) -> Vec<Value> {
+        vec![
+            json!(s.id),
+            json!(s.token),
+            json!(false),
+            json!(s.nodes),
+            json!(s.edges),
+        ]
+    }
+    fn verdict(
+        expected: &[Seal],
+        rows: Vec<Vec<Value>>,
+    ) -> std::result::Result<bool, &'static str> {
+        sealed(expected, &rows).map_err(|e| e.1)
+    }
+
+    #[test]
+    fn a_sealed_generation_with_its_stored_counts_passes_in_any_row_order() {
+        let (a, b) = (seal(7, 6), seal(0, 0));
+        assert_eq!(
+            verdict(&[a.clone(), b.clone()], vec![healthy(&b), healthy(&a)]),
+            Ok(true)
+        );
+    }
+
+    #[test]
+    fn any_difference_from_the_sealed_import_is_a_mismatch_not_an_error() {
+        let s = seal(7, 6);
+        let mut cases: Vec<(&str, Vec<Value>)> = vec![];
+        let mut edit = |name, position: usize, value: Value| {
+            let mut row = healthy(&s);
+            row[position] = value;
+            cases.push((name, row));
+        };
+        edit("another import's token", 1, json!(Uuid::new_v4()));
+        edit("no token", 1, Value::Null);
+        edit("import still open", 2, json!(true));
+        edit("no open flag", 2, Value::Null);
+        edit("a member erased", 3, json!(6));
+        edit("an extra member", 3, json!(8));
+        edit("a relationship deleted", 4, json!(5));
+        edit("an extra relationship", 4, json!(7));
+        edit("generation missing", 3, json!(-1));
+        for (name, row) in cases {
+            assert_eq!(
+                verdict(std::slice::from_ref(&s), vec![row]),
+                Ok(false),
+                "{name}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_generation_without_a_recorded_token_can_never_be_sealed() {
+        let unsealed = Seal {
+            token: None,
+            ..seal(1, 0)
+        };
+        let mut row = healthy(&unsealed);
+        row[1] = json!(Uuid::new_v4());
+        assert_eq!(verdict(&[unsealed], vec![row]), Ok(false));
+    }
+
+    #[test]
+    fn one_unsealed_generation_fails_the_whole_read() {
+        let (a, b) = (seal(3, 2), seal(4, 3));
+        let mut damaged = healthy(&b);
+        damaged[4] = json!(2);
+        assert_eq!(
+            verdict(&[a.clone(), b.clone()], vec![healthy(&a), damaged]),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn malformed_seal_responses_are_invalid_rather_than_trusted() {
+        let s = seal(3, 2);
+        let bad = |rows: Vec<Vec<Value>>| verdict(std::slice::from_ref(&s), rows);
+        let invalid = Err("graph_response_invalid");
+        assert_eq!(bad(vec![]), invalid, "a missing row");
+        assert_eq!(
+            bad(vec![healthy(&s), healthy(&s)]),
+            invalid,
+            "a repeated row"
+        );
+        assert_eq!(bad(vec![healthy(&s)[..4].to_vec()]), invalid, "a short row");
+        let mut row = healthy(&s);
+        row[3] = json!("3");
+        assert_eq!(bad(vec![row]), invalid, "a count that is not a number");
+        let mut row = healthy(&s);
+        row[2] = json!("false");
+        assert_eq!(
+            bad(vec![row]),
+            invalid,
+            "an open flag that is not a boolean"
+        );
+        let mut row = healthy(&s);
+        row[1] = json!(7);
+        assert_eq!(bad(vec![row]), invalid, "a token that is not a string");
+        let mut row = healthy(&s);
+        row[0] = json!(Uuid::new_v4());
+        assert_eq!(
+            bad(vec![row]),
+            Ok(false),
+            "a row for a generation nobody asked for"
+        );
+    }
 }

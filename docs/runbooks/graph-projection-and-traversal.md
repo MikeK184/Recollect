@@ -79,6 +79,13 @@ for diagnosis. These commands do not prove future analytics or deployment.
   configured service and retry/rebuild through the application. Backend errors
   remain different from a successful no-path result. Do not edit Neo4j properties
   to repair canonical evidence or delete unrelated labels.
+- **`graph_import_mismatch` on a ready generation:** every read compares the
+  stored import token and counts with Neo4j and verifies exactly what it selected,
+  so physical damage is reported on the next read and no cached result hides it.
+  Maintenance then re-verifies the whole generation, marks it with the same code in
+  graph status and queues one replacement; do not queue another rebuild while that
+  replacement is queued or running. Reads that do not touch the damaged part keep
+  working until the replacement is ready.
 - **Cancelled, expired or obsolete input:** retry rechecks current authority and
   retention. A superseded generation cannot be retried; rebuild the current exact
   input. Cleanup fences old generations and preserves shared entities.

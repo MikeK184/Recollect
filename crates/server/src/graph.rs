@@ -15,6 +15,7 @@ use uuid::Uuid;
 mod adapter;
 pub mod analytics;
 mod combined;
+mod deep;
 mod descriptor;
 mod exploration;
 mod queue;
@@ -24,7 +25,7 @@ mod work;
 pub use adapter::erase;
 pub use exploration::{__path_explore, explore};
 pub use queue::{__path_get, __path_rebuild, get, maintain_brain, rebuild, run_once};
-pub use read::{__path_path, __path_view, path, reset_verification, view};
+pub use read::{__path_path, __path_view, path, view};
 pub use work::execute;
 
 pub(crate) const STRUCTURAL: &[&str] = &[

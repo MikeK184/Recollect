@@ -121,6 +121,7 @@ pub async fn explore(
                 return Err(display_limit());
             }
             let included = validate_reach(&selected, &input, &reach, true)?;
+            read::verify_returned(&state, &selected, reach.iter().flat_map(|r| r.edges.iter().copied())).await?;
             reach.insert(0, GraphReach { key: center.clone(), nodes: vec![center.clone()], edges: vec![] });
             (included, reach)
         } else {

@@ -85,7 +85,7 @@ pub(super) async fn discover(
           SELECT 1 FROM repository_snapshots s WHERE s.brain_id=$1 AND s.id=x
            AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
            AND EXISTS(SELECT 1 FROM repository_jobs j JOIN jobs w ON w.id=j.job_id WHERE j.brain_id=s.brain_id AND j.snapshot_id=s.id AND w.state='succeeded')))
-        AND NOT EXISTS(SELECT 1 FROM graph_generations g WHERE g.brain_id=$1 AND g.kind='combined' AND g.input_snapshot_ids=i.snapshots AND g.input_epoch=$2 AND g.adapter=$4 AND g.state NOT IN ('superseded','removed'))
+        AND NOT EXISTS(SELECT 1 FROM graph_generations g WHERE g.brain_id=$1 AND g.kind='combined' AND g.input_snapshot_ids=i.snapshots AND g.input_epoch=$2 AND g.adapter=$4 AND g.state NOT IN ('superseded','removed') AND NOT (g.state='ready' AND g.error_code IS NOT DISTINCT FROM 'graph_import_mismatch'))
       ORDER BY i.snapshots,r.created_at,r.id LIMIT $3")
         .bind(brain).bind(current).bind(room as i64).bind(LINKER).fetch_all(&mut **tx).await?;
     let mut count = 0;

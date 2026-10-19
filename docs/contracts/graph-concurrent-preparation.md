@@ -111,6 +111,56 @@ whole-assertion page budgets, digest settlement, idempotency, human overrides an
 the existing uncertain-provider recovery rules. No provider call occurs during
 scheduling. Record lock wait and transaction age separately from native I/O.
 
+## Native verification amendment — 2026-10-19
+
+The user authorized replacing the time-windowed cache of verified native items
+that let repeated populated reads skip verification. A cache bounded by 20 seconds
+left damage unnoticed inside its window, which contradicts failing closed.
+Interactive reads now verify the physical Neo4j projection on every read and keep
+no verification result between reads. [ADR 0007](../adr/0007-canonical-graph-projections.md)
+is unchanged: no content hash and no strict native version handshake is added.
+
+**Per-read seal.** PostgreSQL already holds what a ready generation looks like
+natively: the lease token of the import that sealed it (`native_attempt_token`,
+equal to the generation's Neo4j `import_token`) and the node and relationship
+counts verified before readiness. After the preparation snapshot is released and
+before the final fair lock, a read sends one parameterized Query API request for
+all its projections and passes only when each generation's token equals the stored
+token, its import is closed and its membership and relationship counts equal the
+stored counts. Counts use relationship-degree and indexed lookups on the
+generation property (the adapter creates the indexes with its constraints), so
+the request does not scan other generations or Brains. A combined read whose
+generations hold more than one million relationships splits into several requests.
+
+**Exact fallback.** Any seal difference falls back to the exact selective check:
+the generation exists, every selected entity is a member, and every selected
+relationship exists with its canonical endpoints, family and relation. That
+passes after physical erasure of entities the read does not select, where only the
+counts differ, and otherwise fails closed with `graph_import_mismatch`.
+
+**Returned relationships.** Path, exploration and graph recall also verify exactly
+the relationships the native search returned, because counts cannot show which
+relationships a search walked. The check is bounded by the traversal limits.
+
+**Deep verification.** Graph maintenance fully re-verifies at most one ready
+generation per Brain per pass whose last native verification
+(`native_verified_at`, set at readiness) is older than 24 hours, or was cleared by
+a read that failed exact verification. It checks the complete descriptor and the
+seal without a Brain lock across native I/O, and stamps only the exact sealed
+import it verified: a generation replaced, re-imported or flagged by a read
+meanwhile is not stamped. A native outage proves nothing and leaves the stamp.
+A stamp is bookkeeping, not a canonical input, and does not advance the analytics
+epoch.
+
+**Damage.** A deep check mismatch marks that ready generation
+`graph_import_mismatch`, visible in graph status. Ordinary discovery under the
+current writer authority, the existing 500-job cap and its dedupe then queues one
+replacement for that exact input; a queued, running, failed or newer replacement
+suppresses further queuing, so a persistent fault cannot cause a rebuild storm.
+Until the replacement is ready, reads of the damaged generation continue to fail
+closed on any damaged selected content. A read can only ask for earlier
+re-verification; it never queues work.
+
 ## Acceptance
 
 - Actual PostgreSQL preparation observes a stable snapshot while a concurrent
@@ -123,6 +173,12 @@ scheduling. Record lock wait and transaction age separately from native I/O.
 - Exercise populated overview and centered reads during capture/audits/rebuilds;
   record errors, lock wait and total latency. Synthetic success does not replace
   the recorded normal-installation timeout check.
+- Against actual Neo4j, a warm generation read costs one Query API request;
+  deleting a selected relationship or entity out of band fails the very next read;
+  erasing an unselected entity does not; a traversal verifies the relationships it
+  returned. A due generation is fully re-verified and stamped without advancing the
+  analytics epoch, a changed sealing token is never stamped, and damage queues
+  exactly one replacement however many passes follow.
 - Pause actual digest/handover preparation while a same-Brain writer commits;
   race correction, access/policy changes, erasure and expiry against publication.
   Prove restart/wrap fairness and that timeouts cannot erase valid old coverage.

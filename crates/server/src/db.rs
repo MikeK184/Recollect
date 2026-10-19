@@ -288,6 +288,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "067_review_accounting_and_intents",
         include_str!("../migrations/067_review_accounting_and_intents.sql"),
     ),
+    (
+        "069_graph_verification_stamp",
+        include_str!("../migrations/069_graph_verification_stamp.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

@@ -169,6 +169,11 @@ pub async fn rebuild(
 
 pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
     let mut tx = db::actor_tx(&state.pool, actor).await?;
+    // A Brain whose admission lock is held elsewhere must not pin a connection
+    // for the rest of its time budget; the pass moves on and retries.
+    sqlx::query("SET LOCAL lock_timeout='2s'")
+        .execute(&mut *tx)
+        .await?;
     db::require_writer(&mut tx, brain).await?;
     let first: i16 = sqlx::query_scalar("UPDATE brains SET graph_scanned_at=clock_timestamp(),graph_discovery_cursor=(graph_discovery_cursor+1)%3 WHERE id=$1 RETURNING (graph_discovery_cursor+2)::smallint%3::smallint")
         .bind(brain)
@@ -189,11 +194,12 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
     let snapshots:Vec<Uuid>=sqlx::query_scalar("SELECT s.id FROM repository_snapshots s WHERE s.brain_id=$1
       AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
       AND EXISTS(SELECT 1 FROM repository_jobs r JOIN jobs j ON j.id=r.job_id WHERE r.brain_id=s.brain_id AND r.snapshot_id=s.id AND j.state='succeeded')
-      AND NOT EXISTS(SELECT 1 FROM graph_generations g WHERE g.brain_id=s.brain_id AND g.snapshot_id=s.id)
+      AND (NOT EXISTS(SELECT 1 FROM graph_generations g WHERE g.brain_id=s.brain_id AND g.snapshot_id=s.id)
+        OR (SELECT g.state='ready' AND g.error_code IS NOT DISTINCT FROM 'graph_import_mismatch' FROM graph_generations g WHERE g.brain_id=s.brain_id AND g.snapshot_id=s.id ORDER BY g.created_at DESC,g.id DESC LIMIT 1))
       ORDER BY s.created_at,s.id LIMIT 7")
         .bind(brain).fetch_all(&mut *tx).await?;
     let current = epoch(&mut tx, brain).await?;
-    let needed:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM claims WHERE brain_id=$1) AND NOT EXISTS(SELECT 1 FROM graph_generations WHERE brain_id=$1 AND kind='knowledge' AND input_epoch=$2 AND state NOT IN ('superseded','removed') AND (error_code IS NULL OR error_code<>'graph_input_expired') AND (descriptor->>'expires_at' IS NULL OR (descriptor->>'expires_at')::timestamptz>clock_timestamp()))")
+    let needed:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM claims WHERE brain_id=$1) AND NOT EXISTS(SELECT 1 FROM graph_generations WHERE brain_id=$1 AND kind='knowledge' AND input_epoch=$2 AND state NOT IN ('superseded','removed') AND NOT (state='ready' AND error_code IS NOT DISTINCT FROM 'graph_import_mismatch') AND (error_code IS NULL OR error_code<>'graph_input_expired') AND (descriptor->>'expires_at' IS NULL OR (descriptor->>'expires_at')::timestamptz>clock_timestamp()))")
         .bind(brain).bind(current).fetch_one(&mut *tx).await?;
     let mut count = 0;
     for offset in 0..3 {
@@ -240,10 +246,25 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
             continue;
         }
         let mut tx = db::actor_tx(&state.pool, actor).await?;
+        sqlx::query("SET LOCAL lock_timeout='2s'")
+            .execute(&mut *tx)
+            .await?;
         db::require_writer(&mut tx, brain).await?;
         sqlx::query("UPDATE graph_generations SET cleaned_at=clock_timestamp() WHERE brain_id=$1 AND id=$2 AND state IN ('superseded','removed')")
             .bind(brain).bind(id).execute(&mut *tx).await?;
         tx.commit().await?;
+    }
+    // Last, so full native verification can never delay discovery or cleanup.
+    // Damage it finds is replaced by the next pass's discovery.
+    match deep::verify_one(state, brain, actor).await {
+        Ok(deep::Checked::Damaged) => {
+            tracing::debug!(brain_id=%brain,"Graph deep verification found damage");
+        }
+        Ok(_) => {}
+        // Native outage or authority loss: the work above already committed.
+        Err(error) => {
+            tracing::debug!(brain_id=%brain,code=error.1,"Graph deep verification is waiting")
+        }
     }
     Ok(count)
 }
@@ -251,19 +272,8 @@ pub async fn run_once(state: &AppState) -> Result<usize> {
     let brains: Vec<(Uuid, Uuid)> = sqlx::query_as("SELECT * FROM recollect_graph_brains()")
         .fetch_all(&state.pool)
         .await?;
-    let mut count = 0;
-    for (brain, actor) in brains {
-        match tokio::time::timeout(
-            crate::worker::BRAIN_BUDGET,
-            maintain_brain(state, brain, actor),
-        )
-        .await
-        {
-            Ok(Ok(n)) => count += n,
-            Ok(Err(_)) | Err(_) => {
-                tracing::warn!(brain_id=%brain,"Graph maintenance remains pending")
-            }
-        }
-    }
-    Ok(count)
+    Ok(crate::worker::each_brain("graph", brains, |brain, actor| {
+        maintain_brain(state, brain, actor)
+    })
+    .await)
 }

@@ -37,5 +37,7 @@ argon2 = "0.6"
 
 [dev-dependencies]
 recollect-agent = { path = "../agent" }
+# Paused-clock tests of the per-Brain maintenance budgets.
+tokio = { workspace = true, features = ["test-util"] }
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"

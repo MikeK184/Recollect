@@ -401,6 +401,11 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
 /// Short exclusive-lock pass: housekeeping, discovery and the choice of work.
 async fn survey(state: &AppState, brain: Uuid, actor: Uuid) -> Result<Option<Survey>> {
     let mut tx = db::actor_tx(&state.pool, actor).await?;
+    // Give up on a Brain whose admission lock is held elsewhere instead of
+    // pinning this connection for the rest of the Brain's budget.
+    sqlx::query("SET LOCAL lock_timeout='2s'")
+        .execute(&mut *tx)
+        .await?;
     db::lock_brain(&mut tx, brain, true).await?;
     db::require_writer(&mut tx, brain).await?;
     cleanup(&mut tx, brain).await?;
@@ -495,6 +500,9 @@ async fn publish(
     prepared: Option<Prepared>,
 ) -> Result<usize> {
     let mut tx = db::actor_tx(&state.pool, actor).await?;
+    sqlx::query("SET LOCAL lock_timeout='2s'")
+        .execute(&mut *tx)
+        .await?;
     db::lock_brain(&mut tx, brain, true).await?;
     db::require_writer(&mut tx, brain).await?;
     let (p, profile) = (&survey.policy, &survey.profile);
@@ -731,14 +739,10 @@ pub async fn run_once(state: &AppState) -> Result<usize> {
         sqlx::query_as("SELECT brain_id,actor_id FROM recollect_semantic_brains()")
             .fetch_all(&state.pool)
             .await?;
-    let mut queued = 0;
-    for (brain, actor) in brains {
-        match maintain_brain(state, brain, actor).await {
-            Ok(n) => queued += n,
-            Err(error) => {
-                tracing::warn!(brain_id=%brain,code=error.1,"Semantic maintenance is waiting")
-            }
-        }
-    }
-    Ok(queued)
+    Ok(
+        crate::worker::each_brain("semantic", brains, |brain, actor| {
+            maintain_brain(state, brain, actor)
+        })
+        .await,
+    )
 }
