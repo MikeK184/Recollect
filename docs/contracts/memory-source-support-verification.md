@@ -142,6 +142,20 @@ exist in the Brain and remain logically active. Delivery deadlines use the same
 closure, including repository snapshot time rather than manifest creation time;
 logical expiry invalidates cached context before background cleanup runs.
 
+Supersession edges are erasure dependencies, not support or deadline
+dependencies. A revision that replaces or retires an earlier revision of the
+same claim is linked to it as an exact contributor (a supersession edge; an
+edge whose input revision belongs to the parent's own claim). The link keeps the
+replaced revision in the erasure closure and in the audit's exact-lineage
+prerequisites and cycle gate. The support predicate, its batch form and the
+delivery deadline do not follow it, nor the replaced claim's current head: the
+replacement is judged by its own gates, evidence and lifetime, so the expiry of
+the raw source that supported the replaced revision neither withdraws the
+replacement nor moves its deadline. Handover and digest contributions, the other
+claims' reconciliation inputs, supports, review decisions, rules and manifests
+remain dependencies exactly as above, and an expired or unsupported genuine
+dependency still withdraws its dependant.
+
 One SQL predicate decides support for every consumer. For a caller subject to
 row-level security it answers only for a current member of the Brain: a
 non-member, and a revision of another Brain, is never supported. Owner-rights

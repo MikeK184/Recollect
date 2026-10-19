@@ -83,6 +83,12 @@ representations. Dependency checks follow exact support and derivation identitie
 A revision with any erased support is erased; another revision supported exclusively
 by independently retained inputs is evaluated separately. The mere presence of a second
 support on the same affected revision does not establish independent derivation.
+The link from a replacement or retirement to the earlier revision of the same claim it
+replaced (a supersession edge) is such a derivation: erasing the replaced revision's source
+still erases the replacement. It is an erasure dependency only. Expiry of the replaced
+revision's source neither withdraws the replacement nor shortens its deadline; the
+replacement keeps its own evidence and claim lifetime (see
+[source support](memory-source-support-verification.md)).
 
 Erasing the current revision does not promote an older one. Minimal identity/time
 tombstones preserve the distinction between no record and an erased historical interval.
@@ -204,6 +210,8 @@ it contains no conversation or source text and does not preserve erased bytes.
 - Defaults/overrides apply by class and deadline, with retained-excerpt and unrelated
   document controls. Expiry of sole support qualifies retained claims without preserving
   forbidden full raw content. Shortening policy immediately denies due reads/work.
+  A replacement stays usable after the replaced revision's raw source expires and is still
+  erased with that source.
 - Explicit source/claim/snapshot/manifest erasure clears controlled payloads, associated
   rules/receipts, artifacts and dependent representations; independent records survive.
   Historical gaps cannot become older accepted assertions. Customer files are untouched.

@@ -296,6 +296,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "069_graph_verification_stamp",
         include_str!("../migrations/069_graph_verification_stamp.sql"),
     ),
+    // 070 is reserved for another branch; `compatible` compares the applied
+    // names positionally with this list, so the gap is intentional.
+    (
+        "071_supersession_support_boundary",
+        include_str!("../migrations/071_supersession_support_boundary.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {

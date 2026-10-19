@@ -1,24 +1,76 @@
 //! The canonical support predicate is a membership-gated SECURITY DEFINER
-//! function (migration 068). These proofs keep it equal to the previous
-//! invoker-rights body, which is retained here as a reference function, and
-//! keep the definer from silently bypassing a future restrictive read policy.
+//! function (migration 068) over the support closure of migration 071. These
+//! proofs keep it equal to the previous invoker-rights body, retained here as a
+//! reference function, and keep the definer from silently bypassing a future
+//! restrictive read policy. The only intended difference from the previous body
+//! is the supersession boundary: a same-claim replacement edge is an erasure
+//! dependency, not a support or deadline dependency. The reference encodes
+//! exactly that exception, over its own edge formulation, and nothing else.
 use super::*;
 use sqlx::{Postgres, Transaction};
 
 const REFERENCE: &str = "recollect_fixture_old_memory_supported";
+const DEADLINE_REFERENCE: &str = "recollect_fixture_old_deadline";
+const FULL_PRE_DIGEST: &str = "recollect_fixture_full_pre_digest";
 
-/// The previous `recollect_memory_supported` body (migration 043) under a test
-/// name. It is an invoker-rights function, so called as the application role it
-/// is evaluated through every row-level security policy, exactly as before.
+/// The previous support and deadline bodies (migrations 043 and 046) under test
+/// names. They are invoker-rights functions, so called as the application role
+/// they are evaluated through every row-level security policy, exactly as before.
+///
+/// The reference closure is the previous exact-contribution and current-head
+/// closure with one exception, written here independently of the migration: an
+/// edge whose input revision belongs to the same claim as its parent (a
+/// replacement or retirement linked to the revision it replaced) is not
+/// followed. `recollect_fixture_full_pre_digest` is the unmodified 046 body over
+/// the unchanged full closure; it is the control that shows what the previous
+/// semantics did with that edge.
 pub(crate) async fn install_reference(h: &Harness) {
+    const CLOSURE: &str = "recollect_fixture_support_dependencies";
+    const PRE_DIGEST: &str = "recollect_fixture_old_pre_digest";
+    let exact = include_str!("../../migrations/046_exact_memory_deadlines.sql");
+    let pre_digest = exact
+        .split("CREATE OR REPLACE FUNCTION recollect_pre_digest_supported")
+        .nth(1)
+        .and_then(|rest| rest.split("$$;").next())
+        .expect("Migration 046 defines the previous pre-digest support body");
+    let deadline = exact
+        .split("CREATE OR REPLACE FUNCTION recollect_memory_deadline")
+        .nth(1)
+        .and_then(|rest| rest.split("$$;").next())
+        .expect("Migration 046 defines the previous deadline body");
     let migration = include_str!("../../migrations/043_support_predicate_short_circuit.sql");
     let body = migration
         .split("CREATE OR REPLACE FUNCTION recollect_memory_supported")
         .nth(1)
         .expect("Migration 043 defines the previous support body");
+    let supported = body
+        .replace("recollect_pre_digest_supported(", &format!("{PRE_DIGEST}("))
+        .replace("recollect_memory_dependencies(", &format!("{CLOSURE}("));
     sqlx::raw_sql(&format!(
-        "CREATE OR REPLACE FUNCTION {REFERENCE}{body}
-         GRANT EXECUTE ON FUNCTION {REFERENCE}(uuid,uuid) TO recollect_app;"
+        "CREATE OR REPLACE FUNCTION {CLOSURE}(b uuid,target uuid) RETURNS TABLE(revision_id uuid)
+         LANGUAGE sql STABLE SET search_path=public,pg_temp AS $$
+          WITH RECURSIVE edges(parent,child) AS (
+            SELECT c.revision_id,c.input_revision_id FROM claim_contributions c
+              JOIN claim_revisions p ON p.brain_id=c.brain_id AND p.id=c.revision_id
+              JOIN claim_revisions i ON i.brain_id=c.brain_id AND i.id=c.input_revision_id
+              WHERE c.brain_id=b AND p.claim_id<>i.claim_id
+            UNION SELECT c.revision_id,h.current_revision FROM claim_contributions c
+              JOIN claim_revisions p ON p.brain_id=c.brain_id AND p.id=c.revision_id
+              JOIN claim_revisions i ON i.brain_id=c.brain_id AND i.id=c.input_revision_id
+              JOIN claims h ON h.brain_id=i.brain_id AND h.id=i.claim_id
+              WHERE c.brain_id=b AND p.claim_id<>i.claim_id
+          ), dependencies(id) AS (
+            SELECT target UNION SELECT e.child FROM edges e JOIN dependencies d ON d.id=e.parent
+          ) SELECT id FROM dependencies
+         $$;
+         CREATE OR REPLACE FUNCTION {PRE_DIGEST}{filtered}$$;
+         CREATE OR REPLACE FUNCTION {FULL_PRE_DIGEST}{pre_digest}$$;
+         CREATE OR REPLACE FUNCTION {DEADLINE_REFERENCE}{deadline_filtered}$$;
+         CREATE OR REPLACE FUNCTION {REFERENCE}{supported}
+         GRANT EXECUTE ON FUNCTION {CLOSURE}(uuid,uuid),{PRE_DIGEST}(uuid,uuid),{FULL_PRE_DIGEST}(uuid,uuid),
+           {DEADLINE_REFERENCE}(uuid,uuid),{REFERENCE}(uuid,uuid) TO recollect_app;",
+        filtered = pre_digest.replace("recollect_memory_dependencies(", &format!("{CLOSURE}(")),
+        deadline_filtered = deadline.replace("recollect_memory_dependencies(", &format!("{CLOSURE}(")),
     ))
     .execute(&h.admin)
     .await
@@ -792,5 +844,442 @@ async fn support_gate_cost_per_revision_as_the_application_role() {
         "definer batch {many:?} vs previous {old:?}"
     );
     tx.rollback().await.unwrap();
+    h.finish().await;
+}
+
+// Supersession boundary (migration 071). A revision that replaces or retires an
+// earlier revision of the same claim is linked to it by a claim_contributions
+// edge, as autonomous::basis does. These cases pin that edge to erasure only and
+// leave every genuine dependency as it was.
+
+/// A source with its identity and one version, as returned by the API.
+async fn source_of(h: &Harness, owner: &Login, base: &str, title: &str) -> Value {
+    review::ok(
+        h,
+        "POST",
+        &format!("{base}/sources"),
+        owner,
+        json!({"title":title,"media_type":"text/plain","content":"Synthetic values for support proof.\n","retain_content":true,"source_uri":null,"group_ids":[],"observed_at":null}),
+    )
+    .await
+}
+
+/// Replace `prior` (PUT with its base revision) citing `version`.
+async fn replace(
+    h: &Harness,
+    owner: &Login,
+    base: &str,
+    prior: &Value,
+    version: &Value,
+    value: &str,
+) -> Value {
+    let mut input = review::proposal(version, "Supersession subject", value);
+    input["base_revision"] = prior["id"].clone();
+    review::ok(
+        h,
+        "PUT",
+        &format!("{base}/claims/{}", prior["claim_id"].as_str().unwrap()),
+        owner,
+        input,
+    )
+    .await
+}
+
+/// The edge autonomous::basis writes: the replacement is linked to every
+/// reconciliation input it was offered, here the revision it replaced.
+async fn link(h: &Harness, brain: Uuid, revision: &Value, input: &Value) {
+    sqlx::query(
+        "INSERT INTO claim_contributions(brain_id,revision_id,input_revision_id) VALUES($1,$2,$3)",
+    )
+    .bind(brain)
+    .bind(id(revision))
+    .bind(id(input))
+    .execute(&h.admin)
+    .await
+    .unwrap();
+}
+
+/// A succeeded `supported` assessment, the machine-maintained route to support
+/// that learning writes at publication. An unreviewed revision needs it, and an
+/// unreviewed revision's expired source is what makes the previous closure fail.
+async fn assess(h: &Harness, brain: Uuid, revision: &Value) {
+    let inserted = sqlx::query(
+        "INSERT INTO memory_support_assessments(id,brain_id,revision_id,policy_id,verifier_version,actor_id,state,disposition,reason,finished_at)
+         SELECT gen_random_uuid(),$1,$2,p.policy_id,'source-support-3',$3,'succeeded','supported','Synthetic assessed support',clock_timestamp()
+         FROM model_policy_heads p WHERE p.brain_id=$1",
+    )
+    .bind(brain)
+    .bind(id(revision))
+    .bind(owner_of(h, brain).await)
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(inserted.rows_affected(), 1, "The Brain has a model policy");
+}
+
+/// Document retention of one day, with `versions` created well before that.
+async fn expire(h: &Harness, owner: &Login, base: &str, versions: &[&Value]) {
+    let retention = review::ok(h, "GET", &format!("{base}/retention"), owner, Value::Null).await;
+    let mut policy = retention["policy"].clone();
+    policy["document_days"] = json!(1);
+    review::ok(
+        h,
+        "PUT",
+        &format!("{base}/retention"),
+        owner,
+        json!({"base_change":retention["change_id"],"policy":policy}),
+    )
+    .await;
+    for version in versions {
+        sqlx::query("UPDATE source_versions SET created_at=clock_timestamp()-interval '400 days' WHERE id=$1")
+            .bind(version["version"]["id"].as_str().unwrap().parse::<Uuid>().unwrap())
+            .execute(&h.admin)
+            .await
+            .unwrap();
+    }
+}
+
+/// Deadline of every revision from the migration function and from the previous
+/// body over the reference closure, as the Brain owner through the application
+/// role, asserted equal. Returns the deadlines.
+type Deadline = Option<chrono::DateTime<chrono::Utc>>;
+
+async fn deadlines(h: &Harness, brain: Uuid) -> std::collections::BTreeMap<Uuid, Deadline> {
+    install_reference(h).await;
+    let mut tx = app_tx(h, Some(owner_of(h, brain).await)).await;
+    let rows: Vec<(Uuid, Deadline, Deadline)> = sqlx::query_as(&format!(
+        "SELECT r.id,recollect_memory_deadline($1,r.id),{DEADLINE_REFERENCE}($1,r.id)
+             FROM claim_revisions r WHERE r.brain_id=$1 ORDER BY r.id"
+    ))
+    .bind(brain)
+    .fetch_all(&mut *tx)
+    .await
+    .unwrap();
+    tx.rollback().await.unwrap();
+    rows.into_iter()
+        .map(|(id, new, old)| {
+            assert_eq!(new, old, "Deadline of {id} differs from the previous body");
+            (id, new)
+        })
+        .collect()
+}
+
+async fn pre_digest(h: &Harness, brain: Uuid, revision: &Value, function: &str) -> bool {
+    let mut tx = app_tx(h, Some(owner_of(h, brain).await)).await;
+    let verdict = sqlx::query_scalar(&format!("SELECT {function}($1,$2)"))
+        .bind(brain)
+        .bind(id(revision))
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    tx.rollback().await.unwrap();
+    verdict
+}
+
+async fn dependencies(h: &Harness, brain: Uuid, revision: &Value, function: &str) -> Vec<Uuid> {
+    sqlx::query_scalar(&format!(
+        "SELECT revision_id FROM {function}($1,$2) ORDER BY revision_id"
+    ))
+    .bind(brain)
+    .bind(id(revision))
+    .fetch_all(&h.admin)
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn a_replacement_keeps_its_support_and_deadline_after_the_replaced_source_expires() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (brain, base) = new_brain(&h, &owner, "Supersession boundary").await;
+    crate::models::allow(&h, &owner, &base, |_| {}).await;
+    let old = source_of(&h, &owner, &base, "Superseded raw evidence").await;
+    let fresh = source_of(&h, &owner, &base, "Replacement evidence").await;
+    let predecessor = propose(
+        &h,
+        &owner,
+        &base,
+        &old["version"]["id"],
+        "Supersession subject",
+        "8080",
+    )
+    .await;
+    let replacement = replace(
+        &h,
+        &owner,
+        &base,
+        &predecessor,
+        &fresh["version"]["id"],
+        "9090",
+    )
+    .await;
+    assert_eq!(replacement["claim_id"], predecessor["claim_id"]);
+    link(&h, brain, &replacement, &predecessor).await;
+    assess(&h, brain, &predecessor).await;
+    assess(&h, brain, &replacement).await;
+
+    // Before expiry both are supported through every form of the predicate.
+    let verdict = assert_equivalent(&h, &[brain]).await;
+    assert!(verdict[&(brain, id(&predecessor))] && verdict[&(brain, id(&replacement))]);
+
+    expire(&h, &owner, &base, &[&old]).await;
+    let verdict = assert_equivalent(&h, &[brain]).await;
+    assert!(
+        !verdict[&(brain, id(&predecessor))],
+        "The replaced revision's own expired source still withdraws it"
+    );
+    assert!(
+        verdict[&(brain, id(&replacement))],
+        "The replacement does not inherit the replaced revision's source expiry"
+    );
+    // The previous semantics, kept as a control: the full closure reaches the
+    // expired predecessor and withdraws the replacement.
+    assert!(!pre_digest(&h, brain, &replacement, FULL_PRE_DIGEST).await);
+    assert!(pre_digest(&h, brain, &replacement, "recollect_pre_digest_supported").await);
+
+    // The full contribution graph is kept for erasure and the audit; only the
+    // support closure drops the supersession edge and the predecessor.
+    assert!(
+        dependencies(&h, brain, &replacement, "recollect_memory_dependencies")
+            .await
+            .contains(&id(&predecessor))
+    );
+    assert!(
+        dependencies(
+            &h,
+            brain,
+            &replacement,
+            "recollect_memory_exact_dependencies"
+        )
+        .await
+        .contains(&id(&predecessor))
+    );
+    assert_eq!(
+        dependencies(
+            &h,
+            brain,
+            &replacement,
+            "recollect_memory_support_dependencies"
+        )
+        .await,
+        vec![id(&replacement)]
+    );
+
+    // The replacement keeps its own deadline: its claim retention (until erased)
+    // and its own fresh source, never the expired source of the predecessor.
+    let all = deadlines(&h, brain).await;
+    let own: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+        "SELECT recollect_retention_deadline(v.brain_id,v.retention_class,v.created_at)
+         FROM source_versions v WHERE v.brain_id=$1 AND v.id=$2",
+    )
+    .bind(brain)
+    .bind(
+        fresh["version"]["id"]
+            .as_str()
+            .unwrap()
+            .parse::<Uuid>()
+            .unwrap(),
+    )
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert!(own.unwrap() > chrono::Utc::now());
+    assert_eq!(all[&id(&replacement)], own);
+    assert!(
+        all[&id(&predecessor)].unwrap() < chrono::Utc::now(),
+        "The predecessor keeps its own expired deadline"
+    );
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn erasing_the_replaced_revisions_source_still_erases_the_replacement() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (brain, base) = new_brain(&h, &owner, "Supersession erasure").await;
+    crate::models::allow(&h, &owner, &base, |_| {}).await;
+    let old = source_of(&h, &owner, &base, "Superseded raw evidence").await;
+    let fresh = source_of(&h, &owner, &base, "Replacement evidence").await;
+    let predecessor = propose(
+        &h,
+        &owner,
+        &base,
+        &old["version"]["id"],
+        "Supersession subject",
+        "8080",
+    )
+    .await;
+    let replacement = replace(
+        &h,
+        &owner,
+        &base,
+        &predecessor,
+        &fresh["version"]["id"],
+        "9090",
+    )
+    .await;
+    link(&h, brain, &replacement, &predecessor).await;
+    assess(&h, brain, &predecessor).await;
+    assess(&h, brain, &replacement).await;
+    // Independent control: its own source and no edge to the erased one. It must
+    // not share the replacement's source: erasure fences the other sources of a
+    // revision derived from an erased input against further model use.
+    let unrelated = source_of(&h, &owner, &base, "Unrelated evidence").await;
+    let control = propose(
+        &h,
+        &owner,
+        &base,
+        &unrelated["version"]["id"],
+        "Independent subject",
+        "7070",
+    )
+    .await;
+    assess(&h, brain, &control).await;
+    let verdict = assert_equivalent(&h, &[brain]).await;
+    assert!(verdict[&(brain, id(&replacement))] && verdict[&(brain, id(&control))]);
+
+    let target = json!({"kind":"source","id":old["id"]});
+    let preview = review::ok(
+        &h,
+        "POST",
+        &format!("{base}/erasures/preview"),
+        &owner,
+        target.clone(),
+    )
+    .await;
+    review::ok(
+        &h,
+        "POST",
+        &format!("{base}/erasures"),
+        &owner,
+        json!({"target":target,"eligibility_epoch":preview["eligibility_epoch"]}),
+    )
+    .await;
+
+    let states: Vec<(Uuid, String)> = sqlx::query_as(
+        "SELECT id,privacy_state FROM claim_revisions WHERE brain_id=$1 ORDER BY id",
+    )
+    .bind(brain)
+    .fetch_all(&h.admin)
+    .await
+    .unwrap();
+    let state = |revision: &Value| {
+        states
+            .iter()
+            .find(|(candidate, _)| *candidate == id(revision))
+            .map(|(_, state)| state.as_str())
+            .unwrap()
+    };
+    assert_eq!(state(&predecessor), "erased");
+    assert_eq!(
+        state(&replacement),
+        "erased",
+        "The replacement stays an erasure dependent of the revision it replaced"
+    );
+    assert_eq!(
+        state(&control),
+        "active",
+        "An independent revision survives"
+    );
+    let verdict = assert_equivalent(&h, &[brain]).await;
+    assert!(!verdict[&(brain, id(&replacement))] && verdict[&(brain, id(&control))]);
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn genuine_dependencies_still_withdraw_their_dependants_when_their_source_expires() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (brain, base) = new_brain(&h, &owner, "Genuine dependency").await;
+    crate::models::allow(&h, &owner, &base, |_| {}).await;
+    let expiring = source_of(&h, &owner, &base, "Expiring evidence").await;
+    let fresh = source_of(&h, &owner, &base, "Fresh evidence").await;
+    // A handover contribution is evidence the handover stands on.
+    let contributor = propose(
+        &h,
+        &owner,
+        &base,
+        &expiring["version"]["id"],
+        "Contributor",
+        "1",
+    )
+    .await;
+    assess(&h, brain, &contributor).await;
+    // The handover preserves its contributor's exact evidence, so it cites the
+    // same source; it is reviewed, which tolerates that source's expiry for its
+    // own evidence but not for what it depends on.
+    let summary = review_claim(
+        &h,
+        &owner,
+        &base,
+        &handover(
+            &h,
+            &owner,
+            &base,
+            &expiring["version"]["id"],
+            "Handover over contributor",
+            &[&contributor],
+        )
+        .await,
+        "accept",
+    )
+    .await;
+    // An offered reconciliation input of a different claim is also still a
+    // dependency; only the same-claim edge is a supersession edge.
+    let offered = propose(
+        &h,
+        &owner,
+        &base,
+        &expiring["version"]["id"],
+        "Offered input",
+        "2",
+    )
+    .await;
+    assess(&h, brain, &offered).await;
+    let learned = propose(
+        &h,
+        &owner,
+        &base,
+        &fresh["version"]["id"],
+        "Learned beside input",
+        "3",
+    )
+    .await;
+    assess(&h, brain, &learned).await;
+    link(&h, brain, &learned, &offered).await;
+    let verdict = assert_equivalent(&h, &[brain]).await;
+    for revision in [&contributor, &summary, &offered, &learned] {
+        assert!(verdict[&(brain, id(revision))], "{revision}");
+    }
+    assert!(
+        deadlines(&h, brain).await.values().all(Option::is_none),
+        "Document retention is until erased by default"
+    );
+
+    expire(&h, &owner, &base, &[&expiring]).await;
+    let verdict = assert_equivalent(&h, &[brain]).await;
+    assert!(!verdict[&(brain, id(&contributor))]);
+    assert!(
+        !verdict[&(brain, id(&summary))],
+        "A handover whose contributor's source expired is withdrawn"
+    );
+    assert!(!verdict[&(brain, id(&offered))]);
+    assert!(
+        !verdict[&(brain, id(&learned))],
+        "A different-claim reconciliation input remains a support dependency"
+    );
+    let after = deadlines(&h, brain).await;
+    assert!(
+        after[&id(&summary)].unwrap() < chrono::Utc::now(),
+        "The handover's deadline still includes its contributor's expired source"
+    );
+    assert_eq!(
+        dependencies(&h, brain, &summary, "recollect_memory_support_dependencies").await,
+        dependencies(&h, brain, &summary, "recollect_memory_dependencies").await,
+        "A handover's closure has no supersession edge to drop"
+    );
     h.finish().await;
 }
