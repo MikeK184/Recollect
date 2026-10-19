@@ -420,6 +420,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/coordination/a2a/.well-known/agent-card.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["coordinationA2aAgentCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/a2a/message:send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["coordinationA2aSendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["peers"];
+        put?: never;
+        post: operations["announce"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/sessions/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/sessions/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/sessions/{id}/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["heartbeat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/sessions/{id}/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/coordination/sessions/{id}/inbox/{event}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/deletions/fence": {
         parameters: {
             query?: never;
@@ -1188,6 +1332,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/organization/aliases/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["organizationAliases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/organization/aliases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["organizationAlias"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/organization/fields/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["viewOrganizationFields"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/organization/sources/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["organizationSources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/organization/topics/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["organizationTopic"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/organization/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["organizationView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/pipeline": {
         parameters: {
             query?: never;
@@ -1380,6 +1620,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/brains/{brain}/retrieval/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recordFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/retrieval/feedback/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["feedbackContext"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/brains/{brain}/revision-manifests": {
         parameters: {
             query?: never;
@@ -1470,6 +1742,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reindexSemantic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["managedSkills"];
+        put?: never;
+        post: operations["createManagedSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/brains/{brain}/skills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["managedSkill"];
+        put: operations["updateManagedSkill"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2490,6 +2794,64 @@ export interface components {
             last_used_at: string;
             name: string;
         };
+        /** @enum {string} */
+        AliasAction: "accept" | "reject" | "revoke";
+        AliasCandidateView: {
+            acceptance_state: string;
+            /** Format: int32 */
+            byte_end: number;
+            /** Format: int32 */
+            byte_start: number;
+            /** Format: uuid */
+            change_id?: string | null;
+            disposition: string;
+            from: components["schemas"]["OrganizationCard"];
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            input_id: string;
+            quote: string;
+            source_key: string;
+            to: components["schemas"]["OrganizationCard"];
+        };
+        AliasCommand: {
+            action: components["schemas"]["AliasAction"];
+            /** Format: uuid */
+            base_change_id?: string | null;
+        };
+        AliasCommandResult: {
+            /** Format: uuid */
+            change_id: string;
+            disposition: string;
+            /** Format: uuid */
+            id: string;
+        };
+        AliasCursor: {
+            /** Format: uuid */
+            after_id: string;
+            /** Format: int64 */
+            epoch: number;
+            /** Format: date-time */
+            expires_at?: string | null;
+            scope: components["schemas"]["GraphSelection"];
+        };
+        AliasRequest: {
+            cursor?: null | components["schemas"]["AliasCursor"];
+            limit?: number;
+            scope: components["schemas"]["GraphSelection"];
+        };
+        AliasView: {
+            /** Format: uuid */
+            brain_id: string;
+            candidates: components["schemas"]["AliasCandidateView"][];
+            /** Format: int64 */
+            epoch: number;
+            evidence: components["schemas"]["GraphNode"][];
+            /** Format: date-time */
+            expires_at?: string | null;
+            next_cursor?: null | components["schemas"]["AliasCursor"];
+            scope: components["schemas"]["GraphSelection"];
+        };
         AnalyticsProvenance: {
             coverage: components["schemas"]["RecallCoverage"];
             generation: components["schemas"]["GraphGeneration"];
@@ -3190,6 +3552,8 @@ export interface components {
             knowledge_until?: string | null;
             revision: components["schemas"]["ClaimRevision"];
         };
+        /** @enum {string} */
+        CommunityReadiness: "unconfigured" | "blocked" | "pending" | "queued" | "ready" | "failed" | "stale";
         ConflictParticipant: {
             /** Format: uuid */
             base_revision: string;
@@ -3204,6 +3568,150 @@ export interface components {
             replacement?: null | components["schemas"]["ClaimContent"];
             /** Format: uuid */
             selected_id?: string | null;
+        };
+        CoordinationAnnouncement: {
+            overlaps: components["schemas"]["CoordinationOverlap"][];
+            session: components["schemas"]["CoordinationSession"];
+        };
+        CoordinationEvent: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            payload: components["schemas"]["CoordinationPayload"];
+            /** Format: int64 */
+            sequence: number;
+        };
+        CoordinationHeartbeat: {
+            /** Format: int64 */
+            expected_revision: number;
+        };
+        CoordinationInbox: {
+            events: components["schemas"]["CoordinationEvent"][];
+            gap: boolean;
+            /** Format: int64 */
+            next_cursor: number;
+            peers: components["schemas"]["CoordinationSession"][];
+        };
+        CoordinationIntent: {
+            mode: string;
+            path: string;
+            phase: string;
+            /** Format: uuid */
+            repository_id: string;
+        };
+        CoordinationMessage: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            from_session_id: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            recipient: components["schemas"]["CoordinationSession"];
+            /** Format: uuid */
+            reply_to?: string | null;
+            sender: components["schemas"]["CoordinationSession"];
+            text: string;
+            /** Format: uuid */
+            to_session_id: string;
+        };
+        CoordinationMessageInput: {
+            /** Format: uuid */
+            from_session_id: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            reply_to?: string | null;
+            text: string;
+            /** Format: uuid */
+            to_session_id: string;
+        };
+        CoordinationOverlap: {
+            basis: string[];
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            own_revision: number;
+            paths: string[];
+            peer: components["schemas"]["CoordinationSession"];
+            /** Format: int64 */
+            peer_revision: number;
+            reason: string;
+            tokens: string[];
+        };
+        CoordinationPayload: {
+            data: components["schemas"]["CoordinationOverlap"];
+            /** @enum {string} */
+            type: "overlap";
+        } | {
+            data: components["schemas"]["CoordinationMessage"];
+            /** @enum {string} */
+            type: "message";
+        } | {
+            data: components["schemas"]["CoordinationPeerClosed"];
+            /** @enum {string} */
+            type: "peer_closed";
+        };
+        CoordinationPeerClosed: {
+            peer: components["schemas"]["CoordinationSession"];
+        };
+        CoordinationPeers: {
+            overlaps: components["schemas"]["CoordinationOverlap"][];
+            sessions: components["schemas"]["CoordinationSession"][];
+        };
+        CoordinationSession: {
+            /** Format: uuid */
+            account_id: string;
+            account_name: string;
+            area_ids: string[];
+            /** Format: uuid */
+            device_id: string;
+            device_name: string;
+            /** Format: uuid */
+            environment_id?: string | null;
+            environment_name?: string | null;
+            /** Format: date-time */
+            expires_at: string;
+            goal: string;
+            host_kind: string;
+            /** Format: uuid */
+            id: string;
+            intents: components["schemas"]["CoordinationIntent"][];
+            label: string;
+            /** Format: date-time */
+            last_seen_at: string;
+            repository_ids: string[];
+            /** Format: int64 */
+            revision: number;
+            /** Format: uuid */
+            scope_id?: string | null;
+            status: string;
+            /** Format: uuid */
+            task_id?: string | null;
+            topics: string[];
+        };
+        CoordinationSessionInput: {
+            context_repository_ids?: string[];
+            /** Format: int64 */
+            expected_revision?: number | null;
+            /** Format: uuid */
+            expected_scope: string;
+            goal: string;
+            host_kind: string;
+            /** Format: uuid */
+            id: string;
+            intents?: components["schemas"]["CoordinationIntent"][];
+            label: string;
+            /** Format: uuid */
+            task_id: string;
+            topics?: string[];
         };
         CreateBrain: {
             description?: string;
@@ -3304,11 +3812,23 @@ export interface components {
             /** Format: int64 */
             jobs: number;
             /** Format: int64 */
+            knowledge_alias_candidates?: number;
+            /** Format: int64 */
+            knowledge_alias_changes?: number;
+            /** Format: int64 */
+            knowledge_field_inputs?: number;
+            /** Format: int64 */
             manifest_revisions: number;
             /** Format: int64 */
             model_claim_fences?: number;
             /** Format: int64 */
             model_input_fences?: number;
+            /** Format: int64 */
+            retrieval_feedback_contexts?: number;
+            /** Format: int64 */
+            semantic_batches?: number;
+            /** Format: int64 */
+            semantic_entries?: number;
             shared_sources: boolean;
             /** Format: int64 */
             snapshots: number;
@@ -3406,6 +3926,99 @@ export interface components {
             /** Format: date-time */
             to?: string | null;
         };
+        FeedbackCommand: {
+            /** Format: uuid */
+            base_change_id?: string | null;
+            /** Format: uuid */
+            context_id: string;
+            vote: components["schemas"]["UtilityVote"];
+        };
+        FeedbackContext: {
+            feedback: components["schemas"]["FeedbackResult"];
+            node: components["schemas"]["GraphNode"];
+        };
+        /**
+         * @description A delivery context is issued only for one canonically qualified input under
+         *     an owned retrieval operation. It contains no duplicate query/evidence body.
+         */
+        FeedbackContextRequest: {
+            input_kind: string;
+            /** Format: uuid */
+            query_context_id: string;
+            /** Format: uuid */
+            revision_id: string;
+            scope: components["schemas"]["GraphSelection"];
+        };
+        FeedbackResult: {
+            /** Format: uuid */
+            change_id?: string | null;
+            /** Format: uuid */
+            context_id: string;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: uuid */
+            query_context_id: string;
+            /** Format: uuid */
+            task_id: string;
+            vote?: null | components["schemas"]["UtilityVote"];
+        };
+        FieldOrganizationCoverage: {
+            assigned_inputs: number;
+            counts_are_lower_bounds: boolean;
+            examined_inputs: number;
+            qualified_inputs: number;
+            /** @description Content-free refresh state, independent of model/native profiles. */
+            refresh_state: string;
+            unassigned_inputs: number;
+        };
+        FieldOrganizationCursor: {
+            /** Format: uuid */
+            after_input?: string | null;
+            /** Format: uuid */
+            after_origin?: string | null;
+            /** Format: uuid */
+            entity_id?: string | null;
+            /** Format: int64 */
+            epoch: number;
+            /** Format: date-time */
+            expires_at?: string | null;
+            scope: components["schemas"]["GraphSelection"];
+        };
+        FieldOrganizationEntity: {
+            contributor_count: number;
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["FieldReferenceKind"];
+            label: string;
+            /** @description Field on the original canonical reference which supplies its current name. */
+            label_pointer: string;
+            /** Format: uuid */
+            reference_id: string;
+        };
+        FieldOrganizationRequest: {
+            cursor?: null | components["schemas"]["FieldOrganizationCursor"];
+            /** Format: uuid */
+            entity_id?: string | null;
+            scope: components["schemas"]["GraphSelection"];
+        };
+        FieldOrganizationView: {
+            /** Format: uuid */
+            brain_id: string;
+            coverage: components["schemas"]["FieldOrganizationCoverage"];
+            entities: components["schemas"]["FieldOrganizationEntity"][];
+            /** Format: int64 */
+            epoch: number;
+            evidence: components["schemas"]["GraphNode"][];
+            /** Format: date-time */
+            expires_at?: string | null;
+            next_cursor?: null | components["schemas"]["FieldOrganizationCursor"];
+            origins: components["schemas"]["OrganizationFieldOrigin"][];
+            scope: components["schemas"]["GraphSelection"];
+        };
+        /** @enum {string} */
+        FieldOriginKind: "source_context" | "claim_revision" | "repository_snapshot" | "manifest_revision";
+        /** @enum {string} */
+        FieldReferenceKind: "repository" | "environment";
         GrantRequest: {
             role: string;
         };
@@ -3558,10 +4171,14 @@ export interface components {
             link_epoch: number;
             /** Format: int64 */
             memory_epoch: number;
+            missing_tracked_generation_ids?: string[];
             /** Format: int64 */
             offset: number;
             /** Format: int64 */
+            organization_epoch?: number;
+            /** Format: int64 */
             total: number;
+            tracked_generations?: components["schemas"]["GraphGeneration"][];
         };
         GraphView: {
             /** Format: uuid */
@@ -3719,6 +4336,8 @@ export interface components {
             /** Format: int32 */
             max_attempts: number;
             /** Format: int32 */
+            preparation_deferrals?: number;
+            /** Format: int32 */
             progress: number;
             state: string;
             /** Format: uuid */
@@ -3814,6 +4433,48 @@ export interface components {
         LoginRequest: {
             password: string;
             username: string;
+        };
+        ManagedSkillBundle: {
+            files: components["schemas"]["ManagedSkillFile"][];
+            skill: components["schemas"]["ManagedSkillSummary"];
+        };
+        ManagedSkillFile: {
+            content: string;
+            path: string;
+        };
+        ManagedSkillInput: {
+            description: string;
+            enabled: boolean;
+            /** Format: uuid */
+            environment_id?: string | null;
+            /** Format: int32 */
+            expected_version?: number | null;
+            files: components["schemas"]["ManagedSkillFile"][];
+            kind: components["schemas"]["ManagedSkillKind"];
+            name: string;
+            profile_ids: string[];
+            tags: string[];
+        };
+        /** @enum {string} */
+        ManagedSkillKind: "skill" | "instructions";
+        ManagedSkillSummary: {
+            /** Format: uuid */
+            brain_id: string;
+            description: string;
+            enabled: boolean;
+            /** Format: uuid */
+            environment_id?: string | null;
+            file_paths: string[];
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ManagedSkillKind"];
+            name: string;
+            profile_ids: string[];
+            tags: string[];
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: int32 */
+            version: number;
         };
         ManifestDetail: {
             current: components["schemas"]["ManifestRevision"];
@@ -4597,6 +5258,245 @@ export interface components {
             /** @description Current caller's accessible Brains only; this is not a global queue census. */
             queue_scope: string;
         };
+        OrganizationCard: {
+            /** Format: uuid */
+            change_id?: string | null;
+            entity_count: number;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            label: string;
+            pinned: boolean;
+            source_count: number;
+            topic_kind?: null | components["schemas"]["OrganizationTopicKind"];
+        };
+        OrganizationCenter: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "topic";
+        } | {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "entity";
+        };
+        OrganizationCommunityStatus: {
+            /** Format: uuid */
+            report_id?: string | null;
+            state: components["schemas"]["CommunityReadiness"];
+            vector_features?: null | components["schemas"]["VectorFeatureReadiness"];
+        };
+        OrganizationConnection: {
+            /** Format: int32 */
+            byte_end: number;
+            /** Format: int32 */
+            byte_start: number;
+            /** Format: uuid */
+            from: string;
+            /** Format: uuid */
+            id: string;
+            interpretation: string;
+            quote: string;
+            relation: string;
+            source_key: string;
+            /** Format: uuid */
+            to: string;
+        };
+        OrganizationCoverage: {
+            counts_are_lower_bounds: boolean;
+            examined_sources: number;
+            mapped_sources: number;
+            qualified_sources: number;
+            unassigned_sources: number;
+        };
+        OrganizationCursor: {
+            /** Format: uuid */
+            after_source?: string | null;
+            card_offset: number;
+            center?: null | components["schemas"]["OrganizationCenter"];
+            /** Format: int64 */
+            epoch: number;
+            /** Format: date-time */
+            expires_at?: string | null;
+            row_cursor: components["schemas"]["OrganizationRowCursor"];
+            scope: components["schemas"]["GraphSelection"];
+        };
+        OrganizationFieldOrigin: {
+            /** Format: uuid */
+            entity_id: string;
+            evidence_key: string;
+            /** @description RFC 6901 pointer into the immutable canonical input/context snapshot. */
+            field_pointer: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            input_id: string;
+            /** Format: uuid */
+            logical_id: string;
+            origin_kind: components["schemas"]["FieldOriginKind"];
+            /** Format: uuid */
+            revision_id: string;
+            /**
+             * Format: uuid
+             * @description Exact original UUID value at the declared pointer; never a text quote.
+             */
+            value: string;
+        };
+        OrganizationMembership: {
+            /** Format: uuid */
+            entity_id: string;
+            /** Format: uuid */
+            input_id: string;
+            reason: string;
+            source_key: string;
+            /** Format: uuid */
+            topic_id: string;
+            /** Format: double */
+            weight: number;
+        };
+        OrganizationMention: {
+            /** Format: int32 */
+            byte_end: number;
+            /** Format: int32 */
+            byte_start: number;
+            /** Format: uuid */
+            entity_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            input_id: string;
+            quote: string;
+            source_key: string;
+        };
+        OrganizationRepresentativeSource: {
+            /** Format: uuid */
+            input_id: string;
+            provenance_kind: string;
+            source_key: string;
+            /** Format: uuid */
+            topic_id: string;
+        };
+        OrganizationRequest: {
+            center?: null | components["schemas"]["OrganizationCenter"];
+            cursor?: null | components["schemas"]["OrganizationCursor"];
+            limit?: number;
+            scope: components["schemas"]["GraphSelection"];
+        };
+        /**
+         * @description A keyset in one bounded detail stream. Source windows advance only after
+         *     both card streams and all three detail phases have been exhausted.
+         */
+        OrganizationRowCursor: {
+            /** Format: uuid */
+            after_id?: string | null;
+            /** @enum {string} */
+            phase: "mentions";
+        } | {
+            /** Format: uuid */
+            after_entity?: string | null;
+            /** Format: uuid */
+            after_input?: string | null;
+            /** Format: uuid */
+            after_topic?: string | null;
+            /** @enum {string} */
+            phase: "memberships";
+        } | {
+            /** Format: uuid */
+            after_id?: string | null;
+            /** @enum {string} */
+            phase: "connections";
+        } | {
+            /** @enum {string} */
+            phase: "done";
+        };
+        OrganizationSourceCursor: {
+            /** Format: uuid */
+            after_input?: string | null;
+            /** Format: uuid */
+            after_source?: string | null;
+            /** Format: uuid */
+            after_topic?: string | null;
+            /** Format: uuid */
+            brain_id: string;
+            /** Format: int64 */
+            epoch: number;
+            /** Format: date-time */
+            expires_at?: string | null;
+            scope: components["schemas"]["GraphSelection"];
+            /** Format: uuid */
+            through_source?: string | null;
+            /** Format: uuid */
+            topic_id?: string | null;
+        };
+        OrganizationSourceMembership: {
+            /** Format: uuid */
+            input_id: string;
+            reason: string;
+            source_key: string;
+            /** Format: uuid */
+            topic_id: string;
+            /** Format: double */
+            weight: number;
+        };
+        OrganizationSourcesRequest: {
+            cursor?: null | components["schemas"]["OrganizationSourceCursor"];
+            scope: components["schemas"]["GraphSelection"];
+            /** Format: uuid */
+            topic_id?: string | null;
+        };
+        OrganizationSourcesView: {
+            /** Format: uuid */
+            brain_id: string;
+            community_status: components["schemas"]["OrganizationCommunityStatus"];
+            coverage: components["schemas"]["OrganizationCoverage"];
+            /** Format: int64 */
+            epoch: number;
+            evidence: components["schemas"]["GraphNode"][];
+            /** Format: date-time */
+            expires_at?: string | null;
+            next_cursor?: null | components["schemas"]["OrganizationSourceCursor"];
+            representative_sources: components["schemas"]["OrganizationRepresentativeSource"][];
+            scope: components["schemas"]["GraphSelection"];
+            source_memberships: components["schemas"]["OrganizationSourceMembership"][];
+            state: string;
+            topics: components["schemas"]["OrganizationCard"][];
+        };
+        /** @enum {string} */
+        OrganizationTopicKind: "facet" | "community" | "split" | "manual_overlay";
+        OrganizationView: {
+            /** Format: uuid */
+            brain_id: string;
+            community_status?: null | components["schemas"]["OrganizationCommunityStatus"];
+            connections: components["schemas"]["OrganizationConnection"][];
+            /**
+             * @description Exact semantic endpoints for this page's detail rows, independent of
+             *     the ranked overview-card page. These do not advance the card cursor.
+             */
+            context_cards: components["schemas"]["OrganizationCard"][];
+            coverage: components["schemas"]["OrganizationCoverage"];
+            entities: components["schemas"]["OrganizationCard"][];
+            /** Format: int64 */
+            epoch: number;
+            evidence: components["schemas"]["GraphNode"][];
+            /** Format: date-time */
+            expires_at?: string | null;
+            memberships: components["schemas"]["OrganizationMembership"][];
+            mentions: components["schemas"]["OrganizationMention"][];
+            next_cursor?: null | components["schemas"]["OrganizationCursor"];
+            producer_status?: null | components["schemas"]["ProducerReadiness"];
+            /**
+             * @description At most one exact visible mention for each overview card. These anchors
+             *     do not consume or advance the independently paginated detail stream.
+             */
+            representative_mentions: components["schemas"]["OrganizationMention"][];
+            representative_sources?: components["schemas"]["OrganizationRepresentativeSource"][];
+            scope: components["schemas"]["GraphSelection"];
+            source_memberships?: components["schemas"]["OrganizationSourceMembership"][];
+            source_next_cursor?: null | components["schemas"]["OrganizationSourceCursor"];
+            state: string;
+            topics: components["schemas"]["OrganizationCard"][];
+        };
         OwnerRequest: {
             /** Format: uuid */
             account_id: string;
@@ -4778,6 +5678,8 @@ export interface components {
             refreshed_at?: string | null;
             state: string;
         };
+        /** @enum {string} */
+        ProducerReadiness: "unconfigured" | "blocked" | "ready";
         PublicationFence: {
             /** Format: uuid */
             repository_id: string;
@@ -5488,6 +6390,54 @@ export interface components {
             accounts: components["schemas"]["Account"][];
             invitations: components["schemas"]["Invitation"][];
         };
+        TopicCommand: {
+            /** Format: uuid */
+            base_change_id: string;
+            change: components["schemas"]["TopicOverride"];
+        };
+        TopicCommandResult: {
+            /** Format: uuid */
+            change_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            split_topic_id?: string | null;
+        };
+        TopicOverride: {
+            /** @enum {string} */
+            action: "rename_source";
+            /** Format: uuid */
+            basis_input: string;
+            label: string;
+        } | {
+            /** @enum {string} */
+            action: "exclude_sources";
+            excluded: boolean;
+            input_ids: string[];
+        } | {
+            /** @enum {string} */
+            action: "split_sources";
+            input_ids: string[];
+        } | {
+            /** @enum {string} */
+            action: "rename";
+            /** Format: uuid */
+            basis_input: string;
+            label: string;
+        } | {
+            /** @enum {string} */
+            action: "pin";
+            pinned: boolean;
+        } | {
+            /** @enum {string} */
+            action: "exclude";
+            excluded: boolean;
+            input_ids: string[];
+        } | {
+            /** @enum {string} */
+            action: "split";
+            input_ids: string[];
+        };
         UnavailableClaim: {
             /** Format: uuid */
             claim_id: string;
@@ -5515,6 +6465,10 @@ export interface components {
             installation_owner: boolean;
             username: string;
         };
+        /** @enum {string} */
+        UtilityVote: "helpful" | "unhelpful" | "reused";
+        /** @enum {string} */
+        VectorFeatureReadiness: "ready" | "partial" | "unavailable";
         WorkspaceCatalogue: {
             areas: components["schemas"]["ScopeResource"][];
             /** Format: int64 */
@@ -6451,6 +7405,244 @@ export interface operations {
             };
         };
     };
+    coordinationA2aAgentCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    coordinationA2aSendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoordinationMessageInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationMessage"];
+                };
+            };
+        };
+    };
+    peers: {
+        parameters: {
+            query?: {
+                session_id?: string;
+            };
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationPeers"];
+                };
+            };
+        };
+    };
+    announce: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoordinationSessionInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationAnnouncement"];
+                };
+            };
+        };
+    };
+    close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    events: {
+        parameters: {
+            query?: {
+                after?: number;
+            };
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded authenticated inbox SSE with cursor replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    heartbeat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoordinationHeartbeat"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationSession"];
+                };
+            };
+        };
+    };
+    inbox: {
+        parameters: {
+            query?: {
+                after?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoordinationInbox"];
+                };
+            };
+        };
+    };
+    ack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     brainDeletionFence: {
         parameters: {
             query?: never;
@@ -6763,6 +7955,8 @@ export interface operations {
         parameters: {
             query?: {
                 offset?: number;
+                /** @description Comma-separated list of at most 102 distinct non-nil generation UUIDs within 3774 bytes. */
+                tracked_generation_ids?: string;
             };
             header?: never;
             path: {
@@ -7866,6 +9060,158 @@ export interface operations {
             };
         };
     };
+    organizationAliases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AliasRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AliasView"];
+                };
+            };
+        };
+    };
+    organizationAlias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AliasCommand"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AliasCommandResult"];
+                };
+            };
+        };
+    };
+    viewOrganizationFields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldOrganizationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldOrganizationView"];
+                };
+            };
+        };
+    };
+    organizationSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationSourcesRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationSourcesView"];
+                };
+            };
+        };
+    };
+    organizationTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopicCommand"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicCommandResult"];
+                };
+            };
+        };
+    };
+    organizationView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationView"];
+                };
+            };
+        };
+    };
     brainPipeline: {
         parameters: {
             query?: never;
@@ -8240,6 +9586,56 @@ export interface operations {
             };
         };
     };
+    recordFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackCommand"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackResult"];
+                };
+            };
+        };
+    };
+    feedbackContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackContextRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackContext"];
+                };
+            };
+        };
+    };
     revisionManifests: {
         parameters: {
             query?: {
@@ -8429,6 +9825,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SemanticProfile"];
+                };
+            };
+        };
+    };
+    managedSkills: {
+        parameters: {
+            query?: {
+                environment_id?: string;
+                operation_id?: string;
+                query?: string;
+                include_disabled?: boolean;
+            };
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedSkillSummary"][];
+                };
+            };
+        };
+    };
+    createManagedSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManagedSkillInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedSkillBundle"];
+                };
+            };
+        };
+    };
+    managedSkill: {
+        parameters: {
+            query?: {
+                environment_id?: string;
+                operation_id?: string;
+                version?: number;
+                path?: string;
+                entrypoint_only?: boolean;
+            };
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedSkillBundle"];
+                };
+            };
+        };
+    };
+    updateManagedSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brain: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManagedSkillInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedSkillBundle"];
                 };
             };
         };

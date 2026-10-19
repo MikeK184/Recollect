@@ -89,7 +89,7 @@ Work type: product
   scoped history, committed scope with unavailable/recovered context, both desktop
   flows and normal preservation pass. Workspace 25 passed/143 explicitly skipped;
   focused integrations run separately. Clippy, 156-operation API/web build,
-  governance and diff checks pass. See the [dated mapping](../../../mappings/mcp-tools-2026-09-22.md)
+  governance and diff checks pass. See the [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-tools-2026-09-22.md)
   and [runbook](../../../runbooks/agent-memory-tools.md) for evidence and limits.
 - Version: N/A: no release policy.
 - Commit: Uncommitted.

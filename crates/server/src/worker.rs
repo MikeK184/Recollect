@@ -138,6 +138,12 @@ pub async fn execute(state: &AppState, job: &ClaimedJob) -> Result<(), Failure> 
     if job.kind == "source.learn" {
         return crate::learning::execute(state, job).await;
     }
+    if job.kind == "knowledge.map" {
+        return crate::knowledge_mapping::production::execute(state, job).await;
+    }
+    if job.kind == "knowledge.fields" {
+        return crate::knowledge_mapping::fields::execute(state, job).await;
+    }
     if job.kind == "handover.generate" {
         return crate::handovers::execute(state, job).await;
     }
@@ -334,8 +340,14 @@ pub async fn run(state: AppState) -> anyhow::Result<()> {
     periodic(&mut tasks, &state, signal.clone(), "semantic", MAINTENANCE_EVERY, |state| async move {
         crate::semantic::run_once(&state).await.is_err()
     });
+    periodic(&mut tasks, &state, signal.clone(), "retained mapping", MAINTENANCE_EVERY, |state| async move {
+        crate::knowledge_mapping::producer::run_once(&state).await.is_err()
+    });
     periodic(&mut tasks, &state, signal.clone(), "graph", MAINTENANCE_EVERY, |state| async move {
         crate::graph::run_once(&state).await.is_err()
+    });
+    periodic(&mut tasks, &state, signal.clone(), "canonical fields", MAINTENANCE_EVERY, |state| async move {
+        crate::knowledge_mapping::fields::run_once(&state).await.is_err()
     });
     periodic(&mut tasks, &state, signal.clone(), "analytics", MAINTENANCE_EVERY, |state| async move {
         crate::graph::analytics::run_once(&state).await.is_err()

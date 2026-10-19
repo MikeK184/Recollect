@@ -3,6 +3,7 @@
 Status: in-progress
 Owning epic: `docs/roadmap/epics/operational-readiness.md`
 Work type: product
+Implementation: first-batch checkpoint retained; October 18 graph follow-up is locally validated, with normal update and comparable quality rerun open
 
 ## Summary
 
@@ -23,7 +24,7 @@ Work type: product
 
 - In scope: root update/recovery bridge, build/schema diagnostics; whole canonical source chunks and bounded alternative-window packing; historical/preference answer behavior; separately frozen provider diagnostics with retained failures; opt-in partial graph entry and one-hop qualification/verification; focused local and budgeted evaluation.
 - Out of scope: changing existing Brain provider policies, remote deployment, recursive summaries, schema reset, deletion of migration history and full-corpus learning.
-- Blockers: No unresolved authority decision; final normal-Brain graph performance acceptance remains open after authenticated endpoints timed out under background contention. Later research targets remain unimplemented.
+- Blockers: No unresolved authority decision. The historical normal-installation graph failure remains unresolved there; later local mixed-workload and normal-data clone repairs pass. A reviewed installed update, final normal-runtime acceptance and comparable memory-quality rerun remain open. Later research targets are separate scope.
 
 ## Surface and Interface Changes
 
@@ -98,9 +99,9 @@ any checkpointed update; graph success is measured with every outcome counted.
 - Automated: meaningful canonical span/multi-window publication controls; >500-node partial graph and damaged/excluded inputs; root recovery ownership/encryption and failed-update checks; focused browser, native tests and governance validation.
 - Manual: verify build/schema and preserved normal inventory after an explicitly owned update, using retained checkpoint.
 - Acceptance: complete >2048-byte supported evidence survives to answer publication; additional source fragments remain bounded and revalidated; partial graph entry avoids full-source qualification/verification and opens a nonempty default overview plus centered read on the normal Brain during ordinary background verification; original complete API retains refusal semantics; update checkpoint is compatible with existing fresh-target recovery; score changes reported rather than assumed.
-- Current outcome: initial migration-043 graph checks failed in 2–15 seconds,
+- Historical installation outcome (October 9): initial migration-043 graph checks failed in 2–15 seconds,
   as retained in the [first-batch report](../../../mappings/memory-quality-first-batch-proof-2026-10-08.md).
-  The normal image is now on migration 047, built at 13:57:36Z, with exact IDs
+  The recorded normal image was on migration 047, built at 13:57:36Z, with exact IDs
   preserved through checkpointed updates. The migration-046 series passed
   37/40 with three database failures and p95 3.520 seconds. The new 047 series
   passes only 35/40, with five database failures and p95 4.027 seconds. Reliable
@@ -109,13 +110,23 @@ any checkpointed update; graph success is measured with every outcome counted.
   under the writer lock as the next measured seam. The native 10k capture-only
   workload passes 40/40 at p95 0.513 seconds; it is not normal-runtime acceptance.
 
+- Current local follow-up (October 18): the owning
+  [concurrency pack](graph-concurrent-preparation.md) records 602/602 mixed 10k
+  reads, zero errors and p95 0.460 seconds during capture/audit/rebuild, plus both
+  normal-data clone series passing 40/40 below two seconds. These are later
+  passing repair measurements, with the old failures preserved. They did not
+  update the normal installation. A comparable post-repair memory-quality run
+  has not been completed; the latest LongMemEval baseline remains 20/50 (40%).
+  [Automatic organization](graph-automatic-knowledge-mapping.md) has its own
+  failed current4 extractor/group/canonical quality gates.
+
 ## Closeout
 
 - Planned: the bounded update, evidence and graph batch above.
-- Shipped: Local implementation/deployment of the update, evidence-window, answer and graph/audit query repairs; the slice remains in-progress until live graph acceptance passes. No new comparable benchmark score is established.
-- Not shipped: reliable populated normal-Brain graph reads; later learning/time/topic/ANN research phases; a complete fresh held-out benchmark.
-- New blockers: Measured background writer contention and repeated canonical qualification still exceed graph read deadlines. PID/advisory-key sampling now ties long digest/handover maintenance to the tested Brain; next action is reducing cumulative writer tenure through bounded preparation/publication while preserving complete support/privacy, exact generation and deadline gates. Full automatic mapping and forced audit/rebuild acceptance remain open.
+- Shipped: Partial first-batch implementation and the dated October 9 local update of evidence-window, answer and graph/audit repairs. The full slice remains in-progress. October 18 graph repairs have passing local proof, with no new normal-installation deployment or comparable benchmark score.
+- Not shipped: Verified repaired behavior in the normal installation, final integrated closeout and a comparable post-repair memory-quality run. Later learning/time/topic/ANN work remains separately scoped.
+- New blockers: The remaining readiness gates are an owned normal-installation update and all-outcome graph proof under ordinary background work, followed by the comparable quality run. Local writer-tenure repair and forced capture/audit/rebuild proof now pass in the concurrency pack; those completed controls are not reopened as unimplemented work. Separate automatic-mapping quality failures remain with its owning pack.
 - Docs updated: accepted first-batch amendments, installation runbook, dated proof, research follow-up and owning epic/index/pack.
-- Validation: Focused native answer/evidence/support/graph/MCP controls, browser geometry, root update and isolated recovery passed; final governance result is in the dated proof. Final model-free normal graph checks failed and are retained. Paid diagnostics were incomplete and stopped near the USD 8 commitment ceiling.
+- Validation: Focused native answer/evidence/support/graph/MCP controls, browser geometry, root update and isolated recovery passed in the original batch. Its model-free normal graph failures and incomplete paid diagnostics near the USD 8 commitment ceiling remain retained. The later October 18 local graph measurements above pass; they are separate from installed-runtime and answer-quality proof. This documentation update makes no new provider calls or runtime measurements.
 - Version: N/A — local development.
-- Commit: uncommitted.
+- Commit: Implementation checkpoint `f2673d7`; this documentation reconciliation is uncommitted.

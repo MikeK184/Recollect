@@ -63,6 +63,8 @@ struct Candidates {
     claims: Vec<Candidate>,
     #[serde(default)]
     retirements: Vec<Retirement>,
+    #[serde(default)]
+    mapping: Option<serde_json::Value>,
 }
 #[derive(Default, Deserialize)]
 pub struct LearningQuery {
@@ -472,6 +474,12 @@ async fn existing(
 async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_support::Stage> {
     let (mut tx, mut run, policy) = ready(state, job).await?;
     if let Some(stage) = memory_support::load(&mut tx, run.brain_id, run.id).await? {
+        crate::knowledge_mapping::production::missing_legacy(
+            &mut tx,
+            &run,
+            stage.extraction_request,
+        )
+        .await?;
         tx.commit().await?;
         return Ok(stage);
     }
@@ -494,6 +502,7 @@ async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_supp
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
+    let mapping_context=crate::knowledge_mapping::production::learning_context(state,job,&run).await?;
     let response = gateway::invoke_for_policy(
         state,
         gateway::Context {
@@ -530,6 +539,16 @@ async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_supp
             "The provider returned too many claims.",
         ));
     }
+    let prepared_mapping = crate::knowledge_mapping::production::prepare_learning(
+        state,
+        job,
+        &run,
+        &response.request,
+        policy.policy.max_input_bytes as usize,
+        candidates.mapping.as_ref(),
+        &mapping_context,
+    )
+    .await?;
     let (mut tx, mut run, policy) = ready(state, job).await?;
     let source = gateway::source(
         state,
@@ -545,6 +564,14 @@ async fn prepare_stage(state: &AppState, job: &ClaimedJob) -> Result<memory_supp
         "extraction",
         std::slice::from_ref(&source.class),
     )?;
+    crate::knowledge_mapping::production::stage_learning(
+        &mut tx,
+        &run,
+        &response.request,
+        &source,
+        prepared_mapping,
+    )
+    .await?;
     let lines: Vec<&str> = source.text.lines().collect();
     let mut contents = Vec::new();
     let mut mutations = std::collections::HashSet::new();
@@ -975,6 +1002,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     )
     .await?;
     jobs::enqueue(&mut tx, job.actor_id, job.brain_id, audit).await?;
+    crate::knowledge_mapping::production::enqueue_learning(&mut tx, job, &run, audit).await?;
     sqlx::query("UPDATE jobs SET state='succeeded',progress=100,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE id=$1 AND lease_token=$2")
         .bind(job.id).bind(job.lease_token).execute(&mut *tx).await?;
     let within_retention: bool =
@@ -991,7 +1019,7 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     tx.commit().await?;
     Ok(())
 }
-fn derivation(run: &LearningRun, request: &ModelRequest, automatic: bool) -> ModelDerivation {
+fn derivation(run: &LearningRun, request: &ModelRequest, _automatic: bool) -> ModelDerivation {
     ModelDerivation {
         run_id: run.id,
         request_id: request.id,
@@ -999,18 +1027,8 @@ fn derivation(run: &LearningRun, request: &ModelRequest, automatic: bool) -> Mod
         provider: request.provider.clone(),
         requested_model: request.model.clone(),
         returned_model: request.returned_model.clone().unwrap_or_default(),
-        prompt_label: if automatic {
-            autonomous::PROMPT
-        } else {
-            gateway::EXTRACT_PROMPT
-        }
-        .into(),
-        schema_label: if automatic {
-            autonomous::PROMPT
-        } else {
-            gateway::EXTRACT_SCHEMA
-        }
-        .into(),
+        prompt_label: request.prompt_label.clone(),
+        schema_label: request.schema_label.clone(),
     }
 }
 pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<(), Failure> {

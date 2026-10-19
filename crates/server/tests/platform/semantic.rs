@@ -1,5 +1,7 @@
 use super::*;
 use recollect_server::semantic;
+#[path = "semantic_admission.rs"]
+mod admission;
 #[path = "semantic_recovery.rs"]
 mod recovery;
 

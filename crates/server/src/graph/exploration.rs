@@ -91,6 +91,8 @@ pub async fn explore(
         {
             return Err(Error::invalid("Choose an eligible center or overview, one to eight hops and a supported direction."));
         }
+        let mut pinned_scope=input.scope.clone();
+        for retry in 0..=2 {
         let mut tx = auth.preparation_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'").execute(&mut *tx).await?;
         let mut selected = if input.windowed {
@@ -98,9 +100,9 @@ pub async fn explore(
                 Some(center) => read::Window::Neighbors { center:center.clone(),direction:input.direction.clone() },
                 None => read::Window::Page { offset:0,limit:250 },
             };
-            read::select_windowed(&state, &mut tx, &auth, brain, input.scope.clone(), window).await?
+            read::select_windowed(&state, &mut tx, &auth, brain, pinned_scope.clone(), window).await?
         } else {
-            read::select(&state, &mut tx, &auth, brain, input.scope.clone(), NODE_LIMIT, EDGE_LIMIT).await?
+            read::select(&state, &mut tx, &auth, brain, pinned_scope.clone(), NODE_LIMIT, EDGE_LIMIT).await?
         };
         if input.center.as_ref().is_some_and(|k| !selected.nodes.contains_key(k)) {
             return Err(Error::invalid("The center must be an eligible entity in this exact graph view."));
@@ -109,6 +111,7 @@ pub async fn explore(
         if input.center.is_none() && (selected.nodes.len() > DISPLAY_NODES || selected.edges.len() > DISPLAY_EDGES) {
             return Err(display_limit());
         }
+        pinned_scope=selected.view.scope.clone();
         // The snapshot is complete, so release it before the Neo4j round trips.
         tx.commit().await?;
         read::verify(&state, &selected).await?;
@@ -129,17 +132,25 @@ pub async fn explore(
         }
         let mut tx = auth.publication_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'").execute(&mut *tx).await?;
-        read::interactive_final_gate(&state, &mut tx, &auth, &mut selected).await?;
+        if let Err(error)=read::interactive_final_gate(&state, &mut tx, &auth, &mut selected).await {
+            if retry<2 && error.1=="graph_preparation_changed" && read::replaced(&state,&mut tx,&auth,&selected).await? {
+                tx.rollback().await?;
+                continue;
+            }
+            return Err(error);
+        }
         tx.commit().await?;
-        Ok(ResponseJson(GraphExploration {
+        return Ok(ResponseJson(GraphExploration {
             expires_at: selected.deadline,
             view: selected.view,
-            center: input.center,
-            direction: input.direction,
+            center: input.center.clone(),
+            direction: input.direction.clone(),
             max_hops: input.max_hops,
             nodes: selected.nodes.into_values().filter(|n| included.contains(&n.key)).collect(),
             edges,
             reach,
-        }))
+        }));
+        }
+        unreachable!("The final bounded attempt returns its outcome")
     }).await.map_err(|_| failure("graph_timeout", "This exploration exceeded its time limit. Select a smaller scope or hop bound."))?
 }

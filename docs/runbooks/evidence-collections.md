@@ -55,7 +55,7 @@ For one manual capture pass with the environment loaded:
 cargo run -p recollect-server -- worker-once capture
 ```
 
-The [proof mapping](../mappings/evidence-collections-proof-2026-09-14.md) records
+The [proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/evidence-collections-proof-2026-09-14.md) records
 authorization, immutable history, real artifacts and missing-source recovery.
 
 ## Failure and Recovery

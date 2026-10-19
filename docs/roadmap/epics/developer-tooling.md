@@ -30,6 +30,9 @@ The user also requests the documentation router and maintainer skills from the
 existing private projects, adapted to Recollect, plus an assessment of further
 skills and MCPs. Use Terme's available pair as reference; keep all writes here.
 
+On 2026-10-18 the user asked that the repository setup also work with Claude
+Code. That is host parity with the existing Codex/OpenCode configuration only.
+
 ## Slice Map
 
 | Slice ID | Status | Evidence | Execution | Summary |
@@ -39,55 +42,26 @@ skills and MCPs. Use Terme's available pair as reference; keep all writes here.
 | `documentation-skills` | shipped | adr-backed, contract-backed | pack | Adapted Terme's router and maintainer to Recollect, verified discovery, and assessed tooling against the accepted stack |
 | `opencode-project-setup` | shipped | adr-backed, contract-backed | pack | Carry the existing project instructions, two skills, six roles and Context7 into OpenCode v2 plus secret-free chrome-devtools browser control and verify host discovery and read-only MCP calls |
 | `rust-semantic-developer-navigation` | shipped | adr-backed, contract-backed | pack | Repository-local Rust Analyzer MCP and Graft structural context with actual calls and isolated runtime footprint |
+| `claude-code-project-setup` | shipped | adr-backed, contract-backed | pack | Carry the shared instructions, two skills, five specialist roles, Context7 and Rust Analyzer/Graft MCPs into Claude Code and verify actual read-only calls |
 
-## Rust semantic navigation closeout
+## Current status
 
-The later [Rust Analyzer/Graft pack](../execution/archive/rust-semantic-developer-navigation.md)
-is locally delivered with a [runbook](../../runbooks/rust-semantic-navigation.md)
-and [actual MCP/isolation evidence](../../mappings/rust-semantic-navigation-proof-2026-10-09.md).
-It preserves existing CodeGraph and keeps product mapping/performance work separate.
-The current host catalog may require a new session. No release, commit, push or
-deployment was performed; version N/A and changes uncommitted.
+Repository-local Context7, CodeGraph, Rust Analyzer MCP and Graft are configured. Rust semantic and Graft structural calls have retained proof; the October 18 documentation audit also called both MCPs. Structural index freshness is separate from optional deep/model summaries. No additional tool installation is required for the current work.
 
-## CodeGraph closeout
+The October 18 user-requested
+[maintainer skill](../../../.agents/skills/recollect-doc-maintainer/SKILL.md)
+clarification uses the documented small-fix exception: it adds partial-progress
+reporting within the existing workflow, with no product interface, lifecycle
+status or permission change. Project scores remain in the owning docs. Skill
+validation and repository discovery checks belong to this local docs update;
+the archived original skill-delivery record is unchanged.
 
-The [delivered pack](../execution/archive/codegraph-local-navigation.md) records
-the exact validation and boundaries. The local index contains 3,075 files;
-permissions navigation and source addition/removal refresh passed. Cognee's
-tracked source/Git state is unchanged. Governance lint and 32 tests passed.
-No further user action is needed for CLI use. Version: N/A; commit: uncommitted.
+See the [current roadmap](index.md) for priorities and the
+[active packs](../execution/active/README.md) for exact remaining acceptance.
 
-## Atlas reference closeout
+## Delivery evidence
 
-- Planned: Full local Atlas clone, confirmation of the three requested pages,
-  isolated Git ignore entry, and source pointers for future research.
-- Shipped: Clean `agent-memory-atlas/` reference checkout at
-  `7eca7f7abd934c2e44bc096fc1dd0cbf94275b99`, with all three Markdown sources
-  and their generated HTML verified against the live website.
-- Not shipped: Application changes or automated knowledge ingestion; this
-  request delivers reference material for subsequent research.
-- New blockers: None.
-- Docs updated: Root README/agent guide, epic/index, and
-  [dated reference mapping](../../mappings/atlas-reference-2026-09-13.md).
-- Validation: Correct origin, full history, clean checkout, parent ignore,
-  source-file presence, and three byte-for-byte HTML comparisons passed.
-  Cognee remained clean; CodeGraph retained its complete 3,075-file index
-  with zero pending changes/references. scripts/validate.sh passed governance
-  lint and all 32 tests.
-- Version: N/A: no application release.
-- Commit: uncommitted in Recollect; upstream reference revision recorded above.
-
-## Documentation skills closeout
-
-The [delivered pack](../execution/archive/documentation-skills.md) records the
-two Terme-derived skills, reconciled current governance and tooling assessment.
-Both entrypoints passed skill validation, local-link/UI checks and actual Codex
-catalog discovery from the root and a nested directory. Governance lint and all
-32 tests passed. The [assessment](../../runbooks/development-tooling.md) identifies
-future workflow-skill candidates and recommends no extra development MCP now.
-No product capability, external integration or independent agent evaluation is
-claimed. Version: N/A; commit: uncommitted.
-
-## Final desktop and tooling acceptance — 2026-10-01
-
-The owning desktop/tooling slices are shipped with [current deployed and host evidence](../../mappings/desktop-final-acceptance-2026-10-01.md). Earlier pending checks above describe the September 26 snapshot; their remaining acceptance is now complete. No release, commit or push was performed.
+[Archived packs](../execution/archive/README.md) retain the delivered slices.
+The superseded chronological closeouts and original research references remain
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/developer-tooling.md).
+Dated test/deployment observations are not a current runtime health claim.

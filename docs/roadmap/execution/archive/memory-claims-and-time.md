@@ -66,7 +66,7 @@ Work type: product
 - Shipped: Evidence-linked claims/decisions, immutable knowledge revisions, fact/knowledge-time selection, independent trust dimensions, selective document/manifest reassessment, canonical eligibility and browser authoring/history. A real test proposal links the retained structural fact and exact manifest without inventing runtime proof.
 - Not shipped: N/A within this slice. Human review/correction, retention/erasure, model learning, procedures and general retrieval remain in their named successor slices.
 - New blockers: None.
-- Docs updated: ADR 0005, claims contract, [runbook](../../../runbooks/claims-and-time.md), [proof mapping](../../../mappings/claims-and-time-proof-2026-09-14.md), local development guidance, README, owning epic and indexes. The platform epic records the discovered pairing URL fix under its small-fix exception.
+- Docs updated: ADR 0005, claims contract, [runbook](../../../runbooks/claims-and-time.md), [proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/claims-and-time-proof-2026-09-14.md), local development guidance, README, owning epic and indexes. The platform epic records the discovered pairing URL fix under its small-fix exception.
 - Validation: Eleven core API/database scenarios; focused temporal/environment/readability/authority proof; seven ordinary browser workflows plus deterministic opaque-code regression; 81 unique OpenAPI operations, frontend build, rustfmt/Clippy, governance lint and 32 checker tests. Actual test-Brain API/browser evidence and normal-runtime readiness passed. Optional OIDC was skipped in this regression.
 - Version: N/A; no release requested.
 - Commit: Uncommitted.

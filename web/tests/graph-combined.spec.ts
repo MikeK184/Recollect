@@ -1,4 +1,4 @@
-import { loadGraph, openGraphDrawer, openDetails } from "./desktop-helpers";
+import { use2DGraph, loadGraph, openGraphDrawer, openDetails } from "./desktop-helpers";
 import { test, expect as baseExpect } from "@playwright/test";
 const expect = baseExpect.configure({ timeout: 20_000 });
 import { execFile, spawn, type ChildProcess } from "node:child_process";
@@ -210,7 +210,7 @@ test("committed HCL publications supply combined graph paths and browser evidenc
       notes: "Synthetic committed source; no deployed-state assertion.",
       base_revision: null,
     });
-    await page.goto(`/brains/${brain.id}/graph`);
+    await page.goto(`/brains/${brain.id}/graph?tab=evidence`);
     const panel = page.locator("body");
     await page.getByText("Combined", { exact: true }).click();
     const load = () => loadGraph(page);
@@ -249,6 +249,7 @@ test("committed HCL publications supply combined graph paths and browser evidenc
       )
       .toBeGreaterThanOrEqual(3);
     await load();
+    await use2DGraph(page);
     await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
     await expect(
       panel.getByText("Exact repository inputs", { exact: true }),
@@ -317,8 +318,8 @@ test("committed HCL publications supply combined graph paths and browser evidenc
     ).toBeVisible();
     await openGraphDrawer(
       page,
-      "Eligible entities",
-      "Browse eligible entity pages",
+      "Entities",
+      "Entities",
     );
     const bridge = panel
       .getByTestId("graph-entity")

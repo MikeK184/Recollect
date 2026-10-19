@@ -65,7 +65,7 @@ Work type: product
 - Shipped: Main-form limits with on-demand help; stage-specific failure labels/reasons; typed sensitive-input denial; budget-blocked semantic scheduling; missing-asset 404 and styled user-triggered page recovery. Normal local Compose deployment and browser recovery/Cancel are verified.
 - Not shipped: Paid completion of every historical learning failure; protected or oversized evidence is not altered to force learning. No release or new macOS plugin trust setup is included.
 - New blockers: None.
-- Docs updated: Governing amendments, provider runbook, owner/indexes and [dated evidence](../../../mappings/input-errors-and-page-recovery-2026-10-07.md).
+- Docs updated: Governing amendments, provider runbook, owner/indexes and [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/input-errors-and-page-recovery-2026-10-07.md).
 - Validation: Static-file/SPA fallback and sensitive-input no-call proofs; all 20 semantic regression tests; three pure UI tests; web type/design/build; formatting and Clippy with warnings denied; 32 governance fixtures. Browser info icon, main-form controls, Cancel and isolated missing-chunk/Reload recovery passed. Actual legacy URL returns 404 and HTML remains no-store. Live new learning succeeds while retained input/model failures remain visible.
 - Version: N/A; no release requested.
 - Commit: Uncommitted.

@@ -5,7 +5,7 @@ Confidence: verified
 
 ## Sources and Method
 
-The user authorized all five phases of the [automatic memory plan](../research/automated-memory-improvement-plan-2026-10-07.md).
+The user authorized all five phases of the [automatic memory plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md).
 Accepted contracts govern [source support](../contracts/memory-source-support-verification.md),
 [session digests](../contracts/memory-automatic-session-digests.md),
 [scoped context](../contracts/retrieval-scoped-project-brief.md) and

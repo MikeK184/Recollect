@@ -67,6 +67,6 @@ Work type: product
 - Not shipped: External tenant deployment/verification, device credentials, profile grants and shared-operation packaging remain outside this slice.
 - New blockers: None.
 - Docs updated: Team contract, this archived pack, epic/indexes, team/local-development runbooks and dated proof mapping.
-- Validation: [Current local proof](../../../mappings/platform-team-access-proof-2026-09-14.md): five core Rust scenarios, one real-provider OIDC scenario, three browser workflows plus mobile follow-up, authenticated startup, native worker restart, Clippy/rustfmt/frontend build, governance lint and 32 checker tests passed.
+- Validation: [Current local proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/platform-team-access-proof-2026-09-14.md): five core Rust scenarios, one real-provider OIDC scenario, three browser workflows plus mobile follow-up, authenticated startup, native worker restart, Clippy/rustfmt/frontend build, governance lint and 32 checker tests passed.
 - Version: N/A: no release or strict versioning.
 - Commit: uncommitted.

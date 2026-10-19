@@ -77,7 +77,7 @@ Work type: product
 - Not shipped: New atomic API or backup schedule; unrelated native-host acceptance.
 - New blockers: None.
 - Docs updated: Desktop/managed amendments, this archived pack, epic/index,
-  [dated evidence](../../../mappings/desktop-unified-privacy-form-2026-10-06.md),
+  [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-unified-privacy-form-2026-10-06.md),
   mappings/active/archive indexes and handoff.
 - Validation: Four pure draft/save checks, production type/design/build checks,
   32 governance tests, whitespace and CodeGraph synchronization pass. Rebuilt

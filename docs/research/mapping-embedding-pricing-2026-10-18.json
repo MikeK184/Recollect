@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "provider": "openai",
+  "model": "text-embedding-3-large",
+  "endpoint": "https://api.openai.com/v1",
+  "tier": "standard embeddings API; no Batch discount or regional multiplier",
+  "verified_at": "2026-10-18T00:33:16Z",
+  "valid_for_hours": 24,
+  "source_url": "https://developers.openai.com/api/docs/models/text-embedding-3-large",
+  "input_nano_usd_per_token": 130,
+  "output_nano_usd_per_token": 0,
+  "note": "Official exact-model public list input pricing. Not account availability or billing proof. Config model/dimensions must be frozen, no substitution. No paid call is authorized. Refresh and re-freeze when stale."
+}

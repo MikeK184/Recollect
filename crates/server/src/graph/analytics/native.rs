@@ -131,6 +131,36 @@ pub(super) async fn calculate(
     d: &Frozen,
     e: &Entry,
 ) -> Result<Output> {
+    calculate_inner(state, r, d, e, None).await
+}
+
+/// Internal semantic-affinity projection. The public topology analytics retain
+/// their existing unit-weight behavior; organization supplies exact positive
+/// weights in descriptor edge order and still uses native Leiden.
+pub(super) async fn calculate_weighted(
+    state: &AppState,
+    r: &AnalyticsReport,
+    d: &Frozen,
+    e: &Entry,
+    weights: &[f64],
+) -> Result<Output> {
+    if r.algorithm != "leiden"
+        || r.direction != "both"
+        || weights.len() != d.edges.len()
+        || weights.iter().any(|w| !w.is_finite() || *w <= 0.0)
+    {
+        return Err(invalid());
+    }
+    calculate_inner(state, r, d, e, Some(weights)).await
+}
+
+async fn calculate_inner(
+    state: &AppState,
+    r: &AnalyticsReport,
+    d: &Frozen,
+    e: &Entry,
+    weights: Option<&[f64]>,
+) -> Result<Output> {
     adapter::schema(&state.config, &state.http).await?;
     let version = control(
         &state.config,
@@ -152,7 +182,12 @@ pub(super) async fn calculate(
     } else {
         d.edges.len()
     };
-    let projection_bytes=estimate(state,"CALL gds.graph.project.estimate('*','*',{nodeCount:$nodes,relationshipCount:$edges}) YIELD bytesMax RETURN bytesMax",json!({"nodes":d.nodes.len(),"edges":projected_edges})).await?;
+    let projection_bytes = if weights.is_some() {
+        estimate(state,"CALL gds.graph.project.estimate('*',$relationships,{nodeCount:$nodes,relationshipCount:$edges}) YIELD bytesMax RETURN bytesMax",
+            json!({"nodes":d.nodes.len(),"edges":projected_edges,"relationships":{"LINK":{"properties":{"weight":{"property":"weight","defaultValue":1.0}}}}})).await?
+    } else {
+        estimate(state,"CALL gds.graph.project.estimate('*','*',{nodeCount:$nodes,relationshipCount:$edges}) YIELD bytesMax RETURN bytesMax",json!({"nodes":d.nodes.len(),"edges":projected_edges})).await?
+    };
     let ids: BTreeMap<_, _> = d
         .nodes
         .iter()
@@ -163,21 +198,34 @@ pub(super) async fn calculate(
         .nodes
         .iter()
         .enumerate()
-        .map(|(i, _)| json!([i, null]))
+        .map(|(i, _)| {
+            if weights.is_some() {
+                json!([i, null, 0.0])
+            } else {
+                json!([i, null])
+            }
+        })
         .collect();
-    for edge in &d.edges {
+    for (ordinal, edge) in d.edges.iter().enumerate() {
         let from = *ids.get(edge.from.as_str()).ok_or_else(invalid)?;
         let to = *ids.get(edge.to.as_str()).ok_or_else(invalid)?;
-        rows.push(if r.direction == "incoming" {
+        rows.push(if let Some(weights) = weights {
+            json!([from, to, weights[ordinal]])
+        } else if r.direction == "incoming" {
             json!([to, from])
         } else {
             json!([from, to])
         });
     }
     let graph = e.graph();
+    let data = if weights.is_some() {
+        "{relationshipProperties:{weight:row[2]}}"
+    } else {
+        "{}"
+    };
     let statement=format!("CYPHER 25 {} CALL (*) {{
       WHEN datetime.realtime()<datetime($deadline) AND NOT EXISTS {{ MATCH (:RecollectGraphFence {{brain:$brain,key:$fence}}) }} THEN {{
-       UNWIND $rows AS row WITH gds.graph.project($graph,row[0],row[1],{{}},$config) AS g
+       UNWIND $rows AS row WITH gds.graph.project($graph,row[0],row[1],{data},$config) AS g
        RETURN g.graphName AS graph,g.nodeCount AS nodes,g.relationshipCount AS edges
       }} ELSE {{ RETURN null AS graph,0 AS nodes,0 AS edges }}
      }} RETURN graph,nodes,edges",adapter::GUARD);
@@ -201,6 +249,9 @@ pub(super) async fn calculate(
         _ => return Err(invalid()),
     };
     let mut config = r.parameters.clone();
+    if weights.is_some() {
+        config["relationshipWeightProperty"] = json!("weight");
+    }
     config["jobId"] = json!(e.id);
     let algo_bytes = estimate(
         state,

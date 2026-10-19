@@ -14,7 +14,7 @@ Work type: product
 
 - [Desktop contract](../../../contracts/desktop-experience.md) (amended 2026-10-03: visual language and motion section)
 - [Design system document](../../desktop-experience/design-system.md) (updated by this pack)
-- [claude-mem study, 2026-10-03](../../../research/claude-mem-study-2026-10-03.md) (warm-dark token reference: base #1a1916 / cards #252320, per-category accents with low-alpha tints)
+- [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (warm-dark token reference: base #1a1916 / cards #252320, per-category accents with low-alpha tints)
 - [Owning epic](../../epics/desktop-visual-experience.md)
 
 ## Scope

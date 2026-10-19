@@ -40,3 +40,6 @@ Copy [template.md](template.md) when adding an operator procedure.
 - [Run approved tools and reconcile MCP outcomes](mcp-runtime.md)
 - [Use optional Vault credentials and private runners](mcp-vault-and-private-runners.md)
 - [Connect coding hosts to scoped memory](agent-memory-tools.md)
+- [Cross-machine coordination fixture](agent-coordination.md)
+
+- [Publish and consume shared Brain skills and instructions](managed-skills.md)

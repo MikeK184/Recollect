@@ -66,7 +66,7 @@ Work type: governance
 - Shipped: Accepted ADR/contracts, domain amendments and all nine decision-complete packs are present; the authority-only slice is complete. Product implementation and runtime acceptance remain in their separate packs.
 - Not shipped: Product code/runtime acceptance belongs to the eight implementation/proof slices.
 - New blockers: None.
-- Docs updated: ADR 0014, desktop/answer/domain amendments, approved plan, seven epic records and execution indexes; [authority handoff](../../../mappings/desktop-experience-authority-2026-09-26.md) and [implementation boundary](../../../mappings/desktop-experience-implementation-2026-09-26.md).
+- Docs updated: ADR 0014, desktop/answer/domain amendments, approved plan, seven epic records and execution indexes; [authority handoff](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-authority-2026-09-26.md) and [implementation boundary](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md).
 - Validation: 2026-09-26 ./scripts/validate.sh passed governance lint and all 32 tests; git diff --check -- docs passed. An initial non-authoritative foundation-index link was corrected to the three accepted foundation documents before the passing run.
 - Version: N/A: documentation-only delivery, no release.
 - Commit: uncommitted.

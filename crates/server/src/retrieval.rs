@@ -24,6 +24,7 @@ use uuid::Uuid;
 pub(crate) mod answer_bundle;
 mod brief;
 mod context;
+pub mod feedback;
 pub(crate) mod graph;
 mod semantic;
 

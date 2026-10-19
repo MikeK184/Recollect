@@ -116,6 +116,10 @@ survive view deletion; new operations fail explicitly if a selected view vanishe
 Current grant/device revocation denies reads and new operations. Historical
 bindings do not bypass current policy.
 
+The [agent-coordination contract](mcp-agent-coordination.md) adds a separate
+bounded shared presence/goal/file-intent projection. Publishing that projection
+does not expose these private task/operation endpoints or their raw histories.
+
 ### Interfaces and UI
 
 Use `/api/brains/{brain}/workspace` for the repository/area/environment inventory,

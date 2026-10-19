@@ -67,6 +67,6 @@ Work type: product
 - Not shipped: General retrieval/graph consumers, automatic learning and erasure belong to their named successor slices.
 - New blockers: None.
 - Docs updated: Review contract, claims runbook, review runbook/proof, README, owning epic and execution indexes.
-- Validation: Thirteen core API scenarios passed; three focused review scenarios and the final scope-removal/failure scenario passed. Both claim/review browser workflows passed in 14 seconds with worker restart. Actual local migration/readiness/test-Brain review inspection, generated 84-operation API, build, rustfmt, Clippy and governance/32 checker tests passed; see [proof](../../../mappings/review-and-corrections-proof-2026-09-14.md).
+- Validation: Thirteen core API scenarios passed; three focused review scenarios and the final scope-removal/failure scenario passed. Both claim/review browser workflows passed in 14 seconds with worker restart. Actual local migration/readiness/test-Brain review inspection, generated 84-operation API, build, rustfmt, Clippy and governance/32 checker tests passed; see [proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/review-and-corrections-proof-2026-09-14.md).
 - Version: N/A; no release requested.
 - Commit: Uncommitted.

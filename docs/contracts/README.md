@@ -10,11 +10,9 @@ source decision, and state explicit deferrals. Use `proposed`, `accepted`,
 Resolve conflicts with accepted ADRs before implementation. Evidence mappings
 support decisions but do not themselves authorize behavior.
 
-[Managed autonomous memory experience](memory-managed-experience.md) governs the 2026-09-28 agent-first setup correction.
-
-[Tiered desktop surface](desktop-knowledge-surface.md) and
-[Irreversible Brain deletion](platform-brain-deletion.md) govern the 2026-09-29
-knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
+Use the [current roadmap](../roadmap/epics/index.md) to distinguish delivered
+behavior from unfinished acceptance. An accepted contract specifies required
+behavior; it is not itself implementation or runtime proof.
 
 ## Index
 
@@ -47,6 +45,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Exact combined repository graphs](graph-cross-repository-views.md)
 - [Bounded canonical graph analytics](graph-analytics.md)
 - [Bounded graph exploration](graph-exploration.md)
+- [Grouped 3D graph navigation](graph-grouped-3d-navigation.md)
 - [Scoped graph retrieval and source-aware context](retrieval-graph-fusion.md)
 - [Desktop memory investigation](retrieval-investigation-ui.md)
 - [Contextual desktop experience](desktop-experience.md)
@@ -56,6 +55,7 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Managed MCP calls and credentials](mcp-runtime-and-credentials.md)
 - [Vault credentials and private runners](mcp-vault-and-private-runners.md)
 - [Agent memory and workspace MCP tools](mcp-memory-and-workspace-tools.md)
+- [Brain-scoped agent coordination](mcp-agent-coordination.md)
 - [Plugin/MCP direct user authentication](mcp-plugin-direct-auth.md)
 - [Automatic managed MCP observation capture](mcp-observation-capture.md)
 - [Personal/shared installation and diagnostics](operations-local-and-shared.md)
@@ -70,3 +70,8 @@ knowledge-surface, Ask-default, wiring-split and total-deletion decisions.
 - [Automatic session digests and durable support](memory-automatic-session-digests.md) — accepted automatic scoped handover/excerpt lifecycle.
 
 - [Scoped project brief and authenticated continuation](retrieval-scoped-project-brief.md).
+- [Attributed utility feedback and bounded offline ranking experiments](retrieval-attributed-feedback.md).
+
+- [Brain-managed skills and shared instructions](mcp-managed-skills.md).
+
+- [Native managed-skill installation, lifetime and refresh](mcp-native-skill-reload.md).

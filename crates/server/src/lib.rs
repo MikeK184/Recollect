@@ -10,6 +10,7 @@ pub mod brains;
 pub mod capture;
 pub mod commands;
 pub mod config;
+pub mod coordination;
 pub mod credentials;
 pub mod db;
 pub mod devices;
@@ -47,6 +48,7 @@ pub mod retrieval;
 pub mod semantic;
 mod session_digests;
 pub mod shutdown;
+pub mod skills;
 mod strict_json;
 mod support_excerpts;
 pub mod team;
@@ -109,7 +111,27 @@ impl AppState {
         auth::login,
         auth::me,
         auth::logout,
+        knowledge_mapping::organization::view,
+        knowledge_mapping::organization::source_view,
+        knowledge_mapping::fields::view,
+        knowledge_mapping::organization::topic,
+        knowledge_mapping::aliases::view,
+        knowledge_mapping::aliases::decide,
         mcp::catalogue,
+        coordination::announce,
+        coordination::peers,
+        coordination::heartbeat,
+        coordination::close,
+        coordination::inbox,
+        coordination::ack,
+        coordination::send,
+        coordination::stream::events,
+        coordination::a2a::card,
+        coordination::a2a::send,
+        skills::list,
+        skills::get,
+        skills::create,
+        skills::update,
         mcp::get_definition,
         mcp::get_connection,
         mcp::create_connection,
@@ -162,6 +184,8 @@ impl AppState {
         capture::devices,
         capture::report_device,
         retrieval::recall,
+        retrieval::feedback::context,
+        retrieval::feedback::record,
         answers::create,
         answers::get,
         answers::cancel,
@@ -305,7 +329,59 @@ pub(crate) fn api_routes() -> Router<AppState> {
         .route("/auth/logout", post(auth::logout))
         .route("/auth/enroll", post(team::enroll))
         .route("/auth/options", get(oidc::options))
+        .route(
+            "/brains/{brain}/coordination/sessions",
+            get(coordination::peers).post(coordination::announce),
+        )
+        .route(
+            "/brains/{brain}/coordination/sessions/{id}/heartbeat",
+            post(coordination::heartbeat),
+        )
+        .route(
+            "/brains/{brain}/coordination/sessions/{id}/close",
+            post(coordination::close),
+        )
+        .route(
+            "/brains/{brain}/coordination/sessions/{id}/inbox",
+            get(coordination::inbox),
+        )
+        .route(
+            "/brains/{brain}/coordination/sessions/{id}/inbox/{event}/ack",
+            post(coordination::ack),
+        )
+        .route(
+            "/brains/{brain}/coordination/sessions/{id}/events",
+            get(coordination::events),
+        )
+        .route(
+            "/brains/{brain}/coordination/messages",
+            post(coordination::send),
+        )
+        .route(
+            "/brains/{brain}/coordination/a2a/.well-known/agent-card.json",
+            get(coordination::a2a::card),
+        )
+        .route(
+            "/brains/{brain}/coordination/a2a/message:send",
+            post(coordination::a2a::send),
+        )
+        .route(
+            "/brains/{brain}/coordination/a2a/{*unsupported}",
+            axum::routing::any(coordination::a2a::unsupported),
+        )
         .route("/brains/{brain}/mcp", get(mcp::catalogue))
+        .route(
+            "/brains/{brain}/skills",
+            get(skills::list)
+                .post(skills::create)
+                .layer(DefaultBodyLimit::max(2 * 1024 * 1024)),
+        )
+        .route(
+            "/brains/{brain}/skills/{id}",
+            get(skills::get)
+                .put(skills::update)
+                .layer(DefaultBodyLimit::max(2 * 1024 * 1024)),
+        )
         .route("/brains/{brain}/mcp/runtime", get(mcp::runtime::status))
         .route(
             "/brains/{brain}/mcp/calls/{id}/reconcile",
@@ -450,6 +526,8 @@ pub(crate) fn api_routes() -> Router<AppState> {
             "/brains/{brain}/recall",
             post(retrieval::recall).layer(DefaultBodyLimit::max(32768)),
         )
+        .route("/brains/{brain}/retrieval/feedback/context", post(retrieval::feedback::context).layer(DefaultBodyLimit::max(32768)))
+        .route("/brains/{brain}/retrieval/feedback", post(retrieval::feedback::record).layer(DefaultBodyLimit::max(8192)))
         .route(
             "/brains/{brain}/answer-requests",
             post(answers::create).layer(DefaultBodyLimit::max(32768)),
@@ -463,6 +541,21 @@ pub(crate) fn api_routes() -> Router<AppState> {
         .route("/brains/{brain}/graph", get(graph::get))
         .route("/brains/{brain}/graph/rebuild", post(graph::rebuild))
         .route("/brains/{brain}/graph/view", post(graph::view))
+        .route(
+            "/brains/{brain}/organization/fields/view",
+            post(knowledge_mapping::fields::view),
+        )
+        .route("/brains/{brain}/organization/sources/view",post(knowledge_mapping::organization::source_view))
+        .route(
+            "/brains/{brain}/organization/view",
+            post(knowledge_mapping::organization::view),
+        )
+        .route(
+            "/brains/{brain}/organization/topics/{id}",
+            axum::routing::put(knowledge_mapping::organization::topic),
+        )
+        .route("/brains/{brain}/organization/aliases/view", post(knowledge_mapping::aliases::view))
+        .route("/brains/{brain}/organization/aliases/{id}", axum::routing::put(knowledge_mapping::aliases::decide))
         .route("/brains/{brain}/graph/path", post(graph::path))
         .route("/brains/{brain}/graph/explore", post(graph::explore))
         .route(

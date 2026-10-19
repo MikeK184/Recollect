@@ -104,6 +104,6 @@ Work type: product
   original fact, explicit tool evidence revised it under standing policy, and no
   operational verification was invented. Temporary credentials were removed; no
   customer files were read or sent. Detailed controls and limits are in the
-  [Atlas audit](../../../mappings/atlas-implementation-audit-2026-09-15.md).
+  [Atlas audit](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-implementation-audit-2026-09-15.md).
 - Version: N/A; no release policy.
 - Commit: Uncommitted.

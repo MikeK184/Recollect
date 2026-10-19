@@ -67,7 +67,7 @@ and dependent copies; it does not mean Withdraw.
 conflict dispositions, independent applicability and transaction-failure proof.
 `./scripts/test-ui.sh tests/review.spec.ts tests/claims.spec.ts` exercises the real
 browser/server workflow and restarted worker. See the
-[dated proof](../mappings/review-and-corrections-proof-2026-09-14.md).
+[dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/review-and-corrections-proof-2026-09-14.md).
 
 The [review contract](../contracts/memory-review-and-corrections.md) governs the three
 new API operations and canonical eligibility. General retrieval, graph rebuilds,

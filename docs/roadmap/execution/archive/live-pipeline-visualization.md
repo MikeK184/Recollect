@@ -14,7 +14,7 @@ Work type: product
 
 - [Desktop contract](../../../contracts/desktop-experience.md) (amended 2026-10-03: live pipeline view rules)
 - [Desktop ADR](../../../adr/0014-desktop-experience-and-answers.md)
-- [claude-mem study, 2026-10-03](../../../research/claude-mem-study-2026-10-03.md) (SSE live-feed + processing/queue indicator pattern as visual reference; their broadcaster is not copied)
+- [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (SSE live-feed + processing/queue indicator pattern as visual reference; their broadcaster is not copied)
 - [Owning epic](../../epics/desktop-visual-experience.md)
 
 ## Scope

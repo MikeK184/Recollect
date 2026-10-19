@@ -35,7 +35,7 @@ default 3,072 dimensions. The accepted
 [mutation policy](../foundation/engineering-principles.md#route-every-mutation-through-one-policy),
 [claims](memory-claims-and-time.md), [review](memory-review-and-corrections.md)
 and [retention](memory-retention-and-erasure.md) govern this slice. The
-[provider preflight](../mappings/openai-provider-preflight-2026-09-14.md) proves
+[provider preflight](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/openai-provider-preflight-2026-09-14.md) proves
 account access; it is not Brain transmission authority.
 
 ## Contract

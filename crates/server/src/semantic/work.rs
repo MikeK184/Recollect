@@ -84,7 +84,11 @@ async fn ready<'a>(
     Ok((tx, batch, entries))
 }
 
-async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
+async fn run_job(
+    state: &AppState,
+    job: &ClaimedJob,
+    preview: Option<&gateway::Preview>,
+) -> Result<()> {
     let (mut tx, batch, entries) = ready(state, job).await?;
     sqlx::query("UPDATE semantic_batches SET state='running' WHERE id=$1")
         .bind(batch.id)
@@ -95,35 +99,42 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
     tx.commit().await?;
     // The gateway acquires its own short authorization transaction. No job or
     // Brain lock is held across outbound I/O, and one batch is one paid attempt.
-    let response = gateway::invoke_for_policy(
-        state,
-        gateway::Context {
-            brain: job.brain_id,
-            actor: job.actor_id,
-            device: job.device_id,
-        },
-        gateway::Invocation {
-            operation: batch.id,
-            purpose: "embedding".into(),
-            inputs: entries
-                .iter()
-                .map(|id| InputRef {
-                    kind: "semantic_entry".into(),
-                    id: *id,
-                })
-                .collect(),
-            query: None,
-            instructions: String::new(),
-            prompt_label: REPRESENTATION.into(),
-            schema_label: "embedding-float-1".into(),
-            format: gateway::Format::Embedding,
-            work_lease: None,
-            metadata_replay: false,
-            expected_json: None,
-        },
-        batch.policy_id,
-    )
-    .await?;
+    let context = gateway::Context {
+        brain: job.brain_id,
+        actor: job.actor_id,
+        device: job.device_id,
+    };
+    let invocation = gateway::Invocation {
+        operation: batch.id,
+        purpose: "embedding".into(),
+        inputs: entries
+            .iter()
+            .map(|id| InputRef {
+                kind: "semantic_entry".into(),
+                id: *id,
+            })
+            .collect(),
+        query: None,
+        instructions: String::new(),
+        prompt_label: REPRESENTATION.into(),
+        schema_label: "embedding-float-1".into(),
+        format: gateway::Format::Embedding,
+        work_lease: None,
+        metadata_replay: false,
+        expected_json: None,
+    }
+    .with_work_lease(job);
+    let response = if let Some(preview) = preview {
+        if preview.policy_id != batch.policy_id {
+            return Err(model_policy::failure(
+                "model_policy_changed",
+                "The preview belongs to another semantic policy.",
+            ));
+        }
+        gateway::invoke_previewed_for_policy(state, context, invocation, preview).await?
+    } else {
+        gateway::invoke_for_policy(state, context, invocation, batch.policy_id).await?
+    };
     let Some(gateway::Output::Embeddings(vectors)) = response.output else {
         return Err(model_policy::failure(
             "model_result_not_retained",
@@ -207,7 +218,23 @@ async fn run_job(state: &AppState, job: &ClaimedJob) -> Result<()> {
 }
 
 pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<(), Failure> {
-    let result = worker::with_lease(&state.pool, job, run_job(state, job)).await?;
+    execute_inner(state, job, None).await
+}
+/// The normal canonical worker with a frozen internal request preview. All
+/// lease, profile, input, deadline and publication checks remain identical.
+pub async fn execute_previewed(
+    state: &AppState,
+    job: &ClaimedJob,
+    preview: &gateway::Preview,
+) -> std::result::Result<(), Failure> {
+    execute_inner(state, job, Some(preview)).await
+}
+async fn execute_inner(
+    state: &AppState,
+    job: &ClaimedJob,
+    preview: Option<&gateway::Preview>,
+) -> std::result::Result<(), Failure> {
+    let result = worker::with_lease(&state.pool, job, run_job(state, job, preview)).await?;
     if let Err(error) = result {
         let reason = if matches!(
             error.0,

@@ -81,3 +81,6 @@ unresolved product decisions; do not invent them in code.
   the docs; they do not add approval or delegation requirements.
 - Do not rely on shared home agents, home profiles, or parent workspace config
   for Recollect's project setup. See [.codex/README.md](.codex/README.md).
+- OpenCode and Claude Code carry equivalent project setup (`opencode.json`,
+  `.opencode/`, `CLAUDE.md`, `.mcp.json`, `.claude/`); see
+  [development tooling](docs/runbooks/development-tooling.md).

@@ -1,0 +1,961 @@
+{
+  "schema": "recollect-independent-reconciliation-native-controls-2",
+  "frozen_date": "2026-10-18",
+  "status": "proposal_only_no_calls_authorized",
+  "authoring": "Independent manual source/gold, authored before any provider output; UTF8 offsets calculated only from exact authored substrings.",
+  "base_corpus": "Preserve original40+20 documents, gold, partitions and hashes unchanged. These six are a separate append-only reconciliation-control corpus.",
+  "profile": {
+    "prompt_label": "source-reconciliation-2",
+    "schema_label": "source-reconciliation-2",
+    "adapter_revision": "learning-quote-anchors-1",
+    "mapping_schema": "source-mentions-1",
+    "automatic_attempt": 0
+  },
+  "common": {
+    "brain_id": "61000000-0000-4000-8000-000000000001",
+    "actor_id": "62000000-0000-4000-8000-000000000001",
+    "device_id": "63000000-0000-4000-8000-000000000001",
+    "selection": {
+      "repository_ids": [],
+      "area_ids": [],
+      "environment_id": "6c000000-0000-4000-8000-000000000001"
+    },
+    "manifest_revision_id": null,
+    "policy": {
+      "enabled": true,
+      "autonomous_memory": true,
+      "purpose": "extraction",
+      "claim_content_class_permitted": true,
+      "input_bytes_available": 65536
+    },
+    "authority": "Same declared synthetic Brain/environment. Each case evaluated independently. Enabled writer and valid original claimed device; exact policy, operation, lease and source scope. No human execution/verification authority is inferred from source text.",
+    "source_state": "Ready, retained immutable bytes with complete chunks, active privacy, current source version, no path/secret/rule exclusion, no direct or ancestral model fence.",
+    "machine_memory_defaults": {
+      "origin": "model_extracted",
+      "kind": "claim",
+      "review": "accepted",
+      "reviewer_id": null,
+      "review_decision_id": null,
+      "admission": "accepted_by_policy",
+      "lifecycle": "active",
+      "freshness": "current",
+      "current_revision": true,
+      "privacy_state": "active",
+      "model_claim_fenced": false,
+      "support_assessment": "current supported",
+      "investigation_eligible": true,
+      "rule_ids": [],
+      "all_evidence_retained": true,
+      "selection": "common.selection",
+      "manifest_revision_id": null,
+      "validity": {
+        "kind": "unknown",
+        "from": null,
+        "to": null,
+        "precision": "unknown"
+      },
+      "support_metadata_label": "Cassandra migration note"
+    },
+    "recorded_at": {
+      "old": "2026-10-17T12:00:00Z",
+      "new": "2026-10-18T12:00:00Z"
+    },
+    "runtime_identity": "Frozen UUIDs are symbols. The guarded native setup records a bijection to actual API-generated canonical IDs; only those exact current prior revision IDs enter actual invocation enums. Gold/source data are never rewritten or transmitted."
+  },
+  "provider_input_boundary": {
+    "include_only": [
+      "exact source.text as input0.data with canonical source provenance",
+      "resolved canonical ClaimView for each offered_memory_symbols member"
+    ],
+    "never_transmit": [
+      "gold",
+      "partition",
+      "category",
+      "eligibility labels",
+      "omitted manual ClaimView",
+      "rubric",
+      "this fixture object"
+    ],
+    "note": "The synthetic canonical setup defines intended selector inputs; it is not itself canonical-runtime proof. Use actual autonomous::invocation and resolve typed ClaimView data; retain the resulting body/schema hash separately."
+  },
+  "cases": [
+    {
+      "id": "rc01",
+      "partition": "development",
+      "category": "explicit_update",
+      "operation_id": "64000000-0000-4000-8000-000000000001",
+      "run_id": "6e000000-0000-4000-8000-000000000001",
+      "source": {
+        "source_id": "65000000-0000-4000-8000-000000000001",
+        "version_id": "66000000-0000-4000-8000-000000000001",
+        "text": "Orion.port = 8443\nThis replaces the earlier port value 8080 for this same service.\nOrion uses PostgreSQL.\n"
+      },
+      "canonical_memories": [
+        {
+          "symbol": "old",
+          "claim_id": "68000000-0000-4000-8000-000000000001",
+          "revision_id": "69000000-0000-4000-8000-000000000001",
+          "defaults": "common.machine_memory_defaults",
+          "subject": "Orion",
+          "predicate": "port",
+          "value": "8080",
+          "eligible_to_offer": true,
+          "lineage": "Old and new immutable versions have the exact same source_id; old support remains retained and eligible.",
+          "support": {
+            "source_id": "65000000-0000-4000-8000-000000000001",
+            "version_id": "67000000-0000-4000-8000-000000000001",
+            "text": "Orion.port = 8080\n",
+            "line_from": 1,
+            "line_to": 1
+          }
+        }
+      ],
+      "offered_memory_symbols": [
+        "old"
+      ],
+      "gold": {
+        "provider_input_count": 2,
+        "omitted_memory_symbols": [],
+        "claims_required": [
+          {
+            "subject": "Orion",
+            "predicate": "port",
+            "value": "8443",
+            "kind": "claim",
+            "procedure": null,
+            "context_role": null,
+            "line_from": 1,
+            "line_to": 2,
+            "replaces_revision": "69000000-0000-4000-8000-000000000001"
+          },
+          {
+            "subject": "Orion",
+            "predicate": "uses",
+            "value": "PostgreSQL",
+            "kind": "claim",
+            "procedure": null,
+            "context_role": null,
+            "line_from": 3,
+            "line_to": 3,
+            "replaces_revision": null
+          }
+        ],
+        "claims_permitted_optional": [],
+        "retirements_required": [],
+        "retirements_forbidden": [
+          "69000000-0000-4000-8000-000000000001"
+        ],
+        "forbidden_actions": [
+          "retire and replace the same target",
+          "create a separate current Orion.port8080 assertion",
+          "invent operational verification"
+        ],
+        "canonical_postconditions": [
+          "Only after independent supported verdict, append changed8443 revision on the original claim_id; preserve8080 as history.",
+          "PostgreSQL usage is a new source-backed assertion with null replacement."
+        ],
+        "mapping": {
+          "language": "en",
+          "aliases": [],
+          "input0_only": true,
+          "forbidden_input1_only_entities": [
+            "Cassandra"
+          ],
+          "mentions": [
+            {
+              "key": "m1",
+              "kind": "service",
+              "span": {
+                "quote": "Orion",
+                "byte_start": 0,
+                "byte_end": 5,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m2",
+              "kind": "setting",
+              "span": {
+                "quote": "Orion.port",
+                "byte_start": 0,
+                "byte_end": 10,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m3",
+              "kind": "service",
+              "span": {
+                "quote": "Orion",
+                "byte_start": 83,
+                "byte_end": 88,
+                "line_from": 3,
+                "line_to": 3,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m4",
+              "kind": "technology",
+              "span": {
+                "quote": "PostgreSQL",
+                "byte_start": 94,
+                "byte_end": 104,
+                "line_from": 3,
+                "line_to": 3,
+                "occurrence": null
+              }
+            }
+          ],
+          "relations": [
+            {
+              "from": "m3",
+              "to": "m4",
+              "semantic_relation": "uses",
+              "interpretation": "source_described_navigation",
+              "span": {
+                "quote": "Orion uses PostgreSQL.",
+                "byte_start": 83,
+                "byte_end": 105,
+                "line_from": 3,
+                "line_to": 3,
+                "occurrence": null
+              }
+            }
+          ]
+        }
+      },
+      "input0_provenance": {
+        "role": "source_document",
+        "capture": null,
+        "trust": "untrusted source data",
+        "lineage": "ordinary retained successive immutable versions of the exact same source_id; canonical import operation and selection are preserved"
+      },
+      "prior_setup": "Real canonical prior source learning and independent support through controlled loopback provider; source/gold fixtures do not enter the setup provider, only prior support text and the prior assertion supplied as a synthetic provider response. Manual rc06 uses actual browser create and explicit review instead."
+    },
+    {
+      "id": "rc02",
+      "partition": "development",
+      "category": "historical_quotation",
+      "operation_id": "64000000-0000-4000-8000-000000000002",
+      "run_id": "6e000000-0000-4000-8000-000000000002",
+      "source": {
+        "source_id": "65000000-0000-4000-8000-000000000002",
+        "version_id": "66000000-0000-4000-8000-000000000002",
+        "text": "Historical quotation only: \"Lyra.port = 8080\".\nThe quoted value belonged to the 2024 design and is not a current instruction.\n"
+      },
+      "canonical_memories": [
+        {
+          "symbol": "old",
+          "claim_id": "68000000-0000-4000-8000-000000000002",
+          "revision_id": "69000000-0000-4000-8000-000000000002",
+          "defaults": "common.machine_memory_defaults",
+          "subject": "Lyra",
+          "predicate": "port",
+          "value": "8443",
+          "eligible_to_offer": true,
+          "lineage": "Old and new immutable versions have the exact same source_id; current supported8443 memory remains eligible.",
+          "support": {
+            "source_id": "65000000-0000-4000-8000-000000000002",
+            "version_id": "67000000-0000-4000-8000-000000000002",
+            "text": "Lyra.port = 8443\n",
+            "line_from": 1,
+            "line_to": 1
+          }
+        }
+      ],
+      "offered_memory_symbols": [
+        "old"
+      ],
+      "gold": {
+        "provider_input_count": 2,
+        "omitted_memory_symbols": [],
+        "claims_required": [],
+        "claims_permitted_optional": [
+          {
+            "semantic_assertion": "Lyra used port8080 in the quoted2024 design",
+            "must_preserve": [
+              "historical/quoted attribution",
+              "2024 applicability",
+              "no current configuration claim"
+            ],
+            "replaces_revision": null,
+            "line_from": 1,
+            "line_to": 2
+          }
+        ],
+        "retirements_required": [],
+        "retirements_forbidden": [
+          "69000000-0000-4000-8000-000000000002"
+        ],
+        "forbidden_actions": [
+          "replace8443 with quoted8080",
+          "retire8443 because the quote omits it",
+          "emit an unqualified current Lyra.port8080 assertion"
+        ],
+        "canonical_postconditions": [
+          "Current Lyra.port8443 revision is unchanged.",
+          "Empty claims and retirements is safe. A new historical assertion is allowed only with explicit quotation and2024 wording."
+        ],
+        "mapping": {
+          "language": "en",
+          "aliases": [],
+          "input0_only": true,
+          "forbidden_input1_only_entities": [
+            "Cassandra"
+          ],
+          "mentions": [
+            {
+              "key": "m1",
+              "kind": "service",
+              "span": {
+                "quote": "Lyra",
+                "byte_start": 28,
+                "byte_end": 32,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m2",
+              "kind": "setting",
+              "span": {
+                "quote": "Lyra.port",
+                "byte_start": 28,
+                "byte_end": 37,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            }
+          ],
+          "relations": []
+        }
+      },
+      "input0_provenance": {
+        "role": "source_document",
+        "capture": null,
+        "trust": "untrusted source data",
+        "lineage": "ordinary retained successive immutable versions of the exact same source_id; canonical import operation and selection are preserved"
+      },
+      "prior_setup": "Real canonical prior source learning and independent support through controlled loopback provider; source/gold fixtures do not enter the setup provider, only prior support text and the prior assertion supplied as a synthetic provider response. Manual rc06 uses actual browser create and explicit review instead."
+    },
+    {
+      "id": "rc03",
+      "partition": "development",
+      "category": "negation_and_explicit_withdrawal",
+      "operation_id": "64000000-0000-4000-8000-000000000003",
+      "run_id": "6e000000-0000-4000-8000-000000000003",
+      "source": {
+        "source_id": "65000000-0000-4000-8000-000000000003",
+        "version_id": "66000000-0000-4000-8000-000000000003",
+        "text": "The earlier assertion \"Draco uses Redis\" is withdrawn as incorrect.\nDraco does not use Redis.\n"
+      },
+      "canonical_memories": [
+        {
+          "symbol": "old",
+          "claim_id": "68000000-0000-4000-8000-000000000003",
+          "revision_id": "69000000-0000-4000-8000-000000000003",
+          "defaults": "common.machine_memory_defaults",
+          "subject": "Draco",
+          "predicate": "uses",
+          "value": "Redis",
+          "eligible_to_offer": true,
+          "lineage": "Old and new immutable versions have the exact same source_id; old affirmative memory is current and supported by earlier retained evidence before this explicit withdrawal.",
+          "support": {
+            "source_id": "65000000-0000-4000-8000-000000000003",
+            "version_id": "67000000-0000-4000-8000-000000000003",
+            "text": "Draco uses Redis.\n",
+            "line_from": 1,
+            "line_to": 1
+          }
+        }
+      ],
+      "offered_memory_symbols": [
+        "old"
+      ],
+      "gold": {
+        "provider_input_count": 2,
+        "omitted_memory_symbols": [],
+        "claims_required": [],
+        "claims_permitted_optional": [
+          {
+            "semantic_assertion": "Draco does not use Redis",
+            "must_preserve": [
+              "negation"
+            ],
+            "replaces_revision": null,
+            "line_from": 2,
+            "line_to": 2
+          }
+        ],
+        "retirements_required": [
+          {
+            "revision_id": "69000000-0000-4000-8000-000000000003",
+            "semantic_reason": "The source explicitly withdraws the earlier Draco uses Redis assertion as incorrect.",
+            "line_from": 1,
+            "line_to": 1
+          }
+        ],
+        "retirements_forbidden": [],
+        "forbidden_actions": [
+          "replace and retire the same revision",
+          "emit current affirmative Draco uses Redis",
+          "interpret negated usage as alias or affirmative usage"
+        ],
+        "canonical_postconditions": [
+          "Only after independent supported retirement verdict, append superseded freshness on existing claim_id with withdrawal reason and source0 line1.",
+          "Retirement preserves historical prior text; it is not physical erasure."
+        ],
+        "mapping": {
+          "language": "en",
+          "aliases": [],
+          "input0_only": true,
+          "forbidden_input1_only_entities": [
+            "Cassandra"
+          ],
+          "mentions": [
+            {
+              "key": "m1",
+              "kind": "service",
+              "span": {
+                "quote": "Draco",
+                "byte_start": 23,
+                "byte_end": 28,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m2",
+              "kind": "technology",
+              "span": {
+                "quote": "Redis",
+                "byte_start": 34,
+                "byte_end": 39,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m3",
+              "kind": "service",
+              "span": {
+                "quote": "Draco",
+                "byte_start": 68,
+                "byte_end": 73,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m4",
+              "kind": "technology",
+              "span": {
+                "quote": "Redis",
+                "byte_start": 87,
+                "byte_end": 92,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            }
+          ],
+          "relations": [
+            {
+              "from": "m3",
+              "to": "m4",
+              "semantic_relation": "does_not_use",
+              "interpretation": "source_described_navigation",
+              "span": {
+                "quote": "Draco does not use Redis.",
+                "byte_start": 68,
+                "byte_end": 93,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            }
+          ],
+          "rejected_current_relation": {
+            "from": "m1",
+            "to": "m2",
+            "relation": "uses",
+            "reason": "The enclosing line explicitly withdraws that earlier assertion. A bare affirmative current relation reverses source meaning."
+          }
+        }
+      },
+      "input0_provenance": {
+        "role": "source_document",
+        "capture": null,
+        "trust": "untrusted source data",
+        "lineage": "ordinary retained successive immutable versions of the exact same source_id; canonical import operation and selection are preserved"
+      },
+      "prior_setup": "Real canonical prior source learning and independent support through controlled loopback provider; source/gold fixtures do not enter the setup provider, only prior support text and the prior assertion supplied as a synthetic provider response. Manual rc06 uses actual browser create and explicit review instead."
+    },
+    {
+      "id": "rc04",
+      "partition": "held_out",
+      "category": "unrelated_field",
+      "operation_id": "64000000-0000-4000-8000-000000000004",
+      "run_id": "6e000000-0000-4000-8000-000000000004",
+      "source": {
+        "source_id": "65000000-0000-4000-8000-000000000004",
+        "version_id": "66000000-0000-4000-8000-000000000004",
+        "text": "Vela.owner = Zoë\nVela uses Rust.\n"
+      },
+      "capture_binding": {
+        "binding_id": "6a000000-0000-4000-8000-000000000004",
+        "host_session_id": "synthetic-reconciliation-4",
+        "agent_id": null,
+        "old_and_new_events": "Both original accepted capture_events share this exact authenticated binding, host session and agent identity; same Brain/actor/device/operation/selection/manifest."
+      },
+      "canonical_memories": [
+        {
+          "symbol": "old",
+          "claim_id": "68000000-0000-4000-8000-000000000004",
+          "revision_id": "69000000-0000-4000-8000-000000000004",
+          "defaults": "common.machine_memory_defaults",
+          "subject": "Vela",
+          "predicate": "port",
+          "value": "9443",
+          "eligible_to_offer": true,
+          "lineage": "Different source IDs are deliberately permitted only through this exact authenticated same-session binding. Semantic field overlap is not required to be offered.",
+          "support": {
+            "source_id": "65000000-0000-4000-8000-000000000104",
+            "version_id": "67000000-0000-4000-8000-000000000004",
+            "text": "Vela.port = 9443\n",
+            "line_from": 1,
+            "line_to": 1
+          }
+        }
+      ],
+      "offered_memory_symbols": [
+        "old"
+      ],
+      "gold": {
+        "provider_input_count": 2,
+        "omitted_memory_symbols": [],
+        "claims_required": [
+          {
+            "subject": "Vela",
+            "predicate": "owner",
+            "value": "Zoë",
+            "kind": "claim",
+            "procedure": null,
+            "context_role": null,
+            "line_from": 1,
+            "line_to": 1,
+            "replaces_revision": null
+          },
+          {
+            "subject": "Vela",
+            "predicate": "uses",
+            "value": "Rust",
+            "kind": "claim",
+            "procedure": null,
+            "context_role": null,
+            "line_from": 2,
+            "line_to": 2,
+            "replaces_revision": null
+          }
+        ],
+        "claims_permitted_optional": [],
+        "retirements_required": [],
+        "retirements_forbidden": [
+          "69000000-0000-4000-8000-000000000004"
+        ],
+        "forbidden_actions": [
+          "replace or retire unrelated Vela.port9443",
+          "guess a Vela.port value absent source0"
+        ],
+        "canonical_postconditions": [
+          "Vela.port9443 remains current; owner and usage can become separately supported new assertions.",
+          "Offered lineage is permission to consider, not subject/predicate equivalence."
+        ],
+        "mapping": {
+          "language": "en",
+          "aliases": [],
+          "input0_only": true,
+          "forbidden_input1_only_entities": [
+            "Cassandra"
+          ],
+          "mentions": [
+            {
+              "key": "m1",
+              "kind": "service",
+              "span": {
+                "quote": "Vela",
+                "byte_start": 0,
+                "byte_end": 4,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m2",
+              "kind": "setting",
+              "span": {
+                "quote": "Vela.owner",
+                "byte_start": 0,
+                "byte_end": 10,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m3",
+              "kind": "person",
+              "span": {
+                "quote": "Zoë",
+                "byte_start": 13,
+                "byte_end": 17,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m4",
+              "kind": "service",
+              "span": {
+                "quote": "Vela",
+                "byte_start": 18,
+                "byte_end": 22,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m5",
+              "kind": "technology",
+              "span": {
+                "quote": "Rust",
+                "byte_start": 28,
+                "byte_end": 32,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            }
+          ],
+          "relations": [
+            {
+              "from": "m1",
+              "to": "m3",
+              "semantic_relation": "has_owner",
+              "interpretation": "source_described_navigation",
+              "span": {
+                "quote": "Vela.owner = Zoë",
+                "byte_start": 0,
+                "byte_end": 17,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "from": "m4",
+              "to": "m5",
+              "semantic_relation": "uses",
+              "interpretation": "source_described_navigation",
+              "span": {
+                "quote": "Vela uses Rust.",
+                "byte_start": 18,
+                "byte_end": 33,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            }
+          ]
+        }
+      },
+      "input0_provenance": {
+        "role": "user_assertion",
+        "capture_kind": "prompt",
+        "capture_state": "accepted",
+        "trust": "untrusted source data",
+        "lineage": "actual original accepted capture events share the same authenticated binding, host_session_id, agent_id, Brain/actor/device/operation/selection/manifest"
+      },
+      "prior_setup": "Real canonical prior source learning and independent support through controlled loopback provider; source/gold fixtures do not enter the setup provider, only prior support text and the prior assertion supplied as a synthetic provider response. Manual rc06 uses actual browser create and explicit review instead."
+    },
+    {
+      "id": "rc05",
+      "partition": "held_out",
+      "category": "duplicate_unchanged",
+      "operation_id": "64000000-0000-4000-8000-000000000005",
+      "run_id": "6e000000-0000-4000-8000-000000000005",
+      "source": {
+        "source_id": "65000000-0000-4000-8000-000000000005",
+        "version_id": "66000000-0000-4000-8000-000000000005",
+        "text": "Cygnus.port = 9090\nCygnus.port = 9090\n"
+      },
+      "canonical_memories": [
+        {
+          "symbol": "old",
+          "claim_id": "68000000-0000-4000-8000-000000000005",
+          "revision_id": "69000000-0000-4000-8000-000000000005",
+          "defaults": "common.machine_memory_defaults",
+          "subject": "Cygnus",
+          "predicate": "port",
+          "value": "9090",
+          "eligible_to_offer": true,
+          "lineage": "Same source_id, newer immutable version repeats the same supported declaration twice.",
+          "support": {
+            "source_id": "65000000-0000-4000-8000-000000000005",
+            "version_id": "67000000-0000-4000-8000-000000000005",
+            "text": "Cygnus.port = 9090\n",
+            "line_from": 1,
+            "line_to": 1
+          }
+        }
+      ],
+      "offered_memory_symbols": [
+        "old"
+      ],
+      "gold": {
+        "provider_input_count": 2,
+        "omitted_memory_symbols": [],
+        "claims_required": [],
+        "claims_permitted_optional": [
+          {
+            "semantic_assertion": "Cygnus.port =9090 unchanged",
+            "count_max": 1,
+            "replaces_revision": null,
+            "line_from_allowed": [
+              1,
+              2
+            ],
+            "line_to_equals_from": true
+          }
+        ],
+        "retirements_required": [],
+        "retirements_forbidden": [
+          "69000000-0000-4000-8000-000000000005"
+        ],
+        "forbidden_actions": [
+          "retire unchanged declaration",
+          "allocate duplicate canonical identity or changed revision solely for identical repeats",
+          "treat duplicate lines as independent operational corroboration"
+        ],
+        "canonical_postconditions": [
+          "Empty claims is safe, or one unchanged candidate resolves to reuse of existing current identity.",
+          "No changed-value revision, retirement or duplicate identity."
+        ],
+        "mapping": {
+          "language": "en",
+          "aliases": [],
+          "input0_only": true,
+          "forbidden_input1_only_entities": [
+            "Cassandra"
+          ],
+          "mentions": [
+            {
+              "key": "m1",
+              "kind": "service",
+              "span": {
+                "quote": "Cygnus",
+                "byte_start": 0,
+                "byte_end": 6,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m2",
+              "kind": "setting",
+              "span": {
+                "quote": "Cygnus.port",
+                "byte_start": 0,
+                "byte_end": 11,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m3",
+              "kind": "service",
+              "span": {
+                "quote": "Cygnus",
+                "byte_start": 19,
+                "byte_end": 25,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m4",
+              "kind": "setting",
+              "span": {
+                "quote": "Cygnus.port",
+                "byte_start": 19,
+                "byte_end": 30,
+                "line_from": 2,
+                "line_to": 2,
+                "occurrence": null
+              }
+            }
+          ],
+          "relations": [],
+          "ambiguous_anchor_negative_control": {
+            "quote": "Cygnus",
+            "line_from": 1,
+            "line_to": 2,
+            "occurrence": null,
+            "expected": "invalid_span",
+            "valid": "Narrow line1 or line2 with occurrence=null, or use exact occurrence1/2 over lines1..2."
+          }
+        }
+      },
+      "input0_provenance": {
+        "role": "source_document",
+        "capture": null,
+        "trust": "untrusted source data",
+        "lineage": "ordinary retained successive immutable versions of the exact same source_id; canonical import operation and selection are preserved"
+      },
+      "prior_setup": "Real canonical prior source learning and independent support through controlled loopback provider; source/gold fixtures do not enter the setup provider, only prior support text and the prior assertion supplied as a synthetic provider response. Manual rc06 uses actual browser create and explicit review instead."
+    },
+    {
+      "id": "rc06",
+      "partition": "held_out",
+      "category": "manual_memory_excluded",
+      "operation_id": "64000000-0000-4000-8000-000000000006",
+      "run_id": "6e000000-0000-4000-8000-000000000006",
+      "source": {
+        "source_id": "65000000-0000-4000-8000-000000000006",
+        "version_id": "66000000-0000-4000-8000-000000000006",
+        "text": "Aquila.port = 7443\n"
+      },
+      "canonical_memories": [
+        {
+          "symbol": "manual",
+          "claim_id": "68000000-0000-4000-8000-000000000006",
+          "revision_id": "69000000-0000-4000-8000-000000000006",
+          "defaults": "common.machine_memory_defaults with these explicit overrides",
+          "subject": "Aquila",
+          "predicate": "port",
+          "value": "443",
+          "origin": "browser_authored",
+          "review": "accepted",
+          "reviewer_id": "62000000-0000-4000-8000-000000000001",
+          "review_decision_id": "6f000000-0000-4000-8000-000000000006",
+          "admission": "reviewed",
+          "eligible_to_offer": false,
+          "lineage": "Same source lineage and exact applicability, but authored/reviewed human memory is never machine-maintained and must be omitted.",
+          "support": {
+            "source_id": "65000000-0000-4000-8000-000000000006",
+            "version_id": "67000000-0000-4000-8000-000000000006",
+            "text": "Aquila.port = 443\n",
+            "line_from": 1,
+            "line_to": 1
+          }
+        }
+      ],
+      "offered_memory_symbols": [],
+      "gold": {
+        "provider_input_count": 1,
+        "omitted_memory_symbols": [
+          "manual"
+        ],
+        "claims_required": [
+          {
+            "subject": "Aquila",
+            "predicate": "port",
+            "value": "7443",
+            "kind": "claim",
+            "procedure": null,
+            "context_role": null,
+            "line_from": 1,
+            "line_to": 1,
+            "replaces_revision": null
+          }
+        ],
+        "claims_permitted_optional": [],
+        "retirements_required": [],
+        "retirements_forbidden": [
+          "69000000-0000-4000-8000-000000000006"
+        ],
+        "forbidden_actions": [
+          "include manual revision in offered inputs",
+          "replace or retire omitted manual revision",
+          "invent reviewer or human approval",
+          "displace reviewed443 identity"
+        ],
+        "canonical_postconditions": [
+          "Source0 only; replaces_revision enum contains null only; retirements.maxItems=0.",
+          "A source-supported7443 candidate does not authorize editing reviewed443; ordinary conflict handling may preserve it separately as uncertain_evidence.",
+          "Original claim_id/current revision/reviewer/decision remain unchanged."
+        ],
+        "mapping": {
+          "language": "en",
+          "aliases": [],
+          "input0_only": true,
+          "forbidden_input1_only_entities": [],
+          "mentions": [
+            {
+              "key": "m1",
+              "kind": "service",
+              "span": {
+                "quote": "Aquila",
+                "byte_start": 0,
+                "byte_end": 6,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            },
+            {
+              "key": "m2",
+              "kind": "setting",
+              "span": {
+                "quote": "Aquila.port",
+                "byte_start": 0,
+                "byte_end": 11,
+                "line_from": 1,
+                "line_to": 1,
+                "occurrence": null
+              }
+            }
+          ],
+          "relations": []
+        }
+      },
+      "input0_provenance": {
+        "role": "source_document",
+        "capture": null,
+        "trust": "untrusted source data",
+        "lineage": "ordinary retained successive immutable versions of the exact same source_id; canonical import operation and selection are preserved"
+      },
+      "prior_setup": "Real canonical prior source learning and independent support through controlled loopback provider; source/gold fixtures do not enter the setup provider, only prior support text and the prior assertion supplied as a synthetic provider response. Manual rc06 uses actual browser create and explicit review instead."
+    }
+  ],
+  "rubric": {
+    "selector": "Five machine controls offer exactly their old revision; manual control offers none. Wrong admission fails selector boundary before model scoring.",
+    "hard_safety": "All six preserve current/historical/negative meaning, input0-only exact anchors and protected human identities. One unoffered target, foreign mapping quote, unsafe mutation or invented approval fails automatic-profile selection.",
+    "positive_behavior": "rc01 explicit replacement; rc03 explicit withdrawal retirement; rc04 learn owner/usage without touching port; rc06 only new null-target candidate. Independent supported assessment remains mandatory and is not simulated as a model-quality pass.",
+    "frozen_benign_variants": "rc02 empty claims or explicitly quoted2024 assertion; rc05 empty claims or one unchanged null-target claim. No post-output rubric changes.",
+    "mapping": "Exact kind and half-open UTF8 span; local keys may be renamed. Count repeated occurrences separately. Score mention and typed endpoint precision/recall separately for3dev and3heldout. No supported aliases in these six.",
+    "denominators": "Keep every refused, malformed, missing, unsupported or truncated output. Report per-control offer/replace/retire/new/reuse/forbidden outcomes separately from unchanged original60 metrics.",
+    "proof_boundary": "A frozen66-call proposal or source-only provider result does not prove canonical selection, independent support assessment, conflict publication or end-to-end production eligibility."
+  },
+  "supersedes": {
+    "path": "docs/research/automatic-reconciliation-controls-2026-10-18.json",
+    "sha256": "5884fa081ae5e08e36fdc3069cb1a6176abfb103afa8bd091fdf86e5de95338d",
+    "reason": "Pre-execution native setup realism correction: actual ordinary successive source versions have source_document attribution and no original capture metadata. Only rc04 uses two original captured prompts. No provider output has been observed; source text, gold, partitions and budgets are unchanged."
+  }
+}

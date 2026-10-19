@@ -9,6 +9,7 @@ import {
   Code,
   ActionIcon,
   Badge,
+  Tabs,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ import {
 import { HostIcon } from "../../components/HostIcon";
 import { AgentsRoster } from "./AgentsRoster";
 import { useBrainSearch } from "../../app/useBrainSearch";
+import { SkillsPanel } from "../skills/SkillsPanel";
 import "./agents.css";
 
 export function AgentsPage() {
@@ -138,7 +140,7 @@ export function AgentsPage() {
     <div className="agents-management-page">
       <PageHeader
         title="Agents"
-        description="Coding agents that have used this Brain."
+        description="Connect your coding agents and share their working guidance."
         actions={
           <div className="agents-header-actions">
             <McpAgentSetup brain={brain} buttonLabel="Connect agent" />
@@ -151,138 +153,167 @@ export function AgentsPage() {
           </div>
         }
       />
-      <div className={`agents-layout${device && wide ? " inspecting" : ""}`}>
-        <div className="agents-main">
-          <AgentsRoster
-            brain={brain}
-            selectedDevice={device}
-            onSelect={(id) => updateSearch({ device: id, tab: undefined })}
-          />
-          <div className="agents-utilities">
-            <section className="management-surface agent-connect-utility">
-              <h2 className="management-title">Connect your coding tool</h2>
-              <Text size="sm" c="dimmed" mb="md">
-                Install the plugin, choose a Brain, and start working.
-              </Text>
-              <SegmentedControl
-                fullWidth
-                className="vision-segment agent-host-tabs"
-                value={host}
-                onChange={setHost}
-                data={[
-                  {
-                    value: "codex",
-                    label: (
-                      <span>
-                        <HostIcon host="codex" size={24} />
-                        Codex
-                      </span>
-                    ),
-                  },
-                  {
-                    value: "claude",
-                    label: (
-                      <span>
-                        <HostIcon host="claude" size={24} />
-                        Claude Code
-                      </span>
-                    ),
-                  },
-                  {
-                    value: "opencode",
-                    label: (
-                      <span>
-                        <HostIcon host="opencode" size={24} />
-                        OpenCode
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-              <div className="agent-setup-prompt">
-                <PluginConnect brain={brain} compact />
-              </div>
-              <details className="feature-advanced">
-                <summary>
-                  View setup for{" "}
-                  {host === "claude"
-                    ? "Claude Code"
-                    : host === "opencode"
-                      ? "OpenCode"
-                      : "Codex"}
-                </summary>
-                <div className="feature-advanced-content">
-                  <PluginInstall
-                    host={host}
-                    directory={directory}
-                    setDirectory={setDirectory}
-                  />
-                </div>
-              </details>
-            </section>
-            <section className="management-surface agent-memory-utility">
-              <h2 className="management-title">Check memory access</h2>
-              <Text size="md" c="dimmed" mb="md">
-                Verify a real memory read from your agent.
-              </Text>
-              <details className="agent-prompt-details">
-                <summary>View memory-read prompt</summary>
-                <Code block className="agent-read-check">
-                  {agentMemoryReadCheck(brain)}
-                </Code>
-              </details>
-              <Group mt="lg">
-                <CopyButton value={agentMemoryReadCheck(brain)}>
-                  {({ copied, copy }) => (
-                    <Button
-                      variant="outline"
-                      fullWidth
-                      onClick={copy}
-                      leftSection={
-                        copied ? <Check size={21} /> : <Clipboard size={21} />
-                      }
-                    >
-                      {copied ? "Copied" : "Copy memory-read check"}
-                    </Button>
-                  )}
-                </CopyButton>
-              </Group>
-            </section>
-          </div>
-        </div>
-        {!!device && wide && (
-          <aside
-            className="management-surface agent-activity-inspector"
-            aria-label="Agent activity"
-          >
-            {!agent && (
-              <Group justify="flex-end">
-                <ActionIcon
-                  variant="subtle"
-                  aria-label="Close agent activity"
-                  onClick={close}
-                >
-                  <X size={18} />
-                </ActionIcon>
-              </Group>
-            )}
-            {activity}
-          </aside>
-        )}
-      </div>
-      <Drawer
-        closeOnEscape={!inspecting}
-        closeOnClickOutside={!inspecting}
-        trapFocus={!inspecting}
-        className="feature-drawer"
-        opened={!!device && !wide}
-        onClose={close}
-        title={agent ? `${agent.name} · ${agent.user_name}` : "Agent activity"}
-        position="right"
-        size="md"
+      <Tabs
+        value={search.tab === "skills" ? "skills" : "agents"}
+        onChange={(tab) =>
+          updateSearch({
+            tab: tab === "skills" ? "skills" : undefined,
+            device: undefined,
+          })
+        }
+        mb="md"
       >
-        {!!device && !wide && activity}
-      </Drawer>
+        <Tabs.List>
+          <Tabs.Tab value="agents">Agent setup</Tabs.Tab>
+          <Tabs.Tab value="skills">Skills</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
+      {search.tab === "skills" ? (
+        <SkillsPanel key={brain.id} />
+      ) : (
+        <>
+          <div
+            className={`agents-layout${device && wide ? " inspecting" : ""}`}
+          >
+            <div className="agents-main">
+              <AgentsRoster
+                brain={brain}
+                selectedDevice={device}
+                onSelect={(id) => updateSearch({ device: id, tab: undefined })}
+              />
+              <div className="agents-utilities">
+                <section className="management-surface agent-connect-utility">
+                  <h2 className="management-title">Connect your coding tool</h2>
+                  <Text size="sm" c="dimmed" mb="md">
+                    Install the plugin, choose a Brain, and start working.
+                  </Text>
+                  <SegmentedControl
+                    fullWidth
+                    className="vision-segment agent-host-tabs"
+                    value={host}
+                    onChange={setHost}
+                    data={[
+                      {
+                        value: "codex",
+                        label: (
+                          <span>
+                            <HostIcon host="codex" size={24} />
+                            Codex
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "claude",
+                        label: (
+                          <span>
+                            <HostIcon host="claude" size={24} />
+                            Claude Code
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "opencode",
+                        label: (
+                          <span>
+                            <HostIcon host="opencode" size={24} />
+                            OpenCode
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                  <div className="agent-setup-prompt">
+                    <PluginConnect brain={brain} compact />
+                  </div>
+                  <details className="feature-advanced">
+                    <summary>
+                      View setup for{" "}
+                      {host === "claude"
+                        ? "Claude Code"
+                        : host === "opencode"
+                          ? "OpenCode"
+                          : "Codex"}
+                    </summary>
+                    <div className="feature-advanced-content">
+                      <PluginInstall
+                        host={host}
+                        directory={directory}
+                        setDirectory={setDirectory}
+                      />
+                    </div>
+                  </details>
+                </section>
+                <section className="management-surface agent-memory-utility">
+                  <h2 className="management-title">Check memory access</h2>
+                  <Text size="md" c="dimmed" mb="md">
+                    Verify a real memory read from your agent.
+                  </Text>
+                  <details className="agent-prompt-details">
+                    <summary>View memory-read prompt</summary>
+                    <Code block className="agent-read-check">
+                      {agentMemoryReadCheck(brain)}
+                    </Code>
+                  </details>
+                  <Group mt="lg">
+                    <CopyButton value={agentMemoryReadCheck(brain)}>
+                      {({ copied, copy }) => (
+                        <Button
+                          variant="outline"
+                          fullWidth
+                          onClick={copy}
+                          leftSection={
+                            copied ? (
+                              <Check size={21} />
+                            ) : (
+                              <Clipboard size={21} />
+                            )
+                          }
+                        >
+                          {copied ? "Copied" : "Copy memory-read check"}
+                        </Button>
+                      )}
+                    </CopyButton>
+                  </Group>
+                </section>
+              </div>
+            </div>
+            {!!device && wide && (
+              <aside
+                className="management-surface agent-activity-inspector"
+                aria-label="Agent activity"
+              >
+                {!agent && (
+                  <Group justify="flex-end">
+                    <ActionIcon
+                      variant="subtle"
+                      aria-label="Close agent activity"
+                      onClick={close}
+                    >
+                      <X size={18} />
+                    </ActionIcon>
+                  </Group>
+                )}
+                {activity}
+              </aside>
+            )}
+          </div>
+          <Drawer
+            closeOnEscape={!inspecting}
+            closeOnClickOutside={!inspecting}
+            trapFocus={!inspecting}
+            className="feature-drawer"
+            opened={!!device && !wide}
+            onClose={close}
+            title={
+              agent ? `${agent.name} · ${agent.user_name}` : "Agent activity"
+            }
+            position="right"
+            size="md"
+          >
+            {!!device && !wide && activity}
+          </Drawer>
+        </>
+      )}
     </div>
   );
 }

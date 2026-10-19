@@ -45,7 +45,7 @@ test("native analytical reports, evidence, invalidation, errors at 1280 pixels l
         retain_content: true,
         content: `${name} port 8080.\nANALYTICS_INERT_EVIDENCE <script>window.analyticsInjected=true</script>\n`,
       });
-      const claim = await post(`/api/brains/${brain.id}/claims`, {
+      let claim = await post(`/api/brains/${brain.id}/claims`, {
         content: {
           kind: "claim",
           subject: `${name} analytical service${name === "Cobalt" ? " module.deeply_nested_repository_symbol_without_breaks_for_mobile_layout" : ""}`,
@@ -60,7 +60,7 @@ test("native analytical reports, evidence, invalidation, errors at 1280 pixels l
             to: null,
             precision: "unknown",
           },
-          freshness: "current",
+          freshness: "needs_verification",
           operational: "declared",
           observed_at: null,
           observation: "",
@@ -74,6 +74,15 @@ test("native analytical reports, evidence, invalidation, errors at 1280 pixels l
           ],
         },
       });
+      const reviewed = await post(
+        `/api/brains/${brain.id}/claims/${claim.claim_id}/review`,
+        {
+          base_revision: claim.id,
+          action: "accept",
+          reason: "Synthetic evidence checked by the fixture owner.",
+        },
+      );
+      claim = reviewed.claims[0].revision;
       rows.push({
         source: source.id,
         version: source.version.id,
@@ -97,7 +106,7 @@ test("native analytical reports, evidence, invalidation, errors at 1280 pixels l
       )
       .toBe("ready");
   }
-  await page.goto(`/brains/${fixture.brain}/graph`);
+  await page.goto(`/brains/${fixture.brain}/graph?tab=evidence`);
   const panel = page.locator("body");
   await openGraphDrawer(page, "Graph status and maintenance", "Graph status");
   await panel

@@ -69,7 +69,11 @@ async fn prepare<'a>(state: &'a AppState, job: &ClaimedJob) -> Result<(Tx<'a>, G
     descriptor::available(&mut tx, &g).await?;
     Ok((tx, g))
 }
-async fn progress(state: &AppState, job: &ClaimedJob, percent: i32) -> Result<()> {
+async fn progress(
+    state: &AppState,
+    job: &ClaimedJob,
+    percent: i32,
+) -> Result<chrono::DateTime<chrono::Utc>> {
     let mut tx = db::device_tx(&state.pool, job.actor_id, job.device_id).await?;
     db::require_writer(&mut tx, job.brain_id).await?;
     lease(&mut tx, job).await?;
@@ -81,8 +85,14 @@ async fn progress(state: &AppState, job: &ClaimedJob, percent: i32) -> Result<()
     .bind(percent)
     .execute(&mut *tx)
     .await?;
+    let deadline: chrono::DateTime<chrono::Utc> =
+        sqlx::query_scalar("SELECT lease_until FROM jobs WHERE id=$1 AND lease_token=$2")
+            .bind(job.id)
+            .bind(job.lease_token)
+            .fetch_one(&mut *tx)
+            .await?;
     tx.commit().await?;
-    Ok(())
+    Ok(deadline)
 }
 async fn run(state: &AppState, job: &ClaimedJob) -> Result<()> {
     let (mut tx, g) = prepare(state, job).await?;
@@ -100,36 +110,53 @@ async fn run(state: &AppState, job: &ClaimedJob) -> Result<()> {
     descriptor::retained(&mut tx, &d).await?;
     tx.commit().await?;
     let (mut tx, g) = ready(state, job).await?;
-    preparation_unchanged(&mut tx, job.brain_id, current).await?;
+    if preparation_epoch(&mut tx, job.brain_id).await? != current {
+        return Err(failure(
+            "graph_preparation_contended",
+            "Graph preparation changed before any native import. A bounded fresh attempt will retry.",
+        ));
+    }
     descriptor::retained(&mut tx, &d).await?;
-    sqlx::query("UPDATE graph_generations SET descriptor=$3,node_count=$4,edge_count=$5,unresolved=$6,ambiguous=$7,unsupported=$8,state='running',error_code=NULL,cleaned_at=NULL WHERE brain_id=$1 AND id=$2")
+    sqlx::query("UPDATE graph_generations SET descriptor=$3,node_count=$4,edge_count=$5,unresolved=$6,ambiguous=$7,unsupported=$8,state='running',error_code=NULL,cleaned_at=NULL,native_attempt_token=$9 WHERE brain_id=$1 AND id=$2")
         .bind(job.brain_id).bind(g.id).bind(Json(&d)).bind(d.nodes.len() as i64).bind(d.edges.len() as i64)
-        .bind(d.unresolved).bind(d.ambiguous).bind(d.unsupported).execute(&mut *tx).await?;
+        .bind(d.unresolved).bind(d.ambiguous).bind(d.unsupported).bind(job.lease_token).execute(&mut *tx).await?;
+    let (number, deadline): (i32, chrono::DateTime<chrono::Utc>) =
+        sqlx::query_as("SELECT attempts,lease_until FROM jobs WHERE id=$1 AND lease_token=$2")
+            .bind(job.id)
+            .bind(job.lease_token)
+            .fetch_one(&mut *tx)
+            .await?;
+    let mut attempt = adapter::ImportAttempt {
+        number,
+        token: job.lease_token,
+        deadline,
+    };
     tx.commit().await?;
-    adapter::setup(state, &g).await?;
+    adapter::setup(state, &g, &attempt).await?;
     let batches = 2 * (d.nodes.len().div_ceil(500) + d.edges.len().div_ceil(500));
     let mut done = 0;
     for batch in d.nodes.chunks(500) {
-        adapter::nodes(state, &g, batch).await?;
+        adapter::nodes(state, &g, &attempt, batch).await?;
         done += 1;
-        progress(state, job, 5 + (90 * done / batches) as i32).await?;
+        attempt.deadline = progress(state, job, 5 + (90 * done / batches) as i32).await?;
     }
     for batch in d.edges.chunks(500) {
-        adapter::edges(state, &g, batch).await?;
+        adapter::edges(state, &g, &attempt, batch).await?;
         done += 1;
-        progress(state, job, 5 + (90 * done / batches) as i32).await?;
+        attempt.deadline = progress(state, job, 5 + (90 * done / batches) as i32).await?;
     }
     for batch in d.nodes.chunks(500) {
         adapter::verify_nodes(state, &g, batch).await?;
         done += 1;
-        progress(state, job, 5 + (90 * done / batches) as i32).await?;
+        attempt.deadline = progress(state, job, 5 + (90 * done / batches) as i32).await?;
     }
     for batch in d.edges.chunks(500) {
         adapter::verify_edges(state, &g, batch).await?;
         done += 1;
-        progress(state, job, 5 + (90 * done / batches) as i32).await?;
+        attempt.deadline = progress(state, job, 5 + (90 * done / batches) as i32).await?;
     }
     adapter::verify_counts(state, &g, &d).await?;
+    adapter::seal(state, &g, &attempt).await?;
     let (mut tx, g) = ready(state, job).await?;
     preparation_unchanged(&mut tx, job.brain_id, current).await?;
     // Memory epoch and snapshot retention are current under the same Brain lock

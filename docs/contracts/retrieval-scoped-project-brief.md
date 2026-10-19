@@ -4,7 +4,7 @@ Status: accepted
 
 ## Source
 
-The user-authorized [automatic memory plan](../research/automated-memory-improvement-plan-2026-10-07.md)
+The user-authorized [automatic memory plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 adds scoped context to normal plugin recall. Existing memory authority, retrieval
 scope, support, deadlines, cost and plugin latency limits remain unchanged.
 

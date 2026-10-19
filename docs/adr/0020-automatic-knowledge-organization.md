@@ -26,6 +26,12 @@ does not match a known scope. Broad technology/concept identities and actual
 service/person/repository instances remain distinct. Topic identity is persisted
 independently of GDS's report-local community number.
 
+The user resolved unmatched edited-topic behavior on 2026-10-18: preserve edited
+topics as manual overlays on their still-valid contributors, alongside new
+automatic groups. A uniquely matched edited topic keeps its automatic identity;
+an unmatched overlay never claims that its human label was inferred or qualified
+by the new clustering result. Exact support, scope and privacy still govern it.
+
 Extend canonical qualification, derivative erasure/restore replay and typed
 navigation for semantic records before exposing them. Topics explain source
 organization; mentions and inferred relationships do not become accepted claims

@@ -105,5 +105,5 @@ still hold copies. The [model gateway and learning worker](provider-learning.md)
 enforce current retention and in-flight erasure. Later capture-inbox, vector,
 graph and backup adapters must
 enforce the [retention contract](../contracts/memory-retention-and-erasure.md) and prove
-their own cleanup. See the [dated proof](../mappings/retention-and-erasure-proof-2026-09-14.md)
+their own cleanup. See the [dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retention-and-erasure-proof-2026-09-14.md)
 and run `./scripts/test-platform.sh` plus the retention/claims/review browser tests.

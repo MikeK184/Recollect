@@ -1,0 +1,596 @@
+{
+  "name": "graph-organization-fresh-heldout-v1",
+  "version": 1,
+  "created": "2026-10-18",
+  "source": "Independent root-authored synthetic documents and manual topic/span gold, frozen before development parameter selection and before observing provider output or vector similarities. No customer data.",
+  "usage": "Untouched grouping holdout only. Do not fit or select parameters using these texts, embeddings, topic labels, scores or outcomes. Source-only production reconciliation may extract the exact text once under a separately approved frozen campaign. Original source-facts and reconciliation-control corpora keep their partitions and hashes.",
+  "span_coordinates": "half-open UTF-8 bytes into exact text",
+  "mention_columns": [
+    "key",
+    "kind",
+    "byte_start",
+    "byte_end",
+    "quote"
+  ],
+  "endpoint_policy": "Endpoint quality is not annotated here. Empty aliases/relations arrays are not negative endpoint gold and cannot be used as such. Original extractor endpoint qualification remains separate.",
+  "scope_policy": {
+    "scope": "Harness-created canonical Brain/repository/environment; text never grants authorization.",
+    "boundaries": "The sigma document is an independent Brain; no shared group, count, label or vector feature may cross the Brain boundary."
+  },
+  "evaluation_policy": {
+    "freeze_before_tuning": true,
+    "held_out": "Evaluate once after development recipe freeze; retain all failed, unsupported, unassigned and missing outcomes.",
+    "development": "Only original12 development documents may fit the predeclared hybrid grid. The original observed8 heldout remain diagnostics, never fitting data.",
+    "topics": "All66 new-corpus pairs retained; disjoint nonempty topics are negative, empty topics remain unknown except explicit unrelated pair controls.",
+    "label_usefulness": "Blind review separate from source/span origin.",
+    "truth": "No topic, vector, generated output or feedback promotes claim authority."
+  },
+  "identity_pairs": [
+    [
+      "f01.ca",
+      "f11.ca",
+      "distinct_Brain"
+    ]
+  ],
+  "topic_pairs": [
+    [
+      "f01",
+      "f02",
+      "related_pki"
+    ],
+    [
+      "f03",
+      "f04",
+      "related_databases"
+    ],
+    [
+      "f05",
+      "f06",
+      "related_identity"
+    ],
+    [
+      "f05",
+      "f07",
+      "related_identity"
+    ],
+    [
+      "f01",
+      "f07",
+      "related_pki"
+    ],
+    [
+      "f08",
+      "f09",
+      "related_deployment"
+    ],
+    [
+      "f03",
+      "f12",
+      "related_databases"
+    ],
+    [
+      "f01",
+      "f10",
+      "unrelated_empty"
+    ],
+    [
+      "f01",
+      "f11",
+      "cross_Brain_no_membership_or_count"
+    ]
+  ],
+  "documents": [
+    {
+      "id": "f01",
+      "partition": "held_out",
+      "scope": "alpha/infra/PROD",
+      "title": "Trust anchor overlap",
+      "language": "en",
+      "text": "During certificate authority rotation, distribute both trust anchors before renewing the intermediate issuer. Keep the previous chain trusted until every workload has renewed. Zoë recorded the overlap window.",
+      "mentions": [
+        [
+          "ca",
+          "concept",
+          7,
+          37,
+          "certificate authority rotation"
+        ],
+        [
+          "anchors",
+          "concept",
+          55,
+          68,
+          "trust anchors"
+        ],
+        [
+          "issuer",
+          "concept",
+          89,
+          108,
+          "intermediate issuer"
+        ],
+        [
+          "zoe",
+          "person",
+          176,
+          180,
+          "Zoë"
+        ]
+      ],
+      "topics": [
+        "pki"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f02",
+      "partition": "held_out",
+      "scope": "alpha/infra/DEV",
+      "title": "PKIX chain transition",
+      "language": "en",
+      "text": "A PKIX chain rollover must preserve an overlap between old and new roots. Removing the former root early makes clients reject certificates that are still valid. The rollover is a plan, not a completed operation.",
+      "mentions": [
+        [
+          "pkix",
+          "technology",
+          2,
+          6,
+          "PKIX"
+        ],
+        [
+          "rollover",
+          "concept",
+          7,
+          21,
+          "chain rollover"
+        ],
+        [
+          "roots",
+          "concept",
+          67,
+          72,
+          "roots"
+        ]
+      ],
+      "topics": [
+        "pki"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f03",
+      "partition": "held_out",
+      "scope": "alpha/database/PROD",
+      "title": "WAL replay on standby",
+      "language": "en",
+      "text": "PostgreSQL streams WAL records to a standby. Measure replay lag before promoting that replica; a successful connection alone does not prove it has replayed the last committed transaction.",
+      "mentions": [
+        [
+          "pg",
+          "technology",
+          0,
+          10,
+          "PostgreSQL"
+        ],
+        [
+          "wal",
+          "concept",
+          19,
+          22,
+          "WAL"
+        ],
+        [
+          "lag",
+          "concept",
+          53,
+          63,
+          "replay lag"
+        ],
+        [
+          "replica",
+          "concept",
+          86,
+          93,
+          "replica"
+        ]
+      ],
+      "topics": [
+        "databases"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f04",
+      "partition": "held_out",
+      "scope": "alpha/database/DEV",
+      "title": "Recovering an asynchronous copy",
+      "language": "en",
+      "text": "After the leader crashes, an asynchronous follower can be behind its durable log. Reapply the archived transaction segments and verify the recovery position before accepting writes. No failover has been performed.",
+      "mentions": [
+        [
+          "follower",
+          "concept",
+          29,
+          50,
+          "asynchronous follower"
+        ],
+        [
+          "log",
+          "concept",
+          69,
+          80,
+          "durable log"
+        ],
+        [
+          "recovery",
+          "concept",
+          139,
+          156,
+          "recovery position"
+        ]
+      ],
+      "topics": [
+        "databases"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f05",
+      "partition": "held_out",
+      "scope": "alpha/identity/PROD",
+      "title": "OIDC signing key overlap",
+      "language": "en",
+      "text": "OIDC tokens carry a signing-key identifier. Publish the replacement key in JWKS before issuing tokens with it, and retain the old public key until existing tokens expire. The issuer and audience must still match.",
+      "mentions": [
+        [
+          "oidc",
+          "technology",
+          0,
+          4,
+          "OIDC"
+        ],
+        [
+          "tokens1",
+          "concept",
+          5,
+          11,
+          "tokens"
+        ],
+        [
+          "tokens2",
+          "concept",
+          95,
+          101,
+          "tokens"
+        ],
+        [
+          "tokens3",
+          "concept",
+          156,
+          162,
+          "tokens"
+        ],
+        [
+          "jwks",
+          "technology",
+          75,
+          79,
+          "JWKS"
+        ],
+        [
+          "issuer",
+          "concept",
+          175,
+          181,
+          "issuer"
+        ],
+        [
+          "audience",
+          "concept",
+          186,
+          194,
+          "audience"
+        ]
+      ],
+      "topics": [
+        "identity"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f06",
+      "partition": "held_out",
+      "scope": "alpha/identity/DEV",
+      "title": "Validating an identity token",
+      "language": "en",
+      "text": "An OpenID Connect relying party checks the token signature against the discovered key set. It also validates the intended recipient and provider identifier. A matching email address alone is insufficient authentication.",
+      "mentions": [
+        [
+          "openid",
+          "technology",
+          3,
+          17,
+          "OpenID Connect"
+        ],
+        [
+          "signature",
+          "concept",
+          43,
+          58,
+          "token signature"
+        ],
+        [
+          "keyset",
+          "concept",
+          82,
+          89,
+          "key set"
+        ],
+        [
+          "authentication",
+          "concept",
+          204,
+          218,
+          "authentication"
+        ]
+      ],
+      "topics": [
+        "identity"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f07",
+      "partition": "held_out",
+      "scope": "alpha/identity/PROD",
+      "title": "Trust during key discovery",
+      "language": "en",
+      "text": "Fetch the JWKS document over HTTPS and validate its certificate chain. OIDC signing-key rotation and transport trust are separate checks; accepting an unsigned token is never a workaround for an expired certificate.",
+      "mentions": [
+        [
+          "jwks",
+          "technology",
+          10,
+          14,
+          "JWKS"
+        ],
+        [
+          "https",
+          "technology",
+          29,
+          34,
+          "HTTPS"
+        ],
+        [
+          "chain",
+          "concept",
+          52,
+          69,
+          "certificate chain"
+        ],
+        [
+          "oidc",
+          "technology",
+          71,
+          75,
+          "OIDC"
+        ],
+        [
+          "rotation",
+          "concept",
+          76,
+          96,
+          "signing-key rotation"
+        ]
+      ],
+      "topics": [
+        "identity",
+        "pki"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f08",
+      "partition": "held_out",
+      "scope": "alpha/workloads/PROD",
+      "title": "Budgeted workload eviction",
+      "language": "en",
+      "text": "Kubernetes eviction respects a PodDisruptionBudget during voluntary node maintenance. Check available replicas and readiness before draining the node. A budget does not prevent an involuntary hardware failure.",
+      "mentions": [
+        [
+          "k8s",
+          "technology",
+          0,
+          10,
+          "Kubernetes"
+        ],
+        [
+          "budget",
+          "technology",
+          31,
+          50,
+          "PodDisruptionBudget"
+        ],
+        [
+          "maintenance",
+          "concept",
+          68,
+          84,
+          "node maintenance"
+        ],
+        [
+          "readiness",
+          "concept",
+          115,
+          124,
+          "readiness"
+        ]
+      ],
+      "topics": [
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f09",
+      "partition": "held_out",
+      "scope": "alpha/workloads/DEV",
+      "title": "Keeping replicas available",
+      "language": "en",
+      "text": "A rolling deployment should keep enough ready instances while replacing old pods. Kubernetes admission may refuse a voluntary removal that would violate the disruption allowance. This note does not claim the rollout succeeded.",
+      "mentions": [
+        [
+          "rolling",
+          "concept",
+          2,
+          20,
+          "rolling deployment"
+        ],
+        [
+          "k8s",
+          "technology",
+          82,
+          92,
+          "Kubernetes"
+        ],
+        [
+          "disruption",
+          "concept",
+          157,
+          177,
+          "disruption allowance"
+        ]
+      ],
+      "topics": [
+        "deployment"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f10",
+      "partition": "held_out",
+      "scope": "alpha/unknown/unknown",
+      "title": "Lunch arrangements",
+      "language": "en",
+      "text": "Bring pears and sandwiches to the picnic on Saturday. The blue blanket is beside the basket. There are no infrastructure instructions in this note.",
+      "mentions": [],
+      "topics": [],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f11",
+      "partition": "held_out",
+      "scope": "sigma/infra/PROD",
+      "title": "Independent trust anchor overlap",
+      "language": "en",
+      "text": "During certificate authority rotation, distribute both trust anchors before renewing the intermediate issuer. Keep the previous chain trusted until every workload has renewed. Zoë recorded the overlap window.",
+      "mentions": [
+        [
+          "ca",
+          "concept",
+          7,
+          37,
+          "certificate authority rotation"
+        ],
+        [
+          "anchors",
+          "concept",
+          55,
+          68,
+          "trust anchors"
+        ],
+        [
+          "issuer",
+          "concept",
+          89,
+          108,
+          "intermediate issuer"
+        ],
+        [
+          "zoe",
+          "person",
+          176,
+          180,
+          "Zoë"
+        ]
+      ],
+      "topics": [
+        "pki"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    },
+    {
+      "id": "f12",
+      "partition": "held_out",
+      "scope": "alpha/database/PROD",
+      "title": "Cache refusal is not database retirement",
+      "language": "en",
+      "text": "The checkout-api does not use Redis for persistence. Its PostgreSQL database remains active. Reject the proposed cache endpoint change; this sentence does not withdraw the database configuration.",
+      "mentions": [
+        [
+          "app",
+          "service",
+          4,
+          16,
+          "checkout-api"
+        ],
+        [
+          "redis",
+          "technology",
+          30,
+          35,
+          "Redis"
+        ],
+        [
+          "persistence",
+          "concept",
+          40,
+          51,
+          "persistence"
+        ],
+        [
+          "pg",
+          "technology",
+          57,
+          67,
+          "PostgreSQL"
+        ],
+        [
+          "endpoint",
+          "concept",
+          113,
+          127,
+          "cache endpoint"
+        ]
+      ],
+      "topics": [
+        "databases"
+      ],
+      "aliases": [],
+      "relations": [],
+      "endpoint_gold": "not_annotated_for_this_grouping_corpus"
+    }
+  ]
+}

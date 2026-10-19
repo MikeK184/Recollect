@@ -1,11 +1,24 @@
 # Archived Execution Packs
 
+These are delivery records, not current operating instructions. Their dates,
+commit status and runtime observations describe the original acceptance. Use the
+[current roadmap](../../epics/index.md) and [runbooks](../../../runbooks/README.md)
+for current behavior and open work. Removed supporting studies are linked at the
+exact historical Git revision; a historical pass does not close a newer failure.
+
 This index contains shipped packs with reconciled closeout evidence. A shipped
 local capability does not establish a deployed or published service.
 
 | Pack | Status |
 | --- | --- |
+| [desktop-grouped-3d-graph.md](desktop-grouped-3d-graph.md) | shipped |
+| [retrieval-attributed-feedback.md](retrieval-attributed-feedback.md) | shipped |
+| [mcp-native-skill-reload.md](mcp-native-skill-reload.md) | shipped |
+| [mcp-agent-coordination.md](mcp-agent-coordination.md) | shipped |
+| [mcp-managed-skills.md](mcp-managed-skills.md) | shipped |
+| [repository-current-documentation.md](repository-current-documentation.md) | shipped |
 | [rust-semantic-developer-navigation.md](rust-semantic-developer-navigation.md) | shipped |
+| [claude-code-project-setup.md](claude-code-project-setup.md) | shipped |
 | [retrieval-semantic-discovery-plans.md](retrieval-semantic-discovery-plans.md) | shipped |
 | [operations-longmemeval-bench.md](operations-longmemeval-bench.md) | shipped |
 | [brain-openrouter-provider.md](brain-openrouter-provider.md) | shipped |

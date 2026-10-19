@@ -46,7 +46,7 @@ The user-authorized full product goal and accepted foundations require actual
 central/local/private execution, startup locks, compatible reuse, credentials,
 long-call leases and recovery. The [catalogue contract](../contracts/mcp-catalogue-and-profiles.md)
 deliberately starts nothing. The [runtime contract](../contracts/mcp-runtime-and-credentials.md)
-resolves the next slice's behavior; the [dated mapping](../mappings/mcp-runtime-2026-09-22.md)
+resolves the next slice's behavior; the [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-runtime-2026-09-22.md)
 records current SDK/specification and read-only Cognee/Atlas findings.
 
 Current MCP supports both a modern per-request lifecycle and legacy initialized

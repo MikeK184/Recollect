@@ -4,7 +4,7 @@ Status: accepted
 
 ## Source
 
-The user authorized the full [automated memory plan](../research/automated-memory-improvement-plan-2026-10-07.md).
+The user authorized the full [automated memory plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md).
 This amendment extends [autonomous maintenance](memory-autonomous-maintenance.md)
 and [source support](memory-source-support-verification.md); their standing permits,
 accounting, authority, privacy and publication rules remain governing.

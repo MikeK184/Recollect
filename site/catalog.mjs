@@ -18,6 +18,7 @@ export const groups = [
     ['procedures-and-handovers', 'Procedures & handovers', 'docs/runbooks/procedures-and-handovers.md'],
   ] },
   { text: 'Tools & private execution', items: [
+    ['managed-skills', 'Shared skills & instructions', 'docs/runbooks/managed-skills.md'],
     ['mcp-catalogue', 'Connections & tool groups', 'docs/runbooks/mcp-catalogue.md'],
     ['mcp-runtime', 'Tool calls & outcomes', 'docs/runbooks/mcp-runtime.md'],
     ['mcp-vault-and-private-runners', 'Private runners & credentials', 'docs/runbooks/mcp-vault-and-private-runners.md'],

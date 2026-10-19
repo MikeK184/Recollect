@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "endpoint": "https://api.openai.com/v1",
+  "tier": "standard text Responses API; no tools, regional routing or fast mode",
+  "verified_at": "2026-10-17T23:56:35Z",
+  "valid_for_hours": 24,
+  "source_url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+  "input_nano_usd_per_token": 200,
+  "cached_input_nano_usd_per_token": 20,
+  "cache_write_nano_usd_per_token": 250,
+  "output_nano_usd_per_token": 1200,
+  "maximum_input_tokens_before_long_context_multiplier": 272000,
+  "note": "Official public list pricing is not account access or billing proof. Reserve the higher uncached/cache-write rate for every input token. Refresh and re-freeze before paid execution if stale; this file does not authorize spend."
+}

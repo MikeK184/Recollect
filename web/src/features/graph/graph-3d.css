@@ -1,0 +1,69 @@
+.graph-renderer-dimensions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-bottom: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+}
+.graph-renderer-fallback {
+  flex: 1;
+  padding: var(--mantine-spacing-xs);
+}
+.graph-renderer-loading {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 20rem;
+}
+.graph-spatial-stage {
+  flex: 1;
+  min-height: 0;
+}
+.graph-spatial-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 22rem;
+  overflow: hidden;
+  background: var(--rc-canvas);
+}
+.graph-spatial-canvas {
+  position: absolute;
+  inset: 0;
+}
+.graph-spatial-canvas canvas {
+  display: block;
+}
+.graph-spatial-caption {
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  color: var(--rc-muted);
+  font-size: var(--mantine-font-size-xs);
+  background: var(--rc-surface);
+}
+.graph-spatial-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-xs);
+}
+.graph-spatial-group {
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border: 1px solid var(--rc-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--rc-selection);
+  color: var(--rc-ink);
+  font-size: var(--mantine-font-size-xs);
+}
+.graph-spatial-controls {
+  display: flex;
+  gap: var(--mantine-spacing-xs);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-top: 1px solid var(--rc-border);
+  background: var(--rc-surface);
+}
+.graph-spatial-controls .mantine-Select-root {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
