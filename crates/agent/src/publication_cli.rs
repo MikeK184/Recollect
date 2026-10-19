@@ -50,14 +50,23 @@ async fn upload(
         "/api/brains/{}/repositories/{}/snapshots",
         bundle.brain_id, bundle.repository_id
     );
+    let body = serde_json::to_value(bundle.input)?;
+    // Size the budget from the prepared file (the upload is its payload), not the
+    // ordinary request cap that would abort a large bundle mid-transfer.
+    let size = tokio::fs::metadata(root.join(format!("{id}.json")))
+        .await
+        .map_or(recollect_protocol::PUBLICATION_MAX_BYTES, |m| {
+            m.len() as usize
+        });
     let result: Result<PublicationResult> = async {
         decode(
             client
-                .send(
+                .send_with_timeout(
                     Method::POST,
                     &path,
                     Some(device.token),
-                    Some(serde_json::to_value(bundle.input)?),
+                    Some(body),
+                    crate::payload_timeout(size),
                 )
                 .await?,
         )

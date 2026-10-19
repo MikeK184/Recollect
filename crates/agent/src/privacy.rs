@@ -58,6 +58,124 @@ struct InputHeader {
     revision: String,
     captured_at: DateTime<Utc>,
 }
+
+/// Identity fields gathered while streaming the start of a bundle.
+#[derive(Default)]
+struct Partial {
+    endpoint: Option<String>,
+    device_id: Option<Uuid>,
+    brain_id: Option<Uuid>,
+    repository_id: Option<Uuid>,
+    publication_id: Option<Uuid>,
+    revision: Option<String>,
+    captured_at: Option<DateTime<Utc>>,
+}
+impl Partial {
+    fn finish(self) -> Option<BundleHeader> {
+        Some(BundleHeader {
+            endpoint: self.endpoint?,
+            device_id: self.device_id?,
+            brain_id: self.brain_id?,
+            repository_id: self.repository_id?,
+            input: InputHeader {
+                publication_id: self.publication_id?,
+                revision: self.revision?,
+                captured_at: self.captured_at?,
+            },
+        })
+    }
+    fn complete(&self) -> bool {
+        self.endpoint.is_some()
+            && self.device_id.is_some()
+            && self.brain_id.is_some()
+            && self.repository_id.is_some()
+            && self.publication_id.is_some()
+            && self.revision.is_some()
+            && self.captured_at.is_some()
+    }
+}
+/// Reads identity fields and stops as soon as all are known, so a truncated
+/// prefix of a large bundle is enough. Stopping is signalled with an error;
+/// the caller trusts the cell only when it is complete.
+struct HeaderSeed<'a>(&'a std::cell::RefCell<Partial>, bool);
+impl<'de> serde::de::DeserializeSeed<'de> for HeaderSeed<'_> {
+    type Value = ();
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> std::result::Result<(), D::Error> {
+        d.deserialize_map(self)
+    }
+}
+impl<'de> serde::de::Visitor<'de> for HeaderSeed<'_> {
+    type Value = ();
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("a prepared bundle")
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(
+        self,
+        mut map: A,
+    ) -> std::result::Result<(), A::Error> {
+        use serde::de::{Error, IgnoredAny};
+        let Self(cell, nested) = self;
+        while let Some(key) = map.next_key::<String>()? {
+            match (nested, key.as_str()) {
+                (false, "endpoint") => cell.borrow_mut().endpoint = Some(map.next_value()?),
+                (false, "device_id") => cell.borrow_mut().device_id = Some(map.next_value()?),
+                (false, "brain_id") => cell.borrow_mut().brain_id = Some(map.next_value()?),
+                (false, "repository_id") => {
+                    cell.borrow_mut().repository_id = Some(map.next_value()?)
+                }
+                (false, "input") => map.next_value_seed(HeaderSeed(cell, true))?,
+                (true, "publication_id") => {
+                    cell.borrow_mut().publication_id = Some(map.next_value()?)
+                }
+                (true, "revision") => cell.borrow_mut().revision = Some(map.next_value()?),
+                (true, "captured_at") => cell.borrow_mut().captured_at = Some(map.next_value()?),
+                _ => {
+                    map.next_value::<IgnoredAny>()?;
+                }
+            }
+            if cell.borrow().complete() {
+                return Err(A::Error::custom("header complete"));
+            }
+        }
+        Ok(())
+    }
+}
+fn header_from_prefix(prefix: &[u8]) -> Option<BundleHeader> {
+    use serde::de::DeserializeSeed;
+    let cell = std::cell::RefCell::new(Partial::default());
+    let mut json = serde_json::Deserializer::from_slice(prefix);
+    let _ = HeaderSeed(&cell, false).deserialize(&mut json);
+    cell.into_inner().finish()
+}
+/// Identity of one prepared bundle. Only the first bytes are read when the
+/// identity fields lead the file (they do for bundles this version writes);
+/// otherwise fall back to the bounded full read so old layouts still clean up.
+async fn bundle_header(path: &Path) -> Result<Option<BundleHeader>> {
+    use tokio::io::AsyncReadExt;
+    const PREFIX: usize = 16 * 1024;
+    let limit = PUBLICATION_MAX_BYTES + 8192;
+    let meta = fs::symlink_metadata(path)
+        .await
+        .map_err(|_| anyhow!("Enola did not produce a required artifact."))?;
+    ensure!(
+        meta.is_file() && !meta.is_symlink() && meta.len() <= limit as u64,
+        "Invalid or oversized extraction artifact."
+    );
+    let mut prefix = Vec::with_capacity(PREFIX.min(meta.len() as usize));
+    fs::File::open(path)
+        .await?
+        .take(PREFIX as u64)
+        .read_to_end(&mut prefix)
+        .await?;
+    if let Some(header) = header_from_prefix(&prefix) {
+        return Ok(Some(header));
+    }
+    if meta.len() as usize <= prefix.len() {
+        return Ok(None);
+    }
+    let bytes = publication::artifact(path, limit).await?;
+    Ok(serde_json::from_slice(&bytes).ok())
+}
 async fn cache_path(root: &Path, device: Uuid, brain: Uuid) -> Result<PathBuf> {
     let dir = publication::private_root(&root.join(".privacy")).await?;
     Ok(dir.join(format!("{device}-{brain}.json")))
@@ -115,8 +233,7 @@ pub async fn cleanup(root: &Path, saved: &CachedPrivacy) -> Result<Cleanup> {
         else {
             continue;
         };
-        let bytes = publication::artifact(&file.path(), PUBLICATION_MAX_BYTES + 8192).await?;
-        let header:BundleHeader=serde_json::from_slice(&bytes).map_err(|_|anyhow!("A prepared bundle has unreadable identity metadata; cleanup remains unacknowledged."))?;
+        let header = bundle_header(&file.path()).await?.ok_or_else(|| anyhow!("A prepared bundle has unreadable identity metadata; cleanup remains unacknowledged."))?;
         ensure!(
             header.input.publication_id == id && git_object_id(&header.input.revision),
             "Prepared bundle identity is invalid; cleanup remains unacknowledged."
@@ -219,8 +336,7 @@ pub async fn apply_deletion(
         else {
             continue;
         };
-        let bytes = publication::artifact(&file.path(), PUBLICATION_MAX_BYTES + 8192).await?;
-        let header: BundleHeader = serde_json::from_slice(&bytes).map_err(|_| {
+        let header = bundle_header(&file.path()).await?.ok_or_else(|| {
             anyhow!(
                 "A prepared bundle has unreadable identity metadata; deletion cleanup remains incomplete."
             )
@@ -245,14 +361,25 @@ pub async fn synchronize(
     brain: Uuid,
     root: &Path,
 ) -> Result<Cleanup> {
-    cleanup_known(client, device, brain, root).await?;
     let path = format!("/api/brains/{brain}/privacy-sync");
-    let sync: PrivacyDeviceSync = decode(
-        client
-            .send(Method::GET, &path, Some(device.token), None)
-            .await?,
-    )
-    .await?;
+    let fetched: Result<PrivacyDeviceSync> = async {
+        decode(
+            client
+                .send(Method::GET, &path, Some(device.token), None)
+                .await?,
+        )
+        .await
+    }
+    .await;
+    let sync = match fetched {
+        Ok(sync) => sync,
+        Err(error) => {
+            // Offline expiry must not wait for the server: apply the last known
+            // position once, then report the failed synchronization.
+            let _ = cleanup_known(client, device, brain, root).await;
+            return Err(error);
+        }
+    };
     ensure!(
         sync.brain_id == brain,
         "Retention response belongs to another Brain."
@@ -270,6 +397,7 @@ pub async fn synchronize(
         checked_at: Utc::now(),
     };
     save(root, &saved).await?;
+    // One pass under the new position; the former position is never looser.
     let mut report = cleanup(root, &saved).await?;
     let _: PrivacyDeviceReceipt = decode(
         client
@@ -286,4 +414,60 @@ pub async fn synchronize(
     .await?;
     report.acknowledged = true;
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn header(extra: &str) -> String {
+        let id = Uuid::new_v4();
+        format!(
+            r#"{{"endpoint":"http://127.0.0.1:8787","device_id":"{}","brain_id":"{}","repository_id":"{}","input":{{"publication_id":"{id}","operation_id":"{}","origin":"x","revision":"{}","branch":null,"dirty":false,"captured_at":"2026-10-19T12:00:00Z",{extra}"#,
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            "a".repeat(40)
+        )
+    }
+
+    #[tokio::test]
+    async fn bundle_identity_is_read_from_the_leading_bytes_only() {
+        let root = publication::project_root()
+            .join(".cache")
+            .join(format!("privacy-header-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root).await.unwrap();
+        // Valid identity followed by far more than a prefix of unparseable bytes:
+        // only a header-only read can succeed.
+        let leading = root.join("leading.json");
+        let mut body = header(r#""files":["#);
+        body.push_str(&"!".repeat(512 * 1024));
+        fs::write(&leading, body).await.unwrap();
+        let found = bundle_header(&leading).await.unwrap().unwrap();
+        assert_eq!(found.input.revision, "a".repeat(40));
+        assert_eq!(found.endpoint, "http://127.0.0.1:8787");
+
+        // An older layout with the identity after a large payload still resolves
+        // through the bounded full read.
+        let trailing = root.join("trailing.json");
+        let complete = header(r#""files":[]}}"#);
+        let body = format!(
+            r#"{{"filler":"{}",{}"#,
+            "z".repeat(64 * 1024),
+            &complete[1..]
+        );
+        fs::write(&trailing, body).await.unwrap();
+        let tail = bundle_header(&trailing).await.unwrap().unwrap();
+        assert_eq!(
+            tail.input.captured_at.to_rfc3339(),
+            "2026-10-19T12:00:00+00:00"
+        );
+
+        // Neither layout: unreadable, not a panic or a silent match.
+        let broken = root.join("broken.json");
+        fs::write(&broken, b"{\"endpoint\":\"x\"}").await.unwrap();
+        assert!(bundle_header(&broken).await.unwrap().is_none());
+        fs::remove_dir_all(root).await.unwrap();
+    }
 }

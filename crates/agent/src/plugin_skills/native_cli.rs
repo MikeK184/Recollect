@@ -1,7 +1,7 @@
 //! Native CLI and bounded lifecycle synchronization. No harness is reported
 //! loaded merely because files were exported or a refresh was requested.
 use super::{
-    GuidanceHttpStatus, catalogue,
+    BoundaryResources, GuidanceHttpStatus, Shared, catalogue,
     native::{self, NativeHost, NativeScope},
     query, read_json,
 };
@@ -11,8 +11,7 @@ use crate::{
     plugin_storage::{self, Config},
 };
 use anyhow::{Result, anyhow, bail, ensure};
-use recollect_protocol::{ManagedSkillBundle, OperationBinding, TaskDetail};
-use reqwest::Method;
+use recollect_protocol::{ManagedSkillBundle, ManagedSkillSummary, OperationBinding, TaskDetail};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
@@ -213,13 +212,14 @@ async fn bundles(
     client: &Client,
     device: &StoredDevice,
     operation: Uuid,
+    entries: &[ManagedSkillSummary],
 ) -> Result<Vec<ManagedSkillBundle>> {
-    let entries = catalogue(client, device, config.brain, operation, None).await?;
     let mut result = Vec::with_capacity(entries.len());
     for batch in entries.chunks(4) {
         let mut tasks = tokio::task::JoinSet::new();
         for entry in batch {
-            let endpoint = config.endpoint.clone();
+            // The shared client already carries the endpoint, trust roots and host.
+            let client = client.clone();
             let config = config.clone();
             let device = StoredDevice {
                 endpoint: device.endpoint.clone(),
@@ -227,9 +227,7 @@ async fn bundles(
                 token: device.token,
             };
             let id = entry.id;
-            tasks.spawn(async move {
-                bundle(&config, &Client::new(&endpoint)?, &device, operation, id).await
-            });
+            tasks.spawn(async move { bundle(&config, &client, &device, operation, id).await });
         }
         while let Some(value) = tasks.join_next().await {
             result.push(value??);
@@ -417,7 +415,8 @@ async fn run_at(
         }
         "sync" => {
             let op = op.as_ref().expect("operation");
-            let bundles = bundles(config, client, device, op.id).await?;
+            let entries = catalogue(client, device, config.brain, op.id, None).await?;
+            let bundles = bundles(config, client, device, op.id, &entries).await?;
             for bundle in &bundles {
                 super::save(
                     &root,
@@ -470,7 +469,7 @@ fn remember_task(
     let published = root
         .join("native-skills/catalogues")
         .join(format!("{}-{task}.json", config.device));
-    changed |= plugin_storage::read::<Value>(&published)
+    changed |= plugin_storage::read_limited::<Value>(&published, plugin_storage::CATALOGUE_BYTES)
         .map_or(true, |catalog| catalog["scope_id"] != json!(scope.id));
     let native_scope = NativeScope {
         root,
@@ -533,7 +532,7 @@ fn snapshot(
     }
     let body = json!({"owned_exports":owned_exports,"scope_id":scope_id,"task_id":task,"brain_id":config.brain,"workspace":workspace,"entries":entries,"native_loaded":false});
     ensure!(
-        serde_json::to_vec(&body)?.len() <= 1024 * 1024,
+        serde_json::to_vec(&body)?.len() as u64 <= plugin_storage::CATALOGUE_BYTES,
         "native_snapshot_too_large"
     );
     native::publish_scoped(
@@ -558,20 +557,52 @@ fn snapshot(
 /// All network work completes inside one short budget before filesystem mutation.
 /// Dropping this future during network I/O cannot schedule a later export. Native
 /// filesystem transactions remain synchronous and protected by the hook watchdog.
+/// `resources` is the boundary's single operation and catalogue, resolved by the
+/// caller and shared with recall.
 pub async fn sync_session(
     config: &Config,
     client: &Client,
     device: &StoredDevice,
     session: &Session,
+    resources: &Shared<BoundaryResources>,
 ) -> Result<Value> {
-    sync_session_at(&plugin_storage::root()?, config, client, device, session).await
+    sync_session_at(
+        &plugin_storage::root()?,
+        config,
+        client,
+        device,
+        session,
+        resources,
+    )
+    .await
 }
+/// Resolve the boundary resources itself, as a standalone caller (tests) would.
+#[cfg(test)]
+async fn sync_session_standalone(
+    root: &Path,
+    config: &Config,
+    client: &Client,
+    device: &StoredDevice,
+    session: &Session,
+) -> Result<Value> {
+    use super::boundary_resources;
+    let resources = tokio::time::timeout(
+        SNAPSHOT_BUDGET,
+        boundary_resources(client, device, config, session, SNAPSHOT_BUDGET),
+    )
+    .await
+    .unwrap_or_else(|_| Err(std::sync::Arc::new(anyhow!("native_snapshot_timeout"))));
+    sync_session_at(root, config, client, device, session, &resources).await
+}
+/// Network budget for the shared catalogue and for the member bundle fetch.
+pub const SNAPSHOT_BUDGET: Duration = Duration::from_millis(2400);
 async fn sync_session_at(
     root: &Path,
     config: &Config,
     client: &Client,
     device: &StoredDevice,
     session: &Session,
+    resources: &Shared<BoundaryResources>,
 ) -> Result<Value> {
     let host = host(&session.setup.host)?;
     // The session has already resolved and bound its Brain. Offline boundary
@@ -625,34 +656,19 @@ async fn sync_session_at(
             },
         )
     };
-    let fetch = tokio::time::timeout(Duration::from_millis(2400), async {
-        let op: OperationBinding = super::decode_guidance(
-            client
-                .send(
-                    Method::POST,
-                    &format!(
-                        "/api/brains/{}/workspace/tasks/{}/operations",
-                        config.brain, session.setup.task_id
-                    ),
-                    Some(device.token),
-                    Some(json!({"kind":"retrieval","expected_scope":session.scope.id})),
-                )
-                .await?,
-        )
-        .await?;
-        ensure!(
-            op.brain_id == config.brain
-                && op.task_id == session.setup.task_id
-                && op.scope.id == session.scope.id
-                && op.device_id == Some(config.device)
-                && op.scope_valid
-                && op.kind == "retrieval",
-            "native_operation_scope_mismatch"
-        );
-        bundles(config, client, device, op.id).await
-    })
-    .await
-    .unwrap_or_else(|_| Err(anyhow!("native_snapshot_timeout")));
+    let fetch: Shared<Vec<ManagedSkillBundle>> = match resources {
+        Err(error) => Err(error.clone()),
+        Ok(resources) => match &resources.catalogue {
+            Err(error) => Err(error.clone()),
+            Ok(entries) => tokio::time::timeout(
+                SNAPSHOT_BUDGET,
+                bundles(config, client, device, resources.operation.id, entries),
+            )
+            .await
+            .unwrap_or_else(|_| Err(anyhow!("native_snapshot_timeout")))
+            .map_err(std::sync::Arc::new),
+        },
+    };
     let bundles = match fetch {
         Ok(value) => value,
         Err(error) => {
@@ -735,7 +751,7 @@ async fn sync_session_at(
                 }
                 return empty("unavailable");
             }
-            return Err(error);
+            return Err(anyhow::Error::msg(error.to_string()));
         }
     };
     for bundle in &bundles {

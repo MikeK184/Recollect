@@ -1,7 +1,7 @@
 //! One immutable destination per native host session; no folder-wide "latest task".
 use crate::{
     Client, StoredDevice, capture::CachedCaptureBinding, capture_cli::HookSetup,
-    capture_launch::Launch, decode, plugin_storage, privacy,
+    capture_launch::Launch, decode, plugin_skills::BoundaryResources, plugin_storage, privacy,
 };
 use anyhow::{Result, anyhow, ensure};
 use chrono::{DateTime, Utc};
@@ -70,17 +70,11 @@ pub fn agent_state_path(
     // tuple is disjoint from a valid native identity and never becomes a path.
     let key = agent.map(|agent| json!([session, agent]).to_string());
     let session = key.as_deref().unwrap_or(session);
-    plugin_storage::directory(root)?;
-    let db_path = root.join("sessions.sqlite3");
-    plugin_storage::private_file(&db_path, false)?;
-    let db = Connection::open(db_path)?;
-    db.busy_timeout(Duration::from_millis(250))?;
-    db.execute_batch("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA secure_delete=ON;
-        CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, device TEXT NOT NULL, brain TEXT NOT NULL, host TEXT NOT NULL, session TEXT NOT NULL, cwd TEXT NOT NULL,
-        UNIQUE(endpoint,device,brain,host,session,cwd));")?;
+    let db = open_registry(root)?;
     let cwd = cwd.to_str().ok_or_else(|| anyhow!("invalid_workspace"))?;
+    let now = Utc::now().timestamp();
     db.execute(
-        "INSERT OR IGNORE INTO sessions VALUES(?1,?2,?3,?4,?5,?6,?7)",
+        "INSERT OR IGNORE INTO sessions(id,endpoint,device,brain,host,session,cwd,last_event_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",
         params![
             Uuid::new_v4().to_string(),
             config.endpoint,
@@ -88,15 +82,119 @@ pub fn agent_state_path(
             config.brain.to_string(),
             host,
             session,
-            cwd
+            cwd,
+            now
         ],
     )?;
     let id: String = db.query_row("SELECT id FROM sessions WHERE endpoint=?1 AND device=?2 AND brain=?3 AND host=?4 AND session=?5 AND cwd=?6",
         params![config.endpoint, config.device.to_string(), config.brain.to_string(), host, session, cwd], |r| r.get(0))?;
+    // Touch at most hourly: this runs for every hook and a write is an fsync.
+    db.execute(
+        "UPDATE sessions SET last_event_at=?2 WHERE id=?1 AND last_event_at<?3",
+        params![id, now, now - TOUCH_AFTER.as_secs() as i64],
+    )?;
     let id: Uuid = id.parse()?;
     let directory = root.join("sessions");
     plugin_storage::directory(&directory)?;
     Ok(directory.join(format!("{id}.json")))
+}
+
+/// Registry rows and closed session files are kept this long after the last event.
+pub const RETAIN: chrono::Duration = chrono::Duration::days(30);
+const TOUCH_AFTER: Duration = Duration::from_secs(3600);
+
+fn open_registry(root: &Path) -> Result<Connection> {
+    plugin_storage::directory(root)?;
+    let db_path = root.join("sessions.sqlite3");
+    plugin_storage::private_file(&db_path, false)?;
+    let db = Connection::open(db_path)?;
+    db.busy_timeout(Duration::from_millis(250))?;
+    db.execute_batch("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA secure_delete=ON;
+        CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, device TEXT NOT NULL, brain TEXT NOT NULL, host TEXT NOT NULL, session TEXT NOT NULL, cwd TEXT NOT NULL,
+        last_event_at INTEGER NOT NULL DEFAULT 0, UNIQUE(endpoint,device,brain,host,session,cwd));")?;
+    // Registries written before pruning existed lack the column. Their rows start
+    // their retention clock now rather than looking decades old.
+    let pruned: bool = db.query_row(
+        "SELECT count(*)>0 FROM pragma_table_info('sessions') WHERE name='last_event_at'",
+        [],
+        |r| r.get(0),
+    )?;
+    if !pruned {
+        db.execute_batch(
+            "ALTER TABLE sessions ADD COLUMN last_event_at INTEGER NOT NULL DEFAULT 0;",
+        )?;
+        db.execute(
+            "UPDATE sessions SET last_event_at=?1 WHERE last_event_at=0",
+            [Utc::now().timestamp()],
+        )?;
+    }
+    Ok(db)
+}
+
+fn archive_path(state: &Path) -> Option<PathBuf> {
+    Some(state.parent()?.join("closed").join(state.file_name()?))
+}
+
+/// Move a closed session out of the directory every drain scans. Its registry
+/// row stays so a resumed native session finds it again (see `restore`).
+pub fn archive(state: &Path) -> Result<()> {
+    let target = archive_path(state).ok_or_else(|| anyhow!("invalid_plugin_state"))?;
+    plugin_storage::directory(target.parent().expect("archive directory"))?;
+    std::fs::rename(state, target)?;
+    Ok(())
+}
+
+/// A host may resume a native session after its task closed; bring the archived
+/// state back so the continuation keeps its original scope and task link.
+pub fn restore(state: &Path) -> Result<()> {
+    let Some(archived) = archive_path(state) else {
+        return Ok(());
+    };
+    if !state.try_exists()? && archived.try_exists()? {
+        std::fs::rename(archived, state)?;
+    }
+    Ok(())
+}
+
+/// Delete rows whose last event is older than `RETAIN`, with their closed
+/// session files. Sessions that are still open are kept so their task can close.
+pub fn prune(root: &Path, now: DateTime<Utc>) -> Result<usize> {
+    let db = open_registry(root)?;
+    let cutoff = (now - RETAIN).timestamp();
+    let ids: Vec<String> = db
+        .prepare("SELECT id FROM sessions WHERE last_event_at<?1")?
+        .query_map([cutoff], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    let directory = root.join("sessions");
+    let mut removed = 0;
+    for id in ids {
+        let Ok(parsed) = id.parse::<Uuid>() else {
+            continue;
+        };
+        let state = directory.join(format!("{parsed}.json"));
+        // Never delete under a hook that is resuming this session right now.
+        let lock = state.with_extension("lock");
+        let guard = plugin_storage::private_file(&lock, false)?;
+        if guard.try_lock().is_err() {
+            continue;
+        }
+        if state.try_exists()? {
+            // An open or unreadable session still owns server work.
+            if plugin_storage::read::<Session>(&state).map_or(true, |s| !s.closed) {
+                continue;
+            }
+            std::fs::remove_file(&state)?;
+        }
+        if let Some(archived) = archive_path(&state)
+            && archived.try_exists()?
+        {
+            std::fs::remove_file(archived)?;
+        }
+        std::fs::remove_file(&lock)?;
+        db.execute("DELETE FROM sessions WHERE id=?1", [&id])?;
+        removed += 1;
+    }
+    Ok(removed)
 }
 
 pub struct SessionStart<'a> {
@@ -343,37 +441,22 @@ pub async fn close(client: &Client, device: &StoredDevice, session: &mut Session
     Ok(())
 }
 
+/// `resources` carries the boundary's single retrieval operation and guidance
+/// catalogue, shared with native synchronization.
 pub async fn recall(
     client: &Client,
     device: &StoredDevice,
     session: &Session,
     query: &str,
+    resources: &BoundaryResources,
 ) -> Result<String> {
     let base = format!("/api/brains/{}", session.setup.brain_id);
-    let operation: OperationBinding = decode(
-        client
-            .send(
-                Method::POST,
-                &format!(
-                    "{base}/workspace/tasks/{}/operations",
-                    session.setup.task_id
-                ),
-                Some(device.token),
-                Some(json!({"kind":"retrieval", "expected_scope":session.scope.id})),
-            )
-            .await?,
-    )
-    .await?;
+    let operation = &resources.operation;
     // Curated guidance uses its own typed channel. Failure does not suppress
     // ordinary recall; no instruction body is injected by this discovery step.
-    let guidance = match tokio::time::timeout(
-        Duration::from_millis(800),
-        crate::plugin_skills::catalogue(client, device, session.setup.brain_id, operation.id, None),
-    )
-    .await
-    {
-        Ok(Ok(entries)) => crate::plugin_skills::catalog_context(&entries, operation.id),
-        _ => format!(
+    let guidance = match &resources.catalogue {
+        Ok(entries) => crate::plugin_skills::catalog_context(entries, operation.id),
+        Err(_) => format!(
             "Recollect managed guidance catalog unavailable; skills.list with operation {} can retry.\n",
             operation.id
         ),
@@ -615,6 +698,91 @@ mod tests {
             let parsed: Value = serde_json::from_str(line).unwrap();
             assert_eq!(parsed["text"], "\"\\".repeat(900));
         }
+    }
+    fn closed_fixture(config: &plugin_storage::Config, root: &Path, closed: bool) -> Session {
+        let now = Utc::now();
+        let task = Uuid::new_v4();
+        Session {
+            id: Uuid::new_v4(),
+            setup: HookSetup {
+                endpoint: config.endpoint.clone(),
+                device_id: config.device,
+                brain_id: config.brain,
+                binding_id: Uuid::nil(),
+                evidence_root: root.to_owned(),
+                device_profile: config.profile.clone(),
+                host: "codex".into(),
+                working_directory: root.to_owned(),
+                task_id: task,
+                created_task: true,
+                plugin_root: None,
+            },
+            scope: ScopeSnapshot {
+                id: Uuid::new_v4(),
+                task_id: task,
+                brain_id: config.brain,
+                selection: ScopeSelection::default(),
+                repositories: vec![],
+                areas: vec![],
+                environment: None,
+                created_at: now,
+            },
+            host_version: "synthetic".into(),
+            agent_id: None,
+            ended: closed,
+            closed,
+            last_event_at: now,
+        }
+    }
+    #[test]
+    fn closed_sessions_are_archived_restorable_and_pruned_after_retention() {
+        let root = crate::publication::project_root()
+            .join(".cache")
+            .join(format!("plugin-prune-{}", Uuid::new_v4()));
+        let config = plugin_storage::Config {
+            endpoint: "http://localhost:8787".into(),
+            brain: Uuid::new_v4(),
+            device: Uuid::new_v4(),
+            profile: "test".into(),
+            with_runner: false,
+            runner_id: None,
+        };
+        let done = state_path(&root, &config, "codex", "done", &root).unwrap();
+        let open = state_path(&root, &config, "codex", "open", &root).unwrap();
+        plugin_storage::write(&done, &closed_fixture(&config, &root, true)).unwrap();
+        plugin_storage::write(&open, &closed_fixture(&config, &root, false)).unwrap();
+
+        // Archiving takes the file out of the scanned directory; a resumed host
+        // finds it again through restore.
+        archive(&done).unwrap();
+        assert!(!done.exists());
+        restore(&done).unwrap();
+        assert!(done.exists());
+        archive(&done).unwrap();
+
+        // Inside the retention window nothing is removed.
+        assert_eq!(
+            prune(&root, Utc::now() + chrono::Duration::days(29)).unwrap(),
+            0
+        );
+        // Past it, the closed session and its row go; the open session stays.
+        assert_eq!(
+            prune(&root, Utc::now() + RETAIN + chrono::Duration::days(1)).unwrap(),
+            1
+        );
+        assert!(!done.exists() && !archive_path(&done).unwrap().exists());
+        assert!(open.exists());
+        let rows: i64 = open_registry(&root)
+            .unwrap()
+            .query_row("SELECT count(*) FROM sessions", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 1);
+        // The next lookup for the pruned native session is simply a new session.
+        assert_ne!(
+            state_path(&root, &config, "codex", "done", &root).unwrap(),
+            done
+        );
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn native_sessions_and_destinations_never_share_state() {

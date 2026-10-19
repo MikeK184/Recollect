@@ -99,6 +99,64 @@ pub async fn catalogue(
     Ok(entries)
 }
 
+/// An error shared by the independent consumers of one boundary resolution.
+pub type Shared<T> = std::result::Result<T, std::sync::Arc<anyhow::Error>>;
+
+/// One retrieval operation and one catalogue per prompt boundary, resolved once
+/// and handed to recall and native synchronization instead of fetched twice.
+pub struct BoundaryResources {
+    pub operation: OperationBinding,
+    pub catalogue: Shared<Vec<ManagedSkillSummary>>,
+}
+
+pub async fn boundary_resources(
+    client: &Client,
+    device: &StoredDevice,
+    config: &Config,
+    session: &crate::plugin_session::Session,
+    catalogue_budget: std::time::Duration,
+) -> Shared<BoundaryResources> {
+    let share = |error: anyhow::Error| std::sync::Arc::new(error);
+    let operation: OperationBinding = async {
+        let response = client
+            .send(
+                Method::POST,
+                &format!(
+                    "/api/brains/{}/workspace/tasks/{}/operations",
+                    config.brain, session.setup.task_id
+                ),
+                Some(device.token),
+                Some(json!({"kind":"retrieval","expected_scope":session.scope.id})),
+            )
+            .await?;
+        decode_guidance(response).await
+    }
+    .await
+    .map_err(share)?;
+    if !(operation.brain_id == config.brain
+        && operation.task_id == session.setup.task_id
+        && operation.scope.id == session.scope.id
+        && operation.device_id == Some(config.device)
+        && operation.scope_valid
+        && operation.kind == "retrieval")
+    {
+        return Err(share(anyhow!("native_operation_scope_mismatch")));
+    }
+    let catalogue = match tokio::time::timeout(
+        catalogue_budget,
+        catalogue(client, device, config.brain, operation.id, None),
+    )
+    .await
+    {
+        Ok(entries) => entries.map_err(share),
+        Err(_) => Err(share(anyhow!("native_snapshot_timeout"))),
+    };
+    Ok(BoundaryResources {
+        operation,
+        catalogue,
+    })
+}
+
 /// Compact metadata only; authored delimiters cannot escape their JSON record.
 pub fn catalog_context(entries: &[ManagedSkillSummary], operation: Uuid) -> String {
     let mut body = String::new();
@@ -663,9 +721,14 @@ mod tests {
             closed: false,
             last_event_at: chrono::Utc::now(),
         };
-        let context = crate::plugin_session::recall(&client, &device, &session, "Vault workflow")
+        let budget = std::time::Duration::from_millis(800);
+        let resources = boundary_resources(&client, &device, &config, &session, budget)
             .await
             .unwrap();
+        let context =
+            crate::plugin_session::recall(&client, &device, &session, "Vault workflow", &resources)
+                .await
+                .unwrap();
         assert!(context.contains(&bundle.skill.id.to_string()));
         assert!(context.contains(&operation_id.to_string()));
         assert!(context.contains("Memory recall unavailable"));
@@ -681,9 +744,13 @@ mod tests {
             assert!(serde_json::to_vec(&output).unwrap().len() <= 8192);
         }
         unavailable.store(true, Ordering::SeqCst);
-        let context = crate::plugin_session::recall(&client, &device, &session, "Vault workflow")
+        let resources = boundary_resources(&client, &device, &config, &session, budget)
             .await
             .unwrap();
+        let context =
+            crate::plugin_session::recall(&client, &device, &session, "Vault workflow", &resources)
+                .await
+                .unwrap();
         assert!(context.contains("managed guidance catalog unavailable"));
         assert!(!context.contains(&bundle.skill.id.to_string()));
         assert_eq!(reads.load(Ordering::SeqCst), 2);

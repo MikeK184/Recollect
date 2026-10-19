@@ -239,8 +239,39 @@ fn secrets() -> Vec<String> {
     crate::publication::configured_secrets()
 }
 
+/// Time kept in reserve for a hook's own work when waiting on a busy session.
+const HOOK_WORK_RESERVE: Duration = Duration::from_millis(3000);
+/// Longest hook budget before the standalone watchdog gives up on the event.
+const HOOK_BUDGET: Duration = Duration::from_millis(7500);
+/// Persist a bare activity timestamp at most this often (peers treat 90 s as live).
+const SESSION_TOUCH: chrono::Duration = chrono::Duration::seconds(60);
+
 pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
-    let deadline = tokio::time::Instant::now() + Duration::from_millis(7500);
+    hook_until(host, raw, tokio::time::Instant::now() + HOOK_BUDGET).await
+}
+
+/// Take the per-session state lock, waiting for a concurrent hook of the same
+/// session. Claude Code can run PostToolUse hooks concurrently, so contention
+/// is normal and must not discard the event. Returns false if `until` passes.
+async fn lock_session(lock: &std::fs::File, until: tokio::time::Instant) -> Result<bool> {
+    use std::fs::TryLockError;
+    let mut delay = Duration::from_millis(5);
+    loop {
+        match lock.try_lock() {
+            Ok(()) => return Ok(true),
+            Err(TryLockError::WouldBlock) => {}
+            Err(TryLockError::Error(error)) => return Err(error.into()),
+        }
+        if tokio::time::Instant::now() + delay > until {
+            return Ok(false);
+        }
+        tokio::time::sleep(delay).await;
+        delay = (delay * 2).min(Duration::from_millis(100));
+    }
+}
+
+/// `deadline` is the watchdog bound of the whole hook (`hook` passes its default).
+pub async fn hook_until(host: &str, raw: &[u8], deadline: tokio::time::Instant) -> Result<Value> {
     ensure!(
         matches!(host, "codex" | "claude_code" | "opencode"),
         "unsupported_capture_host"
@@ -260,12 +291,6 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             .ok_or_else(|| anyhow!("missing_workspace"))?,
     );
     let cwd = tokio::fs::canonicalize(&cwd).await?;
-    if !crate::plugin_migration::inspect(host, &cwd).is_empty() {
-        eprintln!(
-            "Recollect plugin found a legacy MCP/capture setup. Drain its pending captures, remove its first-party host entry and start the host normally. Plugin capture is withheld to avoid duplicate evidence; inspect plugin status for the file paths."
-        );
-        bail!("plugin_migration_required");
-    }
     let boundary = matches!(
         name,
         "SessionStart"
@@ -275,6 +300,14 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             | "SubagentStart"
             | "PostCompact"
     );
+    // Reads dozens of host configuration files; a session is connected at a
+    // boundary event, so ordinary tool hooks do not repeat the inspection.
+    if boundary && !crate::plugin_migration::inspect(host, &cwd).is_empty() {
+        eprintln!(
+            "Recollect plugin found a legacy MCP/capture setup. Drain its pending captures, remove its first-party host entry and start the host normally. Plugin capture is withheld to avoid duplicate evidence; inspect plugin status for the file paths."
+        );
+        bail!("plugin_migration_required");
+    }
     let (config, _) = selected_with_network(plugin_storage::config()?, &cwd, boundary).await?;
     let root = plugin_storage::root()?;
     if host == "opencode" && name == "CoverageGap" {
@@ -303,8 +336,22 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
     }
     let state = plugin_session::agent_state_path(&root, &config, host, session_id, &cwd, agent)?;
     let lock = plugin_storage::private_file(&state.with_extension("lock"), false)?;
-    lock.try_lock()
-        .map_err(|_| anyhow!("plugin_session_busy"))?;
+    let wait_until = deadline
+        .checked_sub(HOOK_WORK_RESERVE)
+        .map_or_else(tokio::time::Instant::now, |t| {
+            t.max(tokio::time::Instant::now())
+        });
+    if !lock_session(&lock, wait_until).await? {
+        // Record the loss on the inbox so the gap is reported, not silent.
+        let _ = crate::capture::Inbox::open(
+            &crate::capture::profile_root(&root, config.device),
+            &config.endpoint,
+            config.device,
+        )
+        .and_then(|mut inbox| inbox.record_gap("capture_hook_contended"));
+        bail!("plugin_session_busy");
+    }
+    plugin_session::restore(&state)?;
     let mut session = if state.try_exists()? {
         Some(plugin_storage::read::<Session>(&state)?)
     } else {
@@ -411,6 +458,8 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             && session.agent_id.as_deref() == agent,
         "plugin_session_destination_changed"
     );
+    // What is on disk now; per-event timestamps alone do not justify two fsyncs.
+    let persisted = serde_json::to_value(&session)?;
     let needs_context = matches!(
         name,
         "UserPromptSubmit" | "PostCompact" | "ContextRequest" | "SubagentStart"
@@ -429,6 +478,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         )
         .await;
     }
+    let previous_event_at = session.last_event_at;
     session.last_event_at = Utc::now();
     let mut native_cleanup = None;
     if matches!(name, "SessionEnd" | "SubagentStop") {
@@ -445,7 +495,14 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             );
         }
     }
-    plugin_storage::write(&state, &session)?;
+    let changed = {
+        let mut comparable = session.clone();
+        comparable.last_event_at = previous_event_at;
+        serde_json::to_value(&comparable)? != persisted
+    };
+    if changed || session.last_event_at - previous_event_at >= SESSION_TOUCH {
+        plugin_storage::write(&state, &session)?;
+    }
     let launch = session.launch();
     let configured_secrets = secrets();
     // Independent of capture policy: share only the bounded coordination
@@ -469,9 +526,15 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
     // Capture's disabled/denied/stale-policy gaps must never suppress authorized
     // recall. Existing turns keep their immutable cached bindings while offline.
     let mut captured = None;
-    if name != "ContextRequest" && !session.setup.binding_id.is_nil() && capture_scope_ready {
-        captured = launch
-            .inbox()?
+    let wants_capture =
+        name != "ContextRequest" && !session.setup.binding_id.is_nil() && capture_scope_ready;
+    let mut inbox = if wants_capture {
+        Some(launch.inbox()?)
+    } else {
+        launch.inbox().ok()
+    };
+    if wants_capture && let Some(inbox) = inbox.as_mut() {
+        captured = inbox
             .capture_in_launch(
                 session.setup.binding_id,
                 Some(session.id),
@@ -481,8 +544,17 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             )
             .ok();
     }
-    wake_delivery()?;
-    if config.with_runner {
+    // A drain is only useful when something waits: queued events, or an ended
+    // session whose task still has to close. Starting one per event is waste.
+    if session.ended
+        || inbox
+            .as_ref()
+            .is_none_or(|i| i.has_pending().unwrap_or(true))
+    {
+        wake_delivery()?;
+    }
+    drop(inbox);
+    if config.with_runner && boundary {
         spawn("runner")?;
     }
     let mut output = json!({});
@@ -504,27 +576,56 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
             end -= 1;
         }
         query.truncate(end);
+        // One retrieval operation and one catalogue serve both consumers.
+        let wanted = needs_context && !query.trim().is_empty() || native_boundary;
+        let resources = if wanted {
+            // Native synchronization always had a short budget for its network
+            // work; prompt-only recall keeps the hook deadline for the operation
+            // and the catalogue's own 800 ms bound.
+            let (budget, until) = if native_boundary {
+                let budget = crate::plugin_skills::native_cli::SNAPSHOT_BUDGET;
+                (budget, deadline.min(tokio::time::Instant::now() + budget))
+            } else {
+                (Duration::from_millis(800), deadline)
+            };
+            Some(
+                match tokio::time::timeout_at(
+                    until,
+                    crate::plugin_skills::boundary_resources(
+                        &client, device, &config, &session, budget,
+                    ),
+                )
+                .await
+                {
+                    Ok(resolved) => resolved,
+                    Err(_) => Err(std::sync::Arc::new(anyhow!("native_snapshot_timeout"))),
+                },
+            )
+        } else {
+            None
+        };
         let recall = async {
             if !needs_context || query.trim().is_empty() {
                 return None;
             }
+            let Some(Ok(resources)) = resources.as_ref() else {
+                return None;
+            };
             tokio::time::timeout_at(
                 deadline,
-                plugin_session::recall(&client, device, &session, &query),
+                plugin_session::recall(&client, device, &session, &query, resources),
             )
             .await
             .ok()?
             .ok()
         };
         let native = async {
-            if !native_boundary {
-                return None;
-            }
+            let resources = resources.as_ref().filter(|_| native_boundary)?;
             Some(
                 match tokio::time::timeout_at(
                     deadline,
                     crate::plugin_skills::native_cli::sync_session(
-                        &config, &client, device, &session,
+                        &config, &client, device, &session, resources,
                     ),
                 )
                 .await
@@ -636,11 +737,21 @@ async fn close_ended_sessions(client: &Client, device: &StoredDevice, root: &Pat
             continue;
         }
         let mut session: Session = plugin_storage::read(&path)?;
-        if session.setup.endpoint != client.endpoint
-            || session.setup.device_id != device.device_id
-            || !session.ended
-            || session.closed
+        if session.setup.endpoint != client.endpoint || session.setup.device_id != device.device_id
         {
+            continue;
+        }
+        if session.closed {
+            // Closed state is only needed if the host resumes this session.
+            plugin_session::archive(&path)?;
+            continue;
+        }
+        // A host that died without its end hook leaves an open task behind.
+        if !session.ended && Utc::now() - session.last_event_at > plugin_session::RETAIN {
+            session.ended = true;
+            plugin_storage::write(&path, &session)?;
+        }
+        if !session.ended {
             continue;
         }
         if let Ok(Ok(())) = tokio::time::timeout(
@@ -650,10 +761,12 @@ async fn close_ended_sessions(client: &Client, device: &StoredDevice, root: &Pat
         .await
         {
             plugin_storage::write(&path, &session)?;
+            plugin_session::archive(&path)?;
         } else {
             pending = true;
         }
     }
+    plugin_session::prune(root, Utc::now())?;
     Ok(pending)
 }
 

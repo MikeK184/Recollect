@@ -14,6 +14,11 @@ use serde_json::{Value, json};
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use uuid::Uuid;
 
+type Fingerprint = (
+    Option<(std::time::SystemTime, u64)>,
+    Option<(PathBuf, std::time::SystemTime, u64)>,
+);
+
 #[derive(Clone)]
 struct Bridge {
     client: Arc<Client>,
@@ -25,6 +30,8 @@ struct Bridge {
     capture: Option<crate::capture_launch::Launch>,
     scope_changes: Arc<tokio::sync::Mutex<()>>,
     plugin_guard: bool,
+    /// Fingerprint of the files the plugin destination was last validated from.
+    destination_seen: Arc<std::sync::Mutex<Option<Fingerprint>>>,
 }
 fn bounded(result: CallToolResult) -> CallToolResponse {
     if serde_json::to_vec(&result).is_ok_and(|bytes| bytes.len() < 1024 * 1024 - 1024) {
@@ -52,8 +59,36 @@ fn refresh_tool() -> Tool {
     )
 }
 impl Bridge {
+    /// Files that decide the destination: the plugin configuration and the
+    /// nearest workspace selector. Their metadata fingerprints the validation.
+    fn destination_fingerprint() -> Result<Fingerprint> {
+        let stamp = |path: &std::path::Path| {
+            let meta = std::fs::symlink_metadata(path).ok()?;
+            Some((meta.modified().ok()?, meta.len()))
+        };
+        let config = stamp(&crate::plugin_storage::root()?.join("config.json"));
+        let selector = std::env::current_dir()?
+            .ancestors()
+            .map(|parent| parent.join(".recollect/workspace.toml"))
+            .find(|path| std::fs::symlink_metadata(path).is_ok());
+        let selector = selector.and_then(|path| {
+            let (at, len) = stamp(&path)?;
+            Some((path, at, len))
+        });
+        Ok((config, selector))
+    }
     async fn check_plugin_destination(&self) -> Result<()> {
         if !self.plugin_guard {
+            return Ok(());
+        }
+        // The full check can resolve a named selector over the network and runs
+        // for every tool call; repeat it only after those files changed.
+        let fingerprint = Self::destination_fingerprint()?;
+        if self
+            .destination_seen
+            .lock()
+            .is_ok_and(|seen| seen.as_ref() == Some(&fingerprint))
+        {
             return Ok(());
         }
         let (config, _) = crate::plugin_runtime::selected(
@@ -67,6 +102,9 @@ impl Bridge {
                 && config.endpoint == self.client.endpoint,
             "Plugin destination changed. Reconnect this host's MCP server before using its tools."
         );
+        if let Ok(mut seen) = self.destination_seen.lock() {
+            *seen = Some(fingerprint);
+        }
         Ok(())
     }
     async fn refresh(&self) -> Result<Value> {
@@ -196,7 +234,18 @@ impl ServerHandler for Bridge {
                     .and_then(Value::as_str)
                     == Some(launch.setup.task_id.to_string().as_str())
         });
-        let previous = capture.map(|launch| launch.current());
+        // The inbox open may sleep on a lock; keep it off the async worker.
+        let previous = match capture {
+            Some(launch) => {
+                let launch = launch.clone();
+                Some(
+                    tokio::task::spawn_blocking(move || launch.current())
+                        .await
+                        .map_err(|_| unavailable())?,
+                )
+            }
+            None => None,
+        };
         let mut result =
             tokio::time::timeout(Duration::from_secs(65), self.peer.call_tool(request))
                 .await
@@ -223,7 +272,8 @@ impl ServerHandler for Bridge {
                 json!({"state":"ready", "future_binding_id":binding,
                     "instruction":"Only later unbound turns use this capture scope. Existing turns and delayed tools keep their original scope."})
             } else {
-                launch.gap();
+                let launch = launch.clone();
+                let _ = tokio::task::spawn_blocking(move || launch.gap()).await;
                 json!({"state":"gap","code":"capture_scope_refresh_failed",
                     "instruction":"The task scope change committed. Future capture still uses the previous default; inspect capture status. Do not relabel existing turns."})
             };
@@ -290,6 +340,7 @@ async fn serve_inner(
         capture,
         scope_changes: Arc::new(tokio::sync::Mutex::new(())),
         plugin_guard,
+        destination_seen: Arc::new(std::sync::Mutex::new(None)),
     };
     // Reuse the same bounded, cancellation-safe pipe forwarding as the managed
     // process supervisor. The SDK remains responsible for JSON-RPC parsing.
