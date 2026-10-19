@@ -98,13 +98,13 @@ override the selection carried by an operation.
 Drain old captures with their original setup file and credential before removing
 the old first-party MCP entry or enabling plugin capture. Keep the old setup until
 its pending count is zero; do not revoke a credential still needed by queued work.
-See the exact status/drain commands in [capture recovery](session-capture.md).
+See the drain procedure in [capture recovery](session-capture.md).
 The plugin reports collisions without rewriting host configuration. Existing
 unrelated MCP servers, plugins and credentials remain the owner's configuration.
 
-The legacy native `mcp-config codex|claude|opencode` and `capture run` commands
-remain compatibility tools. Their older separate bridge/companion installation is
-not the ordinary plugin setup. Prior macOS bridge proof is recorded in the
+The native `mcp-config codex|claude|opencode` commands remain compatibility
+tools; the `capture run` managed launch was retired. Their older separate
+bridge/companion installation is not the ordinary plugin setup. Prior macOS bridge proof is recorded in the
 [desktop acceptance mapping](../mappings/desktop-final-acceptance-2026-10-01.md).
 
 ## Verification

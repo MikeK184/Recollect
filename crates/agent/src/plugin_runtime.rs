@@ -349,7 +349,7 @@ pub async fn hook(host: &str, raw: &[u8]) -> Result<Value> {
         let version = if let Some(version) = event["host_version"].as_str() {
             version.to_owned()
         } else {
-            crate::capture_setup::version(host).await?
+            crate::capture_scope::host_version(host).await?
         };
         let native_parent = event["parent_session_id"].as_str();
         let parent_task = if let Some(parent) = native_parent.or(agent.map(|_| session_id)) {
@@ -864,7 +864,6 @@ pub async fn run(args: &[String]) -> Result<()> {
                 credential(&config)?,
                 config.brain,
                 root,
-                None,
             )
             .await;
         }

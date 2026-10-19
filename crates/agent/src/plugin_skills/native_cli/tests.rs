@@ -56,7 +56,7 @@ impl Fixture {
         };
         let session = Session {
             id: Uuid::new_v4(),
-            setup: crate::capture_cli::HookSetup {
+            setup: crate::capture_scope::HookSetup {
                 endpoint: config.endpoint.clone(),
                 device_id: config.device,
                 brain_id: config.brain,

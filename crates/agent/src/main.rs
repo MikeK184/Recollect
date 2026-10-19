@@ -1,6 +1,8 @@
 use anyhow::{Result, anyhow, bail};
 use recollect_agent::{Client, CredentialSlot, presentation};
 
+const RETIRED_CAPTURE: &str = "Managed capture launches were retired. Install the Recollect plugin, remove this setup's hooks and MCP entry, and upload any remaining queued evidence with: recollect-agent capture drain SETUP_FILE";
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
@@ -20,37 +22,15 @@ async fn main() -> Result<()> {
     if command == "private-runner" {
         return mcp_runner(&remaining, true);
     }
+    // A retired managed-launch hook must stay silent and never fail the host.
     if command == "capture" && remaining.first().is_some_and(|s| s == "hook") {
-        let result = match remaining.as_slice() {
-            [_, path] => recollect_agent::capture_cli::hook(std::path::Path::new(path)).await,
-            [_] => match std::env::var_os("RECOLLECT_CAPTURE_SETUP") {
-                Some(path) => recollect_agent::capture_cli::hook(std::path::Path::new(&path)).await,
-                None => return Ok(()),
-            },
-            _ => Err(anyhow!("invalid_capture_command")),
-        };
-        if result.is_err() {
-            eprintln!("Recollect capture gap. Check the companion's capture status.");
-        }
+        eprintln!("{RETIRED_CAPTURE}");
         return Ok(());
     }
-    // The capture hook is a hot machine path that must print nothing, and the
-    // helper commands above exec into binaries that present themselves. Every
-    // other command gets the banner only in a human terminal: many subcommands
-    // answer with JSON on stdout that automation parses directly.
+    // The helper commands above exec into binaries that present themselves.
+    // Every other command gets the banner only in a human terminal: many
+    // subcommands answer with JSON on stdout that automation parses directly.
     presentation::banner_quiet();
-    if command == "capture" && remaining.first().is_some_and(|s| s == "status") {
-        if remaining.len() != 2 {
-            bail!("{}", recollect_agent::capture_cli::USAGE);
-        }
-        println!(
-            "{}",
-            serde_json::to_string_pretty(
-                &recollect_agent::capture_cli::status(std::path::Path::new(&remaining[1])).await?
-            )?
-        );
-        return Ok(());
-    }
     if command == "workspace" && remaining.first().is_some_and(|v| v == "discover") {
         if remaining.len() > 2 {
             bail!("{}", recollect_agent::workspace_cli::USAGE);
@@ -62,13 +42,13 @@ async fn main() -> Result<()> {
         );
         return Ok(());
     }
-    let saved_capture = if command == "capture"
-        && remaining
-            .first()
-            .is_some_and(|s| matches!(s.as_str(), "drain" | "run"))
-        && remaining.len() >= 2
-    {
-        Some(recollect_agent::capture_cli::read_setup(std::path::Path::new(&remaining[1])).await?)
+    let saved_capture = if command == "capture" {
+        match remaining.as_slice() {
+            [verb, path] if verb == "drain" => {
+                Some(recollect_agent::capture_scope::read_setup(std::path::Path::new(path)).await?)
+            }
+            _ => bail!("{RETIRED_CAPTURE}"),
+        }
     } else {
         None
     };
@@ -99,15 +79,15 @@ async fn main() -> Result<()> {
             | "mcp"
     ) {
         bail!(
-            "Usage: recollect-agent health | pair [device name] | whoami | brains | unpair | forget. {} {} {} {} Set RECOLLECT_URL and optionally RECOLLECT_DEVICE_PROFILE.",
+            "Usage: recollect-agent health | pair [device name] | whoami | brains | unpair | forget. {} {} {} Set RECOLLECT_URL and optionally RECOLLECT_DEVICE_PROFILE.",
             recollect_agent::workspace_cli::USAGE,
-            recollect_agent::capture_cli::USAGE,
             recollect_agent::mcp_cli::USAGE,
             recollect_agent::mcp_host::USAGE
         );
     }
     let profile = saved_capture
-        .map(|s| s.device_profile)
+        .as_ref()
+        .map(|s| s.device_profile.clone())
         .unwrap_or_else(|| std::env::var("RECOLLECT_DEVICE_PROFILE").unwrap_or("default".into()));
     let slot = CredentialSlot::new(&client.endpoint, &profile)?;
     if command == "pair" {
@@ -143,21 +123,17 @@ async fn main() -> Result<()> {
             )?
         ),
         "capture" => {
-            let status = presentation::status::start("Capture run");
-            let report = match recollect_agent::capture_cli::run(&client, &device, &remaining).await
-            {
+            let status = presentation::status::start("Capture drain");
+            let setup = saved_capture.expect("drain setup was read above");
+            match recollect_agent::capture_scope::drain(&client, &device, &setup).await {
                 Ok(report) => {
                     presentation::status::finish(status, true, "");
-                    report
+                    println!("{}", serde_json::to_string_pretty(&report)?);
                 }
                 Err(error) => {
                     presentation::status::finish(status, false, &error.to_string());
                     return Err(error);
                 }
-            };
-            println!("{}", serde_json::to_string_pretty(&report)?);
-            if let Some(code) = report["exit_code"].as_i64().filter(|code| *code != 0) {
-                std::process::exit(i32::try_from(code).unwrap_or(1));
             }
         }
         "repository" => println!(

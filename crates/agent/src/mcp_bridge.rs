@@ -22,8 +22,6 @@ struct Bridge {
     workspace_root: Option<PathBuf>,
     peer: Peer<RoleClient>,
     instructions: Option<String>,
-    capture: Option<crate::capture_launch::Launch>,
-    scope_changes: Arc<tokio::sync::Mutex<()>>,
     plugin_guard: bool,
 }
 fn bounded(result: CallToolResult) -> CallToolResponse {
@@ -181,54 +179,10 @@ impl ServerHandler for Bridge {
                     "message":"Workspace refresh failed. Check pairing, writer access and the fixed workspace selector. Task scope is unchanged."}).to_string())]).into(),
             });
         }
-        let scope_change = request.name == "workspace.set_scope";
-        let _serial = if scope_change {
-            Some(self.scope_changes.lock().await)
-        } else {
-            None
-        };
-        let capture = self.capture.as_ref().filter(|launch| {
-            scope_change
-                && request
-                    .arguments
-                    .as_ref()
-                    .and_then(|args| args.get("id"))
-                    .and_then(Value::as_str)
-                    == Some(launch.setup.task_id.to_string().as_str())
-        });
-        let previous = capture.map(|launch| launch.current());
-        let mut result =
-            tokio::time::timeout(Duration::from_secs(65), self.peer.call_tool(request))
-                .await
-                .map_err(|_| unavailable())?
-                .map_err(|_| unavailable())?;
-        if let Some(launch) = capture
-            && result.is_error != Some(true)
-            && let Some(value) = result.structured_content.as_mut()
-        {
-            let scope = value["handoff"]["current_scope_id"]
-                .as_str()
-                .and_then(|v| v.parse().ok());
-            let refreshed = match (previous, scope) {
-                (Some(Ok(previous)), Some(scope)) => tokio::time::timeout(
-                    Duration::from_secs(15),
-                    launch.refresh(&self.client, &self.device, previous, scope),
-                )
-                .await
-                .ok()
-                .and_then(Result::ok),
-                _ => None,
-            };
-            value["capture"] = if let Some(binding) = refreshed {
-                json!({"state":"ready", "future_binding_id":binding,
-                    "instruction":"Only later unbound turns use this capture scope. Existing turns and delayed tools keep their original scope."})
-            } else {
-                launch.gap();
-                json!({"state":"gap","code":"capture_scope_refresh_failed",
-                    "instruction":"The task scope change committed. Future capture still uses the previous default; inspect capture status. Do not relabel existing turns."})
-            };
-            result = CallToolResult::structured(value.clone());
-        }
+        let result = tokio::time::timeout(Duration::from_secs(65), self.peer.call_tool(request))
+            .await
+            .map_err(|_| unavailable())?
+            .map_err(|_| unavailable())?;
         Ok(bounded(result))
     }
 }
@@ -238,9 +192,8 @@ pub async fn serve(
     device: StoredDevice,
     brain: Uuid,
     workspace_root: Option<PathBuf>,
-    capture: Option<crate::capture_launch::Launch>,
 ) -> Result<()> {
-    serve_inner(client, device, brain, workspace_root, capture, false).await
+    serve_inner(client, device, brain, workspace_root, false).await
 }
 
 pub async fn serve_plugin(
@@ -248,9 +201,8 @@ pub async fn serve_plugin(
     device: StoredDevice,
     brain: Uuid,
     workspace_root: Option<PathBuf>,
-    capture: Option<crate::capture_launch::Launch>,
 ) -> Result<()> {
-    serve_inner(client, device, brain, workspace_root, capture, true).await
+    serve_inner(client, device, brain, workspace_root, true).await
 }
 
 async fn serve_inner(
@@ -258,7 +210,6 @@ async fn serve_inner(
     device: StoredDevice,
     brain: Uuid,
     workspace_root: Option<PathBuf>,
-    capture: Option<crate::capture_launch::Launch>,
     plugin_guard: bool,
 ) -> Result<()> {
     ensure!(
@@ -269,17 +220,11 @@ async fn serve_inner(
     let remote =
         recollect_mcp_runtime::agent_transport::connect(&client.endpoint, brain, device.token)
             .await?;
-    if let Some(launch) = &capture {
-        launch.validate(&client, &device, brain)?;
-    }
-    let mut instructions = remote
+    let instructions = remote
         .peer()
         .peer_info()
         .and_then(|i| i.instructions.clone())
         .unwrap_or_default();
-    if let Some(launch) = &capture {
-        instructions.push_str(&format!(" This managed host captures task {} in Brain {}. Changing that task refreshes future capture defaults; child tasks remain independent.", launch.setup.task_id, brain));
-    }
     let bridge = Bridge {
         instructions: Some(instructions),
         peer: remote.peer().clone(),
@@ -287,8 +232,6 @@ async fn serve_inner(
         device: Arc::new(device),
         brain,
         workspace_root,
-        capture,
-        scope_changes: Arc::new(tokio::sync::Mutex::new(())),
         plugin_guard,
     };
     // Reuse the same bounded, cancellation-safe pipe forwarding as the managed

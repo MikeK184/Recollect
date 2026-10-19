@@ -1,11 +1,6 @@
 use super::*;
 use crate::mcp::tools::tool;
-use recollect_agent::{
-    Client, CredentialSlot, StoredDevice,
-    capture::{Inbox, profile_root},
-    capture_cli::read_setup,
-    capture_setup::{SetupOptions, prepare},
-};
+use recollect_agent::{CredentialSlot, StoredDevice};
 use rmcp::{ServiceExt, model::CallToolRequestParams, transport::TokioChildProcess};
 
 fn native_environment(command: &mut tokio::process::Command) {
@@ -31,7 +26,6 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
         device_id,
         token: token.parse().unwrap(),
     };
-    let client = Client::new(&endpoint).unwrap();
     let profile_name = format!("bridge-proof-{}", Uuid::new_v4());
     let slot = CredentialSlot::new(&endpoint, &profile_name).unwrap();
     assert!(slot.load().unwrap().is_none());
@@ -122,62 +116,6 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
         )
         .await;
     assert_eq!(status, StatusCode::OK);
-    let policy = ok(
-        &h,
-        &owner,
-        "GET",
-        &format!("{base}/capture/policy"),
-        Value::Null,
-    )
-    .await;
-    let mut enabled = policy["policy"].clone();
-    enabled["enabled"] = json!(true);
-    ok(
-        &h,
-        &owner,
-        "PUT",
-        &format!("{base}/capture/policy"),
-        json!({"base_change":policy["change_id"],"policy":enabled}),
-    )
-    .await;
-    let prepared = prepare(
-        &client,
-        &device,
-        SetupOptions {
-            host: "codex".into(),
-            host_version: "0.154.0".into(),
-            directory: work.clone(),
-            brain: Some(brain),
-            task: Some(original["task"]["id"].as_str().unwrap().parse().unwrap()),
-            agent_id: None,
-            output: None,
-            executable: executable.clone(),
-            device_profile: profile_name.clone(),
-            evidence_root: PathBuf::from(&h.state.config.artifact_dir).join("bridge-evidence"),
-        },
-    )
-    .await
-    .unwrap();
-    let setup = read_setup(&prepared.setup_file).await.unwrap();
-    let launch = Uuid::new_v4();
-    let mut inbox = Inbox::open(
-        &profile_root(&setup.evidence_root, device_id),
-        &endpoint,
-        device_id,
-    )
-    .unwrap();
-    inbox.start_launch(launch, setup.binding_id).unwrap();
-    let old_prompt = json!({"hook_event_name":"UserPromptSubmit","session_id":"native-launch","turn_id":"old","prompt":"Original turn before scope change"});
-    let old = inbox
-        .capture_in_launch(
-            setup.binding_id,
-            Some(launch),
-            &serde_json::to_vec(&old_prompt).unwrap(),
-            &[],
-            chrono::Utc::now(),
-        )
-        .unwrap();
-    drop(inbox);
     let mut command = tokio::process::Command::new(&executable);
     native_environment(&mut command);
     command
@@ -189,10 +127,6 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
             &brain.to_string(),
             "--directory",
             work.to_str().unwrap(),
-            "--capture-setup",
-            prepared.setup_file.to_str().unwrap(),
-            "--capture-launch",
-            &launch.to_string(),
         ]);
     let bridge = tokio::time::timeout(
         Duration::from_secs(120),
@@ -283,7 +217,6 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
     let changed = tool(peer,"workspace.set_scope",json!({"id":original["task"]["id"],"input":{
         "base_scope":original["task"]["scope"]["id"],"selection":selection(&b)},"context_query":"Native scope"})).await;
     assert_eq!(changed["context"]["state"], "ready", "{changed}");
-    assert_eq!(changed["capture"]["state"], "ready", "{changed}");
     assert!(
         changed["context"].to_string().contains("SCOPE_B_CONTEXT")
             && !changed["context"].to_string().contains("SCOPE_A_CONTEXT")
@@ -307,46 +240,6 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
         old_result.to_string().contains("SCOPE_A_CONTEXT")
             && !old_result.to_string().contains("SCOPE_B_CONTEXT")
     );
-    let mut inbox = Inbox::open(
-        &profile_root(&setup.evidence_root, device_id),
-        &endpoint,
-        device_id,
-    )
-    .unwrap();
-    let next_binding = inbox.launch_default(launch, setup.binding_id).unwrap();
-    assert_ne!(next_binding, setup.binding_id);
-    assert_eq!(
-        json!(
-            inbox
-                .cached_binding(next_binding)
-                .unwrap()
-                .binding
-                .operation
-                .scope
-                .id
-        ),
-        changed["handoff"]["current_scope_id"]
-    );
-    let new_prompt = json!({"hook_event_name":"UserPromptSubmit","session_id":"native-launch","turn_id":"new","prompt":"New context turn"});
-    let new = inbox
-        .capture_in_launch(
-            setup.binding_id,
-            Some(launch),
-            &serde_json::to_vec(&new_prompt).unwrap(),
-            &[],
-            chrono::Utc::now(),
-        )
-        .unwrap();
-    let pending = inbox.pending(chrono::Utc::now()).unwrap();
-    assert_eq!(
-        pending.iter().find(|e| e.id == old).unwrap().binding_id,
-        setup.binding_id
-    );
-    assert_eq!(
-        pending.iter().find(|e| e.id == new).unwrap().binding_id,
-        next_binding
-    );
-    drop(inbox);
     let runner = Runner::central(Uuid::new_v4());
     let lease = checked(runner.register(&h.state).await);
     let worker = executor(
@@ -474,47 +367,6 @@ async fn mcp_agent_native_scope_capture_and_managed_receipts() {
         .await
         .unwrap();
     assert_eq!(denied.is_error, Some(true));
-    // Force an actual binding-storage failure in this disposable database.
-    // A disabled capture policy permits metadata bindings but denies content;
-    // it would not exercise failed refresh. Existing rows remain valid here.
-    sqlx::query("ALTER TABLE capture_bindings ADD CONSTRAINT capture_scope_fixture_unavailable CHECK(false) NOT VALID")
-        .execute(&h.admin).await.unwrap();
-    let gap = tool(
-        peer,
-        "workspace.set_scope",
-        json!({"id":original["task"]["id"],"input":{
-            "base_scope":changed["handoff"]["current_scope_id"],"selection":selection(&a)},
-            "context_query":"Native scope"}),
-    )
-    .await;
-    assert_eq!(gap["task"]["scope"]["selection"], selection(&a));
-    assert_eq!(gap["context"]["state"], "ready", "{gap}");
-    assert_eq!(gap["capture"]["state"], "gap", "{gap}");
-    assert_eq!(gap["capture"]["code"], "capture_scope_refresh_failed");
-    sqlx::query("ALTER TABLE capture_bindings DROP CONSTRAINT capture_scope_fixture_unavailable")
-        .execute(&h.admin)
-        .await
-        .unwrap();
-    let inbox = Inbox::open(
-        &profile_root(&setup.evidence_root, device_id),
-        &endpoint,
-        device_id,
-    )
-    .unwrap();
-    assert_eq!(
-        inbox.launch_default(launch, setup.binding_id).unwrap(),
-        next_binding,
-        "failed refresh does not replace the last committed capture default"
-    );
-    assert!(
-        inbox
-            .status()
-            .unwrap()
-            .gaps
-            .iter()
-            .any(|(code, count)| { code == "capture_scope_refresh_failed" && *count > 0 })
-    );
-    drop(inbox);
     stop.cancel();
     running.await.unwrap().unwrap();
     // Actual loss of the fixture's application DB pool makes the remote service

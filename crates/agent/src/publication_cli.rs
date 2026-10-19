@@ -85,9 +85,10 @@ async fn upload(
     }
 }
 pub async fn run(client: &Client, device: &StoredDevice, args: &[String]) -> Result<Value> {
-    let root = std::env::var_os("RECOLLECT_PUBLICATION_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| project_root().join(".data/publications"));
+    let root = match std::env::var_os("RECOLLECT_PUBLICATION_DIR") {
+        Some(path) => PathBuf::from(path),
+        None => crate::plugin_storage::root()?.join("publications"),
+    };
     run_with_defaults(client, device, args, root, default_enola()).await
 }
 
