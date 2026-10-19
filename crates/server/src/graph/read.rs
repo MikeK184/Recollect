@@ -18,6 +18,9 @@ pub(super) struct Selected {
     pub edges: Vec<GraphEdge>,
     pub deadline: Option<DateTime<Utc>>,
     pub(super) projections: Vec<(GraphGeneration, Descriptor)>,
+    /// Canonical expectation of each projection's native generation, in
+    /// `projections` order. Counts are the stored ones, not the filtered selection.
+    pub(super) seals: Vec<adapter::Seal>,
 }
 async fn projection(
     tx: &mut Tx<'_>,
@@ -25,10 +28,13 @@ async fn projection(
     kind: &str,
     snapshot: Option<Uuid>,
     inputs: &[Uuid],
-) -> Result<(GraphGeneration, Descriptor)> {
-    let row:Option<(Json<GraphGeneration>,Json<Descriptor>)>=sqlx::query_as("SELECT to_jsonb(g)-'descriptor',descriptor FROM graph_generations g WHERE brain_id=$1 AND kind=$2 AND snapshot_id IS NOT DISTINCT FROM $3 AND input_snapshot_ids=$4 AND state='ready' AND (kind<>'combined' OR (input_epoch=(SELECT graph_link_epoch FROM brains WHERE id=$1) AND adapter=$5)) ORDER BY created_at DESC,id DESC LIMIT 1")
+) -> Result<(GraphGeneration, Descriptor, adapter::Seal)> {
+    let row:Option<(Json<GraphGeneration>,Json<Descriptor>,Option<Uuid>)>=sqlx::query_as("SELECT to_jsonb(g)-'descriptor',descriptor,native_attempt_token FROM graph_generations g WHERE brain_id=$1 AND kind=$2 AND snapshot_id IS NOT DISTINCT FROM $3 AND input_snapshot_ids=$4 AND state='ready' AND (kind<>'combined' OR (input_epoch=(SELECT graph_link_epoch FROM brains WHERE id=$1) AND adapter=$5)) ORDER BY created_at DESC,id DESC LIMIT 1")
         .bind(brain).bind(kind).bind(snapshot).bind(inputs).bind(combined::LINKER).fetch_optional(&mut **tx).await?;
-    row.map(|(Json(g),Json(d))|(g,d)).ok_or_else(||failure("graph_projection_missing","This exact input has no ready graph generation. Inspect its processing status or rebuild it."))
+    row.map(|(Json(g),Json(d),token)|{
+        let seal=adapter::Seal{id:g.id,token,nodes:g.node_count,edges:g.edge_count};
+        (g,d,seal)
+    }).ok_or_else(||failure("graph_projection_missing","This exact input has no ready graph generation. Inspect its processing status or rebuild it."))
 }
 pub(super) async fn select(
     state: &AppState,
@@ -165,8 +171,9 @@ async fn select_inner(
     } else {
         vec![]
     };
-    let (g, d) = projection(tx, brain, &scope.kind, scope.snapshot_id, &ids).await?;
+    let (g, d, seal) = projection(tx, brain, &scope.kind, scope.snapshot_id, &ids).await?;
     let mut projections = vec![];
+    let mut seals = vec![];
     if scope.kind == "combined" {
         let bytes:i64=sqlx::query_scalar("SELECT coalesce(sum(descriptor_bytes),0)::bigint FROM (
           SELECT DISTINCT ON (g.snapshot_id) g.descriptor_bytes,g.snapshot_id FROM graph_generations g JOIN repository_snapshots s ON s.brain_id=g.brain_id AND s.id=g.snapshot_id
@@ -190,10 +197,13 @@ async fn select_inner(
         let snapshots:Vec<Uuid>=sqlx::query_scalar("SELECT id FROM repository_snapshots WHERE brain_id=$1 AND id=ANY($2) AND (cardinality($3::uuid[])=0 OR repository_id=ANY($3)) ORDER BY id")
             .bind(brain).bind(&ids).bind(&scope.selection.repository_ids).fetch_all(&mut **tx).await?;
         for snapshot in snapshots {
-            projections.push(projection(tx, brain, "repository", Some(snapshot), &[]).await?);
+            let (g, d, seal) = projection(tx, brain, "repository", Some(snapshot), &[]).await?;
+            projections.push((g, d));
+            seals.push(seal);
         }
     }
     projections.push((g.clone(), d));
+    seals.push(seal);
     let mut entities: Vec<_> = projections
         .iter()
         .flat_map(|(_, d)| d.nodes.iter().cloned())
@@ -398,6 +408,7 @@ async fn select_inner(
         edges,
         deadline,
         projections,
+        seals,
     })
 }
 pub(super) async fn final_gate(
@@ -583,95 +594,93 @@ pub(super) async fn interactive_final_gate(
     final_gate(tx, auth, selection).await
 }
 
-/// Entities and relationships of one generation already proven to match their
-/// canonical descriptors, valid for one preparation epoch and a short window.
-struct Proven {
-    epoch: i64,
-    since: std::time::Instant,
-    nodes: std::collections::HashSet<String>,
-    edges: std::collections::HashSet<Uuid>,
-}
-static PROVEN: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<Uuid, Proven>>> =
-    std::sync::LazyLock::new(Default::default);
-/// Canonical changes (including erasure) move the preparation epoch and always
-/// force re-verification. The window bounds how long out-of-band damage to
-/// Neo4j can go unnoticed within one epoch.
-const PROOF_WINDOW: Duration = Duration::from_secs(20);
-const PROVEN_GENERATIONS: usize = 16;
-const PROVEN_ITEMS: usize = 250_000;
-
-/// Forget every proof. For tests that damage the projection out of band.
-pub fn reset_verification() {
-    if let Ok(mut proven) = PROVEN.lock() {
-        proven.clear();
-    }
-}
-
-/// Callers must not hold a database transaction: a full check is one request
-/// for the generation plus one per 500 nodes and edges. Entities and
-/// relationships already proven at this preparation epoch are skipped; the
-/// generation itself is always re-checked.
+/// Physical verification of the selected projections, outside any transaction.
+///
+/// The fast path is one seal request: each generation must carry the token of
+/// the import PostgreSQL recorded when it became ready, be closed, and hold
+/// exactly the stored membership and relationship counts. Nothing is cached, so
+/// damage is seen by the very next read. Counts cannot tell an erased entity the
+/// view never selects from damage to one it does, so any seal mismatch falls back
+/// to the exact check of the selected entities and relationships (one request,
+/// plus one per 500 of each). That passes after erasure of unselected items and
+/// otherwise fails closed with `graph_import_mismatch`. A traversal that returns
+/// native relationships additionally verifies those with [`verify_returned`].
 pub(super) async fn verify(state: &AppState, selected: &Selected) -> Result<()> {
-    let epoch = selected.preparation_epoch;
-    for (g, d) in &selected.projections {
-        let (nodes, edges): (Vec<_>, Vec<_>) = match PROVEN.lock() {
-            Ok(proven) => match proven.get(&g.id) {
-                Some(p) if p.epoch == epoch && p.since.elapsed() < PROOF_WINDOW => (
-                    d.nodes
-                        .iter()
-                        .filter(|n| !p.nodes.contains(&n.key()))
-                        .cloned()
-                        .collect(),
-                    d.edges
-                        .iter()
-                        .filter(|e| !p.edges.contains(&e.id))
-                        .cloned()
-                        .collect(),
-                ),
-                _ => (d.nodes.to_vec(), d.edges.to_vec()),
-            },
-            Err(_) => (d.nodes.to_vec(), d.edges.to_vec()),
-        };
-        let result = async {
+    if adapter::seal_check(state, selected.view.brain_id, &selected.seals).await? {
+        return Ok(());
+    }
+    for ((g, d), seal) in selected.projections.iter().zip(&selected.seals) {
+        let exact = async {
             adapter::verify_generation(state, g).await?;
-            for batch in nodes.chunks(500) {
+            for batch in d.nodes.chunks(500) {
                 adapter::verify_nodes(state, g, batch).await?;
             }
-            for batch in edges.chunks(500) {
+            for batch in d.edges.chunks(500) {
                 adapter::verify_edges(state, g, batch).await?;
             }
             Ok::<_, Error>(())
         }
         .await;
-        let Ok(mut proven) = PROVEN.lock() else {
-            result?;
-            continue;
-        };
-        if result.is_err() {
-            proven.remove(&g.id);
-            return result;
+        if let Err(error) = exact {
+            if error.1 == "graph_import_mismatch" {
+                suspect(state, g, seal).await;
+            }
+            return Err(error);
         }
-        if proven.len() >= PROVEN_GENERATIONS && !proven.contains_key(&g.id) {
-            proven.clear();
+    }
+    Ok(())
+}
+
+/// A read cannot rebuild, but it can tell maintenance that this generation just
+/// failed exact verification: clearing its verification stamp makes the next
+/// graph maintenance pass re-verify it in full before any other generation.
+/// Best effort, idempotent, and only effective on the exact ready generation
+/// that carries this sealing token.
+async fn suspect(state: &AppState, g: &GraphGeneration, seal: &adapter::Seal) {
+    let marked = sqlx::query("SELECT recollect_graph_suspect($1,$2,$3)")
+        .bind(g.brain_id)
+        .bind(g.id)
+        .bind(seal.token)
+        .execute(&state.pool)
+        .await;
+    if marked.is_err() {
+        tracing::warn!(brain_id=%g.brain_id,generation_id=%g.id,"Graph verification mismatch could not be recorded");
+    }
+}
+
+/// Exact native check of the relationships a traversal actually returned, which
+/// the seal's counts cannot vouch for. Callers have already matched every id to
+/// the canonical selection; this proves the relationship exists in the generation
+/// with the same endpoints, family and relation. Bounded by the traversal limits.
+pub(super) async fn verify_returned(
+    state: &AppState,
+    selected: &Selected,
+    returned: impl IntoIterator<Item = Uuid>,
+) -> Result<()> {
+    let mut returned: BTreeSet<Uuid> = returned.into_iter().collect();
+    for (g, d) in &selected.projections {
+        let edges: Vec<_> = d
+            .edges
+            .iter()
+            .filter(|e| returned.remove(&e.id))
+            .cloned()
+            .collect();
+        for batch in edges.chunks(500) {
+            if let Err(error) = adapter::verify_edges(state, g, batch).await {
+                if error.1 == "graph_import_mismatch"
+                    && let Some(seal) = selected.seals.iter().find(|s| s.id == g.id)
+                {
+                    suspect(state, g, seal).await;
+                }
+                return Err(error);
+            }
         }
-        let entry = proven.entry(g.id).or_insert_with(|| Proven {
-            epoch,
-            since: std::time::Instant::now(),
-            nodes: Default::default(),
-            edges: Default::default(),
-        });
-        if entry.epoch != epoch || entry.since.elapsed() >= PROOF_WINDOW {
-            *entry = Proven {
-                epoch,
-                since: std::time::Instant::now(),
-                nodes: Default::default(),
-                edges: Default::default(),
-            };
-        }
-        if entry.nodes.len() + entry.edges.len() + nodes.len() + edges.len() <= PROVEN_ITEMS {
-            entry.nodes.extend(nodes.iter().map(|n| n.key()));
-            entry.edges.extend(edges.iter().map(|e| e.id));
-        }
+    }
+    if !returned.is_empty() {
+        return Err(failure(
+            "graph_response_invalid",
+            "A returned edge was outside the canonical view.",
+        ));
     }
     Ok(())
 }
@@ -866,6 +875,9 @@ pub async fn path(
                 }
                 edges.push(edge.clone());
             }
+            // The seal vouches for counts, not for which relationships the native
+            // search walked: prove the ones it returned.
+            verify_returned(&state, &selected, edges.iter().map(|e| e.id)).await?;
             "path"
         } else {
             "no_path_within_bound"

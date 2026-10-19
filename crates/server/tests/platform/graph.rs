@@ -18,12 +18,12 @@ pub(crate) mod recovery;
 mod retrieval;
 #[path = "graph_scope.rs"]
 mod scope;
+#[path = "graph_seal.rs"]
+mod seal;
 #[path = "graph_status.rs"]
 mod status;
 
 pub(super) async fn cypher(h: &Harness, statement: &str, parameters: Value) -> Value {
-    // Tests damage the projection out of band; verification proofs must not hide it.
-    recollect_server::graph::reset_verification();
     let response = h
         .state
         .http

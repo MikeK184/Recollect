@@ -47,6 +47,20 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
   lookups; graph-window identity qualification retains complete histories.
 - Ownership: `db` owns transaction setup; graph read/worker own preparation/final
   validation; PostgreSQL remains canonical, Neo4j separately verified.
+- Native verification (2026-10-19, [contract amendment](../../../contracts/graph-concurrent-preparation.md#native-verification-amendment--2026-10-19)):
+  the static 20-second cache of verified native items is removed. Each read sends
+  one seal request (stored token, closed import, stored counts) and falls back to
+  the exact selective check on any difference; traversals also verify the
+  relationships they return. Migration 069 adds `graph_generations.native_verified_at`
+  (backfilled from `published_at`, set at readiness), a `recollect_graph_suspect`
+  function that lets a failed read clear that stamp, and a trigger-function
+  refinement so a stamp-only update does not advance the analytics epoch. Graph
+  maintenance deep-verifies one ready generation per Brain per pass after 24 hours
+  and marks damage `graph_import_mismatch`; existing discovery then queues one
+  replacement under the 500-job cap. The adapter also creates a
+  `RECOLLECT_GRAPH_EDGE(generation)` index and a `(generation, id)` index: PROFILE
+  on the local Neo4j showed the counts, cleanup and exact verification otherwise
+  scan every relationship of every Brain.
 
 ## Data and Authority
 
@@ -81,7 +95,11 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
 
 - Automated: Actual snapshot/write concurrency, preparation write denial, final
   invalidation and access controls; native knowledge/exploration/path tests;
-  `./scripts/validate.sh`, formatting and focused compile checks.
+  `./scripts/validate.sh`, formatting and focused compile checks. Native
+  verification: seal comparison unit tests; two actual Neo4j cases (one request
+  per warm read, immediate damage failure, unselected erasure through the
+  fallback; stamping, raced-token refusal, one replacement per damage) in
+  `graph_seal.rs`.
 - Manual: Populated model-free normal-installation graph requests while ordinary
   worker activity continues; checkpoint and exact build/schema proof if updated.
 - Acceptance: All contract controls pass, no stale publication, errors included

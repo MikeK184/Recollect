@@ -177,7 +177,9 @@ async fn run(state: &AppState, job: &ClaimedJob) -> Result<()> {
     // that publishes the generation; import success alone cannot establish it.
     sqlx::query("UPDATE graph_generations SET state='superseded' WHERE brain_id=$1 AND kind=$2 AND snapshot_id IS NOT DISTINCT FROM $3 AND state IN ('ready','failed','cancelled') AND id<>$4 AND input_snapshot_ids=$5")
         .bind(job.brain_id).bind(&g.kind).bind(g.snapshot_id).bind(g.id).bind(&g.input_snapshot_ids).execute(&mut *tx).await?;
-    sqlx::query("UPDATE graph_generations SET state='ready',published_at=clock_timestamp(),error_code=NULL WHERE brain_id=$1 AND id=$2")
+    // Every node, edge and count was verified and the import sealed just before
+    // this lock, so readiness is also the first native verification stamp.
+    sqlx::query("UPDATE graph_generations SET state='ready',published_at=clock_timestamp(),native_verified_at=clock_timestamp(),error_code=NULL WHERE brain_id=$1 AND id=$2")
         .bind(job.brain_id).bind(g.id).execute(&mut *tx).await?;
     let lease_until: chrono::DateTime<chrono::Utc> =
         sqlx::query_scalar("SELECT lease_until FROM jobs WHERE id=$1")

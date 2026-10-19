@@ -158,6 +158,12 @@ pub(crate) async fn expand(
                 // Prefixes can omit an intermediate target; every intermediate
                 // must still be a qualified entity with a valid canonical edge.
                 exploration::validate_reach(selected, &input, &reach, false)?;
+                read::verify_returned(
+                    state,
+                    selected,
+                    reach.iter().flat_map(|r| r.edges.iter().copied()),
+                )
+                .await?;
                 if reach.len() > CANDIDATES {
                     note(&mut status.view.coverage, "graph_candidate_limit");
                 }
