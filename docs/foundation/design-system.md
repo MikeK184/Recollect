@@ -181,8 +181,9 @@ Use Mantine `createTheme`, provider CSS-variable resolver and shared component
 extensions. Force light mode; do not scatter colors/radii/fonts through TSX or
 target generated Mantine class names. Buttons, inputs, selects, menus, dialogs,
 drawers, tabs and tables share defaults. The implemented [theme](../../web/src/design/theme.ts),
-[tokens](../../web/src/design/tokens.ts) and development-only
-[component entry](../../web/design.html) replace the former thin teal/Inter theme.
+[tokens](../../web/src/design/tokens.ts) replace the former thin teal/Inter theme.
+The development-only component preview page was removed on 2026-10-19 with the
+web dead-code cleanup; the theme and token modules are the reference.
 The [dated asset evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md)
 records actual fonts, licenses, SVGs and validation limits.
 

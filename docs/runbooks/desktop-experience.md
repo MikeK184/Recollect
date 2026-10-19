@@ -182,15 +182,10 @@ fonts and geometry; `app/navigation.ts` is the contextual icon map. Feature page
 compose the existing canonical typed API and inspectors. Keep visible protected
 content checks; do not mount unrelated polling panels behind hidden tabs.
 
-For the development-only component reference, start Vite from the repository:
-
-```sh
-npm --prefix web run dev
-```
-
-Open the printed local Vite origin at `/design.html` (normally
-`http://127.0.0.1:5173/design.html`). This uses the real theme/components, adds no
-production Node server, and is not a service-health test. The normal product
+The development-only component preview page (`/design.html`) was removed on
+2026-10-19 with the web dead-code cleanup. `web/src/design/theme.ts` and
+`web/src/design/tokens.ts` are the component reference; the Vite dev server
+(`npm --prefix web run dev`) serves the real application only. The normal product
 continues to use the Rust-served build at port 8787.
 
 Fonts and licenses live under `web/public/fonts/` and `web/public/licenses/`.
