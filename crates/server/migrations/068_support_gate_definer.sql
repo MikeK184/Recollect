@@ -69,3 +69,9 @@ LANGUAGE sql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS 
 $$;
 REVOKE ALL ON FUNCTION recollect_memory_supported_many(uuid,uuid[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION recollect_memory_supported_many(uuid,uuid[]) TO recollect_app;
+
+-- The organization field view pages knowledge_field_inputs by (brain, id). The
+-- primary key alone reads every other Brain's inputs below the cursor and
+-- filters them out; this keyset index reads exactly the page (60,000 inputs in
+-- 20 Brains: 4,500 rows read and 1.7 ms before, 251 rows and 0.27 ms after).
+CREATE INDEX knowledge_field_inputs_page ON knowledge_field_inputs(brain_id,id);

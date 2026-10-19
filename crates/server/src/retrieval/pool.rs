@@ -109,6 +109,10 @@ pub(super) fn chain(breadth: Breadth) -> String {
             // Latest-per-logical-identity lists keep their whole histories but
             // only for the identities the windows reached.
             .replace(
+                "/* recall_window:fact_snapshots */",
+                "AND s.id IN (SELECT snapshot_id FROM recall_facts)",
+            )
+            .replace(
                 "/* recall_window:known_snapshots */",
                 "AND repository_id IN (SELECT s.repository_id FROM repository_snapshots s WHERE s.brain_id=$1 AND s.id IN (SELECT snapshot_id FROM recall_facts))",
             )

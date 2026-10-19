@@ -58,27 +58,56 @@ Implementation: authorized by the repository owner on 2026-10-19
   distinct revision once with the existing per-revision gates, then combines
   per target exactly as the scalar form: every closure member supported and
   acyclic, no non-root handover, every member digest-current.
-- Call sites that test many revisions per statement use the batch function:
-  `memory_rules::supported`, the claim list count and page, the recall and
-  semantic candidate statements, session digest discovery/contributor checks,
-  the graph descriptor roots, learning family matches, autonomous family
-  matches and the migration 057 field input function. Single-revision sites keep
-  the scalar function.
-- Guard test: enumerates the tables the predicate tree reads and fails when any
-  policy on them is not a permissive Brain-membership form, so a future
-  restrictive policy cannot be silently bypassed by the definer.
-- Equivalence test: on generated fixtures (rules, fences, digests, handovers,
-  cycles, another Brain's revisions, a non-member actor) the scalar and batch
-  results equal a reference copy of the previous body created in the
-  disposable database. A timing test records app-role per-revision cost.
-- Organization field paging: the statement that exceeds its bound is captured
-  from the disposable database before any change. The planned repairs, each
-  kept only if it measurably helps, are bulk qualification in the field view
-  transaction like every other organization reader, a batch
-  `recollect_field_inputs_current`, an index on
-  `knowledge_field_inputs(brain_id,id)`, windowed known snapshots/manifests,
-  and qualifying only the inputs behind the next page of references on detail
-  pages (keyset, bounded). Outcomes are recorded here at closeout.
+- Call sites that test many revisions per statement ask the batch function for
+  the revisions that passed their cheap filters: the recall candidate chain,
+  the claim list count and page, semantic discovery, session digest discovery
+  and contributor check, graph descriptor roots, learning and autonomous family
+  matches, and `memory_rules::supported`. Single-revision sites keep the scalar
+  function. Migration 057's field input function is not rewritten: after this
+  change its support call is the fast definer form and the whole function costs
+  about 1 ms per input (see below).
+- Guard test: enumerates the tables the predicate reads from the function
+  bodies and fails when any policy on them is restrictive, narrower than Brain
+  membership, or absent, so a future policy cannot be silently bypassed by the
+  definer. It also proves it can fail by adding such policies in its disposable
+  database.
+- Equivalence test: on generated fixtures (human-reviewed claims, an unreviewed
+  one, a rejected one, a rule-blocked one, a fenced one, handovers including a
+  non-root handover dependency and an unsupported current head, exact
+  contribution cycles, expiring sources, a second Brain's revisions, a
+  non-member actor) the scalar and batch results equal a reference copy of the
+  previous body created in the disposable database and called as the
+  application role. Existing support scenarios (digests, rules, cycles,
+  backups) assert the same equivalence at each state they inspect.
+- Organization field paging: the failing statement is the recall candidate
+  statement inside `retrieval::graph::qualify`, not the 750 ms publication step.
+  It hit the 1,500 ms prepare limit (SQLSTATE 57014) in 2 of 4 runs here and
+  every baseline run, taking 1.1-1.3 s for 85 requested facts against 47-75 ms
+  in runs that passed. `EXPLAIN ANALYZE` of a slow run shows the planner joining
+  each windowed fact to `repository_snapshots` by scanning the Brain's snapshots
+  (1,187 rows removed by the join filter for 25 facts) and evaluating the
+  row-level-security function on every scanned row; the plan varies from run to
+  run. A first repair resolving each fact's snapshot by primary-key lookup was
+  rejected: it removed the flip but evaluated row-level security once per fact
+  and made `graph_combined_union_limits` (5,200 facts) fail with
+  `database_unavailable`. The repository-fact branch now joins a materialized
+  `fact_snapshots` CTE that applies the snapshot-only gates (time, retention
+  state, scope) once per snapshot the windowed facts belong to; recall and graph
+  windows narrow it through a new window hook, and the graph qualify path also
+  windows `known_snapshots`/`known_manifests` through the existing hooks. The
+  statement measured 1,006 ms in the plan that failed and 110 ms now, and the
+  paging test and the union-limit test passed 6 of 6 and 1 of 1 consecutive
+  runs under load.
+- Kept: the keyset index `knowledge_field_inputs_page(brain_id,id)`: 60,000
+  inputs in 20 Brains read 4,500 rows in 1.7 ms before and 251 rows in 0.27 ms
+  after.
+- Not kept, because nothing measurable improved: `recollect.bulk_qualification`
+  in the field view (three runs each, 192-420 ms against 245-500 ms total on a
+  loaded machine, which is noise; that fixture reads no policy the setting
+  rewrites); a batch field-input currency function and narrowing detail pages
+  to the next page of references (the currency step costs about 1 ms per input
+  and the 85-input page about 250 ms, far inside the 1,500 ms bound once the
+  candidate statement is stable).
 
 ## Acceptance
 

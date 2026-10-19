@@ -62,6 +62,15 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
 ), known_manifests AS (
   SELECT DISTINCT ON(manifest_id) id FROM manifest_revisions
   WHERE brain_id=$1 AND created_at<=$2 /* recall_window:known_manifests */ ORDER BY manifest_id,created_at DESC,id DESC
+), fact_snapshots AS MATERIALIZED (
+  -- Snapshot metadata is protected by row-level security and its retention and
+  -- scope gates depend on the snapshot alone. Evaluate them once per snapshot
+  -- the (windowed) facts belong to, so a join planned as a nested loop cannot
+  -- repeat that work for every fact and snapshot pair.
+  SELECT s.* FROM repository_snapshots s
+  WHERE s.brain_id=$1 AND s.created_at<=$2 /* recall_window:fact_snapshots */
+    AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
+    AND recollect_recall_scope(jsonb_build_object('repository_ids',jsonb_build_array(s.repository_id)),$4)
 ), candidates AS (
   SELECT 'claim'::text kind,r.claim_id id,r.id revision_id,NULL::uuid chunk_id,
     r.revision#>>'{content,subject}' label,
@@ -121,11 +130,9 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
     NULL,NULL,NULL,NULL,NULL,0,'ready',f.record,f.recall_vector,
     recollect_retention_deadline(s.brain_id,'repository',s.created_at),
     ($3<>'' AND ($3=f.record->>'name' OR $3=coalesce(f.record->>'file',f.record#>>'{source,path}',f.record->>'path'))),true
-  FROM /* graph_window:facts */ repository_facts f JOIN repository_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
-  WHERE f.brain_id=$1 AND s.created_at<=$2
+  FROM /* graph_window:facts */ repository_facts f JOIN fact_snapshots s ON s.id=f.snapshot_id AND s.brain_id=f.brain_id
+  WHERE f.brain_id=$1
     AND $5::uuid IS NULL AND $7 IN ('investigation','history')
-    AND recollect_content_state(s.brain_id,'repository',s.privacy_state,s.created_at)='active'
-    AND recollect_recall_scope(jsonb_build_object('repository_ids',jsonb_build_array(s.repository_id)),$4)
     AND (($6::jsonb IS NOT NULL AND EXISTS(SELECT 1 FROM jsonb_array_elements($6->'entries') entry
       WHERE entry->>'repository_id'=s.repository_id::text AND entry->>'snapshot_id'=s.id::text
         AND (coalesce(entry->'config_paths','[]'::jsonb)='[]'::jsonb OR EXISTS(
