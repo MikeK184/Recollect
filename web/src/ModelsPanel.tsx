@@ -127,6 +127,10 @@ function PolicyEditor({
         </Text>
         <Switch
           label="Allow model transmission"
+          description={
+            draft.text_model ? undefined : "Choose a text model first."
+          }
+          disabled={!draft.text_model}
           checked={draft.enabled}
           onChange={(e) =>
             patch({
@@ -173,7 +177,12 @@ function PolicyEditor({
           <summary>Resource limits and automatic processing</summary>
           <Stack mt="md">
             {" "}
-            <TextInput label="Text model" value={draft.text_model} readOnly />
+            <TextInput
+              label="Text model"
+              placeholder="Not selected"
+              value={draft.text_model}
+              readOnly
+            />
             <TextInput
               label="Embedding model"
               value={draft.embedding_model}
@@ -361,7 +370,8 @@ function PolicyHistory({
               {p.policy.enabled ? "Enabled" : "Disabled"}
             </Text>
             <Text size="sm">
-              {p.policy.text_model} · {p.policy.embedding_model}
+              {p.policy.text_model || "No text model selected"} ·{" "}
+              {p.policy.embedding_model}
             </Text>
             <Text size="sm">
               Purposes: {p.policy.purposes.join(", ") || "none"}. Content:{" "}

@@ -20,7 +20,8 @@ x-runtime: &runtime
   RECOLLECT_MCP_OUTBOX_DIR: /var/lib/recollect/artifacts/.mcp-receipts/central
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-  # Unset keys are omitted so the server's built-in fallback model applies; select models in Brain policy.
+  # Unset keys are omitted. There is no built-in text model: each Brain's administrator selects one,
+  # unless RECOLLECT_TEXT_MODEL names an explicit model for the whole installation.
   RECOLLECT_TEXT_MODEL:
   RECOLLECT_EMBEDDING_MODEL: ${RECOLLECT_EMBEDDING_MODEL:-text-embedding-3-large}
   RECOLLECT_EMBEDDING_DIMENSIONS: ${RECOLLECT_EMBEDDING_DIMENSIONS:-3072}

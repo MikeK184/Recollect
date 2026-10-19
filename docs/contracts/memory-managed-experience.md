@@ -18,8 +18,12 @@ decoupled capture and the separation of retirement, truth and physical erasure.
 Provide one server-owned preset, `managed`, for supported sanitized capture,
 autonomous learning/reconciliation, automatic embeddings and grounded answers.
 Its model purposes are extraction, synthesis, embedding and answering. All
-existing supported content classes are permitted. Models and credentials come
-from the installation. The preset sets a daily accounting ceiling of 1,000,000
+existing supported content classes are permitted. Credentials come from the
+installation. The text model comes from the Brain: the installation supplies one
+only when its operator names it explicitly (`RECOLLECT_TEXT_MODEL`), otherwise
+the Brain's administrator chooses it (see the
+[no-built-in-model amendment](brain-model-catalogue-and-selection.md)). The preset
+sets a daily accounting ceiling of 1,000,000
 tokens, two concurrent calls, a 32 KiB input safety bound and 4,096 output tokens.
 These are bounded engineering defaults, not measured optimal budgets or a cost
 promise. Input bytes remain a transport/admission bound, not a token count.
@@ -28,7 +32,14 @@ Agents retain the existing bounded retrieval/context parameters through MCP.
 The browser's new-Brain flow requests this preset and states its provider use.
 Legacy API callers that omit that request retain their prior behavior. A missing
 provider credential leaves capture available and explains why enrichment cannot
-run; adding a credential does not substitute another provider or model.
+run; adding a credential does not substitute another provider or model. A missing
+text model works the same way: the preset enables capture and saves its limits and
+purposes but leaves model transmission off, with automatic learning and embedding
+off, until the administrator chooses a model. The gateway then reports
+`model_not_selected` ("Choose a text model for this Brain") and Ask, Settings
+and the Brain's AI card show a "Choose a model" state with the action to pick one.
+Choosing a model (`text_model` on the adoption request) is checked against a fresh
+account model list like any selection, re-applies the preset and enables it.
 Existing Brains are never bulk-converted by a deployment. Their administrator can
 adopt the preset once from Ask or Settings; no individual numeric fields or
 purpose lists are required. This is explicit standing authorization to process
@@ -36,7 +47,8 @@ this Brain's eligible retained sources with its installed provider.
 
 `GET /api/brains/{brain}/automation` reports current model, capture, retention
 and installed-provider configuration. `PUT` accepts the observed model and
-capture change IDs and atomically applies the preset through shared persistence
+capture change IDs, an optional `text_model` for the Brain's current provider, and
+atomically applies the preset through shared persistence
 helpers, audit and outbox. It is browser-admin-only, rejects archived Brains,
 checks stale revisions, and supports the existing idempotency protocol. No
 external call occurs in this transaction. Capture exclusions are preserved;
@@ -102,7 +114,9 @@ Connection and profile creation continue through existing shared handlers.
 
 Prove new-Brain managed setup and existing-Brain atomic adoption, stale/replayed
 requests, reader/contributor/device denial, archived denial, capture exclusions
-and retention preservation, provider absence, and no cross-Brain changes. Prove
+and retention preservation, provider absence, an installation without a text model
+(capture on, transmission off until a listed model is chosen), and no cross-Brain
+changes. Prove
 owner-only connector import with malformed, duplicate and no-execution controls.
 Browser checks cover a clear Ask activation path, hidden tuning, optional source
 notes, capture setup and the empty connector catalogue. Reuse the existing

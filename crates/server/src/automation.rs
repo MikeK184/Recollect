@@ -1,7 +1,11 @@
 //! One auditable adoption of the managed preset; domain workers still own work.
 use crate::{
-    AppState, auth::Auth, capture, commands, db, error::Result, memory_evidence::Tx, model_policy,
-    retention,
+    AppState,
+    auth::Auth,
+    capture, commands, db,
+    error::{Error, Result},
+    memory_evidence::Tx,
+    model_policy, retention,
 };
 use axum::{
     Json,
@@ -25,6 +29,11 @@ pub struct AutomationSettings {
 pub struct AutomationUpdate {
     pub model_change: Uuid,
     pub capture_change: Uuid,
+    /// Text model to select for the Brain's current provider while adopting the
+    /// preset. Without a selected model the preset still enables capture but
+    /// leaves model transmission off until a model is chosen.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_model: Option<String>,
 }
 async fn settings(state: &AppState, tx: &mut Tx<'_>, brain: Uuid) -> Result<AutomationSettings> {
     let current = model_policy::current(state, tx, brain).await?;
@@ -44,19 +53,32 @@ async fn settings(state: &AppState, tx: &mut Tx<'_>, brain: Uuid) -> Result<Auto
         retention: retention::settings(tx, brain).await?,
     })
 }
+/// Apply the managed preset. `text_model` selects a model for the Brain's
+/// current provider and goes through the same fresh model-list check as a
+/// policy edit. Without a selected model the preset still saves its limits and
+/// enables capture, but leaves model transmission off, like a missing
+/// credential: choosing a model later re-applies the preset and enables it.
 pub(crate) async fn apply(
     state: &AppState,
     tx: &mut Tx<'_>,
     brain: Uuid,
     actor: Uuid,
+    text_model: Option<String>,
 ) -> Result<AutomationSettings> {
+    if text_model.as_deref().is_some_and(str::is_empty) {
+        return Err(Error::invalid("Choose a text model."));
+    }
     let selected = model_policy::current(state, tx, brain).await?.policy;
     let mut policy = model_policy::defaults(state);
-    policy.provider = selected.provider;
-    policy.text_model = selected.text_model;
-    policy.embedding_model = selected.embedding_model;
+    policy.provider = selected.provider.clone();
+    policy.text_model = text_model.unwrap_or_else(|| selected.text_model.clone());
+    policy.embedding_model = selected.embedding_model.clone();
     policy.embedding_dimensions = selected.embedding_dimensions;
-    policy.enabled = true;
+    if policy.text_model != selected.text_model {
+        model_policy::catalogue::validate_selection(state, &selected, &policy).await?;
+    }
+    let model_selected = !policy.text_model.is_empty();
+    policy.enabled = model_selected;
     policy.purposes = ["extraction", "synthesis", "embedding", "answering"]
         .map(String::from)
         .to_vec();
@@ -65,8 +87,8 @@ pub(crate) async fn apply(
     policy.max_output_tokens = 4096;
     policy.daily_token_limit = 1_000_000;
     policy.max_concurrent = 2;
-    policy.automatic_learning = true;
-    policy.automatic_embedding = true;
+    policy.automatic_learning = model_selected;
+    policy.automatic_embedding = model_selected;
     policy.autonomous_memory = true;
     model_policy::persist(state, tx, brain, actor, policy).await?;
     let mut policy = capture::current(tx, brain).await?.policy;
@@ -124,7 +146,7 @@ pub async fn update(
             "Brain settings changed. Reload before adopting managed memory.",
         ));
     }
-    let result = apply(&state, &mut tx, brain, auth.user.id).await?;
+    let result = apply(&state, &mut tx, brain, auth.user.id, input.text_model).await?;
     commands::finish(&mut tx, key.as_deref(), brain, &result).await?;
     tx.commit().await?;
     Ok(Json(result))

@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "../../api";
 import { ErrorState } from "../../components/AsyncState";
 import { usePollInterval } from "../../usePollInterval";
+import { ChooseModelNotice, needsModel } from "./ChooseModel";
 
 export function ManagedMemoryPanel({
   brain,
@@ -61,17 +62,24 @@ export function ManagedMemoryPanel({
             {compact ? "AI permissions" : "Memory permissions"}
           </Title>
           {policy && (
-            <Badge color={policy.enabled ? "brand" : "gray"}>
-              {!policy.enabled
-                ? "Off"
-                : ready
-                  ? "Configured"
-                  : "Custom permissions"}
+            <Badge
+              color={
+                needsModel(policy) ? "yellow" : policy.enabled ? "brand" : "gray"
+              }
+            >
+              {needsModel(policy)
+                ? "Choose a model"
+                : !policy.enabled
+                  ? "Off"
+                  : ready
+                    ? "Configured"
+                    : "Custom permissions"}
             </Badge>
           )}
         </Group>
         {settings.isPending && <Loader size="sm" />}
         <ErrorState error={settings.error} />
+        {needsModel(policy) && <ChooseModelNotice brain={brain} />}
         {policy?.enabled &&
           data &&
           !data.models.installed.credentials_present && (

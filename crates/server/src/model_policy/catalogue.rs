@@ -313,17 +313,19 @@ pub(crate) async fn validate_selection(
     old: &ModelPolicy,
     next: &ModelPolicy,
 ) -> Result<()> {
-    if old.provider == next.provider
-        && old.text_model == next.text_model
-        && old.embedding_model == next.embedding_model
-    {
+    // An unselected text model (valid only for a disabled policy) has nothing
+    // to check; choosing one later is a change like any other.
+    let text_selected = !next.text_model.is_empty();
+    let provider_changed = old.provider != next.provider;
+    let text_changed = text_selected && (provider_changed || old.text_model != next.text_model);
+    let embedding_changed = provider_changed || old.embedding_model != next.embedding_model;
+    if !text_changed && !embedding_changed {
         return Ok(());
     }
     // Legacy installation IDs can remain unchanged. They must never become a
     // new selection merely because configuration and account listing name them.
-    if ((old.provider != next.provider || old.text_model != next.text_model)
-        && !text_supported_for(&next.provider, &next.text_model))
-        || ((old.provider != next.provider || old.embedding_model != next.embedding_model)
+    if (text_changed && !text_supported_for(&next.provider, &next.text_model))
+        || (embedding_changed
             && !embedding_supported_for(
                 &next.provider,
                 &next.embedding_model,
@@ -343,12 +345,14 @@ pub(crate) async fn validate_selection(
             "Refresh available models before changing the selected model.",
         ));
     }
-    let next_provider_changed = old.provider != next.provider;
     for (old, next) in [
         (&old.text_model, &next.text_model),
         (&old.embedding_model, &next.embedding_model),
     ] {
-        if (old != next || next_provider_changed)
+        if next.is_empty() {
+            continue;
+        }
+        if (old != next || provider_changed)
             && !cache
                 .unwrap()
                 .ids

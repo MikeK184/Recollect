@@ -252,9 +252,11 @@ export function BrainForm({
         {!brain && (
           <Alert color="brand" title="Autonomous memory included">
             Supported agent capture, learning, semantic search and Ask use
-            managed defaults. This Brain’s retained evidence and questions may
-            be processed by the installation’s model provider. Connect your
-            agent once; Recollect handles the memory lifecycle.
+            managed defaults. Capture starts at once; learning, semantic search
+            and Ask run after a model is chosen for this Brain, unless the
+            installation names one. This Brain’s retained evidence and
+            questions may then be processed by that model’s provider. Connect
+            your agent once; Recollect handles the memory lifecycle.
           </Alert>
         )}
         <Group justify="flex-end">

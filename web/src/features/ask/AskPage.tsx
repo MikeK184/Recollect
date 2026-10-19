@@ -90,6 +90,8 @@ const failureText: Record<string, string> = {
     "There is not enough eligible evidence to answer this question. Try naming a specific subject or use Find evidence.",
   model_policy_denied:
     "This Brain’s model policy does not permit this answer. Find evidence remains available.",
+  model_not_selected:
+    "No text model is selected for this Brain. An administrator can choose one under Settings → AI. Find evidence remains available.",
   model_credentials_missing:
     "The installed model has no available credential. An administrator can check the installation.",
   model_budget_exhausted:

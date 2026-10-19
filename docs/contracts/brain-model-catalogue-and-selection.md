@@ -2,6 +2,35 @@
 
 Status: accepted
 
+## No built-in text model — 2026-10-19
+
+The repository owner removes the code default text model. The installation no
+longer supplies `gpt-5.6-luna` or any other text model implicitly; nothing
+model-related is required to start ([ADR 0011](../adr/0011-local-and-shared-installation.md)).
+
+- `RECOLLECT_TEXT_MODEL` is an optional explicit operator override. When unset
+  or blank the installation reports no text model (`installed.text_model` is
+  absent) and each Brain's administrator chooses one. The installer writes the
+  variable only when given `--text-model`.
+- A Brain without a saved policy starts disabled with no text model (an empty
+  `text_model`), or with the operator's explicit model when one is configured.
+  An empty text model is valid only for a disabled policy; saving an enabled
+  policy without one fails with `model_not_selected` ("Choose a text model for
+  this Brain"). The gateway returns the same code before it considers
+  credentials or any provider, so no content can be transmitted.
+- Choosing the first model is a change like any other: the ID must be a
+  supported catalogue entry and listed by a fresh successful account
+  observation. The unchanged-pair rule below applies only to a model a saved
+  policy already holds, and an operator-configured model is accepted as
+  installed only while it is configured; neither makes a model selectable that
+  the catalogue and the account list do not.
+- Saved policies, including saved `gpt-5.6-luna` policies, are never modified
+  by this change, and Luna remains a supported catalogue entry.
+- The managed preset ([managed experience](memory-managed-experience.md))
+  without a selected model enables capture and saves its limits but leaves
+  transmission off; choosing a model through the preset's `text_model` field
+  re-applies it with the same fresh list check and enables it.
+
 ## OpenRouter amendment — 2026-10-08
 
 The user authorizes OpenRouter as a selectable per-Brain provider and live public
@@ -100,8 +129,9 @@ text-embedding-3-large/small. Exclude deprecated, unknown, fine-tuned, audio,
 realtime and tool-specific entries. All offered text models support Responses,
 strict JSON output and the existing bounded extraction, synthesis, answering and
 reranking request formats. Luna uses reasoning effort none; GPT-4.1 omits reasoning.
-An unchanged historical installation pair remains valid without discovery; changing
-either model requires a fresh successful account observation of the chosen IDs.
+An unchanged historical pair already held by a saved policy remains valid without
+discovery; selecting or changing either model, including the first text model,
+requires a fresh successful account observation of the chosen IDs.
 No arbitrary endpoint, provider, fallback or customer-supplied model is accepted.
 
 Prices are USD per million standard input/output tokens, separate from cached,
@@ -146,7 +176,8 @@ the generation remains visibly blocked and causes no provider call. Coverage
 distinguishes indexing/blocked/failed/ready; lexical and exact access continue.
 Changing text model does not rebuild embeddings. Saving unrelated policy controls
 does not create a generation. New Brain creation keeps its existing atomic managed
-defaults; existing policies are never overwritten by migration or a UI preset.
+defaults, without a text model when the installation names none; existing policies
+are never overwritten by migration or a UI preset.
 Remove recommended-default controls from normal settings.
 
 ## Acceptance
@@ -155,9 +186,13 @@ Isolated HTTP/provider and disposable PostgreSQL fixtures prove catalogue bounds
 unknown/deprecated filtering, roles, refresh/cache failures, provenance, supported
 selection, stale revisions and unchanged historical defaults. Prove small/large
 dimensions, profile guards, atomic Save-and-rebuild/replay, old-output suppression,
-policy/erasure fences and lexical access during rebuilding. Browser tests prove
+policy/erasure fences and lexical access during rebuilding. Prove an installation without a text model: managed creation keeps capture on and
+transmission off, the gateway returns `model_not_selected`, a stale or unlisted
+choice is refused, choosing a model enables the preset and a saved policy is
+untouched. Browser tests prove
 inline edit/Cancel/Save, purpose dependencies, readers, real picker choices/prices,
-the changed-embedding cost message and removal of preset controls. No paid calls
+the changed-embedding cost message, the "Choose a model" state and removal of
+preset controls. No paid calls
 or customer corpus transmission are needed for this implementation proof.
 
 ## Explicit Deferrals

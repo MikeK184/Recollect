@@ -37,6 +37,7 @@ import { SemanticPanel } from "./SemanticPanel";
 import type { Brain } from "./api";
 import type { components } from "./api-schema";
 import { Failure, Pages, label, time } from "./ModelsShared";
+import { ChooseModelNotice, needsModel } from "./features/settings/ChooseModel";
 
 type Policy = components["schemas"]["ModelPolicy"];
 type Settings = components["schemas"]["ModelSettings"];
@@ -297,8 +298,11 @@ export function AiPermissionsCard({
         </span>
         <Switch
           label="Allow AI processing"
+          description={
+            needsModel(policy) ? "Choose a text model first." : undefined
+          }
           checked={policy.enabled}
-          disabled={!editable}
+          disabled={!editable || needsModel(policy)}
           onChange={(event) =>
             updateDraft({
               enabled: event.currentTarget.checked,
@@ -447,11 +451,12 @@ export function SelectedModelsCard({
       label: m.id,
       disabled: !m.selectable && m.id !== selected,
     }));
-    if (!options.some((m) => m.value === selected))
+    if (selected && !options.some((m) => m.value === selected))
       options.unshift({ value: selected, label: selected, disabled: false });
     return options;
   };
   const price = (id: string) => {
+    if (!id) return null;
     const entry = modelCatalogue?.models.find((m) => m.id === id);
     if (!entry)
       return <p className="management-muted ai-model-price">Price unknown</p>;
@@ -505,9 +510,18 @@ export function SelectedModelsCard({
           if (next && next.provider !== policy.provider) {
             updateDraft({
               provider: next.provider,
-              text_model: next.text_model,
+              text_model: next.text_model ?? "",
               embedding_model: next.embedding_model,
               embedding_dimensions: next.embedding_dimensions,
+              // Without an installation model the Brain must choose one
+              // before any processing can be allowed.
+              ...(!next.text_model
+                ? {
+                    enabled: false,
+                    automatic_learning: false,
+                    automatic_embedding: false,
+                  }
+                : {}),
             });
             refreshModels(next.provider);
           }
@@ -526,9 +540,20 @@ export function SelectedModelsCard({
           for this Contributor model.
         </Alert>
       )}
+      {needsModel(policy) &&
+        (editable ? (
+          <Alert color="yellow" mt="sm" title="Choose a model">
+            Choose a text model below, then allow AI processing.
+          </Alert>
+        ) : (
+          <div className="ai-choose-model">
+            <ChooseModelNotice brain={brain} />
+          </div>
+        ))}
       <Select
         label="Text model"
-        value={policy.text_model}
+        placeholder="Choose a model"
+        value={policy.text_model || null}
         data={modelChoices("text", policy.text_model)}
         disabled={!editable}
         allowDeselect={false}
@@ -703,7 +728,8 @@ export function DiagnosticsModal({
       <Stack>
         {installed && (
           <Text size="sm">
-            {policy?.text_model} · {policy?.embedding_model} ·{" "}
+            {policy?.text_model || "No text model selected"} ·{" "}
+            {policy?.embedding_model} ·{" "}
             {policy?.embedding_dimensions.toLocaleString()} dimensions
           </Text>
         )}

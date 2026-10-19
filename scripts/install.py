@@ -75,13 +75,23 @@ def settings(args):
             "bind": bind, "cert": cert, "key": key, "project": f"recollect-install-{args.name}"}
 
 
+def text_model(value):
+    """An explicit operator text model; the server accepts the same characters."""
+    if value is not None and not re.fullmatch(r"[A-Za-z0-9._-]{1,120}", value):
+        raise ValueError("Use a text model name of 1–120 letters, digits, dots, hyphens or underscores")
+    return value
+
+
 def initialize(args):
+    args.text_model = text_model(getattr(args, "text_model", None))
     path, desired = directory(args.name), settings(args)
     if path.exists():
         saved = load(args.name)
         if saved != desired:
             raise ValueError("This installation already has different settings; existing files were preserved")
         print(f"Preserved existing installation {args.name}. Configuration: {path}")
+        if args.text_model:
+            print("--text-model was not applied; edit RECOLLECT_TEXT_MODEL in its runtime.env to change it.")
         return
     path.mkdir(mode=0o700, parents=True, exist_ok=False)
     db, app, owner, graph = (secrets.token_urlsafe(32) for _ in range(4))
@@ -90,11 +100,14 @@ def initialize(args):
         "RECOLLECT_OWNER_USERNAME": "owner", "RECOLLECT_OWNER_PASSWORD": owner,
         "RECOLLECT_PUBLIC_ORIGIN": desired["origin"],
         "NEO4J_URL": "http://neo4j:7474", "NEO4J_USERNAME": "neo4j", "NEO4J_PASSWORD": graph,
-        "RECOLLECT_TEXT_MODEL": "gpt-5.6-luna",
         "RECOLLECT_EMBEDDING_MODEL": "text-embedding-3-large",
         "RECOLLECT_EMBEDDING_DIMENSIONS": "3072",
         "OPENAI_API_KEY": "",
     }
+    # There is no default text model: each Brain's administrator chooses one.
+    # An operator may name one explicitly for every Brain of this installation.
+    if args.text_model:
+        runtime["RECOLLECT_TEXT_MODEL"] = args.text_model
     private_write(path / "runtime.env", environment(runtime))
     private_write(path / "operator.env", environment({
         "DATABASE_ADMIN_URL": f"postgres://recollect_admin:{db}@postgres:5432/recollect"}))
@@ -284,6 +297,8 @@ def main():
     init.add_argument("--bind")
     init.add_argument("--cert")
     init.add_argument("--key")
+    init.add_argument("--text-model", help="Optional explicit text model for every Brain; "
+                      "without it each Brain's administrator chooses a model")
     for action in ("config", "build", "start", "stop", "diagnose"):
         command = commands.add_parser(action)
         command.add_argument("name")

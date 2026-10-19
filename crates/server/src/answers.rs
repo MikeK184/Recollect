@@ -507,6 +507,7 @@ pub async fn create(
                     "answer_cancelled" => "cancelled",
                     "answer_stale" | "model_policy_changed" | "content_unavailable" => "stale",
                     "model_policy_denied"
+                    | "model_not_selected"
                     | "model_credentials_missing"
                     | "model_configuration_changed" => "unavailable",
                     "provider_timeout" | "provider_transport" | "model_attempt_recorded" => {

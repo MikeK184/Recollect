@@ -17,6 +17,8 @@ pub struct LiteralAcceptance {
 pub struct ModelPolicy {
     pub enabled: bool,
     pub provider: String,
+    /// The Brain's selected text model. An empty value means none is selected,
+    /// which is valid only while `enabled` is false.
     pub text_model: String,
     pub embedding_model: String,
     pub embedding_dimensions: i32,
@@ -45,7 +47,10 @@ pub struct ModelPolicyVersion {
 pub struct InstalledModels {
     pub provider: String,
     pub endpoint: String,
-    pub text_model: String,
+    /// The operator's explicit text-model override; absent when the
+    /// installation supplies none and each Brain chooses its own.
+    #[serde(default)]
+    pub text_model: Option<String>,
     pub embedding_model: String,
     pub embedding_dimensions: i32,
     pub credentials_present: bool,
@@ -209,6 +214,27 @@ pub struct ModelDerivation {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn installed_models_read_a_receipt_with_or_without_a_text_model() {
+        let installed = |text_model: Option<&str>| {
+            let mut value = serde_json::json!({
+                "provider":"openai", "endpoint":"https://api.openai.com/v1",
+                "embedding_model":"text-embedding-3-large",
+                "embedding_dimensions":3072, "credentials_present":false
+            });
+            if let Some(model) = text_model {
+                value["text_model"] = model.into();
+            }
+            serde_json::from_value::<InstalledModels>(value).unwrap()
+        };
+        // Receipts saved before the model became optional name their model.
+        assert_eq!(
+            installed(Some("gpt-5.6-luna")).text_model.as_deref(),
+            Some("gpt-5.6-luna")
+        );
+        assert_eq!(installed(None).text_model, None);
+    }
 
     #[test]
     fn pre_provider_request_receipt_remains_openai_with_unknown_cost() {

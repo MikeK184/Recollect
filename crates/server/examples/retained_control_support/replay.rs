@@ -344,7 +344,9 @@ async fn route_inner(r: &Routing, bytes: &[u8]) -> Result<(StatusCode, Value)> {
         .as_mut()
         .context("No exact owned current control registered")?;
     ensure!(
-        body["model"] == r.config.models.text_model,
+        body["model"]
+            .as_str()
+            .is_some_and(|m| Some(m) == r.config.models.text_model.as_deref()),
         "Unexpected model"
     );
     if body["text"]["format"]["name"] == "source_reconciliation" {
@@ -508,7 +510,11 @@ async fn route_inner(r: &Routing, bytes: &[u8]) -> Result<(StatusCode, Value)> {
     guard::support_body(
         bytes,
         &h,
-        &r.config.models.text_model,
+        r.config
+            .models
+            .text_model
+            .as_deref()
+            .context("Set RECOLLECT_TEXT_MODEL to the frozen text model")?,
         instructions,
         &body["text"]["format"]["schema"],
     )?;
@@ -524,7 +530,14 @@ async fn route_inner(r: &Routing, bytes: &[u8]) -> Result<(StatusCode, Value)> {
     // Read-only freshness is repeated immediately before EVERY reservation/send.
     if let Mode::Paid { recipe, .. } = &r.mode {
         freshness(&r.root, &r.config, recipe)?;
-        common::validate_pricing(&recipe["pricing"], &r.config.models.text_model)?;
+        common::validate_pricing(
+            &recipe["pricing"],
+            r.config
+                .models
+                .text_model
+                .as_deref()
+                .context("Set RECOLLECT_TEXT_MODEL to the frozen text model")?,
+        )?;
     }
     r.ledger.lock().await.reserve(&a.case_id,op,bytes,&h,json!({"brain_id":a.brain,"run_id":a.run,"source_version_id":a.source,"semantic_sha256":hash(&semantics)?,"body_artifact":format!("{}-support-body.json",a.case_id)}))?;
     a.assessed = true;
@@ -628,7 +641,8 @@ async fn route_inner(r: &Routing, bytes: &[u8]) -> Result<(StatusCode, Value)> {
                                 &parsed,
                             )?;
                             let returned = parsed["model"].as_str();
-                            let expected = &r.config.models.text_model;
+                            let expected =
+                                r.config.models.text_model.as_deref().unwrap_or_default();
                             // Exact alias or declared dated API snapshot only;
                             // do not let an unrelated prefix/model pass.
                             let model_ok = returned.is_some_and(|m| {

@@ -149,7 +149,7 @@ fn migrations(root: &Path) -> Result<Value> {
 
 fn configuration(config: &Config) -> Result<Value> {
     ensure!(
-        config.models.text_model == "gpt-5.6-luna"
+        config.models.text_model.as_deref() == Some("gpt-5.6-luna")
             && config.models.endpoint == "https://api.openai.com/v1",
         "Exact installed provider/model/endpoint required; no substitution"
     );

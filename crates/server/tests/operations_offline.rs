@@ -59,7 +59,7 @@ async fn real_http_metrics_exclude_request_and_configuration_payloads() {
                 endpoint: "http://127.0.0.1:1".into(),
                 openrouter_key: None,
                 openrouter_endpoint: "http://127.0.0.1:1".into(),
-                text_model: "unused".into(),
+                text_model: Some("unused".into()),
                 embedding_model: "unused".into(),
                 embedding_dimensions: 1,
             },

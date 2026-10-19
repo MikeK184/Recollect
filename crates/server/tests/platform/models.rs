@@ -17,6 +17,8 @@ mod mapping_contract;
 mod mcp_memory;
 #[path = "model_preview.rs"]
 mod model_preview;
+#[path = "model_selection.rs"]
+mod model_selection;
 #[path = "openrouter.rs"]
 mod openrouter;
 #[path = "organization.rs"]
@@ -176,10 +178,10 @@ async fn wire(
     } else {
         assert!(matches!(
             body["model"].as_str(),
-            Some("gpt-5.6-luna" | "gpt-4.1-mini" | "gpt-4.1")
+            Some(crate::FIXTURE_TEXT_MODEL | "gpt-4.1-mini" | "gpt-4.1")
         ));
         assert_eq!(body["store"], false);
-        if body["model"] == "gpt-5.6-luna" {
+        if body["model"] == crate::FIXTURE_TEXT_MODEL {
             assert_eq!(body["reasoning"]["effort"], "none");
         } else {
             assert!(body.get("reasoning").is_none());
@@ -1178,7 +1180,7 @@ async fn learning_literal_acceptance_interpretation_conflict_rejection_and_repla
     assert_eq!(literal["revision"]["origin"], "model_extracted");
     assert_eq!(
         literal["revision"]["derivation"]["requested_model"],
-        "gpt-5.6-luna"
+        crate::FIXTURE_TEXT_MODEL
     );
     assert_eq!(literal["eligibility"]["strict_accepted"], true);
     assert_eq!(literal["eligibility"]["strict_operational"], false);

@@ -67,7 +67,14 @@ pub(crate) fn recipe(
     let schema = gateway::extraction_schema();
     let price_bytes = fs::read(root.join(PRICING))?;
     let pricing: Value = serde_json::from_slice(&price_bytes)?;
-    validate_pricing(&pricing, &config.models.text_model)?;
+    validate_pricing(
+        &pricing,
+        config
+            .models
+            .text_model
+            .as_deref()
+            .context("Set RECOLLECT_TEXT_MODEL to the frozen text model")?,
+    )?;
     let cost = worst_case(&pricing, schedule.len() as u64)?;
     let mut code = serde_json::Map::new();
     for path in [
@@ -90,7 +97,7 @@ pub(crate) fn recipe(
         migrations.insert((*name).into(), json!(sha256(sql.as_bytes())?));
     }
     let recipe = json!({"version":1,"kind":"production-extractor-only","provider":"openai",
-        "model":config.models.text_model,"endpoint":config.models.endpoint,
+        "model":config.models.text_model.as_deref(),"endpoint":config.models.endpoint,
         "prompt_label":inv.prompt_label,"schema_label":inv.schema_label,"adapter_revision":production::ADAPTER,
         "prompt_sha256":sha256(inv.instructions.as_bytes())?,"schema_sha256":sha256(&serde_json::to_vec(&schema)?)?,
         "corpora":corpora,"schedule_sha256":sha256(&serde_json::to_vec(&schedule)?)?,"code_sha256":code,"migration_sha256":migrations,

@@ -62,3 +62,13 @@ development volumes. Native development remains an alternate, exclusive runtime.
 Keep application state in a narrowly mounted runtime directory and pass only
 selected environment inputs. Preserve legacy account credentials when preparing
 that directory; do not expose installation/operator files to application roles.
+
+## No default text model — 2026-10-19
+
+An installation carries no text model unless its operator names one:
+`install.py init` writes `RECOLLECT_TEXT_MODEL` only when given `--text-model`,
+and the server reports no installed text model otherwise. Each Brain's
+administrator then chooses a model before any text is sent to a provider
+([contract](../contracts/brain-model-catalogue-and-selection.md)). This keeps the
+rule above that no model key or model choice is required to start, and changes no
+saved Brain policy.
