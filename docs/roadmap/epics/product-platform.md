@@ -1,6 +1,6 @@
 # Product Platform and Access
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -73,6 +73,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
 | `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 | `platform-local-credential-hardening` | shipped | adr-backed, contract-backed | archived | Invited local passwords stored only as Argon2id hashes (ADR 0024), legacy plaintext converted at startup or sign-in and the credential file read fail-closed (503); proven by 5 unit tests, a new platform test, a real `serve` startup run, and unchanged auth/team/MCP platform subsets (30 pass, the same 13 unrelated failures as before the change) |
+| `platform-brain-admission` | in-progress | contract-backed | pack | One typed Brain admission (transport, principal, visibility, role, archive fence, lock) in one round trip replacing five per-surface helpers and about 110 inline checks, with a golden status matrix and one deliberate unification of archived/forbidden outcomes |
 
 ## Completion Criteria
 
@@ -89,7 +90,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 
 ## Current status
 
-Accounts, Brain permissions, auditable durable commands, device identity and canonical Brain deletion are delivered. The original platform slices have no unfinished acceptance in this epic. New automatic mapping must extend existing isolation/deletion behavior under the graph organization pack.
+Accounts, Brain permissions, auditable durable commands, device identity and canonical Brain deletion are delivered. The original platform slices have no unfinished acceptance in this epic. New automatic mapping must extend existing isolation/deletion behavior under the graph organization pack. The `platform-brain-admission` refactor (2026-10-19) is in progress: part 1 adds one typed admission and moves the five per-surface helpers without behaviour change; part 2 migrates the inline sites and unifies archived/forbidden outcomes. It changes no role, grant or isolation rule.
 
 See the [current roadmap](index.md) for priorities and the
 [active packs](../execution/active/README.md) for exact remaining acceptance.
