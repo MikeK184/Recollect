@@ -1,7 +1,11 @@
 use crate::{
     AppState, artifacts,
     auth::Auth,
-    commands, db,
+    commands,
+    db::{
+        self,
+        admission::{self, BrainAccess},
+    },
     error::{Error, Result},
     jobs, worker, workspace,
 };
@@ -58,9 +62,11 @@ pub(crate) fn list_query(query: Option<&str>) -> Result<String> {
     Ok(value.to_owned())
 }
 async fn write_tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid) -> Result<Tx<'a>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
-    Ok(tx)
+    Ok(
+        admission::brain_tx(&state.pool, auth, brain, BrainAccess::WRITE)
+            .await?
+            .tx,
+    )
 }
 pub(crate) async fn operation(
     tx: &mut Tx<'_>,

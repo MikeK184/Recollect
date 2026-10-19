@@ -1,7 +1,11 @@
 use crate::{
     AppState, artifacts,
     auth::Auth,
-    commands, db,
+    commands,
+    db::{
+        self,
+        admission::{self, BrainAccess},
+    },
     error::{Error, Result},
     jobs,
 };
@@ -281,9 +285,11 @@ async fn write_tx<'a>(
     auth: &Auth,
     brain: Uuid,
 ) -> Result<Transaction<'a, Postgres>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
-    Ok(tx)
+    Ok(
+        admission::brain_tx(&state.pool, auth, brain, BrainAccess::WRITE)
+            .await?
+            .tx,
+    )
 }
 async fn groups_valid(
     tx: &mut Transaction<'_, Postgres>,

@@ -11,6 +11,7 @@ use crate::{
     AppState,
     auth::Auth,
     commands, db,
+    db::admission::{self, Admitted, Archived, BrainAccess, Lock, Transport},
     error::{Error, Result},
     workspace,
 };
@@ -70,33 +71,40 @@ fn mutation_error(error: sqlx::Error) -> Error {
         error.into()
     }
 }
+fn archived() -> Error {
+    conflict("Reopen this Brain before configuring or using execution profiles.")
+}
+/// Reads share the Brain lock and work on archived Brains. Writes are
+/// browser-only, take the exclusive lock and refuse archived Brains; callers
+/// check administrator or profile rights after admission.
+fn access(write: bool) -> BrainAccess {
+    if write {
+        BrainAccess::READ
+            .with_lock(Lock::Exclusive)
+            .with_transport(Transport::Browser)
+            .with_archived(Archived::Reject(archived))
+    } else {
+        BrainAccess::READ
+    }
+}
 async fn transaction<'a>(
     state: &'a AppState,
     auth: &Auth,
     brain: Uuid,
     write: bool,
 ) -> Result<Tx<'a>> {
-    if write {
-        auth.require_browser()?;
-    }
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, write).await?;
-    db::require_role(&mut tx, brain, false).await?;
-    if write {
-        require_open(&mut tx, brain).await?;
-    }
+    let Admitted { mut tx, .. } =
+        admission::brain_tx(&state.pool, auth, brain, access(write)).await?;
     definitions::lock(&mut tx).await?;
     Ok(tx)
 }
 async fn require_open(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
-    let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
+    let archived_brain: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
         .bind(brain)
         .fetch_one(&mut **tx)
         .await?;
-    if archived {
-        return Err(conflict(
-            "Reopen this Brain before configuring or using execution profiles.",
-        ));
+    if archived_brain {
+        return Err(archived());
     }
     Ok(())
 }
