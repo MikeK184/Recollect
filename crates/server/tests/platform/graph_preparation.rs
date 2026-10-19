@@ -724,6 +724,73 @@ async fn graph_preparation_10k_reads_during_capture_count_all_outcomes() {
 
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
+async fn graph_preparation_import_progress_does_not_take_the_brain_lock() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (brain, base, scope, _) = fixture(&h, &owner).await;
+    let generation = ok(
+        &h,
+        "POST",
+        &format!("{base}/graph/rebuild"),
+        &owner,
+        json!({"kind":"repository","snapshot_id":scope["snapshot_id"]}),
+    )
+    .await;
+    let id: Uuid = generation["id"].as_str().unwrap().parse().unwrap();
+    let job = worker::claim(&h.state.pool, "heavy")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(job.target_id, id);
+    let (state, gate, proxy_task) = gated_state(&h).await;
+    let observe = async {
+        tokio::time::timeout(Duration::from_secs(3), gate.entered.notified())
+            .await
+            .unwrap();
+        // A reader holds the shared Brain lock for the whole import. Progress
+        // is job metadata; an exclusive-lock update per batch would wait here.
+        let mut reader = db::actor_tx(&h.state.pool, job.actor_id)
+            .await
+            .ok()
+            .unwrap();
+        db::lock_brain(&mut reader, brain, false)
+            .await
+            .ok()
+            .unwrap();
+        gate.resume.notify_one();
+        let advanced = tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                let progress: i16 = sqlx::query_scalar("SELECT progress FROM jobs WHERE id=$1")
+                    .bind(job.id)
+                    .fetch_one(&h.admin)
+                    .await
+                    .unwrap();
+                if progress > 1 {
+                    break progress;
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        })
+        .await;
+        reader.rollback().await.unwrap();
+        advanced
+    };
+    let (execution, advanced) = tokio::join!(graph::execute(&state, &job), observe);
+    advanced.expect("Progress must not wait for the exclusive Brain lock");
+    execution.unwrap();
+    let ready: String = sqlx::query_scalar("SELECT state FROM graph_generations WHERE id=$1")
+        .bind(id)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    assert_eq!(ready, "ready");
+    proxy_task.abort();
+    cleanup(&h, brain).await;
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
 async fn graph_preparation_stale_import_requeues_without_waiting_for_lease_expiry() {
     let h = Harness::new().await;
     let owner = h.login().await;

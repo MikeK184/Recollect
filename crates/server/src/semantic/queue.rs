@@ -8,6 +8,7 @@ use axum::{
 use recollect_protocol::{
     ModelPolicyVersion, SemanticBatch, SemanticCounts, SemanticReindex, SemanticStatus,
 };
+use std::collections::{HashMap, HashSet};
 
 pub(super) const ENTRY_LIMIT: i64 = 50000;
 
@@ -284,7 +285,121 @@ pub(super) async fn enqueue(
     Ok(batch)
 }
 
+/// What a maintenance pass decided under its first lock: the policy and profile
+/// it planned against, the automatic retries and the pending entries to judge.
+struct Survey {
+    policy: ModelPolicyVersion,
+    profile: SemanticProfile,
+    retries: Vec<SemanticBatch>,
+    /// Entry id with the state and timestamp it was selected in.
+    pending: Vec<(Uuid, String, chrono::DateTime<chrono::Utc>)>,
+    batch_limit: usize,
+}
+
+/// Judgement of one pending entry's representation. Computing it reads the
+/// retained artifact and several rows, so it never runs under the Brain lock
+/// unless a canonical input changed after the lock-free preparation.
+enum Verdict {
+    Keep {
+        len: usize,
+        truncated: bool,
+    },
+    Reject {
+        code: &'static str,
+        disposition: &'static str,
+    },
+}
+
+struct Judged {
+    /// `None` skips a batch whose inputs are no longer retryable.
+    retries: Vec<Option<Vec<Uuid>>>,
+    verdicts: HashMap<Uuid, Verdict>,
+}
+
+struct Prepared {
+    epoch: i64,
+    judged: Judged,
+}
+
+async fn judge(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    p: &ModelPolicyVersion,
+    id: Uuid,
+) -> Verdict {
+    let limit = p.policy.max_input_bytes.min(8000) as usize;
+    match representation(state, tx, brain, id).await {
+        Ok(input)
+            if input.text.len() <= limit
+                && model_policy::permits(
+                    state,
+                    &p.policy,
+                    "embedding",
+                    std::slice::from_ref(&input.class),
+                )
+                .is_ok() =>
+        {
+            Verdict::Keep {
+                len: input.text.len(),
+                truncated: input.truncated,
+            }
+        }
+        result => {
+            let code = match result {
+                Err(e) => e.1,
+                Ok(input) if input.text.len() > limit => "semantic_input_too_large",
+                _ => "model_policy_denied",
+            };
+            let disposition = if matches!(code, "content_removed" | "model_input_fenced") {
+                "removed"
+            } else {
+                "blocked"
+            };
+            Verdict::Reject { code, disposition }
+        }
+    }
+}
+
+async fn judge_all(
+    state: &AppState,
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    survey: &Survey,
+    pending: &[Uuid],
+) -> Result<Judged> {
+    let mut retries = Vec::new();
+    for old in &survey.retries {
+        retries.push(
+            match retry_inputs(state, tx, brain, old, &survey.policy).await {
+                Ok(entries) => Some(entries),
+                Err(error) if error.1 != "database_unavailable" => None,
+                Err(error) => return Err(error),
+            },
+        );
+    }
+    let mut verdicts = HashMap::new();
+    for id in pending {
+        verdicts.insert(*id, judge(state, tx, brain, &survey.policy, *id).await);
+    }
+    Ok(Judged { retries, verdicts })
+}
+
 pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
+    let Some(survey) = survey(state, brain, actor).await? else {
+        return Ok(0);
+    };
+    if survey.retries.is_empty() && survey.pending.is_empty() {
+        return Ok(0);
+    }
+    // A failed preparation only costs the fast path: publication judges the
+    // inputs again under the lock and reports the same error.
+    let prepared = prepare(state, brain, actor, &survey).await.ok();
+    publish(state, brain, actor, survey, prepared).await
+}
+
+/// Short exclusive-lock pass: housekeeping, discovery and the choice of work.
+async fn survey(state: &AppState, brain: Uuid, actor: Uuid) -> Result<Option<Survey>> {
     let mut tx = db::actor_tx(&state.pool, actor).await?;
     db::lock_brain(&mut tx, brain, true).await?;
     db::require_writer(&mut tx, brain).await?;
@@ -295,13 +410,13 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
         || model_policy::permits(state, &p.policy, "embedding", &[]).is_err()
     {
         tx.commit().await?;
-        return Ok(0);
+        return Ok(None);
     }
     let profile = match profile(&mut tx, brain).await? {
         Some(profile) if compatible(&p.policy, &profile) => profile,
         Some(_) => {
             tx.commit().await?;
-            return Ok(0);
+            return Ok(None);
         }
         None => create_profile(state, &mut tx, brain, actor, &p).await?,
     };
@@ -323,77 +438,6 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
             .bind((input.kind=="source_chunk").then_some(input.input_id)).bind(input.source_version_id)
             .bind(input.claim_revision_id).bind(input.fact_id).bind(input.manifest_revision_id).execute(&mut *tx).await?;
     }
-    let pending_jobs: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM jobs WHERE brain_id=$1 AND state IN ('queued','running')",
-    )
-    .bind(brain)
-    .fetch_one(&mut *tx)
-    .await?;
-    let batch_limit = (500 - pending_jobs).clamp(0, 10) as usize;
-    let retried = retry_automatic(state, &mut tx, brain, actor, &profile, &p, batch_limit).await?;
-    let batch_limit = batch_limit - retried;
-    let pending: Vec<Uuid> = if batch_limit == 0 {
-        vec![]
-    } else {
-        sqlx::query_scalar("SELECT e.id FROM semantic_entries e WHERE brain_id=$1 AND profile_id=$2 AND (state='pending' OR (state='blocked' AND request_id IS NULL AND error_code<>'batch_input_removed' AND updated_at<clock_timestamp()-interval '1 minute' AND (batch_id IS NULL OR EXISTS(SELECT 1 FROM semantic_batches b WHERE b.id=e.batch_id AND b.state='blocked' AND b.request_id IS NULL AND (e.error_code<>'model_budget_exhausted' OR b.policy_id<>$3 OR e.updated_at<(date_trunc('day',clock_timestamp() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')))))) ORDER BY updated_at,id LIMIT 100")
-            .bind(brain).bind(profile.id).bind(p.change_id).fetch_all(&mut *tx).await?
-    };
-    let mut batch = Vec::new();
-    let mut bytes = 0;
-    let mut queued = 0;
-    let limit = p.policy.max_input_bytes.min(8000) as usize;
-    for id in pending {
-        let input = representation(state, &mut tx, brain, id).await;
-        let input = match input {
-            Ok(input)
-                if input.text.len() <= limit
-                    && model_policy::permits(
-                        state,
-                        &p.policy,
-                        "embedding",
-                        std::slice::from_ref(&input.class),
-                    )
-                    .is_ok() =>
-            {
-                input
-            }
-            result => {
-                let code = match result {
-                    Err(e) => e.1,
-                    Ok(input) if input.text.len() > limit => "semantic_input_too_large",
-                    _ => "model_policy_denied",
-                };
-                let disposition = if matches!(code, "content_removed" | "model_input_fenced") {
-                    "removed"
-                } else {
-                    "blocked"
-                };
-                sqlx::query("UPDATE semantic_entries SET state=$3,embedding=NULL,error_code=$2,updated_at=clock_timestamp() WHERE id=$1")
-                    .bind(id).bind(code).bind(disposition).execute(&mut *tx).await?;
-                continue;
-            }
-        };
-        if !batch.is_empty() && (batch.len() == 20 || bytes + input.text.len() > limit) {
-            enqueue(&mut tx, brain, actor, profile.id, &p, &batch, None).await?;
-            queued += 1;
-            batch.clear();
-            bytes = 0;
-            if queued >= batch_limit {
-                break;
-            }
-        }
-        sqlx::query("UPDATE semantic_entries SET truncated=$2 WHERE id=$1")
-            .bind(id)
-            .bind(input.truncated)
-            .execute(&mut *tx)
-            .await?;
-        bytes += input.text.len();
-        batch.push(id);
-    }
-    if !batch.is_empty() && queued < batch_limit {
-        enqueue(&mut tx, brain, actor, profile.id, &p, &batch, None).await?;
-        queued += 1;
-    }
     if !inputs.is_empty() {
         db::audit(
             &mut tx,
@@ -404,6 +448,155 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
             "pending",
         )
         .await?;
+    }
+    let pending_jobs: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM jobs WHERE brain_id=$1 AND state IN ('queued','running')",
+    )
+    .bind(brain)
+    .fetch_one(&mut *tx)
+    .await?;
+    let batch_limit = (500 - pending_jobs).clamp(0, 10) as usize;
+    let retries = retry_batches(&mut tx, brain, &profile, &p, batch_limit).await?;
+    let pending = if batch_limit == 0 {
+        vec![]
+    } else {
+        sqlx::query_as("SELECT e.id,e.state,e.updated_at FROM semantic_entries e WHERE brain_id=$1 AND profile_id=$2 AND (state='pending' OR (state='blocked' AND request_id IS NULL AND error_code<>'batch_input_removed' AND updated_at<clock_timestamp()-interval '1 minute' AND (batch_id IS NULL OR EXISTS(SELECT 1 FROM semantic_batches b WHERE b.id=e.batch_id AND b.state='blocked' AND b.request_id IS NULL AND (e.error_code<>'model_budget_exhausted' OR b.policy_id<>$3 OR e.updated_at<(date_trunc('day',clock_timestamp() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')))))) ORDER BY updated_at,id LIMIT 100")
+            .bind(brain).bind(profile.id).bind(p.change_id).fetch_all(&mut *tx).await?
+    };
+    tx.commit().await?;
+    Ok(Some(Survey {
+        policy: p,
+        profile,
+        retries,
+        pending,
+        batch_limit,
+    }))
+}
+
+/// Judge the surveyed work in a repeatable-read, read-only transaction that
+/// takes no Brain lock. The epoch read in the same snapshot lets `publish` prove
+/// no canonical input changed before it trusts the result.
+async fn prepare(state: &AppState, brain: Uuid, actor: Uuid, survey: &Survey) -> Result<Prepared> {
+    let mut tx = db::preparation_tx(&state.pool, actor, None).await?;
+    db::require_role(&mut tx, brain, false).await?;
+    let epoch = crate::graph::preparation_epoch(&mut tx, brain).await?;
+    let ids: Vec<Uuid> = survey.pending.iter().map(|e| e.0).collect();
+    let judged = judge_all(state, &mut tx, brain, survey, &ids).await?;
+    Ok(Prepared { epoch, judged })
+}
+
+/// Short exclusive-lock pass: re-check what the survey and preparation assumed,
+/// then enqueue batches and record the rejected entries.
+async fn publish(
+    state: &AppState,
+    brain: Uuid,
+    actor: Uuid,
+    survey: Survey,
+    prepared: Option<Prepared>,
+) -> Result<usize> {
+    let mut tx = db::actor_tx(&state.pool, actor).await?;
+    db::lock_brain(&mut tx, brain, true).await?;
+    db::require_writer(&mut tx, brain).await?;
+    let (p, profile) = (&survey.policy, &survey.profile);
+    // A changed policy or profile head replans on the next pass.
+    if model_policy::current(state, &mut tx, brain)
+        .await?
+        .change_id
+        != p.change_id
+        || self::profile(&mut tx, brain).await?.map(|h| h.id) != Some(profile.id)
+    {
+        tx.commit().await?;
+        return Ok(0);
+    }
+    // Entries another worker or a rebuild touched since the survey are skipped.
+    let ids: Vec<Uuid> = survey.pending.iter().map(|e| e.0).collect();
+    let current: Vec<(Uuid, String, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
+        "SELECT id,state,updated_at FROM semantic_entries WHERE brain_id=$1 AND id=ANY($2)",
+    )
+    .bind(brain)
+    .bind(&ids)
+    .fetch_all(&mut *tx)
+    .await?;
+    let unchanged: HashSet<Uuid> = survey
+        .pending
+        .iter()
+        .filter(|surveyed| current.iter().any(|c| c == *surveyed))
+        .map(|e| e.0)
+        .collect();
+    let pending: Vec<Uuid> = ids
+        .into_iter()
+        .filter(|id| unchanged.contains(id))
+        .collect();
+    let judged = match prepared {
+        Some(prepared)
+            if crate::graph::preparation_epoch(&mut tx, brain).await? == prepared.epoch =>
+        {
+            prepared.judged
+        }
+        // Something canonical changed since the snapshot (or preparation
+        // failed). Judging again under the lock keeps a busy Brain from starving.
+        _ => judge_all(state, &mut tx, brain, &survey, &pending).await?,
+    };
+    let mut retried = 0;
+    for (old, entries) in survey.retries.iter().zip(judged.retries) {
+        let Some(entries) = entries else { continue };
+        let open: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM semantic_batches b WHERE b.brain_id=$1 AND b.id=$2 AND b.state='failed' AND NOT EXISTS(SELECT 1 FROM semantic_batches c WHERE c.retry_of=b.id))")
+            .bind(brain).bind(old.id).fetch_one(&mut *tx).await?;
+        if !open || retry_candidates(&mut tx, brain, old.id).await? != entries {
+            continue;
+        }
+        enqueue(
+            &mut tx,
+            brain,
+            actor,
+            profile.id,
+            p,
+            &entries,
+            Some((old.id, old.automatic_attempt + 1)),
+        )
+        .await?;
+        retried += 1;
+    }
+    let batch_limit = survey.batch_limit - retried;
+    let mut batch = Vec::new();
+    let mut bytes = 0;
+    let mut queued = 0;
+    let limit = p.policy.max_input_bytes.min(8000) as usize;
+    for id in pending {
+        if batch_limit == 0 {
+            break;
+        }
+        let Some(verdict) = judged.verdicts.get(&id) else {
+            continue;
+        };
+        let (len, truncated) = match verdict {
+            Verdict::Keep { len, truncated } => (*len, *truncated),
+            Verdict::Reject { code, disposition } => {
+                sqlx::query("UPDATE semantic_entries SET state=$3,embedding=NULL,error_code=$2,updated_at=clock_timestamp() WHERE id=$1")
+                    .bind(id).bind(*code).bind(*disposition).execute(&mut *tx).await?;
+                continue;
+            }
+        };
+        if !batch.is_empty() && (batch.len() == 20 || bytes + len > limit) {
+            enqueue(&mut tx, brain, actor, profile.id, p, &batch, None).await?;
+            queued += 1;
+            batch.clear();
+            bytes = 0;
+            if queued >= batch_limit {
+                break;
+            }
+        }
+        sqlx::query("UPDATE semantic_entries SET truncated=$2 WHERE id=$1")
+            .bind(id)
+            .bind(truncated)
+            .execute(&mut *tx)
+            .await?;
+        bytes += len;
+        batch.push(id);
+    }
+    if !batch.is_empty() && queued < batch_limit {
+        enqueue(&mut tx, brain, actor, profile.id, p, &batch, None).await?;
+        queued += 1;
     }
     tx.commit().await?;
     Ok(queued + retried)
@@ -419,6 +612,11 @@ async fn cleanup(tx: &mut Tx<'_>, brain: Uuid) -> Result<()> {
     Ok(())
 }
 
+async fn retry_candidates(tx: &mut Tx<'_>, brain: Uuid, batch: Uuid) -> Result<Vec<Uuid>> {
+    Ok(sqlx::query_scalar("SELECT e.id FROM semantic_batch_inputs i JOIN semantic_entries e ON e.id=i.entry_id AND e.brain_id=i.brain_id WHERE i.brain_id=$1 AND i.batch_id=$2 AND e.batch_id=i.batch_id AND e.state IN ('blocked','failed') ORDER BY i.ordinal")
+        .bind(brain).bind(batch).fetch_all(&mut **tx).await?)
+}
+
 async fn retry_inputs(
     state: &AppState,
     tx: &mut Tx<'_>,
@@ -426,8 +624,7 @@ async fn retry_inputs(
     old: &SemanticBatch,
     p: &ModelPolicyVersion,
 ) -> Result<Vec<Uuid>> {
-    let ids: Vec<Uuid> = sqlx::query_scalar("SELECT e.id FROM semantic_batch_inputs i JOIN semantic_entries e ON e.id=i.entry_id AND e.brain_id=i.brain_id WHERE i.brain_id=$1 AND i.batch_id=$2 AND e.batch_id=i.batch_id AND e.state IN ('blocked','failed') ORDER BY i.ordinal")
-        .bind(brain).bind(old.id).fetch_all(&mut **tx).await?;
+    let ids = retry_candidates(tx, brain, old.id).await?;
     let mut valid = Vec::new();
     let mut bytes = 0;
     for id in ids {
@@ -512,15 +709,13 @@ pub async fn retry(
     Ok(ResponseJson(result))
 }
 
-async fn retry_automatic(
-    state: &AppState,
+async fn retry_batches(
     tx: &mut Tx<'_>,
     brain: Uuid,
-    actor: Uuid,
     profile: &SemanticProfile,
     p: &ModelPolicyVersion,
     limit: usize,
-) -> Result<usize> {
+) -> Result<Vec<SemanticBatch>> {
     let batches: Vec<Json<SemanticBatch>> = sqlx::query_scalar("SELECT to_jsonb(b) FROM semantic_batches b JOIN model_requests r ON r.brain_id=b.brain_id AND r.id=b.request_id
         WHERE b.brain_id=$1 AND b.profile_id=$2 AND b.policy_id=$3 AND b.state='failed' AND r.state='failed' AND NOT r.suppressed
         AND b.error_code IN ('provider_rate_limited','provider_unavailable') AND b.automatic_attempt<2
@@ -528,26 +723,7 @@ async fn retry_automatic(
         AND NOT EXISTS(SELECT 1 FROM semantic_batches c WHERE c.retry_of=b.id)
         ORDER BY b.finished_at,b.id LIMIT $4")
         .bind(brain).bind(profile.id).bind(p.change_id).bind(limit as i64).fetch_all(&mut **tx).await?;
-    let mut queued = 0;
-    for Json(old) in batches {
-        let entries = match retry_inputs(state, tx, brain, &old, p).await {
-            Ok(entries) => entries,
-            Err(error) if error.1 != "database_unavailable" => continue,
-            Err(error) => return Err(error),
-        };
-        enqueue(
-            tx,
-            brain,
-            actor,
-            profile.id,
-            p,
-            &entries,
-            Some((old.id, old.automatic_attempt + 1)),
-        )
-        .await?;
-        queued += 1;
-    }
-    Ok(queued)
+    Ok(batches.into_iter().map(|Json(b)| b).collect())
 }
 
 pub async fn run_once(state: &AppState) -> Result<usize> {

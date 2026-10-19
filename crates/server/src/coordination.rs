@@ -19,6 +19,7 @@ use recollect_protocol::*;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{Postgres, Transaction, types::Json as DbJson};
+use std::collections::HashMap;
 pub use stream::events;
 use uuid::Uuid;
 type Tx<'a> = Transaction<'a, Postgres>;
@@ -182,6 +183,8 @@ fn overlap(id: Uuid, a: &SessionRow, b: &SessionRow, r: &matching::Reason) -> Co
         peer_revision: b.revision,
     }
 }
+/// `left_id`, `right_id`, `reason_key`, then the overlap `id`, `signature` and `active`.
+type KnownOverlap = (Uuid, Uuid, String, Uuid, DbJson<Value>, bool);
 async fn matches(
     tx: &mut Tx<'_>,
     brain: Uuid,
@@ -189,6 +192,14 @@ async fn matches(
     notify: bool,
 ) -> Result<Vec<CoordinationOverlap>> {
     let peers = active(tx, brain).await?;
+    // One read of this session's known overlaps replaces a SELECT per peer and
+    // reason. Reasons are unique per peer, and each key is written only after
+    // it is read, so the snapshot stays exact for the loop.
+    let known: Vec<KnownOverlap> = sqlx::query_as("SELECT left_id,right_id,reason_key,id,signature,active FROM coordination_overlaps WHERE brain_id=$1 AND (left_id=$2 OR right_id=$2)").bind(brain).bind(own.id).fetch_all(&mut **tx).await?;
+    let mut known: HashMap<_, _> = known
+        .into_iter()
+        .map(|(l, r, k, id, sig, active)| ((l, r, k), (id, sig, active)))
+        .collect();
     let mut result = Vec::new();
     let mut kept = Vec::new();
     for peer in peers {
@@ -203,7 +214,7 @@ async fn matches(
             } else {
                 (&peer, own)
             };
-            let previous:Option<(Uuid,DbJson<Value>,bool)>=sqlx::query_as("SELECT id,signature,active FROM coordination_overlaps WHERE left_id=$1 AND right_id=$2 AND reason_key=$3").bind(left.id).bind(right.id).bind(&reason.key).fetch_optional(&mut **tx).await?;
+            let previous = known.remove(&(left.id, right.id, reason.key.clone()));
             let relevant = |session: &SessionRow| {
                 session
                     .projection
@@ -446,7 +457,10 @@ pub async fn heartbeat(
     Path((brain, id)): Path<(Uuid, Uuid)>,
     Json(input): Json<CoordinationHeartbeat>,
 ) -> Result<Json<CoordinationSession>> {
-    let mut tx = tx(&state, &auth, brain, true).await?;
+    // A one-row lease refresh. announce and close hold the exclusive Brain lock
+    // and are the only writers of the revision and closed state it checks, so the
+    // shared lock is enough; concurrent heartbeats serialize on the session row.
+    let mut tx = tx(&state, &auth, brain, false).await?;
     let own = owned(&mut tx, &auth, brain, id, true).await?;
     if own.revision != input.expected_revision {
         return Err(conflict());
@@ -527,7 +541,9 @@ pub async fn inbox(
     Path((brain, id)): Path<(Uuid, Uuid)>,
     Query(query): Query<InboxQuery>,
 ) -> Result<Json<CoordinationInbox>> {
-    Ok(Json(read_inbox(&state, &auth, brain, id, query).await?))
+    Ok(Json(
+        read_inbox(&state, &auth, brain, id, query, false).await?,
+    ))
 }
 async fn read_inbox(
     state: &AppState,
@@ -535,6 +551,7 @@ async fn read_inbox(
     brain: Uuid,
     id: Uuid,
     query: InboxQuery,
+    live: bool,
 ) -> Result<CoordinationInbox> {
     let after = query.after.unwrap_or(0);
     let limit = query.limit.unwrap_or(50);
@@ -544,7 +561,7 @@ async fn read_inbox(
         ));
     }
     let mut tx = tx(state, auth, brain, false).await?;
-    let own = owned(&mut tx, auth, brain, id, false).await?;
+    let own = owned(&mut tx, auth, brain, id, live).await?;
     if after > own.next_sequence {
         return Err(Error::invalid("Cursor is ahead of this inbox."));
     }
