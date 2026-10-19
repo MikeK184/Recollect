@@ -785,7 +785,9 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
         &h,
         &base,
         &owner,
-        json!({"query":"EVIDENCE_LIMIT","context_bytes":4096}),
+        // A whole source chunk is up to 4,096 bytes (2026-10-08 amendment), so a
+        // chunk plus its attribution cannot fit a 4 KiB budget; 8 KiB can.
+        json!({"query":"EVIDENCE_LIMIT","context_bytes":8192}),
     )
     .await;
     assert!(has(&bounded, &large["version"]["id"]), "{bounded}");
@@ -796,13 +798,13 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
             .contains("candidate_limit")
     );
     assert!(bounded["coverage"]["examined"].as_u64().unwrap() <= 100);
-    assert!(bounded["context_bytes"].as_u64().unwrap() <= 4096);
+    assert!(bounded["context_bytes"].as_u64().unwrap() <= 8192);
     assert!(
         bounded["context"]["items"][0]["text"]
             .as_str()
             .unwrap()
             .len()
-            <= 2048
+            <= 4096
     );
     eprintln!(
         "Recall corpus: 3/3 initial positive controls; bounded UTF-8 recall {} ms, {} context bytes, {} candidates.",
@@ -841,7 +843,10 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
             "ELIGIBILITY_CROWD",
             &format!("Unreviewed candidate {n}"),
         );
-        ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+        let crowd = ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+        // Supported but unreviewed: ineligible for strict recall, yet eligible to
+        // reach the canonical gates, which is what must not crowd out the control.
+        super::review::supported(&h, &base, &owner, &crowd).await;
     }
     let eligibility_control = recall(
         &h,
