@@ -8,11 +8,19 @@ from an off-machine production backup or a universal capacity claim.
 ## Prepare explicit recovery inputs
 
 Install the repository-local age CLI with `python3 scripts/setup-recovery-tools.py`.
-Its output identifies the platform-specific directory containing `age` and
-`age-keygen`. Generate a private recovery identity with that `age-keygen -o FILE`;
-keep an independent recoverable copy. Obtain its public recipient with
-`age-keygen -y FILE`. The application needs the public recipient, not that private
-decryption identity. Existing OpenSSH `sftp` and Docker/Compose are also required.
+It downloads the pinned release tarball from GitHub and checks its SHA-256 against
+the script's `SHA256` table; a mismatch stops with `ChecksumError` before anything
+is extracted or run. Its output identifies the platform-specific directory
+containing `age` and `age-keygen`. Generate a private recovery identity with that
+`age-keygen -o FILE`; keep an independent recoverable copy. Obtain its public
+recipient with `age-keygen -y FILE`. The application needs the public recipient,
+not that private decryption identity. Existing OpenSSH `sftp` and Docker/Compose
+are also required.
+
+Maintainers changing the age version verify the release's `.proof` once with
+sigsum-verify (age's `SIGSUM.md`), then update the script's `SHA256` table,
+`scripts/update-local.py`, the `age_binary` path below and the other places listed
+under [supply-chain pins](development-tooling.md#supply-chain-pins) together.
 
 Create a private, ignored JSON input file using absolute paths:
 

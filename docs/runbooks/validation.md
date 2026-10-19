@@ -9,7 +9,8 @@ path, or run this from the repository root:
 ./scripts/validate.sh
 ```
 
-The default run checks document shape only: governed files, links and metadata.
+The default run checks document shape (governed files, links and metadata) and the
+offline supply-chain pins described in [development tooling](development-tooling.md#supply-chain-pins).
 It does not compile or test any Rust or web code, so a passing run says nothing
 about whether the application builds. It uses only the Python standard library,
 runs checker tests in disposable temporary directories, and does not install
@@ -37,6 +38,10 @@ dependencies. It runs no integration, platform or browser tests.
 - Presence of the Codex configuration and role files; their contents and the
   MCP stanzas are not compared (see the development tooling runbook).
 - Parent-repo ignore rule for the separate Cognee checkout.
+- `scripts/check-pins.py`: every Dockerfile `FROM`, Compose `image:` and known
+  third-party script image is `name:tag@sha256:<digest>` and every GitHub Actions
+  `uses:` is a 40-hex commit SHA, plus `test_check_pins.py` and
+  `test_download_pins.py` (synthetic archives; no network).
 
 The checker accepts the documented simple Markdown tables and inline links.
 Use one row per record without pipe characters inside table cells. Metadata

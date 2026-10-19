@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Default run checks document shape and the baseline fixture only; it neither
-# compiles nor tests code. Pass --code to also run Rust library tests and the web typecheck.
+# Default run checks document shape, the baseline fixture and the offline supply-chain
+# pins (image digests, tool hashes, action SHAs); it neither compiles nor tests product
+# code. Pass --code to also run Rust library tests and the web typecheck.
 set -euo pipefail
 
 run_code=0
@@ -16,6 +17,9 @@ RECOLLECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 python3 -B -m unittest discover -s "$RECOLLECT_ROOT/docs/tools/tests" -p 'test_*.py' -v
 python3 -B "$RECOLLECT_ROOT/scripts/memory_support_baseline.py" check
 python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_memory_support_baseline.py' -v
+python3 -B "$RECOLLECT_ROOT/scripts/check-pins.py"
+python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_check_pins.py' -v
+python3 -B -m unittest discover -s "$RECOLLECT_ROOT/scripts/tests" -p 'test_download_pins.py' -v
 
 if [[ "$run_code" -eq 1 ]]; then
   (cd "$RECOLLECT_ROOT" && cargo test --workspace --lib)

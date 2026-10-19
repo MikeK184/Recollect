@@ -25,10 +25,21 @@ export npm_config_userconfig=/dev/null
 mkdir -p "$TMPDIR" "$CARGO_HOME" "$RECOLLECT_RUST_TOOLS/installed/bin"
 cd "$RECOLLECT_ROOT"
 
+# SHA-256 of rust-analyzer-aarch64-apple-darwin.gz in release 2026-10-05; it equals the
+# digest GitHub reports for that release asset. When bumping the release, update the URL
+# below and this value together.
+RECOLLECT_RUST_ANALYZER_SHA256=64d3f6b8aacd94a93a03298d7988dfa0c747f8a4fcc539a4e59d9c9f920ca62f
 if [[ ! -x "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer" ]]; then
   curl --fail --location --retry 2 \
     'https://github.com/rust-lang/rust-analyzer/releases/download/2026-10-05/rust-analyzer-aarch64-apple-darwin.gz' \
     --output "$RECOLLECT_RUST_CACHE/rust-analyzer.gz"
+  # Nothing is decompressed or executed unless the download matches the pinned hash.
+  RECOLLECT_OBSERVED_SHA256="$(shasum -a 256 "$RECOLLECT_RUST_CACHE/rust-analyzer.gz" | awk '{print $1}')"
+  if [[ "$RECOLLECT_OBSERVED_SHA256" != "$RECOLLECT_RUST_ANALYZER_SHA256" ]]; then
+    rm -f "$RECOLLECT_RUST_CACHE/rust-analyzer.gz"
+    printf '%s\n' 'rust-analyzer download does not match its pinned SHA-256; nothing was extracted.' >&2
+    exit 1
+  fi
   gzip -dc "$RECOLLECT_RUST_CACHE/rust-analyzer.gz" > "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer.pending"
   chmod 700 "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer.pending"
   "$RECOLLECT_RUST_TOOLS/installed/bin/rust-analyzer.pending" --version

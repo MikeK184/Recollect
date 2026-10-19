@@ -54,7 +54,7 @@ request("sys/mounts/fixture-db", {"type": "database"})
 database_password = secrets.token_urlsafe(36)
 docker = str(repo / "scripts/docker.sh")
 result = subprocess.run([docker, "run", "-d", "--name", "recollect-vault-db-" + uuid.uuid4().hex[:8],
-    "--label", "io.recollect.owner=" + root.name, "--memory=256m", "-p", "127.0.0.1::5432", "-e", "POSTGRES_PASSWORD", "pgvector/pgvector:pg17"],
+    "--label", "io.recollect.owner=" + root.name, "--memory=256m", "-p", "127.0.0.1::5432", "-e", "POSTGRES_PASSWORD", "pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d"],
     env=dict(os.environ, POSTGRES_PASSWORD=database_password), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
 assert result.returncode == 0, "Owned database start failed; diagnostics suppressed"
 container = result.stdout.decode().strip()

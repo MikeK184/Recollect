@@ -125,7 +125,7 @@ class Fixture:
                "--label", "io.recollect.owner=" + OWNER, "--env-file", str(envfile),
                "-p", "127.0.0.1::5432", "-v",
                str(ROOT / "infra/postgres-init.sh") + ":/docker-entrypoint-initdb.d/recollect.sh:ro",
-               "pgvector/pgvector:pg17")
+               "pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d")
         port = docker("port", self.state["database"], "5432/tcp").split(":")[-1]
         eventually(lambda: "accepting connections" in docker("exec", self.state["database"],
                     "pg_isready", "-U", "recollect_admin", "-d", "recollect"), "fixture database")
@@ -138,7 +138,7 @@ class Fixture:
                "-e", "NEO4J_dbms_security_procedures_unrestricted=gds.*",
                "-e", "NEO4J_server_memory_heap_initial__size=256m",
                "-e", "NEO4J_server_memory_heap_max__size=512m",
-               "-e", "NEO4J_server_memory_pagecache_size=256m", "neo4j:2026.08")
+               "-e", "NEO4J_server_memory_pagecache_size=256m", "neo4j:2026.08@sha256:d8f4c156caa3af76499134947deb11d13042e471d9733060449f2a01eb7a248e")
         graph_port = docker("port", self.state["graph"], "7474/tcp").split(":")[-1]
         graph_origin = "http://127.0.0.1:" + graph_port
         eventually(lambda: Api(graph_origin).call("GET", "/"), "owned graph readiness", seconds=180)

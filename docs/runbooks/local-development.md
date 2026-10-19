@@ -8,7 +8,10 @@ Run the locally delivered Recollect platform with Rust/Cargo, Node/npm, Python 3
 and Docker Compose. Verified with Rust 1.94, Node 26 and Docker 29 on macOS ARM.
 The [runtime ADR](../adr/0003-product-runtime.md) records the user's speed-first
 development posture. Local credentials are environment-backed; no password hashes,
-artifact digests or strict release/version gates are introduced.
+artifact digests or strict release/version gates are introduced. Developer
+[supply-chain pins](development-tooling.md#supply-chain-pins) (container image
+digests, downloaded-tool SHA-256 values and Actions commit SHAs) pin what the
+repository pulls in and add no product hash, handshake or release gate.
 
 ## Procedure
 
@@ -64,7 +67,8 @@ registration and task/subagent scope without uploading ordinary source files.
 The [publication workflow](repository-publication.md) adds isolated committed
 extraction, shared snapshots and environment revision histories. The packaged
 plugin includes Enola; source-checkout developers install the adapter with
-`python3 scripts/setup-enola.py` before publishing.
+`python3 scripts/setup-enola.py` (pinned SHA-256, checked before extraction) before
+publishing.
 An optional [OpenAI connection probe](provider-preflight.md) uses the user's
 environment key with fixed synthetic text. The delivered [Brain model policy and
 autonomous maintenance](provider-learning.md) use the selected text/embedding
