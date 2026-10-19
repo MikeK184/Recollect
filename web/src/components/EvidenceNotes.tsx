@@ -41,6 +41,10 @@ const reasons: Record<string, string> = {
     "Some evidence has not been indexed for meaning search yet.",
   semantic_representation_truncated:
     "Some indexed inputs were shortened; their original sources remain linked.",
+  semantic_shortlist_approximate:
+    "This selection is large, so meaning search ranked it with a fast approximation. Some close matches may be missing; narrow the selection for exact ranking.",
+  semantic_shortlist_exhausted:
+    "Fewer than 100 close meaning matches were found in this large selection. More may exist outside the approximate search.",
   semantic_candidate_limit:
     "More meaning matches may exist outside this bounded search.",
   graph_candidate_limit:

@@ -72,10 +72,16 @@ operation does not reuse a paid request. Scope changes require a new context ope
 - Profile mismatch: an administrator uses **Rebuild semantic index** with the
   currently approved installed model. A new generation starts with partial coverage;
   old vectors are immediately excluded. Rebuilding incurs new embedding work.
-- Large scope: narrow the collection or repository/environment selection. Exact
-  semantic scan accepts at most 5,000 scoped representations. Discovery considers
-  100 inputs per pass and at most 50,000 active entries per Brain; coverage exposes
-  backlog/capacity instead of discarding canonical content.
+- Large scope: scopes up to 5,000 scoped representations (50,000 for profiles of at
+  most 384 dimensions) are ranked exactly. Larger scopes up to 50,000 are ranked by a
+  labelled approximate shortlist (`method` `binary_shortlist_rerank`, the
+  `semantic_shortlist_approximate` note) and exactly re-ranked; narrowing the
+  collection or repository/environment selection makes the ranking exact again. When
+  fewer than 100 eligible matches appear, `semantic_shortlist_exhausted` says more
+  may exist beyond the shortlist. `semantic_exact: true` refuses instead of
+  approximating. Discovery considers 100 inputs per pass and at most 50,000 active
+  entries per Brain; coverage exposes backlog/capacity instead of discarding
+  canonical content.
 - Timeout/denial: inspect current grants, operation scope and provider status. The
   semantic operation is bounded to 90 seconds, including the provider limit;
   SQL remains bounded to two seconds. An unavailable semantic channel is an error,

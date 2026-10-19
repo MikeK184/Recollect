@@ -925,26 +925,54 @@ async fn semantic_large_scope_refuses_before_charging_and_narrow_scope_remains_u
         AND e.source_version_id=$1 AND e.state='ready'")
         .bind(version).execute(&h.admin).await.unwrap();
     let before = p.calls.load(Ordering::SeqCst);
+    // An evaluation that insists on exact ranking keeps the refusal, before any
+    // provider charge.
+    let mut exact = query("Engineering source", &["semantic"]);
+    exact["semantic_exact"] = json!(true);
     let (code, body, _) = h
-        .call(
-            "POST",
-            &format!("{base}/recall"),
-            Some(&owner),
-            query("Engineering source", &["semantic"]),
-        )
+        .call("POST", &format!("{base}/recall"), Some(&owner), exact)
         .await;
     assert_eq!(code, StatusCode::CONFLICT, "{body}");
     assert_eq!(body["code"], "semantic_scope_too_large");
     assert_eq!(p.calls.load(Ordering::SeqCst), before);
+    // The same scope is answered by the labelled shortlist: every exactly
+    // scored row is reported, the paging reaches the control source behind the
+    // 5,001 near-identical fragments, and the count is not capped.
+    let approximate = recall(
+        &h,
+        &owner,
+        &base,
+        query("Engineering source", &["semantic"]),
+    )
+    .await;
+    assert_eq!(approximate["semantic"]["method"], "binary_shortlist_rerank");
+    assert_eq!(approximate["semantic"]["scoped_entries"], 5002);
+    assert_eq!(approximate["semantic"]["reranked"], 5002);
+    assert!(
+        approximate["coverage"]["reasons"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("semantic_shortlist_approximate"))
+    );
+    let returned: Vec<&Value> = approximate["context"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| &i["id"])
+        .collect();
+    assert!(returned.contains(&&control["version"]["id"]));
+    assert!(returned.contains(&&large["version"]["id"]));
+    assert_eq!(p.calls.load(Ordering::SeqCst), before + 1);
     let mut input = query("Engineering source", &["semantic"]);
     input["collection_id"] = collection["id"].clone();
     let result = recall(&h, &owner, &base, input).await;
     assert_eq!(result["semantic"]["scoped_entries"], 1);
+    assert_eq!(result["semantic"]["method"], "exact_cosine");
     assert_eq!(
         result["context"]["items"][0]["id"],
         control["version"]["id"]
     );
-    assert_eq!(p.calls.load(Ordering::SeqCst), before + 1);
+    assert_eq!(p.calls.load(Ordering::SeqCst), before + 2);
     server.abort();
     h.finish().await;
 }

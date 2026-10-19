@@ -164,9 +164,13 @@ generation without repeating rebuild work. An old in-flight result cannot publis
 No incompatible projection remains usable or joins a new query generation.
 
 Store full-precision vectors in an unconstrained pgvector column, enforcing each
-entry's dimension against its immutable profile in the database. Exact cosine
-queries remain bounded and filter the active profile before distance calculations;
-do not introduce ANN indexes or mix dimensions/models. Existing 3,072-dimensional
+entry's dimension against its immutable profile in the database. The same trigger
+keeps a derived one-bit-per-dimension signature (null exactly when the vector is
+null). Cosine queries filter the active profile before any distance: exact over
+scopes up to their bound (5,000 representations, or 50,000 for profiles of at most
+384 dimensions) and, above it, a labelled signature shortlist with exact re-ranking,
+as the [semantic recall contract](retrieval-semantic.md) specifies. Do not introduce
+ANN indexes or mix dimensions/models. Existing 3,072-dimensional
 vectors survive migration without an automatic provider call.
 
 The standing worker enumerates and queues only canonical, retained, permitted

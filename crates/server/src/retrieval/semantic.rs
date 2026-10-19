@@ -6,14 +6,47 @@ use sqlx::{
     query::QueryAs,
 };
 
-const SCAN_LIMIT: usize = 5000;
+/// Exact cosine ranks every scoped vector up to this many representations.
+pub const EXACT_LIMIT: usize = 5000;
+/// Profiles of at most this many dimensions store their vectors inline (under
+/// the 2 KB row threshold) and are exactly ranked over any scope instead:
+/// 50,000 vectors measured 0.6 s at 8 and 384 dimensions.
+pub const EXACT_DIMENSIONS: i32 = 384;
+/// A profile holds at most 50,000 entries (the discovery cap), so no recall
+/// scope is larger. Above the exact bound the scope is ranked by a bit-signature
+/// shortlist, then exactly re-ranked.
+pub const SCOPE_LIMIT: usize = 50_000;
+/// Rows of one exact page handed to qualification (the statement still scores
+/// every scoped vector).
+const EXACT_PAGE: usize = 5000;
+/// Hamming-nearest rows per page that receive an exact cosine score.
+pub const SHORTLIST: usize = 4000;
+/// Shortlist pages fetched before the candidate list is reported exhausted.
+pub const SHORTLIST_PAGES: usize = 2;
+const EXACT_COSINE: &str = "exact_cosine";
+pub(super) const SHORTLIST_RERANK: &str = "binary_shortlist_rerank";
+
+/// The largest scope this profile ranks with exact cosine.
+fn exact_limit(dimensions: i32) -> usize {
+    if dimensions <= EXACT_DIMENSIONS {
+        SCOPE_LIMIT
+    } else {
+        EXACT_LIMIT
+    }
+}
+
 // The unique (profile_id,kind,input_id) key permits one indexed vector lookup
 // per canonical candidate. Keep that bound even immediately after a large
 // import, before PostgreSQL has refreshed its cardinality statistics.
 // Apply readiness outside the unique lookup: with fresh statistics PostgreSQL
 // can otherwise scan the pending-work index once for every candidate instead.
-const SCOPED: &str = "semantic_scoped AS MATERIALIZED (
-    SELECT m.*,e.embedding,e.truncated FROM recall_pool m JOIN LATERAL (
+// The selected columns say how much of the entry a consumer needs: admission
+// reads identities only, the exact tier the vector, the shortlist tier the
+// small signature (never the out-of-line vector).
+fn scoped_cte(columns: &str) -> String {
+    format!(
+        "semantic_scoped AS MATERIALIZED (
+    SELECT {columns} FROM recall_pool m JOIN LATERAL (
       SELECT e.* FROM semantic_entries e WHERE e.profile_id=$2
       AND e.kind=CASE m.kind WHEN 'source_version' THEN 'source_chunk' WHEN 'claim' THEN 'claim_revision' ELSE m.kind END
       AND e.input_id=CASE WHEN m.kind='source_version' THEN m.chunk_id ELSE m.revision_id END
@@ -23,7 +56,9 @@ const SCOPED: &str = "semantic_scoped AS MATERIALIZED (
       AND (m.kind<>'source_version' OR e.source_version_id=m.revision_id)
       AND NOT EXISTS(SELECT 1 FROM model_input_fences f WHERE f.brain_id=$1 AND f.source_version_id=e.source_version_id)
       AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=$1 AND f.revision_id=e.claim_revision_id)
-  )";
+  )"
+    )
+}
 
 fn scoped<'q, O>(
     sql: &'q str,
@@ -68,13 +103,11 @@ pub(super) async fn prepare(
         ));
     }
     // Admission needs identities only. Keep canonical text and full vectors out
-    // of this materialized count so a large fresh projection can be refused
+    // of this materialized count so a large fresh projection can be sized
     // within the unchanged read deadline before any provider request.
-    let identities = SCOPED.replace(
-        "m.*,e.embedding,e.truncated",
-        "m.kind,m.revision_id,m.chunk_id",
-    );
-    let count = if let Some(profile) = &profile {
+    let identities = scoped_cte("m.kind,m.revision_id,m.chunk_id");
+    let (count, unindexed, method) = if let Some(profile) = &profile {
+        tune(tx).await?;
         // Semantic scoring is independent of the query text: the whole eligible
         // population, from one pass of the canonical candidate chain.
         pool::build(
@@ -87,42 +120,59 @@ pub(super) async fn prepare(
             true,
         )
         .await?;
+        plan(tx).await?;
+        // One pass sizes the scope and the eligible population, so projection
+        // coverage is a count and not just a flag. Every scoped row is one
+        // eligible pool row, so the difference is the eligible representations
+        // that have no usable vector.
         let sql = format!(
-            "WITH {identities} SELECT count(*)::bigint FROM (SELECT 1 FROM semantic_scoped LIMIT 5001) bounded"
+            "WITH {identities} SELECT (SELECT count(*) FROM (SELECT 1 FROM semantic_scoped LIMIT {}) bounded)::bigint,
+            (SELECT count(*) FROM recall_pool WHERE status_eligible)::bigint",
+            SCOPE_LIMIT + 1
         );
-        let (count,): (i64,) = scoped(&sql, context, profile.id)
+        let (scoped_rows, eligible): (i64, i64) = scoped(&sql, context, profile.id)
             .fetch_one(&mut **tx)
             .await?;
-        if count > SCAN_LIMIT as i64 {
+        // The identity table is admission-only; the request's candidate pass is
+        // built (in this or the post-embedding transaction) with full content.
+        // Drop it before any refusal: automatic recall continues in this
+        // transaction without the semantic channel.
+        sqlx::query("DROP TABLE recall_pool")
+            .execute(&mut **tx)
+            .await?;
+        let scoped_rows = scoped_rows as usize;
+        let bound = exact_limit(profile.dimensions);
+        if scoped_rows > SCOPE_LIMIT || (scoped_rows > bound && context.input.semantic_exact) {
             return Err(model_policy::failure(
                 "semantic_scope_too_large",
-                "Exact semantic recall supports up to 5,000 scoped representations. Select a smaller collection or workspace scope.",
+                if scoped_rows > SCOPE_LIMIT {
+                    "Semantic recall supports up to 50,000 scoped representations. Select a smaller collection or workspace scope."
+                } else {
+                    "Exact semantic recall supports up to 5,000 scoped representations. Select a smaller collection or workspace scope."
+                },
             ));
         }
-        count as usize
+        let method = if scoped_rows > bound {
+            SHORTLIST_RERANK
+        } else {
+            EXACT_COSINE
+        };
+        (
+            scoped_rows,
+            usize::try_from((eligible - scoped_rows as i64).max(0)).unwrap_or(0),
+            method,
+        )
     } else {
-        0
+        (0, 0, EXACT_COSINE)
     };
     if count == 0 {
         note(coverage, "semantic_scoped_coverage_missing");
     }
     // This is projection coverage, not truth qualification. Eligible canonical
-    // rows without a vector remain visible as missing/partial index coverage.
-    if let Some(profile) = &profile {
-        let sql = format!(
-            "WITH {identities} SELECT EXISTS(SELECT 1 FROM recall_pool m WHERE m.status_eligible AND NOT EXISTS(SELECT 1 FROM semantic_scoped s WHERE s.kind=m.kind AND s.revision_id=m.revision_id AND coalesce(s.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)=coalesce(m.chunk_id,'00000000-0000-0000-0000-000000000000'::uuid)))"
-        );
-        let (missing,): (bool,) = scoped(&sql, context, profile.id)
-            .fetch_one(&mut **tx)
-            .await?;
-        if missing {
-            note(coverage, "semantic_scoped_coverage_partial");
-        }
-        // The identity table is admission-only; the request's candidate pass is
-        // built (in this or the post-embedding transaction) with full content.
-        sqlx::query("DROP TABLE recall_pool")
-            .execute(&mut **tx)
-            .await?;
+    // rows without a vector remain visible as missing/partial index coverage,
+    // with their count in the semantic status.
+    if unindexed > 0 {
+        note(coverage, "semantic_scoped_coverage_partial");
     }
     Ok(Admission {
         status: RecallSemantic {
@@ -130,6 +180,9 @@ pub(super) async fn prepare(
             model_request_id: None,
             scoped_entries: count,
             state: if count == 0 { "missing" } else { "available" }.into(),
+            method: method.into(),
+            reranked: 0,
+            unindexed_entries: unindexed,
         },
         policy_id: p.change_id,
     })
@@ -218,6 +271,212 @@ struct Scored {
     candidate: Candidate,
     similarity: f32,
     truncated: bool,
+    /// Rows the exact statement scored (the scoped population); the shortlist
+    /// statement does not report it.
+    #[sqlx(default)]
+    scope_rows: i64,
+}
+
+/// Every scoped vector, scored once, best first, one page at a time. `$4` is
+/// the page size and `$5` its offset.
+fn exact_sql() -> String {
+    // The query vector is parsed once, and each distance is computed once and
+    // reused by the ordering and the similarity. The window count tells the
+    // caller how many vectors the statement scored, whatever the page.
+    format!(
+        "WITH {}, q AS MATERIALIZED (SELECT $3::text::vector v)
+        SELECT {},(1-d)::real similarity,truncated,scope_rows
+        FROM (SELECT s.*,s.embedding<=>q.v d,count(*) OVER () scope_rows FROM semantic_scoped s,q) x
+        ORDER BY d,kind,id,chunk_id NULLS FIRST LIMIT $4 OFFSET $5",
+        scoped_cte("m.*,e.embedding,e.truncated"),
+        pool::CANDIDATE,
+    )
+}
+
+/// One page of the shortlist, exactly re-ranked. Eligibility and scope are
+/// applied before any distance, and the first pass reads only the small
+/// signature of each scoped row; the stored vectors of the page alone are read
+/// to compute the exact cosine. `$4` is the page size and `$5` its offset.
+fn shortlist_sql() -> String {
+    let candidate = pool::CANDIDATE
+        .split(',')
+        .map(|column| format!("p.{column}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "WITH {}, q AS MATERIALIZED (SELECT $3::text::vector v,binary_quantize($3::text::vector) b),
+        shortlist AS MATERIALIZED (
+          SELECT s.pool_ctid,s.entry_id,s.truncated FROM semantic_scoped s,q
+          ORDER BY s.signature<~>q.b,s.kind,s.id,s.chunk_id NULLS FIRST LIMIT $4 OFFSET $5)
+        SELECT {},(1-d)::real similarity,truncated
+        FROM (SELECT {candidate},l.truncated,e.embedding<=>q.v d
+          FROM shortlist l JOIN recall_pool p ON p.ctid=l.pool_ctid
+          JOIN semantic_entries e ON e.id=l.entry_id AND e.brain_id=$1,q) x
+        ORDER BY d,kind,id,chunk_id NULLS FIRST",
+        scoped_cte(
+            "m.ctid AS pool_ctid,m.kind,m.id,m.chunk_id,e.id AS entry_id,e.signature,e.truncated"
+        ),
+        pool::CANDIDATE,
+    )
+}
+
+async fn fetch_exact(
+    tx: &mut Tx<'_>,
+    context: &ReadContext<'_>,
+    profile: Uuid,
+    encoded: &str,
+    size: usize,
+    offset: usize,
+) -> Result<Vec<Scored>> {
+    Ok(scoped(&exact_sql(), context, profile)
+        .bind(encoded)
+        .bind(size as i64)
+        .bind(offset as i64)
+        .fetch_all(&mut **tx)
+        .await?)
+}
+
+async fn fetch_shortlist(
+    tx: &mut Tx<'_>,
+    context: &ReadContext<'_>,
+    profile: Uuid,
+    encoded: &str,
+    size: usize,
+    offset: usize,
+) -> Result<Vec<Scored>> {
+    Ok(scoped(&shortlist_sql(), context, profile)
+        .bind(encoded)
+        .bind(size as i64)
+        .bind(offset as i64)
+        .fetch_all(&mut **tx)
+        .await?)
+}
+
+/// Give the planner statistics for the temporary candidate table, which has
+/// none until it is analyzed. Only the two columns the scoped filter reads: a
+/// full analyze samples the wide text columns and costs about as much as the
+/// scoring statement itself, without changing its plan.
+pub(super) async fn plan(tx: &mut Tx<'_>) -> Result<()> {
+    sqlx::query("ANALYZE recall_pool(kind,status_eligible)")
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+/// Disable JIT for the semantic statements of this transaction. Their planner
+/// cost estimates cross the compilation threshold although they run in tens
+/// to hundreds of milliseconds, so compiling would only add latency.
+pub(super) async fn tune(tx: &mut Tx<'_>) -> Result<()> {
+    sqlx::query("SET LOCAL jit=off").execute(&mut **tx).await?;
+    Ok(())
+}
+
+/// Which scoring statement a proof run executes.
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug)]
+pub enum ProofTier {
+    Exact,
+    Shortlist,
+}
+
+/// Result of one proof run: the ranked identities with their cosine, the plan
+/// text when it was requested, and the cost of preparing the candidate table.
+#[doc(hidden)]
+#[derive(Debug, Default)]
+pub struct SemanticProof {
+    pub ranked: Vec<(Uuid, f32)>,
+    pub plan: Vec<String>,
+    pub pool_plan: Vec<String>,
+    pub sql: String,
+    pub scoped: usize,
+    pub pool_ms: u128,
+    pub analyze_ms: u128,
+}
+
+/// Run one scoring statement exactly as recall builds it, with no bound check,
+/// over the candidate pool of `selection`; `explain` returns its
+/// `EXPLAIN (ANALYZE, BUFFERS)` plan instead of rows. A proof aid for the
+/// recall-versus-exact and timing tests, not a product surface.
+pub(super) async fn proof(
+    tx: &mut Tx<'_>,
+    brain: Uuid,
+    selection: ScopeSelection,
+    vector: &[f32],
+    tier: ProofTier,
+    limit: usize,
+    explain: bool,
+) -> Result<SemanticProof> {
+    let input = RecallRequest {
+        channels: vec!["semantic".into()],
+        selection,
+        ..RecallRequest::default()
+    };
+    let at: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
+        .fetch_one(&mut **tx)
+        .await?;
+    let context = ReadContext {
+        brain,
+        input: &input,
+        at,
+        manifest: None,
+    };
+    let profile = index::profile(tx, brain)
+        .await?
+        .ok_or_else(Error::missing)?;
+    tune(tx).await?;
+    let started = Instant::now();
+    let breadth = pool::Breadth {
+        claims: true,
+        rest: true,
+    };
+    let mut pool_plan = vec![];
+    if explain {
+        pool_plan = pool::build_explained(tx, &context, breadth).await?;
+    } else {
+        pool::build(tx, &context, breadth, false).await?;
+    }
+    let pool_ms = started.elapsed().as_millis();
+    let started = Instant::now();
+    plan(tx).await?;
+    let analyze_ms = started.elapsed().as_millis();
+    let encoded =
+        serde_json::to_string(vector).map_err(|_| Error::invalid("Invalid query vector."))?;
+    let sql = match tier {
+        ProofTier::Exact => exact_sql(),
+        ProofTier::Shortlist => shortlist_sql(),
+    };
+    let mut out = SemanticProof {
+        sql: sql.clone(),
+        pool_plan,
+        pool_ms,
+        analyze_ms,
+        ..SemanticProof::default()
+    };
+    if explain {
+        let sql = format!("EXPLAIN (ANALYZE, BUFFERS) {sql}");
+        out.plan = scoped::<(String,)>(&sql, &context, profile.id)
+            .bind(&encoded)
+            .bind(limit as i64)
+            .bind(0i64)
+            .fetch_all(&mut **tx)
+            .await?
+            .into_iter()
+            .map(|(line,)| line)
+            .collect();
+        return Ok(out);
+    }
+    let rows: Vec<Scored> = match tier {
+        ProofTier::Exact => fetch_exact(tx, &context, profile.id, &encoded, limit, 0).await?,
+        ProofTier::Shortlist => {
+            fetch_shortlist(tx, &context, profile.id, &encoded, limit, 0).await?
+        }
+    };
+    out.scoped = rows.len();
+    out.ranked = rows
+        .into_iter()
+        .map(|r| (r.candidate.id, r.similarity))
+        .collect();
+    Ok(out)
 }
 
 pub(super) struct Ranked {
@@ -235,7 +494,7 @@ pub(super) async fn ranked(
     tx: &mut Tx<'_>,
     context: &ReadContext<'_>,
     baseline: &[Candidate],
-    admission: Option<&Admission>,
+    admission: Option<&mut Admission>,
     vector: Option<&[f32]>,
     coverage: &mut RecallCoverage,
 ) -> Result<Vec<Ranked>> {
@@ -300,176 +559,237 @@ pub(super) async fn ranked(
             .expect("qualified lexical identity")
             .lexical_rank = Some(rank + 1);
     }
-    if let (Some(vector), Some(profile)) =
-        (vector, admission.and_then(|a| a.status.profile.as_ref()))
+    if let (Some(vector), Some(admission)) = (vector, admission)
+        && let Some(profile) = admission.status.profile.clone()
     {
-        let sql = format!(
-            "WITH {SCOPED} SELECT {},(1-(embedding<=>$3::text::vector))::real similarity,truncated FROM semantic_scoped
-          ORDER BY embedding<=>$3::text::vector,kind,id,chunk_id NULLS FIRST LIMIT 5001",
-            pool::CANDIDATE
-        );
         let encoded =
             serde_json::to_string(vector).map_err(|_| Error::invalid("Invalid query vector."))?;
-        let rows: Vec<Scored> = scoped(&sql, context, profile.id)
-            .bind(encoded)
-            .fetch_all(&mut **tx)
-            .await?;
-        if rows.len() > SCAN_LIMIT {
-            return Err(model_policy::failure(
-                "semantic_scope_too_large",
-                "The semantic projection grew beyond this recall scope. Narrow the selection.",
-            ));
-        }
+        // Admission sized the scope in an earlier transaction and chose the
+        // method; the statement that ranks confirms it.
+        let bound = exact_limit(profile.dimensions);
+        let mut method = admission.status.method.clone();
         let mut semantic_rank = 0;
-        // Gates load one page at a time: rows beyond the 100-rank limit are
-        // never qualified, and a page is dropped once it has been read.
-        'rows: for (index, scored) in rows.iter().enumerate() {
-            if index % 128 == 0 {
-                gates.release();
-                let page: Vec<&Candidate> = rows[index..]
-                    .iter()
-                    .take(128)
-                    .map(|r| &r.candidate)
-                    .collect();
-                gates.load(state, tx, context, &page).await?;
-            }
-            if !scored.similarity.is_finite() {
-                return Err(model_policy::failure(
-                    "semantic_distance_unavailable",
-                    "The stored vector did not produce a finite cosine distance.",
-                ));
-            }
-            let similarity = scored.similarity.clamp(-1.0, 1.0);
-            if similarity < context.input.semantic_min_similarity.unwrap_or(0.0) {
-                continue;
-            }
-            let row = &scored.candidate;
-            let key = (row.kind.clone(), row.id);
-            if identities.get(&key).is_some_and(|r| {
-                r.semantic_rank.is_some()
-                    && r.alternatives
-                        .iter()
-                        .filter(|(i, _)| i.semantic_similarity.is_some())
-                        .count()
-                        >= 3
-            }) {
-                continue;
-            }
-            coverage.examined += 1;
-            let Some((mut item, deadline)) =
-                item_with(state, tx, context, row, coverage, &mut gates).await?
-            else {
-                continue;
-            };
-            if item.kind == "source_version"
-                && item.provenance.iter().any(|p| p.availability != "retained")
-            {
-                coverage.withheld += 1;
-                continue;
-            }
-            if let Some(ranked) = identities.get_mut(&key)
-                && ranked.semantic_rank.is_some()
-            {
-                if !same_span(&ranked.item, &item) {
-                    item.channels = vec!["semantic".into()];
-                    item.semantic_similarity = Some(similarity);
-                    item.qualifications
-                        .push("semantic_similarity_not_truth".into());
-                    if scored.truncated {
-                        item.qualifications
-                            .push("semantic_representation_truncated".into());
-                        note(coverage, "semantic_representation_truncated");
-                    }
-                    if let Some((other, until)) = ranked
-                        .alternatives
-                        .iter_mut()
-                        .find(|(other, _)| same_span(other, &item))
-                    {
-                        for channel in &other.channels {
-                            if !item.channels.contains(channel) {
-                                item.channels.push(channel.clone());
-                            }
+        let mut reranked = 0;
+        let mut scope_rows = 0;
+        let mut offset = 0;
+        let mut pages = 0;
+        let mut exhausted = false;
+        // The exact statement scores every scoped vector and returns it a page
+        // at a time. The shortlist statement scores only its page, and pages
+        // through the Hamming order while eligible identities are still missing.
+        'pages: loop {
+            let (rows, size) = if method == EXACT_COSINE {
+                let rows =
+                    fetch_exact(tx, context, profile.id, &encoded, EXACT_PAGE, offset).await?;
+                if offset == 0 {
+                    scope_rows = rows.first().map_or(0, |r| r.scope_rows) as usize;
+                    if scope_rows > bound {
+                        if context.input.semantic_exact {
+                            return Err(model_policy::failure(
+                                "semantic_scope_too_large",
+                                "The semantic projection grew beyond this recall scope. Narrow the selection.",
+                            ));
                         }
-                        *other = item;
-                        *until = [*until, deadline].into_iter().flatten().min();
-                    } else {
-                        ranked.alternatives.push((item, deadline));
+                        // The projection grew past the exact bound after admission.
+                        method = SHORTLIST_RERANK.into();
+                        continue 'pages;
                     }
-                    // Semantic windows must not be crowded out by an earlier
-                    // lexical-only page. Retain their own scores and channels.
-                    ranked
-                        .alternatives
-                        .sort_by_key(|(i, _)| i.semantic_similarity.is_none());
-                    ranked.alternatives.truncate(4);
+                    reranked = scope_rows;
                 }
-                continue;
-            }
-            if semantic_rank == CANDIDATES {
-                note(coverage, "semantic_candidate_limit");
-                break 'rows;
-            }
-            semantic_rank += 1;
-            item.channels = vec!["semantic".into()];
-            let ranked = match identities.entry(key) {
-                std::collections::btree_map::Entry::Vacant(entry) => entry.insert(Ranked {
-                    item,
-                    deadline,
-                    exact: false,
-                    alternatives: vec![],
-                    lexical_rank: None,
-                    semantic_rank: None,
-                    graph_rank: None,
-                }),
-                std::collections::btree_map::Entry::Occupied(entry) => {
-                    let ranked = entry.into_mut();
-                    // Channel ranks belong to the source identity, but the
-                    // shown cosine must travel with its exact scoring span.
-                    // Preserve exact priority and lexical rank while selecting
-                    // the semantic fragment for the attributed context.
-                    if ranked.lexical_rank.is_some()
-                        && ranked
-                            .item
-                            .provenance
-                            .first()
-                            .map(|p| (p.id, p.byte_from, p.byte_to))
-                            != item
+                (rows, EXACT_PAGE)
+            } else {
+                let rows =
+                    fetch_shortlist(tx, context, profile.id, &encoded, SHORTLIST, offset).await?;
+                reranked += rows.len();
+                (rows, SHORTLIST)
+            };
+            let more = if method == EXACT_COSINE {
+                offset + rows.len() < scope_rows
+            } else {
+                rows.len() >= size
+            };
+            let approximate = method == SHORTLIST_RERANK;
+            let mut limited = false;
+            // Gates load one page at a time: rows beyond the 100-rank limit are
+            // never qualified, and a page is dropped once it has been read.
+            'rows: for (index, scored) in rows.iter().enumerate() {
+                if index % 128 == 0 {
+                    gates.release();
+                    let page: Vec<&Candidate> = rows[index..]
+                        .iter()
+                        .take(128)
+                        .map(|r| &r.candidate)
+                        .collect();
+                    gates.load(state, tx, context, &page).await?;
+                }
+                if !scored.similarity.is_finite() {
+                    return Err(model_policy::failure(
+                        "semantic_distance_unavailable",
+                        "The stored vector did not produce a finite cosine distance.",
+                    ));
+                }
+                let similarity = scored.similarity.clamp(-1.0, 1.0);
+                if similarity < context.input.semantic_min_similarity.unwrap_or(0.0) {
+                    continue;
+                }
+                let row = &scored.candidate;
+                let key = (row.kind.clone(), row.id);
+                if identities.get(&key).is_some_and(|r| {
+                    r.semantic_rank.is_some()
+                        && r.alternatives
+                            .iter()
+                            .filter(|(i, _)| i.semantic_similarity.is_some())
+                            .count()
+                            >= 3
+                }) {
+                    continue;
+                }
+                coverage.examined += 1;
+                let Some((mut item, deadline)) =
+                    item_with(state, tx, context, row, coverage, &mut gates).await?
+                else {
+                    continue;
+                };
+                if item.kind == "source_version"
+                    && item.provenance.iter().any(|p| p.availability != "retained")
+                {
+                    coverage.withheld += 1;
+                    continue;
+                }
+                if let Some(ranked) = identities.get_mut(&key)
+                    && ranked.semantic_rank.is_some()
+                {
+                    if !same_span(&ranked.item, &item) {
+                        item.channels = vec!["semantic".into()];
+                        item.semantic_similarity = Some(similarity);
+                        item.qualifications
+                            .push("semantic_similarity_not_truth".into());
+                        if approximate {
+                            item.qualifications
+                                .push("semantic_shortlist_approximate".into());
+                        }
+                        if scored.truncated {
+                            item.qualifications
+                                .push("semantic_representation_truncated".into());
+                            note(coverage, "semantic_representation_truncated");
+                        }
+                        if let Some((other, until)) = ranked
+                            .alternatives
+                            .iter_mut()
+                            .find(|(other, _)| same_span(other, &item))
+                        {
+                            for channel in &other.channels {
+                                if !item.channels.contains(channel) {
+                                    item.channels.push(channel.clone());
+                                }
+                            }
+                            *other = item;
+                            *until = [*until, deadline].into_iter().flatten().min();
+                        } else {
+                            ranked.alternatives.push((item, deadline));
+                        }
+                        // Semantic windows must not be crowded out by an earlier
+                        // lexical-only page. Retain their own scores and channels.
+                        ranked
+                            .alternatives
+                            .sort_by_key(|(i, _)| i.semantic_similarity.is_none());
+                        ranked.alternatives.truncate(4);
+                    }
+                    continue;
+                }
+                if semantic_rank == CANDIDATES {
+                    note(coverage, "semantic_candidate_limit");
+                    limited = true;
+                    break 'rows;
+                }
+                semantic_rank += 1;
+                item.channels = vec!["semantic".into()];
+                let ranked = match identities.entry(key) {
+                    std::collections::btree_map::Entry::Vacant(entry) => entry.insert(Ranked {
+                        item,
+                        deadline,
+                        exact: false,
+                        alternatives: vec![],
+                        lexical_rank: None,
+                        semantic_rank: None,
+                        graph_rank: None,
+                    }),
+                    std::collections::btree_map::Entry::Occupied(entry) => {
+                        let ranked = entry.into_mut();
+                        // Channel ranks belong to the source identity, but the
+                        // shown cosine must travel with its exact scoring span.
+                        // Preserve exact priority and lexical rank while selecting
+                        // the semantic fragment for the attributed context.
+                        if ranked.lexical_rank.is_some()
+                            && ranked
+                                .item
                                 .provenance
                                 .first()
                                 .map(|p| (p.id, p.byte_from, p.byte_to))
-                    {
-                        item.qualifications
-                            .push("lexical_match_in_another_fragment".into());
-                    }
-                    item.channels = ranked.item.channels.clone();
-                    if !same_span(&ranked.item, &item) {
-                        let previous = std::mem::replace(&mut ranked.item, item);
+                                != item
+                                    .provenance
+                                    .first()
+                                    .map(|p| (p.id, p.byte_from, p.byte_to))
+                        {
+                            item.qualifications
+                                .push("lexical_match_in_another_fragment".into());
+                        }
+                        item.channels = ranked.item.channels.clone();
+                        if !same_span(&ranked.item, &item) {
+                            let previous = std::mem::replace(&mut ranked.item, item);
+                            ranked
+                                .alternatives
+                                .retain(|(other, _)| !same_span(other, &ranked.item));
+                            ranked.alternatives.insert(0, (previous, ranked.deadline));
+                            ranked.alternatives.truncate(4);
+                        }
+                        ranked.deadline = [ranked.deadline, deadline].into_iter().flatten().min();
                         ranked
-                            .alternatives
-                            .retain(|(other, _)| !same_span(other, &ranked.item));
-                        ranked.alternatives.insert(0, (previous, ranked.deadline));
-                        ranked.alternatives.truncate(4);
                     }
-                    ranked.deadline = [ranked.deadline, deadline].into_iter().flatten().min();
-                    ranked
+                };
+                ranked.semantic_rank = Some(semantic_rank);
+                ranked.item.semantic_similarity = Some(similarity);
+                if !ranked.item.channels.iter().any(|c| c == "semantic") {
+                    ranked.item.channels.push("semantic".into());
                 }
-            };
-            ranked.semantic_rank = Some(semantic_rank);
-            ranked.item.semantic_similarity = Some(similarity);
-            if !ranked.item.channels.iter().any(|c| c == "semantic") {
-                ranked.item.channels.push("semantic".into());
-            }
-            ranked
-                .item
-                .qualifications
-                .push("semantic_similarity_not_truth".into());
-            if scored.truncated {
                 ranked
                     .item
                     .qualifications
-                    .push("semantic_representation_truncated".into());
-                note(coverage, "semantic_representation_truncated");
+                    .push("semantic_similarity_not_truth".into());
+                if approximate {
+                    ranked
+                        .item
+                        .qualifications
+                        .push("semantic_shortlist_approximate".into());
+                }
+                if scored.truncated {
+                    ranked
+                        .item
+                        .qualifications
+                        .push("semantic_representation_truncated".into());
+                    note(coverage, "semantic_representation_truncated");
+                }
+            }
+            if limited || !more {
+                break;
+            }
+            if method == SHORTLIST_RERANK {
+                pages += 1;
+                if pages == SHORTLIST_PAGES {
+                    exhausted = true;
+                    break;
+                }
+            }
+            offset += size;
+        }
+        if method == SHORTLIST_RERANK {
+            note(coverage, "semantic_shortlist_approximate");
+            if exhausted {
+                note(coverage, "semantic_shortlist_exhausted");
             }
         }
+        admission.status.method = method;
+        admission.status.reranked = reranked;
     }
     let mut ranked: Vec<Ranked> = identities.into_values().collect();
     sort(&mut ranked, context.input);

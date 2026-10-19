@@ -83,6 +83,7 @@ export function buildRecallRequest(
       filters.strategy === "manual" && filters.channels.includes("semantic")
         ? filters.similarity
         : null,
+    semantic_exact: false,
     graph:
       filters.strategy === "manual" && filters.channels.includes("graph")
         ? {

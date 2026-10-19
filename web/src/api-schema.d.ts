@@ -5907,6 +5907,12 @@ export interface components {
              */
             selection: components["schemas"]["ScopeSelection"];
             /**
+             * @description Force exact cosine ranking and refuse a scope above its bound, for
+             *     evaluations that must not accept the approximate large-scope shortlist.
+             * @default false
+             */
+            semantic_exact: boolean;
+            /**
              * Format: float
              * @default null
              */
@@ -5951,11 +5957,24 @@ export interface components {
             status: string;
         };
         RecallSemantic: {
+            /**
+             * @description `exact_cosine` ranks every scoped vector; `binary_shortlist_rerank`
+             *     keeps the Hamming-nearest signatures and ranks only those exactly.
+             */
+            method?: string;
             /** Format: uuid */
             model_request_id?: string | null;
             profile?: null | components["schemas"]["SemanticProfile"];
+            /** @description Vectors that were scored with exact cosine in this query. */
+            reranked?: number;
+            /**
+             * @description Eligible scoped representations with a usable vector (not capped by the
+             *     exact bound).
+             */
             scoped_entries: number;
             state: string;
+            /** @description Eligible scoped representations that have no usable vector yet. */
+            unindexed_entries?: number;
         };
         Repository: {
             /** Format: uuid */

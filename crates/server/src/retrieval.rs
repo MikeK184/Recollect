@@ -88,7 +88,9 @@ pub(crate) fn validate(input: &mut RecallRequest) -> Result<()> {
         && (input.query.is_empty() || input.semantic_request_id.is_none_or(|id| id.is_nil())))
         || (!semantic
             && input.strategy != "auto"
-            && (input.semantic_request_id.is_some() || input.semantic_min_similarity.is_some()))
+            && (input.semantic_request_id.is_some()
+                || input.semantic_min_similarity.is_some()
+                || input.semantic_exact))
         || input
             .semantic_min_similarity
             .is_some_and(|n| !n.is_finite() || !(0.0..=1.0).contains(&n))
@@ -817,6 +819,7 @@ async fn execute(
             authority(&mut tx, auth, brain, &input).await?;
             selected_manifest(&mut tx, brain, &input, at).await?;
             semantic::recheck(state, &mut tx, brain, admission).await?;
+            semantic::tune(&mut tx).await?;
             if graph_admission.is_some() {
                 graph_admission = Some(
                     crate::graph::recall::prepare(
@@ -873,6 +876,9 @@ async fn execute(
         false,
     )
     .await?;
+    if query_vector.is_some() {
+        semantic::plan(&mut tx).await?;
+    }
     {
         let (pending, limited, withheld): (bool, bool, i64) = sqlx::query_as(
             "SELECT
@@ -907,7 +913,7 @@ async fn execute(
         &mut tx,
         &read_context,
         &rows,
-        semantic_admission.as_ref(),
+        semantic_admission.as_mut(),
         query_vector.as_deref(),
         &mut coverage,
     )
@@ -988,6 +994,11 @@ async fn execute(
         } else if semantic_admission.is_some() {
             if input.channels.len() > 1 {
                 "identity-priority-rrf-k60"
+            } else if semantic_admission
+                .as_ref()
+                .is_some_and(|a| a.status.method == semantic::SHORTLIST_RERANK)
+            {
+                "pgvector-binary-shortlist-exact-rerank"
             } else {
                 "pgvector-exact-cosine"
             }
@@ -1005,6 +1016,27 @@ async fn execute(
         coverage,
         elapsed_ms: started.elapsed().as_millis() as u64,
     })
+}
+
+#[doc(hidden)]
+pub use semantic::{
+    EXACT_DIMENSIONS, EXACT_LIMIT, ProofTier, SCOPE_LIMIT, SHORTLIST, SHORTLIST_PAGES,
+    SemanticProof,
+};
+
+/// Run one semantic scoring statement over the candidate pool of `selection`
+/// for the recall-versus-exact and timing proofs; see `semantic::proof`.
+#[doc(hidden)]
+pub async fn semantic_proof(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    brain: Uuid,
+    selection: ScopeSelection,
+    vector: &[f32],
+    tier: ProofTier,
+    limit: usize,
+    explain: bool,
+) -> Result<SemanticProof> {
+    semantic::proof(tx, brain, selection, vector, tier, limit, explain).await
 }
 
 /// Plan text of the lexical candidate pass for a query (EXPLAIN only); a proof
