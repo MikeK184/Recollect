@@ -28,7 +28,8 @@ image; a separate frontend container is unnecessary. Docker Desktop groups
 ./scripts/stack.sh down          # Remove containers/network, preserving data
 ```
 
-The root `compose.yaml` is also a complete standard Compose file. After setup,
+The root `compose.yaml` overrides the shared `infra/product/compose.yaml` services, and
+`setup-local.sh` records both files in `COMPOSE_FILE` in `.env`. After setup,
 `docker compose up -d`, `docker compose stop`, `docker compose ps --all` and
 `docker compose down` work directly. The repository wrapper is equivalent:
 `./scripts/docker.sh compose ...`. Prefer `stack.sh update` for an existing app:

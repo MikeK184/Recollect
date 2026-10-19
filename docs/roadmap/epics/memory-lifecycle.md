@@ -54,7 +54,7 @@ review is an optional override. Deployment provider choices remain inputs.
 Provider input, 2026-09-14: the user supplied `OPENAI_API_KEY` in Recollect's ignored
 `.env` and authorized OpenAI for the required model operations. Use a separate
 text model and embedding model behind the shared gateway. The opt-in synthetic
-`scripts/probe-openai.mjs` checks external connectivity; it does not enable
+`docs/research/scripts/probe-openai.mjs` checks external connectivity; it does not enable
 Brain enrichment or replace the provider-policy contract and retention dependency.
 The [connection proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/openai-provider-preflight-2026-09-14.md)
 records the initially usable GPT-4.1 mini/embedding-3-small pair. After completing

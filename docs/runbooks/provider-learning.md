@@ -12,10 +12,11 @@ under **Advanced model controls**. See the [desktop guide](desktop-experience.md
 
 Start `./scripts/dev.sh` and sign in at `http://127.0.0.1:8787`. The installed
 adapters read `OPENAI_API_KEY` and `OPENROUTER_API_KEY` from the environment.
-The initial OpenAI pair is `gpt-5.6-luna` and `text-embedding-3-large` with
-3,072 dimensions, configured by
-`RECOLLECT_TEXT_MODEL`, `RECOLLECT_EMBEDDING_MODEL` and
-`RECOLLECT_EMBEDDING_DIMENSIONS`. The ignored `.env` is preserved by setup.
+Model selection belongs to the Brain policy catalogue. The environment supplies
+only the embedding pair `text-embedding-3-large` at 3,072 dimensions
+(`RECOLLECT_EMBEDDING_MODEL`, `RECOLLECT_EMBEDDING_DIMENSIONS`) and an optional
+`RECOLLECT_TEXT_MODEL`; when that is unset the server starts with its built-in
+placeholder text model, which is not a recommendation. The ignored `.env` is preserved by setup.
 
 Key presence does not prove a successful call. Each Brain's policy independently
 grants model, purpose and content-class access.

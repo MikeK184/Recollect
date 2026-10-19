@@ -285,7 +285,7 @@ it. That 60-page case passed at p95 777.25 ms; the final equivalent bulk-policy 
 hint and indexed representative lookup yield p95 428.835 ms with automatic
 analyze disabled for the mapping fixture tables, under the same deadlines. Receipts remain in ignored `.cache/graph-implementation/`.
 
-[The deterministic scorer](../../scripts/score-organization.py) validates both
+[The deterministic scorer](../research/scripts/score-organization.py) validates both
 frozen corpora (60 documents), counts missing/error/duplicate predictions and
 invalid UTF-8 spans, and requires a recipe hash for held-out scoring. Its arithmetic
 self-check passes; it makes no calls and cannot qualify a producer. Actual

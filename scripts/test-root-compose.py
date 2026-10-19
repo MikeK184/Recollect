@@ -19,6 +19,8 @@ class RootCompose(unittest.TestCase):
         (self.root / 'scripts').mkdir()
         shutil.copy(ROOT / 'scripts/setup-local.sh', self.root / 'scripts/setup-local.sh')
         shutil.copy(ROOT / 'compose.yaml', self.root / 'compose.yaml')
+        (self.root / 'infra/product').mkdir(parents=True)
+        shutil.copy(ROOT / 'infra/product/compose.yaml', self.root / 'infra/product/compose.yaml')
 
     def setup_local(self):
         return subprocess.run(['bash', str(self.root / 'scripts/setup-local.sh')],
@@ -61,6 +63,7 @@ class RootCompose(unittest.TestCase):
         result = subprocess.run([str(ROOT / 'scripts/docker.sh'), 'compose',
                                  '--project-directory', str(self.root),
                                  '--env-file', str(self.root / '.env'),
+                                 '-f', str(self.root / 'infra/product/compose.yaml'),
                                  '-f', str(self.root / 'compose.yaml'), 'config', '--format', 'json'],
                                 env=env, capture_output=True, text=True, check=True)
         config = json.loads(result.stdout)

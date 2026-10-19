@@ -547,7 +547,7 @@ loading/inference then succeeded. No global package environment was changed.
 The checkpoint is `fastino/gliner2.5-base-v1` at
 `54785d51df8d86a0d8f2eb212fec15871aad2c4d`, an Apache-2.0 English model.
 
-The [probe](../../scripts/probe-local-mapping.py) used CPU on the Mac, Python
+The [probe](../research/scripts/probe-local-mapping.py) used CPU on the Mac, Python
 3.12.14, two Torch threads, threshold 0.5 and the frozen schema. The
 [40-document fixture](../research/automatic-knowledge-mapping-fixtures-2026-10-09.json)
 contains 30 development and 10 held-out cases, all English and ASCII, maximum

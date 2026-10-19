@@ -16,7 +16,7 @@ def validate(saved):
             or saved.get("mode") != "personal" or saved.get("origin") != "http://127.0.0.1:8787"
             or not re.fullmatch(r"sha256:[a-f0-9]{64}", saved.get("checkpoint_image", ""))):
         raise ValueError("Root recovery ownership differs from this repository app")
-    for path in (install.ROOT / ".env", install.ROOT / "compose.yaml"):
+    for path in (install.ROOT / ".env", install.ROOT / "compose.yaml", install.ROOT / "infra/product/compose.yaml"):
         if path.is_symlink() or not path.is_file():
             raise ValueError("Root app configuration is unavailable")
 
@@ -36,7 +36,7 @@ def compose(saved):
 def base():
     return [str(install.ROOT / "scripts/docker.sh"), "compose", "--project-directory", str(install.ROOT),
             "--project-name", "recollect", "--env-file", str(install.ROOT / ".env"),
-            "-f", str(install.ROOT / "compose.yaml")]
+            "-f", str(install.ROOT / "infra/product/compose.yaml"), "-f", str(install.ROOT / "compose.yaml")]
 
 
 def configuration(saved):

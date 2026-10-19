@@ -1,5 +1,5 @@
 // Opt-in provider preflight. Only fixed synthetic text leaves this process.
-// Run from the repo root: node --env-file=.env scripts/probe-openai.mjs
+// Run from the repo root: node --env-file=.env docs/research/scripts/probe-openai.mjs
 const key = process.env.OPENAI_API_KEY?.trim();
 if (!key) {
   console.error("OPENAI_API_KEY is missing. Set it in the ignored .env file.");

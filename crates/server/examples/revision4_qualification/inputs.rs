@@ -102,6 +102,7 @@ pub fn code(root: &Path) -> Result<Value> {
         "scripts/prepare_frozen_organization.py",
         "scripts/docker.sh",
         "compose.yaml",
+        "infra/product/compose.yaml",
     ] {
         files.insert(p.into(), io::hash_file(&root.join(p))?);
     }

@@ -6,6 +6,8 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+# Pre-1.0 A2A SDK; the Agent Card and message binding were verified against exactly 0.4.2
+# (docs/mappings/agent-coordination-a2a-research-2026-10-18.md).
 a2a = { package = "a2a-lf", version = "=0.4.2" }
 futures-util = "0.3"
 anyhow.workspace = true

@@ -12,10 +12,11 @@ text. It does not read or submit Brain evidence or customer files.
 Run from the Recollect root:
 
 ```sh
-node --env-file=.env scripts/probe-openai.mjs
+node --env-file=.env docs/research/scripts/probe-openai.mjs
 ```
 
-It checks the user-selected `text-embedding-3-large` and `gpt-5.6-luna`. The short
+It checks `text-embedding-3-large` and the text model hardcoded in the probe
+(`gpt-5.6-luna`); it does not read `RECOLLECT_TEXT_MODEL`. The short
 structured extraction uses `reasoning.effort:none`. Keep credentials solely in
 the environment/ignored file. The output reports verification, returned model,
 vector dimensions and token counts. It omits raw vectors and provider payloads.

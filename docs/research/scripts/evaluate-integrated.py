@@ -6,14 +6,17 @@ import json
 import math
 from pathlib import Path
 import statistics
+import sys
 import time
 import uuid
 
+OPERATOR_SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+sys.path.insert(0, str(OPERATOR_SCRIPTS))
 import install
 import recovery_installation as runtime
 from recovery_transport import private_json
 
-spec = importlib.util.spec_from_file_location("installation_proof", Path(__file__).with_name("test-installation-runtime.py"))
+spec = importlib.util.spec_from_file_location("installation_proof", OPERATOR_SCRIPTS / "test-installation-runtime.py")
 proof = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(proof)
 EMPTY = {"repository_ids": [], "area_ids": [], "environment_id": None}

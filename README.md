@@ -105,8 +105,9 @@ group: PostgreSQL, Neo4j, UI/API and worker, with a one-shot migration first.
 ./scripts/stack.sh up --build   # Rebuild after code or UI changes
 ```
 
-The root [compose.yaml](compose.yaml) also supports standard `docker compose`
-commands. Use `./scripts/docker.sh compose` if your Docker installation needs the
+The root [compose.yaml](compose.yaml) is an override of the shared
+[product services](infra/product/compose.yaml); `./scripts/setup-local.sh` writes
+`COMPOSE_FILE` to `.env` so standard `docker compose` commands load both files. Use `./scripts/docker.sh compose` if your Docker installation needs the
 repository's CLI wrapper. `stop` keeps containers and data; `down` removes the
 containers/network and keeps data. Do not add `--volumes` when retaining data.
 

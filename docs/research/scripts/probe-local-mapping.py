@@ -14,7 +14,7 @@ from pathlib import Path
 import platform
 import time
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 MODEL = "fastino/gliner2.5-base-v1"
 REVISION = "54785d51df8d86a0d8f2eb212fec15871aad2c4d"
 FIXTURE = ROOT / "docs/research/automatic-knowledge-mapping-fixtures-2026-10-09.json"

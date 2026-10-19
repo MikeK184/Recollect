@@ -1,0 +1,46 @@
+# Named-installation layer (scripts/install.py): credentials, state volumes and
+# build context for a project directory of infra/product. Applied after compose.yaml.
+x-app: &app
+  build:
+    context: ../..
+  volumes:
+    - app_data:/var/lib/recollect
+    - type: bind
+      source: ${RECOLLECT_INSTALL_DIR:?Select a saved installation}/mcp-bindings.json
+      target: /run/recollect/mcp-bindings.json
+      read_only: true
+      bind:
+        create_host_path: false
+  environment:
+    RECOLLECT_MCP_CREDENTIALS_FILE: /run/recollect/mcp-bindings.json
+
+services:
+  postgres:
+    env_file: ${RECOLLECT_INSTALL_DIR}/database.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../postgres-init.sh:/docker-entrypoint-initdb.d/recollect.sh:ro
+  neo4j:
+    env_file: ${RECOLLECT_INSTALL_DIR}/graph.env
+    volumes:
+      - graph_data:/data
+      - graph_logs:/logs
+      - graph_plugins:/plugins
+  migrate:
+    <<: *app
+    env_file:
+      - ${RECOLLECT_INSTALL_DIR}/runtime.env
+      - ${RECOLLECT_INSTALL_DIR}/operator.env
+  api:
+    <<: *app
+    env_file: ${RECOLLECT_INSTALL_DIR}/runtime.env
+  worker:
+    <<: *app
+    env_file: ${RECOLLECT_INSTALL_DIR}/runtime.env
+
+volumes:
+  postgres_data:
+  graph_data:
+  graph_logs:
+  graph_plugins:
+  app_data:

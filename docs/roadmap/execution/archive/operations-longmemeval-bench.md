@@ -13,7 +13,7 @@ Work type: product
 - Non-goals: BEAM, LoCoMo, the `_m` haystack, vendor head-to-head tables.
 - Delivery shape: frozen fetcher, opt-in harness, retained report with all
   three accuracies and the per-type breakdown.
-  `scripts/summarize-longmemeval.py` reproduces the official aggregates from
+  `docs/research/scripts/summarize-longmemeval.py` reproduces the official aggregates from
   completed raw judgments and adds latency, delivered input tokens, known
   billing and explicit unavailable measurements without provider calls.
   A separate campaign summary reconciles all original/discarded experiments,

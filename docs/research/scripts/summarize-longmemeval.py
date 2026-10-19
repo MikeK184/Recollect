@@ -7,7 +7,7 @@ import math
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 TYPES = ["single-session-user", "single-session-preference", "single-session-assistant",
          "multi-session", "temporal-reasoning", "knowledge-update"]
 JUDGE = "gpt-4o-2024-08-06"

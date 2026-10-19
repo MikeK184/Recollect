@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 from uuid import UUID
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 CACHE = ROOT / ".cache"
 B = "longmemeval-glm47-no-reasoning"
 A = "longmemeval-1fdefad9-748f-4c5a-8f4f-7d9b1406445f"

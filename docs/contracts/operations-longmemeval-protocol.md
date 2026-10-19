@@ -70,7 +70,7 @@ the answer-level half.
 - Dataset: the official LongMemEval Hugging Face release files
   (`xiaowu0162/longmemeval`, `longmemeval_s_cleaned.json` for the small
   haystack; `_m_cleaned` only by separate explicit approval). A fetcher
-  modeled on `scripts/fetch-public-benchmark.py` downloads each file once and
+  modeled on `docs/research/scripts/fetch-public-benchmark.py` downloads each file once and
   refuses any SHA-256 drift. The report must name the data file, its hash, and
   the upstream repo commit; a result without those fields is invalid on this
   harness, because the September 2025 cleaning change made pre/post files

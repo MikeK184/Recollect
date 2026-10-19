@@ -9,7 +9,7 @@ production capacity or fresh connectivity for integrations explicitly carried fo
 
 The [accepted contract](../contracts/operations-integrated-evaluations.md) froze
 the corpus, labels, context/model budgets, workload and gates before execution.
-`scripts/evaluate-integrated.py` uses the existing product APIs and workers in
+`docs/research/scripts/evaluate-integrated.py` uses the existing product APIs and workers in
 the owned `proof-integrated-20260926` installation at loopback port 19792. Its
 private quality directory is `.cache/integrated-20260926/`. No customer files
 were imported. The workload uses a separate Brain with model policy disabled.
