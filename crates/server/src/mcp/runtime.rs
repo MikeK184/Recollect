@@ -7,6 +7,7 @@ pub mod runner;
 pub use api::*;
 
 use super::*;
+use crate::db::admission::{self, BrainAccess};
 use crate::publication;
 use axum::extract::Query;
 use serde::Deserialize;
@@ -59,8 +60,9 @@ async fn execution_tx<'a>(
     device: Option<Uuid>,
     brain: Uuid,
 ) -> Result<Tx<'a>> {
-    let mut tx = db::device_tx(pool, actor, device).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx_as(pool, actor, device, brain, BrainAccess::READ)
+        .await?
+        .tx;
     definitions::lock(&mut tx).await?;
     Ok(tx)
 }

@@ -2,7 +2,8 @@
 mod catalogue;
 mod dispatch;
 
-use crate::{AppState, auth::Auth, db, error::Error};
+use crate::db::admission::{self, Admitted, BrainAccess, Role};
+use crate::{AppState, auth::Auth, error::Error};
 use axum::{
     Extension, Router,
     extract::{Path, Request, State},
@@ -32,7 +33,7 @@ struct AgentService {
     state: AppState,
     auth: Arc<Auth>,
     brain: Uuid,
-    role: String,
+    role: Role,
     routes: Router,
 }
 
@@ -73,8 +74,8 @@ pub async fn serve(
         .into_response();
     };
     let role = async {
-        let mut tx = auth.tx(&state.pool).await?;
-        let role = db::require_role(&mut tx, brain, false).await?;
+        let Admitted { tx, role, .. } =
+            admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ).await?;
         tx.commit().await?;
         Ok::<_, Error>(role)
     }
@@ -152,7 +153,7 @@ impl ServerHandler for AgentService {
         Ok(ListToolsResult::with_all_items(
             catalogue::registry()?
                 .iter()
-                .filter(|s| !s.writer || self.role != "reader")
+                .filter(|s| !s.writer || self.role != Role::Reader)
                 .map(|s| s.tool.clone())
                 .collect(),
         ))
@@ -173,7 +174,7 @@ impl ServerHandler for AgentService {
                 None,
             ));
         }
-        if spec.writer && self.role == "reader" {
+        if spec.writer && self.role == Role::Reader {
             return Ok(tool_error(Error::forbidden()));
         }
         match self.dispatch(spec, arguments).await {
