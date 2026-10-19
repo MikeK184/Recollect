@@ -1,5 +1,10 @@
 use super::*;
-use crate::{auth::Auth, commands, db, jobs};
+use crate::{
+    auth::Auth,
+    commands, db,
+    db::admission::{self, Archived, BrainAccess},
+    jobs,
+};
 use axum::{
     Json as ResponseJson,
     extract::{Path, Query, State},
@@ -84,9 +89,9 @@ pub async fn get(
     let offset = publication::offset(&publication::Page {
         offset: page.offset,
     })?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, false).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let p = model_policy::current(&state, &mut tx, brain).await?;
     let profile = profile(&mut tx, brain).await?;
     let profile_id = profile.as_ref().map(|p| p.id);
@@ -201,9 +206,14 @@ pub async fn reindex(
 ) -> Result<ResponseJson<SemanticProfile>> {
     auth.require_browser()?;
     let key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     if let Some(saved) = commands::reserve::<SemanticProfile>(
         &mut tx,
         key.as_deref(),
@@ -482,8 +492,10 @@ async fn survey(state: &AppState, brain: Uuid, actor: Uuid) -> Result<Option<Sur
 /// takes no Brain lock. The epoch read in the same snapshot lets `publish` prove
 /// no canonical input changed before it trusts the result.
 async fn prepare(state: &AppState, brain: Uuid, actor: Uuid, survey: &Survey) -> Result<Prepared> {
-    let mut tx = db::preparation_tx(&state.pool, actor, None).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx =
+        admission::brain_preparation_tx(&state.pool, actor, None, brain, BrainAccess::READ)
+            .await?
+            .tx;
     let epoch = crate::graph::preparation_epoch(&mut tx, brain).await?;
     let ids: Vec<Uuid> = survey.pending.iter().map(|e| e.0).collect();
     let judged = judge_all(state, &mut tx, brain, survey, &ids).await?;
@@ -663,9 +675,9 @@ pub async fn retry(
     headers: HeaderMap,
 ) -> Result<ResponseJson<SemanticBatch>> {
     let key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     if let Some(saved) = commands::reserve::<SemanticBatch>(
         &mut tx,
         key.as_deref(),

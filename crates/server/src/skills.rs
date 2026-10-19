@@ -2,7 +2,10 @@
 use crate::{
     AppState,
     auth::Auth,
-    db,
+    db::{
+        self,
+        admission::{self, Archived, BrainAccess, Transport},
+    },
     error::{Error, Result},
     workspace,
 };
@@ -55,29 +58,33 @@ fn mutation_error(error: sqlx::Error) -> Error {
         error.into()
     }
 }
+fn archived() -> Error {
+    Error(
+        StatusCode::CONFLICT,
+        "brain_archived",
+        "Reopen this Brain before publishing or consuming shared guidance.",
+    )
+}
+/// Publication is a browser administrator action under the exclusive Brain
+/// lock; an archived Brain refuses it. Reads are open to every member, but an
+/// archived Brain stays readable only for a browser administrator. The browser
+/// session is re-checked.
+fn access(write: bool) -> BrainAccess {
+    let base = if write {
+        BrainAccess::admin(Archived::Reject(archived)).with_transport(Transport::Browser)
+    } else {
+        BrainAccess::READ.with_archived(Archived::AdminBrowserOnly(archived))
+    };
+    base.with_session_recheck()
+}
 async fn transaction<'a>(
     state: &'a AppState,
     auth: &Auth,
     brain: Uuid,
     write: bool,
 ) -> Result<(Tx<'a>, String)> {
-    if write {
-        auth.require_browser()?;
-    }
-    let mut tx = auth.publication_tx(&state.pool).await?;
-    let role = db::require_role(&mut tx, brain, write).await?;
-    let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
-        .bind(brain)
-        .fetch_one(&mut *tx)
-        .await?;
-    if archived && (write || auth.device_id.is_some() || role != "admin") {
-        return Err(Error(
-            StatusCode::CONFLICT,
-            "brain_archived",
-            "Reopen this Brain before publishing or consuming shared guidance.",
-        ));
-    }
-    Ok((tx, role))
+    let admitted = admission::brain_tx(&state.pool, auth, brain, access(write)).await?;
+    Ok((admitted.tx, admitted.role.as_str().to_owned()))
 }
 async fn environment(tx: &mut Tx<'_>, brain: Uuid, id: Option<Uuid>) -> Result<()> {
     if !workspace::selection_valid(

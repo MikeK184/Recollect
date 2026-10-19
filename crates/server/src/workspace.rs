@@ -1,7 +1,10 @@
 use crate::{
     AppState,
     auth::Auth,
-    db,
+    db::{
+        self,
+        admission::{self, Archived, BrainAccess, Lock},
+    },
     error::{Error, Result},
     jobs,
 };
@@ -57,19 +60,18 @@ fn local_path(value: &str) -> Result<String> {
         },
     )
 }
+fn archived() -> Error {
+    conflict("Reopen this Brain before changing workspace context.")
+}
+/// Any member, under the exclusive Brain lock; an archived Brain refuses
+/// workspace changes. Callers add their own writer or administrator checks.
+const WORKING: BrainAccess = BrainAccess::READ
+    .with_lock(Lock::Exclusive)
+    .with_archived(Archived::Reject(archived));
 async fn working_tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid) -> Result<Tx<'a>> {
-    let mut tx = auth.tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, true).await?;
-    let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
-        .bind(brain)
-        .fetch_one(&mut *tx)
-        .await?;
-    if archived {
-        return Err(conflict(
-            "Reopen this Brain before changing workspace context.",
-        ));
-    }
-    Ok(tx)
+    Ok(admission::brain_tx(&state.pool, auth, brain, WORKING)
+        .await?
+        .tx)
 }
 
 #[derive(sqlx::FromRow)]

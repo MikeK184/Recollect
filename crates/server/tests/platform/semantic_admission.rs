@@ -369,7 +369,7 @@ async fn run(previewed: bool, mutation: Option<&str>) {
         assert_eq!(committed["batch_state"], "running");
         assert_eq!(committed["running_entries"], committed["entry_count"]);
         assert_eq!(committed["requests"], 0);
-        let gateway_pid = wait_blocked(&h.admin, control_pid, "recollect_lock_brain").await;
+        let gateway_pid = wait_blocked(&h.admin, control_pid, "recollect_admit_brain").await;
         assert!(!task.is_finished());
         let changed = if mutation == Some("cancel") {
             // Exact owned fixture state transition, not an API authorization test.

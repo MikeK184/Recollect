@@ -5,7 +5,10 @@ pub mod stream;
 use crate::{
     AppState,
     auth::Auth,
-    db,
+    db::{
+        self,
+        admission::{self, Archived, BrainAccess, Lock, Transport},
+    },
     error::{Error, Result},
     workspace,
 };
@@ -57,21 +60,19 @@ fn capacity() -> Error {
         "Coordination capacity reached. Preserve request identity and retry later.",
     )
 }
+/// Device-only. Reads share the Brain lock and writes take it exclusively;
+/// archived Brains are refused for both. The session is re-checked.
+fn access(write: bool) -> BrainAccess {
+    BrainAccess::READ
+        .with_lock(if write { Lock::Exclusive } else { Lock::Shared })
+        .with_transport(Transport::Device)
+        .with_archived(Archived::Reject(conflict))
+        .with_session_recheck()
+}
 async fn tx<'a>(state: &'a AppState, auth: &Auth, brain: Uuid, write: bool) -> Result<Tx<'a>> {
-    if auth.device_id.is_none() {
-        return Err(Error::forbidden());
-    }
-    let mut tx = auth.publication_tx(&state.pool).await?;
-    db::lock_brain(&mut tx, brain, write).await?;
-    db::require_role(&mut tx, brain, false).await?;
-    let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
-        .bind(brain)
-        .fetch_one(&mut *tx)
-        .await?;
-    if archived {
-        return Err(conflict());
-    }
-    Ok(tx)
+    Ok(admission::brain_tx(&state.pool, auth, brain, access(write))
+        .await?
+        .tx)
 }
 #[derive(sqlx::FromRow)]
 struct SessionRow {

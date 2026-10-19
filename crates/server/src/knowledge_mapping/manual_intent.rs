@@ -4,7 +4,10 @@ use super::source_features::{self, Features, SourceInput};
 use crate::{
     AppState,
     auth::Auth,
-    db,
+    db::{
+        self,
+        admission::{self, BrainAccess, Role},
+    },
     error::{Error, Result},
     graph,
     memory_evidence::Tx,
@@ -158,13 +161,15 @@ impl Intent {
 }
 
 async fn read<'a>(state: &'a AppState, auth: &Auth, brain: Uuid) -> Result<Tx<'a>> {
-    let mut tx = db::preparation_tx(&state.pool, auth.user.id, auth.device_id).await?;
-    if !matches!(
-        db::require_role(&mut tx, brain, false).await?.as_str(),
-        "writer" | "admin"
-    ) {
-        return Err(Error::forbidden());
-    }
+    let mut tx = admission::brain_preparation_tx(
+        &state.pool,
+        auth.user.id,
+        auth.device_id,
+        brain,
+        BrainAccess::READ.with_role(Role::Writer),
+    )
+    .await?
+    .tx;
     sqlx::query("SET LOCAL statement_timeout='4000ms'")
         .execute(&mut *tx)
         .await?;
