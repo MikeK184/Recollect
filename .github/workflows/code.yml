@@ -30,6 +30,16 @@ jobs:
       # Platform integration tests need Docker Postgres/Neo4j and a .env, so CI runs unit tests only.
       - run: cargo test --workspace --lib
 
+  pins:
+    name: Supply-chain pins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      # Standard library only: image digests, tool hashes and action SHAs, offline.
+      - run: python3 scripts/check-pins.py
+      - run: python3 -B -m unittest discover -s scripts/tests -p 'test_check_pins.py' -v
+      - run: python3 -B -m unittest discover -s scripts/tests -p 'test_download_pins.py' -v
+
   web:
     name: Web typecheck
     runs-on: ubuntu-latest

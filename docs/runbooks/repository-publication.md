@@ -20,7 +20,8 @@ PLUGIN_RUNTIME=/absolute/installed/plugin/bin/recollect-plugin
 
 Source-checkout developers can still run `python3 scripts/setup-enola.py` and
 `cargo build -p recollect-agent`, then use `target/debug/recollect-agent` with the
-legacy paired profile. That setup installs Enola in `.cache/enola-tools/`.
+legacy paired profile. That setup installs the release whose SHA-256 the script pins
+in `.cache/enola-tools/`; a mismatching download is rejected before extraction.
 `RECOLLECT_ENOLA_BIN` can select another executable; its declared build and
 extractor labels are retained without a strict version handshake. Git and Enola
 run locally. No OpenAI credential or model call is needed for static extraction.

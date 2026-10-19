@@ -52,7 +52,9 @@ Workspace rebinding and mutating refactors are never exposed.
 Verified host: Apple Silicon macOS, Rust 1.94.0 with rust-src, Node 26.5.0,
 npm 11.17.0, Git, curl, gzip, shasum and `/usr/bin/sandbox-exec`. No model key
 is needed. Setup downloads public dependencies; runtime launchers deny
-networking and writes outside this checkout. Other hosts fail explicitly.
+networking and writes outside this checkout. Other hosts fail explicitly. The
+rust-analyzer download is checked against a pinned SHA-256 and discarded on a
+mismatch before it is decompressed or run (see [Supply-chain pins](#supply-chain-pins)).
 
 ```bash
 ./scripts/setup-rust-navigation.sh
@@ -121,6 +123,7 @@ cargo fmt --all --check
 cargo check --workspace --all-targets
 cargo test --workspace --lib
 npm --prefix web run typecheck
+python3 scripts/check-pins.py
 ./scripts/validate.sh
 ```
 
@@ -131,6 +134,49 @@ native paths. For documentation or public-guide changes also run
 `npm --prefix site run build` and `npm --prefix site run check`. The
 [Pages workflow](../../.github/workflows/pages.yml) builds the site and runs
 governance validation; it publishes static documentation, not the app.
+
+## Supply-chain pins
+
+Everything the repository pulls from outside is pinned, and `scripts/check-pins.py`
+(offline, standard library only) fails on a gap. `./scripts/validate.sh` runs it with
+its unit tests, and the `pins` job of the [code workflow](../../.github/workflows/code.yml)
+runs it on every push and pull request.
+
+| Reference | Required form |
+| --- | --- |
+| Dockerfile `FROM` and `COPY --from`, Compose `image:`, third-party images started by `scripts/` and `infra/` | `name:tag@sha256:<multi-arch index digest>` on one line, so Renovate can track the tag |
+| GitHub Actions `uses:` | `owner/repo@<40-hex commit SHA> # tag` |
+| Downloaded tool archives | A SHA-256 table or constant in the setup script. A mismatch stops before anything is extracted or executed: age in `setup-recovery-tools.py`, Enola in `setup-enola.py`, rust-analyzer in `setup-rust-navigation.sh` |
+
+Locally built images (`*:local`, `${VAR:-name:local}`), Dockerfile stage aliases and
+local `./` actions are exempt. The checker proves the form of a pin, not that it is
+current or that the digest exists; it never touches the network.
+
+To refresh an image, resolve its tag to the index digest (not one platform's
+manifest) and replace the tag and digest together everywhere `rg 'NAME:TAG'` finds
+them, then rebuild the affected images. On Docker Desktop, `./scripts/docker.sh`
+passes a private `--config` that hides the buildx plugin, so run this read-only
+lookup with `docker` directly:
+
+```sh
+docker buildx imagetools inspect NAME:TAG
+```
+
+To bump a downloaded tool:
+
+- **age** (`scripts/setup-recovery-tools.py`): verify the release's `.proof` once with
+  sigsum-verify (the age repository's `SIGSUM.md`), then update the `SHA256` table, the
+  `AGE_*` build arguments in `infra/product/Dockerfile`, `scripts/update-local.py`,
+  `scripts/test-recovery-runtime.py` and [recovery](recovery.md) together. age publishes
+  no checksum file, so the values come from the GitHub asset digests.
+- **Enola** (`scripts/setup-enola.py`): copy the four values from the release's
+  `enola-<version>-<system>-<arch>.sha256` assets into `SHA256`.
+- **rust-analyzer** (`scripts/setup-rust-navigation.sh`): update the release URL and
+  `RECOLLECT_RUST_ANALYZER_SHA256` (the asset digest GitHub shows) together.
+
+`scripts/tests/test_check_pins.py` covers the checker and guards the repository itself;
+`scripts/tests/test_download_pins.py` proves with synthetic archives that a mismatching
+download is rejected before extraction or execution and a matching one installs.
 
 ## Scope and recovery
 
