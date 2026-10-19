@@ -28,8 +28,10 @@ Owning epic: `docs/roadmap/epics/product-platform.md`
 
 - In scope: `crates/server/src/credentials.rs` (hash on write, verify on read,
   legacy conversion, strict read), login and enrolment callers, a startup
-  conversion before `serve` listens, the `argon2` dependency, tests, and the
-  contract, runbook and ADR text that described plaintext storage.
+  conversion before `serve` listens, the `argon2` dependency (optimized in the
+  dev profile so tests stay fast), tests, the `scripts/setup-local.sh` conflict
+  check (a hashed runtime copy of the same credential IDs is not a conflict), and
+  the contract, runbook and ADR text that described plaintext storage.
 - Out of scope: `crates/mcp-runtime` behavior, the MCP secrets file, Compose or
   installer ownership changes, an operator CLI for conversion, parameter tuning.
 - Blockers: None; the repository owner authorized the design on 2026-10-19.

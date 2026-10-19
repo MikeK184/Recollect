@@ -23,3 +23,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 recollect-protocol = { path = "crates/protocol" }
+
+# Argon2id at the ADR 0024 cost is far too slow unoptimized; build only the
+# hashing crates with optimization so debug builds and tests sign in quickly.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3

@@ -7,8 +7,10 @@ For the current route/menu map, see the [desktop guide](desktop-experience.md).
 Run the locally delivered Recollect platform with Rust/Cargo, Node/npm, Python 3
 and Docker Compose. Verified with Rust 1.94, Node 26 and Docker 29 on macOS ARM.
 The [runtime ADR](../adr/0003-product-runtime.md) records the user's speed-first
-development posture. Local credentials are environment-backed; no password hashes,
-artifact digests or strict release/version gates are introduced. Developer
+development posture. The owner credential is environment-backed and invited
+account passwords are stored as Argon2id hashes
+([ADR 0024](../adr/0024-local-password-hashing.md)); no artifact digests or strict
+release/version gates are introduced. Developer
 [supply-chain pins](development-tooling.md#supply-chain-pins) (container image
 digests, downloaded-tool SHA-256 values and Actions commit SHAs) pin what the
 repository pulls in and add no product hash, handshake or release gate.

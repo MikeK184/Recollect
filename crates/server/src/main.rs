@@ -132,6 +132,20 @@ async fn main() -> anyhow::Result<()> {
                 tracing::info!(worked, "Worker pass completed");
                 return Ok(());
             }
+            // ADR 0024: no plaintext password stays on disk once the server has
+            // started. An unreadable or insecure file must not stop the server;
+            // teammate sign-in returns 503 until the operator fixes it, and the
+            // environment-backed owner can still sign in.
+            match recollect_server::credentials::upgrade_legacy(&config.credential_file).await {
+                Ok(0) => {}
+                Ok(converted) => {
+                    tracing::info!(converted, "Converted legacy local credentials to Argon2id");
+                }
+                Err(error) => tracing::warn!(
+                    code = error.1,
+                    "Local credential file could not be checked; teammate sign-in is unavailable until it is fixed"
+                ),
+            }
             let listener = tokio::net::TcpListener::bind(&config.bind).await?;
             tracing::info!(address=%config.bind,"Recollect listening");
             let state = AppState::new(pool, config)?;

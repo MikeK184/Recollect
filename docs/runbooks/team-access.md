@@ -25,12 +25,19 @@ independent sources of permission.
    The environment-backed installation owner uses the CLI recovery in the
    [local development runbook](local-development.md).
 
-Local teammate passwords are stored without hashing in the ignored 0600
-`.data/credentials.json`, following the user's development instruction. PostgreSQL
-stores random credential references. Preserve that file with the database and
-the ignored `.env`; a database-only restore cannot restore local sign-in secrets.
-`RECOLLECT_CREDENTIAL_FILE` can select another repository-local ignored path.
-This file supports one local API writer; shared packaging is an operations slice.
+Local teammate passwords are stored only as Argon2id hashes in the ignored 0600
+`.data/credentials.json` ([ADR 0024](../adr/0024-local-password-hashing.md)).
+PostgreSQL stores random credential references. Preserve that file with the
+database and the ignored `.env`; a database-only restore cannot restore local
+sign-in secrets. `RECOLLECT_CREDENTIAL_FILE` can select another repository-local
+ignored path. This file supports one local API writer.
+The server only reads the file if it is a regular, non-symlink file owned by its
+own user with mode 0600; after copying or restoring it, run `chmod 600` as the
+application user, otherwise teammate sign-in returns 503 while the owner can still
+sign in. A file from an earlier version that holds plaintext is converted to hashes
+the next time the server starts (the log reports only the count). An older server
+cannot read hashed entries, so after a rollback use **Reset sign-in** for each
+teammate.
 
 ## Optional organization sign-in
 
@@ -73,9 +80,11 @@ configured or verified by those checks.
 
 - Lost invitation response: use **Reset sign-in** for the reserved local account
   to issue a new link. A revoked/expired/used link returns a clear error.
-- Missing/corrupt credential file: owner login still works; restore the ignored
-  file from its local backup or recover affected members through new invitations
-  after repairing the file. Do not replace a valid file as a restart procedure.
+- Missing, corrupt, symlinked or insecure credential file (teammate sign-in returns
+  503 `credentials_unavailable`): owner login still works. Fix the mode/owner to
+  0600 for the application user, restore the ignored file from its local backup,
+  or recover affected members through new invitations after repairing the file.
+  Do not replace a valid file as a restart procedure.
 - Provider unavailable or identity denied: local owner/team login remains
   independent. Verify the issuer, client registration, callback, exact subject
   and group configuration. Error pages do not expose provider token payloads.

@@ -54,6 +54,25 @@ class RootCompose(unittest.TestCase):
         self.assertEqual(old.read_text(), content)
         self.assertIn('RECOLLECT_CREDENTIAL_FILE=.data/credentials.json', env.read_text())
 
+    def test_a_runtime_copy_hashed_by_the_api_is_not_a_conflict(self):
+        (self.root / '.data').mkdir()
+        old = self.root / '.data/credentials.json'
+        old.write_text(json.dumps({'fixture-account': 'synthetic-test-value'}))
+        self.setup_local()
+        new = self.root / '.data/runtime/credentials.json'
+        env = self.root / '.env'
+        hashed = '$argon2id$v=19$m=19456,t=2,p=1$synthetic$synthetic'
+
+        def reselect_legacy_path(content):
+            env.write_text(env.read_text().replace('.data/runtime/credentials.json', '.data/credentials.json'))
+            new.write_text(json.dumps(content))
+
+        reselect_legacy_path({'fixture-account': hashed})
+        self.setup_local()
+        reselect_legacy_path({'other-account': hashed})
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.setup_local()
+
     def test_compose_is_one_preserving_stack_with_runtime_secret_boundaries(self):
         self.setup_local()
         env = {k: v for k, v in os.environ.items() if k in

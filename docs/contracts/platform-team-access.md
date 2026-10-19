@@ -4,7 +4,8 @@ Status: accepted
 
 ## Source
 
-[Runtime ADR](../adr/0003-product-runtime.md), [bootstrap contract](platform-bootstrap.md),
+[Runtime ADR](../adr/0003-product-runtime.md), [local password hashing ADR](../adr/0024-local-password-hashing.md),
+[bootstrap contract](platform-bootstrap.md),
 [durable-work contract](platform-durable-work.md) and the
 [platform epic](../roadmap/epics/product-platform.md). The user authorizes routine
 contracts for the complete product. Foundation access requirements remain in force.
@@ -28,16 +29,32 @@ are atomic; concurrent acceptance creates one credential/session. Invitation URL
 use a fragment read by the browser, then remove it from browser history. Tokens
 and passwords do not enter audit, logs, list responses or command receipts.
 
-Under the no-hashing instruction, invited local credentials live in an ignored
-0600 JSON file (`RECOLLECT_CREDENTIAL_FILE`, default `.data/credentials.json`).
-Accounts reference random credential IDs; no password is stored in PostgreSQL.
+Invited local credentials live in an ignored 0600 JSON file
+(`RECOLLECT_CREDENTIAL_FILE`, default `.data/credentials.json`) under
+[ADR 0024](../adr/0024-local-password-hashing.md). Accounts reference random
+credential IDs; no password is stored in PostgreSQL. Each file value is an
+Argon2id PHC string (version 19, 19,456 KiB, two passes, one lane, random salt),
+never the password. Hashing and verification run off the async threads with at
+most four running at once. A local sign-in for an unknown, disabled or
+unprovisioned account, and for the owner, performs one verification against a
+dummy hash so response time does not reveal which usernames exist. The
+environment-backed installation owner is compared in constant time with its
+environment value and is never stored in the file.
 The single local API process serializes atomic file replacement. A new credential
-is durably written before the database activates it; a failed database transaction
-can leave an unused credential entry, never a partially activated account.
-Runtime reads detect a missing/corrupt file as 503, not a successful login.
-The environment-backed owner remains the recovery path. No password hashes or
-application digest/version gates are added; OIDC's library signature verification
-is part of its protocol, consistent with ADR 0003.
+is hashed and durably written before the database activates it; a failed database
+transaction can leave an unused credential entry, never a partially activated
+account. Reads require a regular file that is not a symlink, has no group or
+other permission bits, belongs to the server's user and is at most 8 MiB; a
+missing, corrupt or insecure file is 503 `credentials_unavailable` for sign-in
+and enrolment, not a successful login. The environment-backed owner remains the
+recovery path.
+Before serving, startup replaces every legacy plaintext entry with an Argon2id
+hash in one atomic file replacement and logs only how many it converted; an
+unreadable or insecure file is logged without values and does not stop the server.
+A legacy entry that sign-in still meets is accepted only when it matches exactly
+and is upgraded then. After one successful start no plaintext password remains.
+No application content-digest or version gates are added; OIDC's library
+signature verification is part of its protocol, consistent with ADR 0003.
 
 `PATCH /api/team/accounts/{id}` enables/disables a non-owner account. Disable
 immediately revokes all its sessions and denies queued publication. Re-enable
@@ -136,7 +153,10 @@ The optional provider is not required by `./scripts/dev.sh`.
 Real HTTP handlers plus non-owner PostgreSQL prove invitation replay/expiry/reset,
 local login and disabled-account denial, denied non-owner administration,
 cross-Brain isolation, ownership/direct/group combinations, group expiry/overage,
-removal and worker revocation with permitted controls. Exercise a real local OIDC
+removal and worker revocation with permitted controls. Prove that stored values are
+Argon2id PHC strings, that a legacy plaintext file is converted at startup while
+the account can still sign in, that a wrong password is rejected, and that a
+group/other-readable or symlinked credential file returns 503 at sign-in. Exercise a real local OIDC
 provider through discovery, signed code exchange and callback; distinguish this
 from untested external Entra tenancy. Prove malformed callback/token denial and
 outage behavior. Test actual browser enrollment and access controls. Run focused
