@@ -1,47 +1,57 @@
--- A revision that replaces or retires an earlier revision of the same claim is
--- linked to it by a claim_contributions edge (autonomous::basis). That edge is
--- historical reasoning: the earlier revision stays an exact contributor for
--- erasure, so erasing the earlier revision's source still erases the
--- replacement, and for the support audit's exact-lineage prerequisites. It is
--- not evidence the replacement still needs, and the supersession contract says
--- the replacement must not inherit the replaced revision's source expiry. Until
--- now the support and deadline closure followed every contribution edge, so a
--- replacement became unsupported (and its deadline moved into the past) as soon
--- as the raw session that supported the replaced revision expired.
+-- A revision published by learning reconciliation is linked by a
+-- claim_contributions edge (autonomous::basis) to every reconciliation input the
+-- run offered: the revision it replaces or retires, which belongs to its own
+-- claim, and the other offered revisions, which belong to other claims of the
+-- same session. Those edges are provenance. They keep every offered input an
+-- exact contributor for erasure, so erasing an offered input's source still
+-- erases the published revision, and they supply the support audit's
+-- exact-lineage prerequisites and cycle gate. They are not evidence the
+-- published revision needs: a published claim's support is verified on its own
+-- through its supports and verdicts, and the supersession contract says a
+-- replacement must not inherit the replaced revision's source expiry. Until now
+-- the support and deadline closure followed every contribution edge, so a
+-- published revision became unsupported (and its deadline moved into the past)
+-- as soon as the raw session that supported any offered input expired.
 --
 -- Edge classification. claim_contributions has no kind column and two writers:
--- procedures::append writes handover (including digest) contributions and
+-- procedures::append writes the contributions of a handover (including a
+-- digest), only when the revision's content carries a handover section, which
+-- procedures::validate ties one-to-one to content.kind='handover', and it
 -- rejects an input of the same claim or of kind handover; autonomous::basis
--- writes the offered reconciliation inputs to each published replacement,
--- retirement and new claim. An edge whose input revision belongs to the same
--- claim as its parent is therefore exactly a supersession edge. Handover
--- contributions and the other offered (different-claim) inputs are unchanged
--- dependencies.
+-- writes the offered inputs to each published replacement, retirement and new
+-- claim, whose kind the extraction schema restricts to claim, decision and
+-- procedure and whose replaced or retired target must keep that kind. An edge
+-- is therefore a procedure contribution exactly when its parent revision is a
+-- handover, and a learning basis edge exactly when it is not. Handover and
+-- digest contributions, supports, review decisions, rules, manifests, digest
+-- currency and the cycle gate are unchanged dependencies. A contributor's own
+-- basis edges are provenance too, so they are not followed from a handover.
 --
 -- The full graph stays in recollect_memory_dependencies,
 -- recollect_memory_exact_dependencies, recollect_memory_exact_acyclic,
 -- recollect_support_audit_target and the privacy closures. A cycle through a
--- supersession edge still fails the root's exact acyclic gate, which walks the
--- full exact graph.
+-- basis edge still fails the root's exact acyclic gate, which walks the full
+-- exact graph.
 
 -- The exact-contribution and current-head closure of
--- recollect_memory_dependencies without supersession edges: neither the
--- earlier revision nor that claim's current head is followed. Invoker rights.
+-- recollect_memory_dependencies restricted to procedure contributions: only a
+-- handover (or digest) revision's contributions, and each contributor's current
+-- head, are followed. A learning basis edge is provenance and is not followed.
+-- Invoker rights.
 CREATE FUNCTION recollect_memory_support_dependencies(b uuid,target uuid) RETURNS TABLE(revision_id uuid)
 LANGUAGE sql STABLE SET search_path=public,pg_temp AS $$
  WITH RECURSIVE dependencies(id) AS (
    SELECT target UNION
-   SELECT e.child FROM dependencies d CROSS JOIN LATERAL (
+   SELECT e.child FROM dependencies d
+   JOIN claim_revisions p ON p.brain_id=b AND p.id=d.id AND p.revision#>>'{content,kind}'='handover'
+   CROSS JOIN LATERAL (
      SELECT c.input_revision_id child FROM claim_contributions c
-       JOIN claim_revisions i ON i.brain_id=c.brain_id AND i.id=c.input_revision_id
        WHERE c.brain_id=b AND c.revision_id=d.id
-         AND i.claim_id<>(SELECT p.claim_id FROM claim_revisions p WHERE p.brain_id=b AND p.id=d.id)
      UNION
      SELECT h.current_revision FROM claim_contributions c
        JOIN claim_revisions i ON i.brain_id=c.brain_id AND i.id=c.input_revision_id
        JOIN claims h ON h.brain_id=i.brain_id AND h.id=i.claim_id
        WHERE c.brain_id=b AND c.revision_id=d.id
-         AND i.claim_id<>(SELECT p.claim_id FROM claim_revisions p WHERE p.brain_id=b AND p.id=d.id)
    ) e
  ) SELECT id FROM dependencies
 $$;
@@ -69,8 +79,8 @@ LANGUAGE sql STABLE SET search_path=public,pg_temp AS $$
 $$;
 
 -- The 046 body over the support closure: the revision's own claim lifetime and
--- evidence, and those of every genuine dependency, but not of a replaced
--- revision of the same claim.
+-- evidence, and those of every genuine dependency, but not of a learning
+-- reconciliation input offered to it.
 CREATE OR REPLACE FUNCTION recollect_memory_deadline(b uuid,target uuid) RETURNS timestamptz
 LANGUAGE sql STABLE SET search_path=public,pg_temp AS $$
  WITH dependencies(id) AS MATERIALIZED (
@@ -130,17 +140,16 @@ LANGUAGE sql STABLE SECURITY DEFINER ROWS 100 SET search_path=public,pg_temp AS 
  ), closure(root,id) AS (
   SELECT q.id,q.id FROM qualified q
   UNION
-  SELECT c.root,e.child FROM closure c CROSS JOIN LATERAL (
+  SELECT c.root,e.child FROM closure c
+  JOIN claim_revisions p ON p.brain_id=b AND p.id=c.id AND p.revision#>>'{content,kind}'='handover'
+  CROSS JOIN LATERAL (
    SELECT x.input_revision_id child FROM claim_contributions x
-    JOIN claim_revisions i ON i.brain_id=x.brain_id AND i.id=x.input_revision_id
     WHERE x.brain_id=b AND x.revision_id=c.id
-     AND i.claim_id<>(SELECT p.claim_id FROM claim_revisions p WHERE p.brain_id=b AND p.id=c.id)
    UNION
    SELECT h.current_revision FROM claim_contributions x
     JOIN claim_revisions i ON i.brain_id=x.brain_id AND i.id=x.input_revision_id
     JOIN claims h ON h.brain_id=i.brain_id AND h.id=i.claim_id
     WHERE x.brain_id=b AND x.revision_id=c.id
-     AND i.claim_id<>(SELECT p.claim_id FROM claim_revisions p WHERE p.brain_id=b AND p.id=c.id)
   ) e
  ), members AS MATERIALIZED (
   SELECT DISTINCT c.id FROM closure c WHERE c.id IS NOT NULL

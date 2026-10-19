@@ -57,9 +57,11 @@ alternatives remain uncertain without a mandatory human queue. Publication reche
 current offered revisions, access, policy, leases, applicability, human overrides,
 rejection rules and erasure. Stale responses are discarded; durable retry behavior
 and input dependency erasure apply to the expanded offered inputs.
-The replacement's link to the revision it replaced is an erasure dependency only: it
-neither inherits that revision's raw-session expiry nor withdraws the replacement when
-that raw source expires (see [source support](memory-source-support-verification.md)).
+Learning basis edges, the links from each published replacement, retirement and new
+claim to every offered input, are provenance and erasure dependencies only: the
+published claim neither inherits an offered input's raw-session expiry or unsupported
+state nor is withdrawn when that raw source expires, and erasing an offered input's
+source still erases it (see [source support](memory-source-support-verification.md)).
 
 ### Capacity and capture feedback
 

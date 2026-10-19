@@ -299,8 +299,8 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     // 070 is reserved for another branch; `compatible` compares the applied
     // names positionally with this list, so the gap is intentional.
     (
-        "071_supersession_support_boundary",
-        include_str!("../migrations/071_supersession_support_boundary.sql"),
+        "071_learning_basis_support_boundary",
+        include_str!("../migrations/071_learning_basis_support_boundary.sql"),
     ),
 ];
 

@@ -390,8 +390,9 @@ pub async fn recheck_target(
 }
 
 /// Current model inputs and their required evidence can expire while a writer
-/// holds the Brain lock. Historical reasoning edges are erasure dependencies,
-/// not a permanent TTL dependency on every superseded source.
+/// holds the Brain lock. The basis edges to every offered input are provenance
+/// and erasure dependencies (see `basis`), not a permanent TTL dependency on
+/// every offered or superseded source.
 pub async fn input_deadline(
     tx: &mut Tx<'_>,
     run: &LearningRun,
@@ -470,6 +471,13 @@ pub fn invocation(run: &LearningRun) -> gateway::Invocation {
     inv
 }
 
+/// Link a published replacement, retirement or new claim to every offered
+/// reconciliation input. These edges are provenance and erasure dependencies
+/// only (migration 071): erasing an offered input's source erases the published
+/// claim, but the claim's support is verified through its own supports and
+/// verdicts, so it never inherits an offered input's expiry or unsupported
+/// state. Only the contributions `procedures::append` writes for a handover are
+/// support and deadline dependencies.
 pub async fn basis(tx: &mut Tx<'_>, r: &ClaimRevision, inputs: &[Uuid]) -> Result<()> {
     for id in inputs {
         sqlx::query("INSERT INTO claim_contributions(revision_id,brain_id,input_revision_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING")

@@ -142,19 +142,25 @@ exist in the Brain and remain logically active. Delivery deadlines use the same
 closure, including repository snapshot time rather than manifest creation time;
 logical expiry invalidates cached context before background cleanup runs.
 
-Supersession edges are erasure dependencies, not support or deadline
-dependencies. A revision that replaces or retires an earlier revision of the
-same claim is linked to it as an exact contributor (a supersession edge; an
-edge whose input revision belongs to the parent's own claim). The link keeps the
-replaced revision in the erasure closure and in the audit's exact-lineage
-prerequisites and cycle gate. The support predicate, its batch form and the
-delivery deadline do not follow it, nor the replaced claim's current head: the
-replacement is judged by its own gates, evidence and lifetime, so the expiry of
-the raw source that supported the replaced revision neither withdraws the
-replacement nor moves its deadline. Handover and digest contributions, the other
-claims' reconciliation inputs, supports, review decisions, rules and manifests
-remain dependencies exactly as above, and an expired or unsupported genuine
-dependency still withdraws its dependant.
+Learning basis edges are provenance and erasure dependencies, not support or
+deadline dependencies. Learning reconciliation links every offered input to each
+replacement, retirement and new claim it publishes as an exact contributor: the
+replaced revision of the same claim and the other offered revisions of different
+claims from the same session alike. The link keeps each offered input in the
+erasure closure, so erasing an offered input's source still erases the published
+claim, and in the audit's exact-lineage prerequisites and cycle gate. The support
+predicate, its batch form and the delivery deadline do not follow it, nor the
+offered input's claim current head: a published claim is judged by its own gates,
+supports, verdicts, evidence and lifetime, so the expiry or unsupported state of
+an offered input's raw source neither withdraws the published claim nor moves its
+deadline. Procedure contributions (the exact contributions of a handover, including
+a session digest) are support and deadline dependencies, as are supports, review
+decisions, rules, manifests and digest currency, exactly as above, and an expired or
+unsupported genuine dependency still withdraws its dependant. The exact-lineage cycle
+gate walks every contribution edge, basis edges included. A contribution is a
+procedure contribution when its parent revision is a handover (content kind
+`handover`, the only revisions that carry handover contributions); every other
+contribution edge is a learning basis edge.
 
 One SQL predicate decides support for every consumer. For a caller subject to
 row-level security it answers only for a current member of the Brain: a
