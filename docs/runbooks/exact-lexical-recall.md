@@ -49,9 +49,10 @@ cached content and rereads current authority.
 
 **Copy attributed context** copies compact structured evidence with its fixed
 data-only instruction and provenance. The displayed byte count includes those
-fields and fits the selected 1–32 KiB budget. A fragment is at most 2 KiB; omitted
-or shortened results are labeled. Copied external text is outside browser cache
-invalidation and must be discarded when its scope or source authority changes.
+fields and fits the selected 1–32 KiB budget. A fragment is at most 4 KiB (a whole
+source chunk); omitted or shortened results are labeled. Copied external text is
+outside browser cache invalidation and must be discarded when its scope or source
+authority changes.
 
 For the native client, pair a device as described in [device pairing](device-pairing.md).
 Begin a context or retrieval operation, then use its returned operation UUID:
