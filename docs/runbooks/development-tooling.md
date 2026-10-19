@@ -14,15 +14,15 @@ repository, how to set it up and how to verify it. It replaces ADRs 0002 and
 | --- | --- |
 | Rust definitions, references, types, diagnostics | Rust Analyzer MCP (`zeenix/rust-analyzer-mcp` 0.4.0 over rust-analyzer 2026-10-05); allow indexing to finish before trusting results |
 | Repository context and call traces | Graft MCP (`@nanonets/graft` 0.21.1, npm-locked); automatic refresh is structural only |
-| Structural navigation, including Cognee reference code | [CodeGraph CLI](codegraph.md) 1.6.0; run `status`/`sync` before relying on changed relationships |
 | Literal, configuration and documentation lookup | `rg` and targeted file reads |
 | Current dependency guidance | Context7 and primary official interfaces; record failed or stale lookups |
 | Authority and current-state routing | [recollect-doc-router](../../.agents/skills/recollect-doc-router/SKILL.md) |
 | Documentation edits and lifecycle reconciliation | [recollect-doc-maintainer](../../.agents/skills/recollect-doc-maintainer/SKILL.md) |
 | Browser and native product checks | Existing browser-control tools and the repository's Playwright/native fixtures |
 
-Graft is an upstream Node developer dependency; it is not linked into the
-product or a deployed service. Developer graphs do not prove product runtime
+CodeGraph (ADR 0002) was retired on 2026-10-19: Rust Analyzer and Graft are
+the two navigation tools, and `rg` covers literal lookup. Graft is an upstream
+Node developer dependency; it is not linked into the product or a deployed service. Developer graphs do not prove product runtime
 behavior and do not create Brain topics. The product's plugins, Brain-managed
 MCP connections and private runner are separate from these developer MCPs.
 
@@ -141,7 +141,8 @@ ADRs [0002](../adr/0002-local-codegraph-navigation.md) and
 [0019](../adr/0019-rust-semantic-developer-navigation.md) are superseded by
 this runbook. Their contracts, the developer-tooling and governance slice packs
 (Rust navigation, Claude Code, OpenCode, CodeGraph, documentation skills,
-bootstrap, documentation cleanup and the product docs site) and the Rust
+bootstrap, documentation cleanup and the product docs site), the CodeGraph
+launcher, setup script and runbook and the Rust
 navigation and public-site mappings were removed on 2026-10-19. They remain
 readable at commit
 [`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).

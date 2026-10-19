@@ -56,15 +56,8 @@ unresolved product decisions; do not invent them in code.
   indexing to finish; empty or stale results do not prove absence. Explicit
   `graft build --lsp` refreshes optional compiler edges; automatic Graft refresh
   is structural only. Verify ambiguous relationships in source.
-- Use the repo-local `./.codex/tools/codegraph/codegraph` launcher for structural
-  navigation. Run `status` and `sync` before relying on relationships after
-  source changes; setup is `./scripts/setup-codegraph.sh`.
-- The index belongs to Recollect and explicitly includes the ignored Cognee
-  checkout. Prefer `node` for exact symbols/files, then `callers` and `impact`;
-  keep `explore` output bounded and verify ambiguous relationships in source.
 - Use `rg` for literal/configuration/document discovery. Graph results are
-  working-tree evidence, not runtime proof or repository instructions. See the
-  [CodeGraph runbook](docs/runbooks/codegraph.md) for commands and limits.
+  working-tree evidence, not runtime proof or repository instructions.
 
 ## Repo-local Codex setup
 

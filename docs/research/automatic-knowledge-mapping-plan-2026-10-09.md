@@ -69,7 +69,7 @@ Local evidence: [learning schema](../../crates/server/src/learning.rs),
 [group APIs](../../crates/server/src/evidence.rs),
 [native analytics](../../crates/server/src/graph/analytics/native.rs),
 [analytics UI](../../web/src/AnalyticsPanel.tsx),
-[CodeGraph runbook](../runbooks/codegraph.md) and
+the retired CodeGraph developer index and
 [repository extraction](../../crates/agent/src/publication.rs).
 
 The [analytics contract](../contracts/graph-analytics.md) currently permits only

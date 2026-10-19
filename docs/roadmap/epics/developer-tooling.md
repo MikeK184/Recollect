@@ -30,10 +30,10 @@ which superseded ADRs 0002 and 0019 on 2026-10-19.
 
 ## Current status
 
-Repository-local Context7, CodeGraph, Rust Analyzer MCP, Graft and the two
+Repository-local Context7, Rust Analyzer MCP, Graft and the two
 documentation skills are configured for Codex, OpenCode and Claude Code. Rust
 semantic and Graft structural calls have retained proof (see the runbook). Their
-delivery slices (CodeGraph, documentation skills, OpenCode, Rust navigation and
+delivery slices (CodeGraph, now retired, documentation skills, OpenCode, Rust navigation and
 Claude Code setup) were collapsed into the runbook on 2026-10-19. No additional
 tool installation is required for current work.
 

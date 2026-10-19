@@ -32,7 +32,7 @@ Status: accepted
   and six Markdown roles in `.opencode/agents/`. Preserve role descriptions and
   instructions from `.codex/agents/`: `default` is the primary agent and the
   five specialist roles are subagents invoked only at the user's request.
-  Both hosts use the same root `AGENTS.md`, `.agents/skills/` and CodeGraph CLI.
+  Both hosts use the same root `AGENTS.md`, `.agents/skills/` and navigation tools.
   The configured development MCPs are Context7 on both hosts plus secret-free
   local stdio chrome-devtools on OpenCode only for browser control. Codex
   also includes the repository-local Rust Analyzer and Graft stdio servers.

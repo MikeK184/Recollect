@@ -33,9 +33,10 @@ from the request rather than requiring a separate input form.
    establish observations, not product decisions. A shipped pack proves only
    its recorded delivery and checks, not current deployment or connectivity.
 4. Inspect relevant code/tests/configuration for implementation or debugging
-   questions. Use `rg` for literals/docs and the [local CodeGraph workflow](../../../docs/runbooks/codegraph.md)
-   for exact symbols, callers and impact. Run status/sync before relying on
-   relationships after source changes; verify ambiguous matches in source.
+   questions. Use `rg` for literals/docs and the Rust Analyzer and Graft MCPs in the
+   [development tooling runbook](../../../docs/runbooks/development-tooling.md)
+   for exact symbols, callers and impact. Refresh Graft after source changes
+   and verify ambiguous matches in source.
 5. For dependency/interface questions, use Context7 and primary official sources.
    Record failed lookups, dates and unverified assumptions in the task's evidence
    when relevant. A missing tool or index does not prevent useful manual reads.

@@ -4,8 +4,6 @@ __pycache__/
 *.pyc
 /.cache/
 /crates/*/.cache/
-/.codegraph/
-/.codex/tools/codegraph/node_modules/
 /.codex/tools/graft/node_modules/
 /.codex/tools/rust-analyzer/installed/
 .env

@@ -168,8 +168,7 @@ record handling, unresolved targets, versions/settings and hashes explicitly.
 Extract from isolated exact committed trees without changing the user's working
 tree. HCL extraction does not evaluate Terraform expressions, resolve every
 remote module or prove deployment. Kubernetes/Helm and other language coverage
-needs fixture evidence. CodeGraph 1.6.0 remains installed development navigation
-and an alternate adapter candidate; a worktree index is not immutable publication.
+needs fixture evidence. A worktree index is not immutable publication.
 [Enola HCL limits](https://github.com/enola-labs/enola/blob/v0.4.19/docs/extraction/hcl.md).
 
 Thin Codex/Claude host adapters sanitize supported events into a durable local
@@ -272,6 +271,6 @@ capture expiry, exact manifests, graph correctness, Vault rotation and runtime
 leases through actual product paths. Compare retrieval channels under equal
 model/context budgets and measure concurrent capture/query/analytics plus restore.
 Use ./scripts/validate.sh for documentation governance. Its Bash/Python tooling
-and the [CodeGraph runbook](../runbooks/codegraph.md) remain independent of the
-new product runtime. No library installation or product deployment is part of
+and the [development tooling runbook](../runbooks/development-tooling.md) remain
+independent of the new product runtime. No library installation or product deployment is part of
 this foundation update.

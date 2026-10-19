@@ -79,23 +79,3 @@ directories. Inspect them with `codex mcp get rust_analyzer` and
 registered tools. The [development tooling runbook](../docs/runbooks/development-tooling.md)
 contains the actual Rust stdio proof, refresh commands and coverage limits, and
 separates configuration discovery from successful calls.
-
-## Local CodeGraph CLI
-
-[tools/codegraph/](tools/codegraph/) contains an independent npm-locked
-CodeGraph 1.6.0 installation and launcher. Run `./scripts/setup-codegraph.sh`
-from Recollect, then:
-
-```bash
-./.codex/tools/codegraph/codegraph node get_authorized_dataset
-```
-
-No home configuration or session restart is required;
-the launcher is available directly through the shell.
-
-Recollect's root index explicitly includes the ignored `references/cognee/`
-checkout and leaves its source/Git state untouched. The runtime, caches, and index stay
-local and ignored; source manifests and settings remain reviewable. Refresh
-with `sync` after source changes. See the
-[runbook](../docs/runbooks/codegraph.md) and
-[verification evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/codegraph-setup-2026-09-13.md).
