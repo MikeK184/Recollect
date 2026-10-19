@@ -57,7 +57,6 @@ struct Slot {
 #[derive(Debug, Clone)]
 pub struct InstanceStatus {
     pub id: Uuid,
-    pub key: InstanceKey,
     pub state: &'static str,
     pub active_calls: usize,
     pub idle_seconds: u64,
@@ -116,13 +115,19 @@ impl Drop for StartupGuard<'_> {
 pub struct OperationLease {
     reservation: Reservation,
     connected: Arc<Connected>,
+    /// The call a successful `validate` accepted; `call` repeats validation only
+    /// for any other name or arguments.
+    validated: Mutex<Option<(String, Value)>>,
 }
 impl OperationLease {
     pub fn instance_id(&self) -> Uuid {
         self.reservation.slot.id
     }
     pub fn validate(&self, name: &str, arguments: &Value) -> Result<()> {
-        self.connected.validate(name, arguments)
+        self.connected.validate(name, arguments)?;
+        *self.validated.lock().expect("validated call lock") =
+            Some((name.to_owned(), arguments.clone()));
+        Ok(())
     }
     /// Consume one operation lease for one tool attempt. A receipt upload is a
     /// separate coordinator operation; it must never call this method again.
@@ -133,11 +138,23 @@ impl OperationLease {
         timeout: Duration,
         cancel: CancellationToken,
     ) -> DispatchOutcome {
-        if self.connected.validate(name, &arguments).is_ok() && !cancel.is_cancelled() {
+        let already = self
+            .validated
+            .lock()
+            .expect("validated call lock")
+            .take()
+            .is_some_and(|(n, a)| n == name && a == arguments);
+        if !already && let Err(error) = self.connected.validate(name, &arguments) {
+            return DispatchOutcome::failed(error.0);
+        }
+        if !cancel.is_cancelled() {
             self.reservation.useful = true;
             self.reservation.uncertain = true;
         }
-        let result = self.connected.call(name, arguments, timeout, cancel).await;
+        let result = self
+            .connected
+            .dispatch(name, arguments, timeout, cancel)
+            .await;
         self.reservation.uncertain = false;
         if result.state == "unknown" {
             self.reservation
@@ -277,6 +294,7 @@ impl RuntimeManager {
         Ok(OperationLease {
             reservation,
             connected,
+            validated: Mutex::new(None),
         })
     }
     pub fn statuses(&self, now: Instant) -> Vec<InstanceStatus> {
@@ -288,7 +306,6 @@ impl RuntimeManager {
                 let state = slot.state.lock().expect("runtime state lock");
                 InstanceStatus {
                     id: slot.id,
-                    key: slot.key.clone(),
                     active_calls: state.active,
                     state: if state.draining {
                         "draining"
@@ -302,14 +319,6 @@ impl RuntimeManager {
                 }
             })
             .collect()
-    }
-    /// Mark owned instances for draining; existing operation leases remain valid.
-    pub fn release_session(&self, actor: Uuid, session: Uuid) {
-        for slot in self.slots.lock().expect("runtime slots lock").values() {
-            if slot.key.actor_id == actor && slot.key.client_session_id == session {
-                slot.state.lock().expect("runtime state lock").draining = true;
-            }
-        }
     }
     pub fn drain_all(&self) {
         for slot in self.slots.lock().expect("runtime slots lock").values() {

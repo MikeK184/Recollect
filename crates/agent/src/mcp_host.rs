@@ -12,7 +12,6 @@ pub fn configuration(
     profile: &str,
     brain: Uuid,
     directory: &Path,
-    capture: Option<(&Path, Uuid)>,
 ) -> Result<Value> {
     ensure!(
         !brain.is_nil()
@@ -27,23 +26,13 @@ pub fn configuration(
     let directory = directory
         .to_str()
         .ok_or_else(|| anyhow!("Use a UTF-8 workspace path."))?;
-    let mut args = vec![
+    let args = vec![
         "mcp-serve".to_owned(),
         "--brain".into(),
         brain.to_string(),
         "--directory".into(),
         directory.into(),
     ];
-    if let Some((path, id)) = capture {
-        args.extend([
-            "--capture-setup".into(),
-            path.to_str()
-                .ok_or_else(|| anyhow!("Use a UTF-8 capture setup path."))?
-                .into(),
-            "--capture-launch".into(),
-            id.to_string(),
-        ]);
-    }
     let mut server = json!({"command":executable, "args":args.clone(),
         "env":{"RECOLLECT_URL":endpoint, "RECOLLECT_DEVICE_PROFILE":profile}});
     if let Some(path) = recollect_mcp_runtime::agent_tls::configured_path()? {
@@ -160,7 +149,6 @@ mod tests {
             "default",
             brain,
             Path::new("/tmp/work"),
-            None,
         )
         .unwrap();
         assert_eq!(value["host"], json!("opencode"));
@@ -190,7 +178,6 @@ mod tests {
                 "default",
                 brain,
                 Path::new("/tmp/work"),
-                None,
             )
             .is_err()
         );

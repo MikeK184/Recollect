@@ -1,7 +1,9 @@
 //! One immutable destination per native host session; no folder-wide "latest task".
 use crate::{
-    Client, StoredDevice, capture::CachedCaptureBinding, capture_cli::HookSetup,
-    capture_launch::Launch, decode, plugin_skills::BoundaryResources, plugin_storage, privacy,
+    Client, StoredDevice,
+    capture::CachedCaptureBinding,
+    capture_scope::{HookSetup, Launch},
+    decode, plugin_skills::BoundaryResources, plugin_storage, privacy,
 };
 use anyhow::{Result, anyhow, ensure};
 use chrono::{DateTime, Utc};

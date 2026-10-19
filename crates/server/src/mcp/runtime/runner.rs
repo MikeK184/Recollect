@@ -191,8 +191,8 @@ impl Runner {
             row.reconciles_call_id.is_some(),
         )?;
         let token = Uuid::new_v4();
-        let lease_until:DateTime<Utc>=sqlx::query_scalar("UPDATE mcp_calls SET state='starting',code=NULL,runner_epoch=$2,attempt_token=$3,lease_until=clock_timestamp()+interval '30 seconds',deadline=clock_timestamp()+interval '35 seconds',started_at=clock_timestamp() WHERE id=$1 RETURNING lease_until")
-            .bind(row.id).bind(self.epoch).bind(token).fetch_one(&mut *tx).await?;
+        sqlx::query("UPDATE mcp_calls SET state='starting',code=NULL,runner_epoch=$2,attempt_token=$3,lease_until=clock_timestamp()+interval '30 seconds',deadline=clock_timestamp()+interval '35 seconds',started_at=clock_timestamp() WHERE id=$1")
+            .bind(row.id).bind(self.epoch).bind(token).execute(&mut *tx).await?;
         db::audit(
             &mut tx,
             row.actor_id,
@@ -214,7 +214,6 @@ impl Runner {
             runner_reference: self.reference.clone(),
             runner_epoch: self.epoch,
             attempt_token: token,
-            lease_until,
             connection_revision: row.connection_revision,
             definition_revision: row.definition_revision,
             definition: authorized.definition.manifest.0,
@@ -240,8 +239,6 @@ impl Runner {
                 self.complete(state, &completion).await?;
                 Ok(McpStartPermit {
                     dispatch: false,
-                    state: "failed".into(),
-                    code: Some(error.1.into()),
                     deadline: None,
                 })
             }
@@ -272,8 +269,6 @@ impl Runner {
         if row.state != "starting" {
             return Ok(McpStartPermit {
                 dispatch: false,
-                state: row.state,
-                code: Some("dispatch_already_committed".into()),
                 deadline: row.deadline,
             });
         }
@@ -291,8 +286,6 @@ impl Runner {
             tx.commit().await?;
             return Ok(McpStartPermit {
                 dispatch: false,
-                state: "cancelled".into(),
-                code: Some("cancelled_before_dispatch".into()),
                 deadline: None,
             });
         }
@@ -344,8 +337,6 @@ impl Runner {
         tx.commit().await?;
         Ok(McpStartPermit {
             dispatch: true,
-            state: "running".into(),
-            code: None,
             deadline: Some(deadline),
         })
     }

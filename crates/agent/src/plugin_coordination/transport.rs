@@ -1,12 +1,16 @@
 use super::*;
 use crate::{Client, StoredDevice};
 use recollect_protocol::{
-    CoordinationAnnouncement, CoordinationInbox, CoordinationIntent, CoordinationMessageInput,
-    CoordinationPeers, CoordinationSession, CoordinationSessionInput, WorkspaceCatalogue,
+    CoordinationAnnouncement, CoordinationHeartbeat, CoordinationInbox, CoordinationIntent,
+    CoordinationMessageInput, CoordinationPeers, CoordinationSession, CoordinationSessionInput,
+    WorkspaceCatalogue,
 };
 use reqwest::Method;
 use std::{io::Read, process::Stdio};
 
+fn heartbeat_body(expected_revision: i64) -> Option<Value> {
+    serde_json::to_value(CoordinationHeartbeat { expected_revision }).ok()
+}
 fn base(config: &Config) -> String {
     format!("/api/brains/{}/coordination", config.brain)
 }
@@ -507,7 +511,11 @@ pub async fn worker(id: Uuid) -> Result<Value> {
                     &device,
                     Method::POST,
                     &format!("{}/sessions/{id}/heartbeat", base(&config)),
-                    Some(json!({"expected_revision":input.expected_revision})),
+                    heartbeat_body(
+                        input
+                            .expected_revision
+                            .ok_or_else(|| anyhow!("coordination_revision_unavailable"))?,
+                    ),
                 )
                 .await?;
                 inbox.put("revision", &response.revision)?;
@@ -701,7 +709,7 @@ pub async fn run(
                 device,
                 Method::POST,
                 &format!("{}/sessions/{id}/heartbeat", base(config)),
-                Some(json!({"expected_revision":own.revision})),
+                heartbeat_body(own.revision),
             )
             .await
         }
@@ -751,7 +759,7 @@ async fn watch(config: &Config, client: &Client, device: &StoredDevice, id: Uuid
                     device,
                     Method::POST,
                     &format!("{}/sessions/{id}/heartbeat", base(config)),
-                    Some(json!({"expected_revision":own.revision})),
+                    heartbeat_body(own.revision),
                 )
                 .await?;
                 heartbeat = tokio::time::Instant::now();

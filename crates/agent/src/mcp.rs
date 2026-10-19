@@ -64,12 +64,6 @@ pub struct LocalCoordinator {
     private_runner: Option<Uuid>,
 }
 impl LocalCoordinator {
-    pub async fn register(
-        client: Arc<Client>,
-        device: &StoredDevice,
-    ) -> Result<(Self, McpRunnerLease)> {
-        Self::register_selected(client, device, None).await
-    }
     pub async fn register_selected(
         client: Arc<Client>,
         device: &StoredDevice,
@@ -149,14 +143,6 @@ impl Coordinator for LocalCoordinator {
     async fn defer(&self, input: McpAttempt) -> Result<()> {
         self.post::<Value>("defer", input).await.map(|_| ())
     }
-}
-pub async fn run(
-    client: Client,
-    device: StoredDevice,
-    directory: PathBuf,
-    stop: CancellationToken,
-) -> Result<()> {
-    run_selected(client, device, directory, stop, None).await
 }
 pub async fn run_selected(
     client: Client,

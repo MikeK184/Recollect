@@ -33,6 +33,28 @@ pub trait Coordinator: Clone + Send + Sync + 'static {
     ) -> impl Future<Output = Result<McpReceiptRemovals>> + Send;
     fn defer(&self, input: McpAttempt) -> impl Future<Output = Result<()>> + Send;
 }
+const POLL_BASE: Duration = Duration::from_millis(500);
+const POLL_MAX: Duration = Duration::from_secs(10);
+/// Claim cadence: fast while work is flowing, doubling up to a ceiling while
+/// the coordinator keeps answering with no plan.
+struct ClaimBackoff(Duration);
+fn deadline_passed(deadline: Option<impl Into<SystemTime>>, now: SystemTime) -> bool {
+    deadline.is_some_and(|deadline| deadline.into() <= now)
+}
+impl ClaimBackoff {
+    fn new() -> Self {
+        Self(POLL_BASE)
+    }
+    fn delay(&self) -> Duration {
+        self.0
+    }
+    fn idle(&mut self) {
+        self.0 = (self.0 * 2).min(POLL_MAX);
+    }
+    fn reset(&mut self) {
+        self.0 = POLL_BASE;
+    }
+}
 async fn control<T>(future: impl Future<Output = Result<T>>) -> Result<T> {
     tokio::time::timeout(Duration::from_secs(5), future)
         .await
@@ -295,6 +317,20 @@ impl<C: Coordinator> Executor<C> {
         if !permit.dispatch {
             return Ok(());
         }
+        // The coordinator's dispatch deadline has already passed: sending now
+        // could only outlive the call it authorizes.
+        if deadline_passed(permit.deadline, SystemTime::now()) {
+            drop(credential_operation);
+            drop(lease);
+            return self
+                .receipt(McpCompletion {
+                    attempt,
+                    state: "failed".into(),
+                    code: "deadline_before_send".into(),
+                    result: None,
+                })
+                .await;
+        }
         // Subtract the entire pre-send round trip conservatively, avoiding clock
         // skew between a companion and its server while respecting the deadline.
         let remaining =
@@ -406,8 +442,11 @@ impl<C: Coordinator> Executor<C> {
         let mut tokens: BTreeMap<Uuid, CancellationToken> = BTreeMap::new();
         let mut heartbeat = tokio::time::interval(Duration::from_secs(5));
         heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        let mut poll = tokio::time::interval(Duration::from_millis(500));
-        poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut backoff = ClaimBackoff::new();
+        let mut next_poll = tokio::time::Instant::now();
+        // The receipt store only grows when a call finishes; once it reads empty
+        // it need not be counted again until then.
+        let mut outbox_empty = false;
         let mut stopping = false;
         let mut final_cleanup = false;
         let mut failure = None;
@@ -429,7 +468,12 @@ impl<C: Coordinator> Executor<C> {
                 _=stop.cancelled(),if !stopping=>{ stopping=true; },
                 finished=calls.join_next(),if !calls.is_empty()=>{
                     match finished {
-                        Some(Ok((id,result)))=>{ tokens.remove(&id); if let Err(error)=result { failure=Some(error); stopping=true; } },
+                        Some(Ok((id,result)))=>{
+                            tokens.remove(&id); outbox_empty=false;
+                            // Capacity just freed: look for work promptly.
+                            backoff.reset(); next_poll=next_poll.min(tokio::time::Instant::now()+backoff.delay());
+                            if let Err(error)=result { failure=Some(error); stopping=true; }
+                        },
                         _=>{ failure=Some(RuntimeError("runner_task_interrupted")); stopping=true; },
                     }
                 },
@@ -455,19 +499,23 @@ impl<C: Coordinator> Executor<C> {
                         },
                     }
                 },
-                _=poll.tick(),if !stopping && calls.len()<16=>{
+                _=tokio::time::sleep_until(next_poll),if !stopping && calls.len()<16=>{
+                    next_poll=tokio::time::Instant::now()+backoff.delay();
                     if self.blocked.load(Ordering::Acquire) { continue; }
-                    match self.outbox.count(SystemTime::now()).await {
-                        Ok(pending) if pending+calls.len()<64=>{},
-                        Ok(_)=>continue,
-                        Err(error)=>{ failure=Some(error); stopping=true; continue; },
+                    if !outbox_empty {
+                        match self.outbox.count(SystemTime::now()).await {
+                            Ok(pending) if pending+calls.len()<64=>{ outbox_empty=pending==0; },
+                            Ok(_)=>continue,
+                            Err(error)=>{ failure=Some(error); stopping=true; continue; },
+                        }
                     }
                     match control(self.coordinator.claim()).await {
                         Ok(McpClaim { plan:Some(plan) }) if plan.runner_epoch==lease.epoch && plan.runner_reference==lease.runner_reference && (1..=3600).contains(&plan.timeout_seconds)=>{
+                            backoff.reset(); next_poll=tokio::time::Instant::now()+backoff.delay();
                             let id=plan.call_id; let cancel=CancellationToken::new(); tokens.insert(id,cancel.clone()); let worker=self.clone();
                             calls.spawn(async move { let result=worker.execute(plan,cancel).await; (id,result) });
                         },
-                        Ok(McpClaim { plan:None })=>{},
+                        Ok(McpClaim { plan:None })=>{ backoff.idle(); next_poll=tokio::time::Instant::now()+backoff.delay(); },
                         result=>{ failure=Some(result.err().unwrap_or(RuntimeError("runner_plan_mismatch"))); stopping=true; },
                     }
                 },
@@ -490,6 +538,27 @@ impl<C: Coordinator> Executor<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn passed_permit_deadline_is_detected() {
+        let now = SystemTime::now();
+        assert!(!deadline_passed(None::<SystemTime>, now));
+        assert!(!deadline_passed(Some(now + Duration::from_secs(1)), now));
+        assert!(deadline_passed(Some(now), now));
+        assert!(deadline_passed(Some(now - Duration::from_secs(1)), now));
+    }
+    #[test]
+    fn claim_backoff_doubles_to_ceiling_and_resets() {
+        let mut backoff = ClaimBackoff::new();
+        let mut seen = vec![backoff.delay()];
+        for _ in 0..6 {
+            backoff.idle();
+            seen.push(backoff.delay());
+        }
+        let millis: Vec<u128> = seen.iter().map(Duration::as_millis).collect();
+        assert_eq!(millis, [500, 1000, 2000, 4000, 8000, 10000, 10000]);
+        backoff.reset();
+        assert_eq!(backoff.delay(), POLL_BASE);
+    }
     #[derive(Clone)]
     struct Blackhole;
     impl Coordinator for Blackhole {
@@ -535,7 +604,6 @@ mod tests {
         let lease = McpRunnerLease {
             runner_reference: "central".into(),
             epoch: Uuid::new_v4(),
-            lease_until: Default::default(),
             cancel_calls: vec![],
             drain_instances: vec![],
             released_sessions: vec![],

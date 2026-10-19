@@ -3,7 +3,7 @@
 use chrono::Utc;
 use recollect_agent::{
     capture::{CachedCaptureBinding, Inbox, profile_root},
-    capture_cli::HookSetup,
+    capture_scope::HookSetup,
     plugin_runtime, plugin_session, plugin_storage, publication,
 };
 use recollect_protocol::*;

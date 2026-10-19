@@ -6,7 +6,7 @@ use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, OnceLock},
+    sync::{Arc, Mutex, OnceLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::Semaphore;
@@ -16,9 +16,10 @@ const MAX_RECEIPT: usize = 300 * 1024;
 const APPLICATION_ID: i64 = 0x524d4350;
 static BLOCKING: OnceLock<Arc<Semaphore>> = OnceLock::new();
 
+/// One connection per store: every operation serializes on it instead of
+/// reopening the file and re-running the identity and PRAGMA checks.
 pub struct Outbox {
-    path: PathBuf,
-    owner: String,
+    db: Arc<Mutex<Connection>>,
 }
 fn unavailable(_: impl std::fmt::Debug) -> RuntimeError {
     RuntimeError("receipt_storage_unavailable")
@@ -154,20 +155,15 @@ impl Outbox {
             }
         }
         let path = directory.join("receipts.sqlite");
-        let opened = path.clone();
         let identity = new_owner.clone();
-        blocking(move || {
+        let db = blocking(move || {
             private(&directory, true)?;
-            if !opened.exists() {
-                connect(&opened, &identity)?;
-                return Ok(());
+            if !path.exists() {
+                return connect(&path, &identity);
             }
-            let mut db = match connect(&opened, &old_owner) {
+            let mut db = match connect(&path, &old_owner) {
                 Ok(db) => db,
-                Err(RuntimeError("receipt_owner_mismatch")) => {
-                    connect(&opened, &identity)?;
-                    return Ok(());
-                }
+                Err(RuntimeError("receipt_owner_mismatch")) => return connect(&path, &identity),
                 Err(error) => return Err(error),
             };
             let tx = db
@@ -178,13 +174,30 @@ impl Outbox {
                 params![identity, old_owner],
             )
             .map_err(unavailable)?;
-            tx.commit().map_err(unavailable)
+            tx.commit().map_err(unavailable)?;
+            Ok(db)
         })
         .await?;
-        Ok(Self {
-            path,
-            owner: new_owner,
+        Ok(Self::wrap(db))
+    }
+
+    fn wrap(db: Connection) -> Self {
+        Self {
+            db: Arc::new(Mutex::new(db)),
+        }
+    }
+    async fn with<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut Connection) -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        let db = self.db.clone();
+        blocking(move || {
+            let mut db = db
+                .lock()
+                .map_err(|_| RuntimeError("receipt_storage_unavailable"))?;
+            work(&mut db)
         })
+        .await
     }
 
     pub async fn open(directory: PathBuf, owner: String) -> Result<Self> {
@@ -192,15 +205,12 @@ impl Outbox {
             return Err(RuntimeError("receipt_owner_invalid"));
         }
         let path = directory.join("receipts.sqlite");
-        let opened = path.clone();
-        let identity = owner.clone();
-        blocking(move || {
+        let db = blocking(move || {
             private(&directory, true)?;
-            connect(&opened, &identity)?;
-            Ok(())
+            connect(&path, &owner)
         })
         .await?;
-        Ok(Self { path, owner })
+        Ok(Self::wrap(db))
     }
     pub async fn store(&self, completion: &McpCompletion, now: SystemTime) -> Result<()> {
         let body = serde_json::to_string(completion).map_err(unavailable)?;
@@ -208,11 +218,8 @@ impl Outbox {
             return Err(RuntimeError("receipt_too_large"));
         }
         let id = completion.attempt.call_id.to_string();
-        let path = self.path.clone();
-        let owner = self.owner.clone();
         let now = seconds(now)?;
-        blocking(move || {
-            let mut db = connect(&path, &owner)?;
+        self.with(move |db| {
             let tx = db
                 .transaction_with_behavior(TransactionBehavior::Immediate)
                 .map_err(unavailable)?;
@@ -244,11 +251,8 @@ impl Outbox {
         .await
     }
     pub async fn pending(&self, now: SystemTime) -> Result<Vec<McpCompletion>> {
-        let path = self.path.clone();
-        let owner = self.owner.clone();
         let now = seconds(now)?;
-        blocking(move || {
-            let mut db = connect(&path, &owner)?;
+        self.with(move |db| {
             let tx = db
                 .transaction_with_behavior(TransactionBehavior::Immediate)
                 .map_err(unavailable)?;
@@ -280,11 +284,8 @@ impl Outbox {
     }
     /// Include quarantined receipts: deletion applies to their bodies too.
     pub async fn identities(&self, now: SystemTime) -> Result<Vec<uuid::Uuid>> {
-        let path = self.path.clone();
-        let owner = self.owner.clone();
         let now = seconds(now)?;
-        blocking(move || {
-            let mut db = connect(&path, &owner)?;
+        self.with(move |db| {
             let tx = db
                 .transaction_with_behavior(TransactionBehavior::Immediate)
                 .map_err(unavailable)?;
@@ -316,10 +317,7 @@ impl Outbox {
         if ids.len() > MAX_PENDING as usize {
             return Err(RuntimeError("receipt_storage_invalid"));
         }
-        let path = self.path.clone();
-        let owner = self.owner.clone();
-        blocking(move || {
-            let mut db = connect(&path, &owner)?;
+        self.with(move |db| {
             let tx = db
                 .transaction_with_behavior(TransactionBehavior::Immediate)
                 .map_err(unavailable)?;
@@ -334,15 +332,12 @@ impl Outbox {
     pub async fn acknowledge(&self, completion: &McpCompletion) -> Result<()> {
         let body = serde_json::to_string(completion).map_err(unavailable)?;
         let id = completion.attempt.call_id.to_string();
-        let path = self.path.clone();
-        let owner = self.owner.clone();
-        blocking(move || {
-            connect(&path, &owner)?
-                .execute(
-                    "DELETE FROM receipts WHERE id=?1 AND body=?2",
-                    params![id, body],
-                )
-                .map_err(unavailable)?;
+        self.with(move |db| {
+            db.execute(
+                "DELETE FROM receipts WHERE id=?1 AND body=?2",
+                params![id, body],
+            )
+            .map_err(unavailable)?;
             Ok(())
         })
         .await
@@ -350,25 +345,19 @@ impl Outbox {
     pub async fn quarantine(&self, completion: &McpCompletion) -> Result<()> {
         let body = serde_json::to_string(completion).map_err(unavailable)?;
         let id = completion.attempt.call_id.to_string();
-        let path = self.path.clone();
-        let owner = self.owner.clone();
-        blocking(move || {
-            connect(&path, &owner)?
-                .execute(
-                    "UPDATE receipts SET rejected=1 WHERE id=?1 AND body=?2",
-                    params![id, body],
-                )
-                .map_err(unavailable)?;
+        self.with(move |db| {
+            db.execute(
+                "UPDATE receipts SET rejected=1 WHERE id=?1 AND body=?2",
+                params![id, body],
+            )
+            .map_err(unavailable)?;
             Ok(())
         })
         .await
     }
     pub async fn count(&self, now: SystemTime) -> Result<usize> {
-        let path = self.path.clone();
-        let owner = self.owner.clone();
         let now = seconds(now)?;
-        blocking(move || {
-            let mut db = connect(&path, &owner)?;
+        self.with(move |db| {
             let tx = db
                 .transaction_with_behavior(TransactionBehavior::Immediate)
                 .map_err(unavailable)?;

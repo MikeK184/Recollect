@@ -7,11 +7,8 @@ use std::time::Duration;
 use uuid::Uuid;
 
 pub mod capture;
-pub mod capture_cli;
 pub mod capture_delivery;
-pub mod capture_launch;
-pub mod capture_run;
-pub mod capture_setup;
+pub mod capture_scope;
 pub mod mcp;
 pub mod mcp_bridge;
 pub mod mcp_cli;

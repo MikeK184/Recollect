@@ -4789,8 +4789,6 @@ export interface components {
             definition_revision: string;
             /** Format: uuid */
             device_id?: string | null;
-            /** Format: date-time */
-            lease_until: string;
             /** Format: uuid */
             profile_id: string;
             /** Format: uuid */
@@ -5045,8 +5043,6 @@ export interface components {
             drain_instances: string[];
             /** Format: uuid */
             epoch: string;
-            /** Format: date-time */
-            lease_until: string;
             released_sessions: components["schemas"]["McpReleasedSession"][];
             runner_reference: string;
         };
@@ -5075,11 +5071,9 @@ export interface components {
             instance_id: string;
         };
         McpStartPermit: {
-            code?: string | null;
             /** Format: date-time */
             deadline?: string | null;
             dispatch: boolean;
-            state: string;
         };
         McpToolDescriptor: {
             annotations?: unknown;

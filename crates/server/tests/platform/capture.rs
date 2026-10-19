@@ -18,9 +18,7 @@ async fn native_setup_uploader_recovers_lost_ack_and_syncs_erasure_before_replay
     use recollect_agent::{
         Client, StoredDevice,
         capture::{Inbox, profile_root},
-        capture_cli, capture_delivery,
-        capture_setup::{self, SetupOptions},
-        publication,
+        capture_delivery, plugin_session, plugin_storage, publication,
     };
     use std::sync::atomic::AtomicBool;
     let (h, owner, base, p, provider_server) = setup().await;
@@ -63,89 +61,45 @@ async fn native_setup_uploader_recovers_lost_ack_and_syncs_erasure_before_replay
         .join(".cache")
         .join(format!("capture-uploader-{}", Uuid::new_v4()));
     let work = root.join("workspace");
-    let output = root.join("generated hooks");
     std::fs::create_dir_all(&work).unwrap();
-    std::fs::create_dir(&output).unwrap();
-    std::fs::write(
-        output.join("unrelated.txt"),
-        "Preserve existing workspace configuration",
-    )
-    .unwrap();
+    let evidence = publication::private_root(&root.join("evidence"))
+        .await
+        .unwrap();
     let brain = Uuid::parse_str(base.rsplit('/').next().unwrap()).unwrap();
-    let prepared = capture_setup::prepare(
+    let config = plugin_storage::Config {
+        endpoint: endpoint.clone(),
+        brain,
+        device,
+        profile: "unused-uploader-fixture".into(),
+        with_runner: false,
+        runner_id: None,
+    };
+    let mut session = plugin_session::create(
         &client,
         &stored,
-        SetupOptions {
-            host: "codex".into(),
-            host_version: "0.154.0".into(),
-            directory: work,
-            brain: Some(brain),
-            task: None,
+        &config,
+        plugin_session::SessionStart {
+            host: "codex",
+            version: "0.154.0",
+            cwd: &work,
+            root: &evidence,
+            id: Uuid::new_v4(),
+            parent_task: None,
+            continuation_of_task: None,
+            selection: None,
             agent_id: None,
-            output: Some(output.clone()),
-            executable: publication::project_root().join("target/debug/recollect-agent"),
-            device_profile: "unused-uploader-fixture".into(),
-            evidence_root: root.join("evidence"),
         },
     )
     .await
     .unwrap();
-    assert_eq!(prepared.state, "configured_only");
-    assert!(prepared.capture_enabled);
-    assert_eq!(
-        std::fs::read_to_string(output.join("unrelated.txt")).unwrap(),
-        "Preserve existing workspace configuration"
-    );
-    let setup = capture_cli::read_setup(&prepared.setup_file).await.unwrap();
+    // Refreshing a session without a binding attaches capture, as a plugin hook does.
+    plugin_session::refresh(&client, &stored, &mut session)
+        .await
+        .unwrap();
+    let setup = session.setup.clone();
     assert_eq!(setup.brain_id, brain);
     assert!(setup.created_task);
-    let (renewed_path, setup) = capture_setup::refresh_version(
-        &client,
-        &stored,
-        &prepared.setup_file,
-        &setup,
-        "0.154.1",
-        &publication::project_root().join("target/debug/recollect-agent"),
-    )
-    .await
-    .unwrap();
-    assert_ne!(setup.binding_id, prepared.binding.id);
-    let renewed = device_ok(
-        &h,
-        "GET",
-        &format!("{base}/capture/bindings"),
-        &token,
-        Value::Null,
-    )
-    .await;
-    assert_eq!(renewed.as_array().unwrap().len(), 2);
-    assert_eq!(
-        renewed[0]["operation"]["id"],
-        json!(prepared.binding.operation.id)
-    );
-    let same = capture_setup::refresh_version(
-        &client,
-        &stored,
-        &prepared.setup_file,
-        &capture_cli::read_setup(&prepared.setup_file).await.unwrap(),
-        "0.154.1",
-        &publication::project_root().join("target/debug/recollect-agent"),
-    )
-    .await
-    .unwrap();
-    assert_eq!(same.0, renewed_path);
-    assert_eq!(same.1.binding_id, setup.binding_id);
-    assert!(
-        prepared
-            .binding
-            .operation
-            .scope
-            .selection
-            .area_ids
-            .is_empty()
-    );
-    let configuration = std::fs::read_to_string(&prepared.setup_file).unwrap();
-    assert!(!configuration.contains(&token));
+    assert!(!setup.binding_id.is_nil());
     let configured = ok(
         &h,
         "GET",
@@ -157,16 +111,6 @@ async fn native_setup_uploader_recovers_lost_ack_and_syncs_erasure_before_replay
     assert_eq!(configured["total"], 1);
     assert!(configured["items"][0]["reported_at"].is_null());
     assert!(configured["items"][0]["last_publication"].is_null());
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        for file in [&prepared.setup_file, &prepared.hooks_file] {
-            assert_eq!(
-                std::fs::metadata(file).unwrap().permissions().mode() & 0o777,
-                0o600
-            );
-        }
-    }
     let mut inbox = Inbox::open(
         &profile_root(&setup.evidence_root, device),
         &endpoint,

@@ -367,6 +367,7 @@ async fn vault_live_static_rotation_preserves_active_calls_and_redacts_coherent_
     .await
     .unwrap();
     local.rotate().await;
+    resolver.invalidate().await;
     let new = resolver
         .resolve(connection, Some("fixture"), "central")
         .await

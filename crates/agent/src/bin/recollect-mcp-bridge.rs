@@ -19,8 +19,7 @@ fn configuration(
             &client.endpoint,
             profile,
             brain,
-            directory,
-            None
+            directory
         )?)?
     );
     Ok(())
@@ -57,8 +56,6 @@ async fn main() -> Result<()> {
     );
     let mut brain = None;
     let mut directory = None;
-    let mut capture_setup = None;
-    let mut capture_launch = None;
     for pair in args.chunks_exact(2) {
         match pair[0].as_str() {
             "--brain" if brain.is_none() => {
@@ -69,12 +66,6 @@ async fn main() -> Result<()> {
                 )
             }
             "--directory" if directory.is_none() => directory = Some(PathBuf::from(&pair[1])),
-            "--capture-setup" if capture_setup.is_none() => {
-                capture_setup = Some(PathBuf::from(&pair[1]))
-            }
-            "--capture-launch" if capture_launch.is_none() => {
-                capture_launch = Some(pair[1].parse::<uuid::Uuid>()?)
-            }
             _ => {
                 return Err(anyhow!(
                     "Use mcp-serve [--brain UUID] [--directory PATH] without repeated options."
@@ -90,10 +81,6 @@ async fn main() -> Result<()> {
         // bridge process, and no paired profile: the user token travels in
         // the host environment. Only the Brain UUID and endpoint matter.
         if matches!(host, "codex-remote" | "claude-remote" | "opencode-remote") {
-            ensure!(
-                capture_setup.is_none() && capture_launch.is_none(),
-                "Standalone configuration cannot replace a managed capture launch."
-            );
             let brain = brain.ok_or_else(|| anyhow!("Remote configuration needs --brain UUID."))?;
             println!(
                 "{}",
@@ -110,16 +97,12 @@ async fn main() -> Result<()> {
         .await
         .map_err(|_| anyhow!("Choose an existing workspace directory."))?;
     ensure!(directory.is_dir(), "Choose a workspace directory.");
-    if let Some(host) = host {
-        ensure!(
-            capture_setup.is_none() && capture_launch.is_none(),
-            "Standalone configuration cannot replace a managed capture launch."
-        );
-        if let Some(brain) = brain {
-            // Rendering non-secret settings is not an authentication operation.
-            // The actual bridge always authenticates and checks the fixed Brain.
-            return configuration(host, &client, &profile, brain, &directory);
-        }
+    if let Some(host) = host
+        && let Some(brain) = brain
+    {
+        // Rendering non-secret settings is not an authentication operation.
+        // The actual bridge always authenticates and checks the fixed Brain.
+        return configuration(host, &client, &profile, brain, &directory);
     }
     let device = CredentialSlot::new(&client.endpoint, &profile)?
         .load()?
@@ -128,20 +111,8 @@ async fn main() -> Result<()> {
     if let Some(host) = host {
         return configuration(host, &client, &profile, brain, &directory);
     }
-    let capture = match (capture_setup, capture_launch) {
-        (Some(path), Some(id)) => Some(recollect_agent::capture_launch::Launch {
-            setup: recollect_agent::capture_cli::read_setup(&path).await?,
-            id,
-        }),
-        (None, None) => None,
-        _ => {
-            return Err(anyhow!(
-                "A managed capture bridge requires its setup and launch ID together."
-            ));
-        }
-    };
     let status = presentation::status::start_quiet("MCP bridge");
-    let outcome = mcp_bridge::serve(client, device, brain, root, capture).await;
+    let outcome = mcp_bridge::serve(client, device, brain, root).await;
     match &outcome {
         Ok(()) => presentation::status::finish(status, true, ""),
         Err(error) => presentation::status::finish(status, false, &error.to_string()),
