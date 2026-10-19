@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Fixture procedure, private-runner runbook, dated evidence/index, archived pack, owning epic/index, active/archive indexes and handoff.
 - Validation: Native Linux build, real MCP success/denial/offline/fresh-container checks, live CUA Connected/connection/test-tools inspection, preparation rerun, Python compilation, shell syntax, governance32, CodeGraph and whitespace passed. Existing backend/frontend/schema untouched; no paid model acceptance.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.

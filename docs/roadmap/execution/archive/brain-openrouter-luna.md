@@ -67,5 +67,3 @@ and [epic](../../epics/memory-lifecycle.md).
 - New blockers: none requiring user input.
 - Docs updated: selection/protocol, epic and active index.
 - Validation: live preflight 1126 ms / USD 0.000011187; HTTP fixture and browser 1/1 passed; native held-out 26/26 completed, 84.6% verdict accuracy, 100% positive usability, zero critical false-usable, USD 0.00440597025. Runtime receipts independently reconciled. No production acceptance is inferred.
-- Version: N/A; no release requested.
-- Commit: uncommitted.

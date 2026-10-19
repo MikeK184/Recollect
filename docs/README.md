@@ -104,7 +104,7 @@ an explicit user request; a reviewer role does not create a new approval gate.
 Run focused validation and `./scripts/validate.sh`. Review delivered behavior
 against the pack and update affected authority, evidence, and runbooks. Fill
 the closeout fields: Planned, Shipped, Not shipped, New blockers, Docs updated,
-Validation, Version, and Commit. Use evidence, not an anticipated result.
+and Validation. Use evidence, not an anticipated result.
 
 After the agreed slice is delivered and required checks pass, mark the pack
 `shipped`, move it from `active/` to `archive/`, and update the owning epic,
@@ -112,9 +112,9 @@ epic index, and active/archive indexes together. Record legitimate deferrals
 and successor slices; unfinished acceptance criteria cannot be relabeled as
 shipped. A blocked slice stays active with its blocker and next action.
 
-There is no application release policy yet. Version is `N/A` and commit is
-uncommitted unless actual release/commit work is separately included in the
-user's request. Local delivery is distinct from deployment or publication.
+There is no application release policy yet, and packs record neither a version
+nor a commit; Git holds the history. Local delivery is distinct from deployment
+or publication.
 
 ## Validation boundaries
 

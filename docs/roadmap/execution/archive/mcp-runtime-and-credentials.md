@@ -98,5 +98,3 @@ Work type: product
   Normal schema 022 is ready with seven Brains, the existing profile/grants and
   33 model requests preserved; exact test-Brain recall and desktop checks pass without
   new paid calls or customer reads. The linked mapping records failures and fixes.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

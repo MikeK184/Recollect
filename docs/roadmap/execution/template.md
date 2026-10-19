@@ -64,5 +64,3 @@ Work type: product
 - New blockers: <Remaining blockers and next action, or None.>
 - Docs updated: <Affected documentation.>
 - Validation: <Executed checks and outcomes.>
-- Version: <Actual version or N/A with reason.>
-- Commit: <Actual commit reference or uncommitted.>

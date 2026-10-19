@@ -167,6 +167,3 @@ Decisions that govern the remaining work (the full design notes are in the
   The independent main lease fix passes all six actual-main native regressions.
   Focused checks, full repository validation
   and governance pass; further harness changes need their own focused proof.
-- Version: N/A — no release or normal-installation update.
-- Commit: Original checkpoint `f2673d7`; the resumed implementation and this
-  reconciliation are uncommitted.

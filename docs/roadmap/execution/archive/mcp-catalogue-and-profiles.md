@@ -89,5 +89,3 @@ Work type: product
   33 model requests and zero active jobs; existing test-Brain recall remains usable.
   Governance lint/32 cases, formatting and whitespace checks passed. Detailed
   scope and limits are in the [mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-catalogue-2026-09-22.md).
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

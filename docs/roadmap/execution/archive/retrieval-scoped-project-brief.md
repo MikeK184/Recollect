@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None for this local slice.
 - Docs updated: Governing contracts, operating runbooks, research/evaluation evidence, owner epics and active/archive indexes.
 - Validation: Native session/recall proof passes deterministic brief, strict operational exclusion, current continuation, zero added model charge, late receipt immediate invalidation, spoof rejection and actual ended-task predecessor resume. Two agent unit tests pass complete escaped hook/host metadata bounds and independent native session/destination state. Consumer review verifies collection/manifest/eligibility before bounded selection and ambiguity, exact actor/device/lineage and shared invalidation; retention/deadline proofs pass. [Dated evidence and limitations](../../../mappings/memory-source-support-staging-2026-10-07.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted; local working-tree implementation.

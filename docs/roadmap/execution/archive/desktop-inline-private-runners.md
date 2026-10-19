@@ -67,5 +67,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Contract, archived pack, owning epic/index, active/archive indexes, evidence/index and handoff.
 - Validation: Web type/design/build, required governance32, whitespace, CodeGraph, CUA live Add/Cancel and isolated save/error/retry/stale/device/reader/archive tests plus laptop/wide layout proof passed. Backend fixture suite not launched; no real registration created or worker started.
-- Version: N/A; no version bump requested.
-- Commit: Uncommitted.

@@ -70,5 +70,3 @@ Work type: product
 - New blockers: None for this slice.
 - Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
 - Validation: Operations proves owner diagnostics, stale-data clearing, retry and ordinary-member denial. Five Assurance cases cover private-output canaries, admin role loss, current blockers/history, partial feeds, canonical links and late Brain-switch responses. Three MCP-runtime cases cover actual permitted calls, recovery, cancellation, expiry and Use revocation; workspace platform integration covers foreign-account private tasks/paths. Final repository checks are recorded in the linked evidence.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.

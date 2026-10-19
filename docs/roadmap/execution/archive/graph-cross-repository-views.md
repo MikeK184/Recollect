@@ -93,5 +93,3 @@ Work type: product
   Brains, test-Brain's exact 99-node/183-edge graph, capture/revision history and model
   request counts. No new model calls or customer source reads. See the
   [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/cross-repository-interfaces-2026-09-15.md).
-- Version: N/A; no release policy.
-- Commit: uncommitted.

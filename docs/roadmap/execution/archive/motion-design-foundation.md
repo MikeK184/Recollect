@@ -81,5 +81,3 @@ Work type: product
   - `./scripts/stack.sh up --build` — postgres/neo4j/worker/api all Healthy; app served at http://127.0.0.1:8787.
   - Browser verification with owner login: Brains home, Ask, Memory, Sources, Agents (per-Brain + global), Activity (overview + processing), Connections and Settings all render on the warm dark theme with readable contrast; list rows stagger in; skeletons replace spinners in list/card regions; status dots pulse where live; page switches transition via the wrapper; brand logo visible in the sidebar. Console: no messages.
   - `prefers-reduced-motion`: verified at the CSS level — the media block zeroes all transition/animation durations and delays, so content appears instantly and fully; browser-level emulation was not available with the verification tooling.
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

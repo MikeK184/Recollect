@@ -163,5 +163,3 @@ dependency; local answering, judging, explicit failure recovery and campaign acc
   focused admission/route fixtures, 76 non-ignored workspace tests (229 ignored),
   browser/type proof and offline official metric/accounting parity pass. The
   unchanged broader suite's same 12 failures remain disclosed.
-- Version: N/A.
-- Commit: uncommitted; no push or deployment.

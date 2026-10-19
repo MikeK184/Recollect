@@ -66,5 +66,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Installation ADR/contract, epic and indexes, root README, installation runbook, continuation record and [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/root-compose-2026-09-26.md).
 - Validation: Actual product image build and Chrome login/dashboard/diagnostics; identical Brain/account inventory and model/migration/MCP counts across conversion/restart; readable retained artifacts/journals; occupied-port and failed-migration denials; effective runtime credential boundaries; three focused setup/Compose tests; shell syntax; 32 governance tests and diff checks passed.
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

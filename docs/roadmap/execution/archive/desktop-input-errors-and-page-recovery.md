@@ -67,5 +67,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Governing amendments, provider runbook, owner/indexes and [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/input-errors-and-page-recovery-2026-10-07.md).
 - Validation: Static-file/SPA fallback and sensitive-input no-call proofs; all 20 semantic regression tests; three pure UI tests; web type/design/build; formatting and Clippy with warnings denied; 32 governance fixtures. Browser info icon, main-form controls, Cancel and isolated missing-chunk/Reload recovery passed. Actual legacy URL returns 404 and HTML remains no-store. Live new learning succeeds while retained input/model failures remain visible.
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

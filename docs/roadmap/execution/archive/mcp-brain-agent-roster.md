@@ -77,5 +77,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Contracts `platform-device-pairing.md`, `mcp-plugin-direct-auth.md`, `desktop-experience.md` amended; epic slice and indexes reconciled; vision body and the device-pairing/desktop-experience runbooks reconciled to plugin wording; [evidence mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/brain-agent-roster-2026-10-02.md) added.
 - Validation: `cargo check`/`clippy` clean for server, agent and protocol; web typecheck (design checks + tsc) clean; focused platform tests `pairing_markers_and_brain_agent_roster` and the existing `device_pairing_delivery_revocation_and_worker_authority` pass on disposable databases; `./scripts/validate.sh` passes; live stack rebuilt with `./scripts/stack.sh up --build` (api/worker healthy, migration 031 applied, backfill verified in DB).
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

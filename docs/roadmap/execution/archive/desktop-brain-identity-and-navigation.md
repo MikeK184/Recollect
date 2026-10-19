@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Desktop/pairing contracts, epic/index, archived pack/index, mappings/index and handoff.
 - Validation: 3 real database/HTTP tests, 2 decoder tests, 9 browser cases, build/typecheck/design, all-target clippy, independent review, CodeGraph and 32 governance checks passed. Local browser proof has no page errors and unchanged inventory.
-- Version: N/A; no release policy.
-- Commit: Uncommitted.

@@ -143,5 +143,3 @@ Work type: product
   validator. Whole-repository validation now passes as well. See exact proof
   boundaries and current checks in the
   [mapping](../../../mappings/native-skill-reload-host-proof-2026-10-18.md).
-- Version: N/A: no release policy or release action requested.
-- Commit: uncommitted.

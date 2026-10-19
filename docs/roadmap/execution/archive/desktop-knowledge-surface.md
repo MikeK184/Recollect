@@ -74,5 +74,3 @@ Work type: product
 - New blockers: None for this slice. Unrelated desktop acceptance packs and the held Ask slice remain open.
 - Docs updated: Governing desktop priority amendment, dated evidence, desktop/agent/capture runbooks as applicable, this pack, owning epic and epic/execution indexes, and CONTINUE_HERE.md.
 - Validation: Knowledge/lineage, graph/chrome, claims, investigation, history navigation, list hygiene, evidence and retention browser proof passed. Graph canvas measured 479px versus 174px combined chrome at 1440×900. The second agent approved owner visuals at 1280/1440/1920, exact cross-view links, draft cancellation and the final Latest knowledge fix. Web design/typecheck/build, workspace Rust tests, platform integration with documented focused reruns, Clippy, formatting, all 32 governance checker tests and git diff --check passed. The evidence mapping distinguishes opt-in skips, real external results and current deployment.
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

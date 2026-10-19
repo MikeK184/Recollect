@@ -71,8 +71,6 @@ Work type: product
 - Validation: Production web build/design/typecheck and independent source/live
   visual review pass. Focused browser evidence below, repository validator,
   whitespace and synchronized CodeGraph checks pass.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.
 
 ## Dated evidence — 2026-10-03
 

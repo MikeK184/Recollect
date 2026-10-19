@@ -112,5 +112,3 @@ are not the target. Generated records, marks and commands remain illustrative.
   definition/device identities preserved. Final governance and whitespace checks
   passed (32 governance cases); results are recorded in the dated mapping,
   alongside scope and evidence limits. Whitespace checks also passed.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

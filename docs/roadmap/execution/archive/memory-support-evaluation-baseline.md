@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None for this local slice.
 - Docs updated: Governing contracts, operating runbooks, research/evaluation evidence, owner epics and active/archive indexes.
 - Validation: All 10 offline scorer tests and 50-case validation passed. Real installed-model native evaluation used 124 distinct calls/148,288 tokens across retained versions; no favorable mixing. v3 meets the unchanged zero-critical-false-usability/80%-positive/completeness gate. Final governance validation passes 32 checks. [Dated evidence and limitations](../../../mappings/memory-source-support-staging-2026-10-07.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted; local working-tree implementation.

@@ -75,5 +75,3 @@ See the [final dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d
 - New blockers: None.
 - Docs updated: Desktop contract, this archived pack, epic and indexes, dated evidence and handoff.
 - Validation: Two focused ambient browser cases, canonical retention deadline test, independent UI review, build/typecheck/design, clippy, final governance/whitespace and synchronized CodeGraph; local readiness and served assets verified.
-- Version: N/A; no release policy or version bump.
-- Commit: Uncommitted; no commit, push or external release.

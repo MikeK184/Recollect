@@ -69,5 +69,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Desktop contract, this archived pack, epic and indexes, dated evidence and handoff.
 - Validation: Existing Graph chrome/keyboard, Connections search/Pause, direct HTTP MCP setup, Privacy editing/erasure, and canonical lazy Knowledge/evidence focus/accessibility journeys; build/typecheck/design, clippy, independent current UI review, final governance/whitespace and CodeGraph; local readiness and new served entry verified.
-- Version: N/A; no release policy or version bump.
-- Commit: Uncommitted; no commit, push or external release.

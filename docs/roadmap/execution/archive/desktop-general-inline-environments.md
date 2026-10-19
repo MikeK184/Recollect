@@ -96,5 +96,3 @@ Work type: product
   local frontend-only deployment over the existing backend and readiness.
   CUA owner/reader controls, inline cancelled drafts, 2504 px width proof and
   independent final source/pixel acceptance. No real settings writes or deletion.
-- Version: N/A; no release policy.
-- Commit: Uncommitted.

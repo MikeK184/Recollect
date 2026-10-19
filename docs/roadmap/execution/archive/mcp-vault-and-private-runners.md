@@ -94,5 +94,3 @@ Work type: product
   without new model calls or customer file reads. Root token is absent from
   API/worker environments and the restored Enterprise token helper still matches.
   See the mapping for logs, incident history and evidence boundaries.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

@@ -69,7 +69,7 @@ Follow [the lifecycle](../../../docs/README.md) and [pack rules](../../../docs/r
   a reason in the owning epic. Foundation-only authoring does not create
   speculative product work. Accepted foundations do not replace detailed contracts.
 - Close out against actual acceptance evidence: Planned, Shipped, Not shipped,
-  New blockers, Docs updated, Validation, Version and Commit. Use meaningful
+  New blockers, Docs updated and Validation. Use meaningful
   `N/A` reasons. Unmet acceptance stays open; later changes normally get a new
   slice rather than rewriting a shipped pack's historical delivery.
 

@@ -101,5 +101,3 @@ Work type: product
   04fc5bcb-362f-4a31-9e28-3ce02b188229 and all original data IDs are preserved.
   Longer normal graph proof passes 37/40, retaining three database failures and
   p95 3.520 seconds; support-audit discovery remains the next measured seam.
-- Version: N/A — local development.
-- Commit: uncommitted.

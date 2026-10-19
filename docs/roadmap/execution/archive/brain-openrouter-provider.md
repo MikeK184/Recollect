@@ -84,5 +84,3 @@ Work type: product
   pass without reapplying adoption or requiring the new provider fields.
   The separate LongMemEval pack is now archived with complete recovery/scoring; see
   [current evidence](../../../mappings/openrouter-benchmark-proof-2026-10-08.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted.

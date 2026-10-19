@@ -95,5 +95,3 @@ Work type: product
   operation API, web build/typecheck, formatting and governance/32 checker tests
   passed. Actual normal test-Brain source and 74-node/151-edge graph inspection passed;
   seven Brains, 33 model requests, zero active jobs and migration 020 preserved.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

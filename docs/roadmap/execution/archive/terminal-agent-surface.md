@@ -72,5 +72,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: This pack closeout only; no contract, ADR or mapping changes were required (presentation over existing reads and CLI behavior).
 - Validation: `web` `npm run typecheck` (design checks + tsc) passes; `cargo clippy -p recollect-agent` clean (0 warnings); `cargo test -p recollect-agent --lib presentation` 8/8 pass (banner fallback selection, plain banner line, bounded ASCII frames, spinner frame cycling, plain/ANSI status lines, elapsed formatting, plain round trip); `./scripts/validate.sh` passes; live stack rebuilt healthy via `./scripts/stack.sh up --build`; browser + CLI TTY/plain proofs above.
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

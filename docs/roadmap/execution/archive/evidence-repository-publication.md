@@ -69,5 +69,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: ADR 0004, publication and collections contracts, Enola experiment and [delivery proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/repository-publication-proof-2026-09-14.md), [runbook](../../../runbooks/repository-publication.md), local development guidance, epic and execution indexes.
 - Validation: Nine core API/database scenarios; native extraction, discovery and origin tests; six ordinary browser workflows (optional OIDC skipped); actual read-only test-Brain extraction/publication and metadata preservation; 75 unique OpenAPI operations, frontend build, rustfmt, Clippy, governance lint and 32 checker tests. Final focused API proof passed after adding immutable same-operation provenance checks. Local runtime restarted with migration 007; external deployment is outside the goal.
-- Version: N/A; no release policy or release requested.
-- Commit: Uncommitted.

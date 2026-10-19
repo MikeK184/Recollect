@@ -21,7 +21,7 @@ Status: accepted
 - Product packs cannot enter implementation or ship while foundation docs are
   pending. Pending sources cannot be listed under Governing Sources.
 - Each shipped pack records all closeout fields and concrete validation
-  evidence. Version/commit may explicitly be N/A or uncommitted.
+  evidence. Packs do not record a version or commit.
 - `AGENTS.md` is the only shared instruction prose. Role definitions live once in
   `.claude/agents/`; Codex (`.codex/agents/`) and OpenCode (`.opencode/agents/`)
   keep stubs that reference them, and the main session is `default`. Specialist

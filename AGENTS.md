@@ -46,7 +46,6 @@ unresolved product decisions; do not invent them in code.
 - Keep secrets in the environment or ignored local secret files. Never copy
   secrets into source, configuration, docs, test fixtures, or output.
 - No automatic release bump, commit, push, or deployment policy exists yet.
-  Report version and commit as `N/A` or uncommitted when applicable.
 
 ## Code navigation
 

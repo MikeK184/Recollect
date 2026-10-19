@@ -33,10 +33,7 @@ PACK_FIELDS = {
     ),
     "Integrations and Runtime Inputs": ("Providers", "Environment", "Secrets", "Failure handling"),
     "Tests and Acceptance": ("Automated", "Manual", "Acceptance"),
-    "Closeout": (
-        "Planned", "Shipped", "Not shipped", "New blockers", "Docs updated",
-        "Validation", "Version", "Commit",
-    ),
+    "Closeout": ("Planned", "Shipped", "Not shipped", "New blockers", "Docs updated", "Validation"),
 }
 REQUIRED = (
     "AGENTS.md", "README.md", ".gitignore", ".codex/README.md", ".codex/config.toml",

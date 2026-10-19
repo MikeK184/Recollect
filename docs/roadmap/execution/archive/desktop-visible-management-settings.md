@@ -86,5 +86,3 @@ Work type: product
   confirms existing bounded 5/30-minute replacements and one-minute pre-request
   block recovery; no runtime provider probe performed. Independent source and
   final screenshot review found no remaining blocker.
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

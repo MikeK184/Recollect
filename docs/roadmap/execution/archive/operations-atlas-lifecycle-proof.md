@@ -129,5 +129,3 @@ Work type: product
 - Validation: lifecycle suite passed in 10.5 s with the worker drained and the
   owned database removed; both benchmark lanes passed; governance lint and
   `./scripts/validate.sh` run with this change.
-- Version: N/A: no release policy.
-- Commit: uncommitted.

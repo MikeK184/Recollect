@@ -105,8 +105,6 @@ Work type: governance
 - New blockers: None.
 - Docs updated: None.
 - Validation: Fixture validation passed.
-- Version: N/A: fixture.
-- Commit: uncommitted
 """
 
 

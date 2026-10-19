@@ -71,5 +71,3 @@ Work type: product
 - New blockers: None for this slice.
 - Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
 - Validation: Five Ask browser regressions, including default Brain redirect and laptop viewport visibility, passed. A deployed real-provider answer with exact citations passed; landing and switching to Search issued no provider request. Independent visual review approved 1280/1440/1920 and disabled fallback. Final repository checks are recorded in the linked evidence.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.

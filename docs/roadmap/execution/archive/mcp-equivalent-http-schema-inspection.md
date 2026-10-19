@@ -77,5 +77,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Contract, epic, archived pack/index, handoff and [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-inspection-readability-2026-10-06.md).
 - Validation: Three pure schema tests, one owned PostgreSQL/HTTP fixture, clippy/rustfmt, governance32 and live Exa CUA proof. Approved manifests and test-Brain call count unchanged; fresh incremental Linux release and ready local stack verified.
-- Version: N/A.
-- Commit: Uncommitted.
