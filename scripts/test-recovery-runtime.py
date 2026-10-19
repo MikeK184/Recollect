@@ -167,7 +167,7 @@ class Drill:
         settings["policy"].update(enabled=True, managed_tools=True)
         owner.call("PUT", base + "/capture/policy", {"base_change": settings["change_id"], "policy": settings["policy"]})
         pairing = owner.call("POST", "/api/devices/pairings", {"name": "Recovery proof companion"})
-        owner.call("POST", "/api/devices/pairings/" + pairing["user_code"] + "/approve", {"approve": True})
+        owner.call("POST", "/api/devices/pairings/" + pairing["user_code"] + "/approve", {"approve": True, "confirm": True})
         paired = owner.call("POST", "/api/devices/pairings/poll", {"device_code": pairing["device_code"]})
         owner.call("POST", "/api/devices/pairings/finish", {"device_code": pairing["device_code"]}, expected=204)
         self.record("device", paired)

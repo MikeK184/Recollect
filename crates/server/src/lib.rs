@@ -53,6 +53,7 @@ mod strict_json;
 mod text_rules;
 mod support_excerpts;
 pub mod team;
+pub mod throttle;
 mod web;
 pub mod worker;
 pub mod workspace;
@@ -65,22 +66,23 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
-
-type LoginAttempts = Arc<Mutex<HashMap<String, (Instant, u32)>>>;
 
 #[derive(Clone)]
 pub struct AppState {
     pub pool: sqlx::PgPool,
     pub config: Arc<config::Config>,
     pub http: reqwest::Client,
-    pub login_attempts: LoginAttempts,
+    pub login_attempts: throttle::Attempts,
+    /// Anonymous pairing and organization sign-in starts, per caller address.
+    pub start_attempts: throttle::Attempts,
+    /// Last time a device's `last_used_at` was written.
+    pub device_touched: throttle::Seen<uuid::Uuid>,
+    /// Last time agent-usage was recorded for a (brain, device, host).
+    pub usage_recorded: throttle::Seen<(uuid::Uuid, uuid::Uuid, String)>,
+    pub oidc_metadata: oidc::MetadataCache,
     pub agent_requests: Arc<tokio::sync::Semaphore>,
     pub mcp_inspections: Arc<tokio::sync::Semaphore>,
     pub answer_capacity: Arc<tokio::sync::Semaphore>,
@@ -96,7 +98,11 @@ impl AppState {
                 .timeout(Duration::from_secs(5))
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?,
-            login_attempts: Arc::new(Mutex::new(HashMap::new())),
+            login_attempts: Default::default(),
+            start_attempts: Default::default(),
+            device_touched: Default::default(),
+            usage_recorded: Default::default(),
+            oidc_metadata: Default::default(),
             agent_requests: Arc::new(tokio::sync::Semaphore::new(16)),
             mcp_inspections: Arc::new(tokio::sync::Semaphore::new(4)),
             answer_capacity: Arc::new(tokio::sync::Semaphore::new(4)),
@@ -850,7 +856,11 @@ pub fn app(state: AppState) -> Router {
     let static_dir = state.config.static_dir.clone();
     let api = api_routes().route(
         "/brains/{brain}/mcp/agent",
-        axum::routing::any(mcp::agent::serve).layer(DefaultBodyLimit::max(256 * 1024)),
+        axum::routing::any(mcp::agent::serve)
+            .layer::<_, std::convert::Infallible>(DefaultBodyLimit::max(256 * 1024))
+            .layer::<_, std::convert::Infallible>(axum::Extension(mcp::agent::internal_routes(
+                &state,
+            ))),
     );
     Router::new()
         .nest("/api", api)
@@ -902,10 +912,43 @@ async fn origin_guard(State(state): State<AppState>, request: Request, next: Nex
         )
         .into_response();
     }
+    let path = request.uri().path();
+    let api = path == "/api" || path.starts_with("/api/");
+    let asset = path.starts_with("/assets/");
     let mut response = next.run(request).await;
+    let policy = cache_policy(api, asset, response.status());
     response.headers_mut().insert(
         header::CACHE_CONTROL,
-        header::HeaderValue::from_static("no-store"),
+        header::HeaderValue::from_static(policy),
     );
     response
+}
+
+/// API responses carry account data and are never stored. Content-hashed
+/// assets are immutable once found; documents revalidate so a deploy shows.
+fn cache_policy(api: bool, asset: bool, status: StatusCode) -> &'static str {
+    if api {
+        "no-store"
+    } else if asset && status.is_success() {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_api_is_never_stored_and_found_assets_are_immutable() {
+        assert_eq!(cache_policy(true, false, StatusCode::OK), "no-store");
+        assert_eq!(cache_policy(true, false, StatusCode::NOT_FOUND), "no-store");
+        assert_eq!(
+            cache_policy(false, true, StatusCode::OK),
+            "public, max-age=31536000, immutable"
+        );
+        assert_eq!(cache_policy(false, true, StatusCode::NOT_FOUND), "no-cache");
+        assert_eq!(cache_policy(false, false, StatusCode::OK), "no-cache");
+    }
 }

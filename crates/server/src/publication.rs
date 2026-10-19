@@ -437,6 +437,17 @@ pub async fn publish(
         return Err(Error::invalid("Idempotency-Key must match publication_id."));
     }
     let mut tx = write_tx(&state, &auth, brain).await?;
+    if let Some(reply) = commands::reserve::<PublicationResult>(
+        &mut tx,
+        Some(&key),
+        "repository.publish",
+        json!({"brain":brain,"repository":repository,"input":body}),
+    )
+    .await?
+    {
+        tx.commit().await?;
+        return Ok(Json(reply));
+    }
     let origin: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM repository_origins WHERE brain_id=$1 AND repository_id=$2 AND origin=$3)").bind(brain).bind(repository).bind(&input.origin).fetch_one(&mut *tx).await?;
     if !origin {
         return Err(Error::missing());
@@ -476,17 +487,6 @@ pub async fn publish(
             "repository_content_disabled",
             "This Brain does not allow new repository file retention.",
         ));
-    }
-    if let Some(reply) = commands::reserve::<PublicationResult>(
-        &mut tx,
-        Some(&key),
-        "repository.publish",
-        json!({"brain":brain,"repository":repository,"input":body}),
-    )
-    .await?
-    {
-        tx.commit().await?;
-        return Ok(Json(reply));
     }
     let candidate: Option<Uuid> = sqlx::query_scalar("SELECT id FROM repository_snapshots WHERE brain_id=$1 AND repository_id=$2 AND revision=$3 AND adapter=$4 AND adapter_build=$5 AND extractor_version=$6 AND settings=$7").bind(brain).bind(repository).bind(&input.revision).bind(&input.adapter).bind(&input.adapter_build).bind(&input.extractor_version).bind(&input.settings).fetch_optional(&mut *tx).await?;
     let reused = candidate.is_some();

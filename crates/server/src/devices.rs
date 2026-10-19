@@ -3,6 +3,7 @@ use crate::{
     auth::Auth,
     error::{Error, Result},
     team,
+    throttle::{self, Peer},
 };
 use axum::{
     Json,
@@ -42,8 +43,18 @@ async fn device(tx: &mut Transaction<'_, Postgres>, id: Uuid) -> Result<Device> 
 #[utoipa::path(post,path="/api/devices/pairings",operation_id="startPairing",request_body=PairingRequest,responses((status=200,body=PairingStart)))]
 pub async fn start(
     State(state): State<AppState>,
+    Peer(peer): Peer,
     Json(input): Json<PairingRequest>,
 ) -> Result<Json<PairingStart>> {
+    // Unauthenticated: bound each caller so the shared pending cap below
+    // cannot be exhausted by one address.
+    if !throttle::allow(&state.start_attempts, &format!("pairing|{peer}"), 30) {
+        return Err(Error(
+            StatusCode::TOO_MANY_REQUESTS,
+            "throttled",
+            "Too many pairing requests. Try again in a minute.",
+        ));
+    }
     let name = input.name.trim();
     if name.is_empty() || name.chars().count() > 120 || name.chars().any(char::is_control) {
         return Err(Error::invalid(
@@ -109,6 +120,25 @@ pub async fn start(
         interval_seconds: 2,
     }))
 }
+/// The account's active device that approving a pairing with this name would
+/// re-key, if any.
+async fn reusable(
+    tx: &mut Transaction<'_, Postgres>,
+    account: Uuid,
+    name: &str,
+    lock: bool,
+) -> Result<Option<(Uuid, String)>> {
+    let sql = if lock {
+        "SELECT id,name FROM devices WHERE account_id=$1 AND lower(name)=lower($2) AND revoked_at IS NULL AND expires_at>now() ORDER BY created_at DESC LIMIT 1 FOR UPDATE"
+    } else {
+        "SELECT id,name FROM devices WHERE account_id=$1 AND lower(name)=lower($2) AND revoked_at IS NULL AND expires_at>now() ORDER BY created_at DESC LIMIT 1"
+    };
+    Ok(sqlx::query_as(sql)
+        .bind(account)
+        .bind(name.trim())
+        .fetch_optional(&mut **tx)
+        .await?)
+}
 #[utoipa::path(get,path="/api/devices/pairings/{code}",params(("code"=String,Path)),responses((status=200,body=PairingView)))]
 pub async fn view(
     State(state): State<AppState>,
@@ -124,11 +154,20 @@ pub async fn view(
     .fetch_optional(&state.pool)
     .await?;
     let (name, status, expires_at) = row.ok_or_else(gone)?;
+    let reuses_device = if status == "pending" {
+        let mut tx = auth.tx(&state.pool).await?;
+        let reused = reusable(&mut tx, auth.user.id, &name, false).await?;
+        tx.commit().await?;
+        reused.map(|(_, name)| name)
+    } else {
+        None
+    };
     Ok(Json(PairingView {
         name,
         user_code: code,
         state: status,
         expires_at,
+        reuses_device,
     }))
 }
 #[utoipa::path(post,path="/api/devices/pairings/{code}/approve",params(("code"=String,Path)),request_body=PairingDecision,responses((status=200,body=PairingView)))]
@@ -170,16 +209,20 @@ pub async fn approve(
     } else {
         "declined"
     };
+    let mut reuses_device = None;
     let device_id = if input.approve {
         let trimmed = name.trim().to_owned();
-        let existing: Option<Uuid> = sqlx::query_scalar(
-            "SELECT id FROM devices WHERE account_id=$1 AND lower(name)=lower($2) AND revoked_at IS NULL AND expires_at>now() ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
-        )
-        .bind(auth.user.id)
-        .bind(&trimmed)
-        .fetch_optional(&mut *tx)
-        .await?;
-        if let Some(id) = existing {
+        let existing = reusable(&mut tx, auth.user.id, &trimmed, true).await?;
+        if let Some((id, existing_name)) = existing {
+            // Re-keying signs the existing device out; make that explicit.
+            if !input.confirm {
+                return Err(Error(
+                    StatusCode::CONFLICT,
+                    "pairing_reuse_unconfirmed",
+                    "This name matches an existing device and approving replaces its token. Confirm to replace it.",
+                ));
+            }
+            reuses_device = Some(existing_name);
             sqlx::query(
                 "UPDATE devices SET token=$2, expires_at=now()+interval '30 days', claimed=false, name=$3, host_kind=COALESCE($4,host_kind), integration=COALESCE($5,integration) WHERE id=$1",
             )
@@ -251,6 +294,7 @@ pub async fn approve(
         user_code: code,
         state: outcome.into(),
         expires_at,
+        reuses_device,
     }))
 }
 #[utoipa::path(post,path="/api/devices/pairings/poll",request_body=PairingCode,responses((status=200,body=PairingPoll)))]
@@ -606,6 +650,16 @@ pub(crate) async fn record_usage(
     if response.status().is_success()
         && let (Some(brain), Some(device)) = (brain, auth.device_id)
     {
+        // The statement only writes once a minute per (brain, device, host), so
+        // let the process skip the whole transaction in between.
+        let seen = (brain, device, host.clone());
+        if !throttle::due(
+            &state.usage_recorded,
+            seen.clone(),
+            std::time::Duration::from_secs(60),
+        ) {
+            return response;
+        }
         let recorded=async {
             let mut tx=auth.tx(&state.pool).await?;
             crate::db::require_role(&mut tx,brain,false).await?;
@@ -614,6 +668,7 @@ pub(crate) async fn record_usage(
             Ok::<_,crate::error::Error>(())
         }.await;
         if recorded.is_err() {
+            throttle::forget(&state.usage_recorded, &seen);
             tracing::warn!("Agent usage metadata could not be recorded");
         }
     }

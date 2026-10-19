@@ -83,6 +83,7 @@ test("direct browser token works over ordinary HTTP MCP and revokes", async ({
   });
   await api(`/api/devices/pairings/${previousPair.user_code}/approve`, {
     approve: true,
+    confirm: true,
   });
   const previous = await api("/api/devices/pairings/poll", {
     device_code: previousPair.device_code,
@@ -571,6 +572,7 @@ test("Context7 anonymous documentation probe through Recollect", async ({
   });
   await api(`/api/devices/pairings/${pairing.user_code}/approve`, {
     approve: true,
+    confirm: true,
   });
   const issued = await api("/api/devices/pairings/poll", {
     device_code: pairing.device_code,

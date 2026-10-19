@@ -408,7 +408,10 @@ function PairingApproval({ code }: { code: string }) {
       result(
         await client.POST("/api/devices/pairings/{code}/approve", {
           params: { path: { code } },
-          body: { approve },
+          body: {
+            approve,
+            confirm: approve && !!pairing.data?.reuses_device,
+          },
         }),
       ),
     onSuccess: (value) => {
@@ -452,6 +455,13 @@ function PairingApproval({ code }: { code: string }) {
                     Check that this code matches the host you just started on
                     your own computer.
                   </Text>
+                  {pairing.data.reuses_device && (
+                    <Alert color="yellow">
+                      You already have a device named{" "}
+                      <strong>{pairing.data.reuses_device}</strong>. Approving
+                      replaces its token, so the host using it signs out.
+                    </Alert>
+                  )}
                   <Group>
                     <Button
                       leftSection={<Check size={16} />}
@@ -461,7 +471,9 @@ function PairingApproval({ code }: { code: string }) {
                       disabled={decision.isPending}
                       onClick={() => decision.mutate(true)}
                     >
-                      Approve device
+                      {pairing.data.reuses_device
+                        ? "Replace and approve"
+                        : "Approve device"}
                     </Button>
                     <Button
                       variant="default"

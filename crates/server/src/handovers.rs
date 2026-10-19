@@ -117,15 +117,6 @@ async fn save(
     publication::safe_payload(state, &json!(input))?;
     let mut tx = auth.tx(&state.pool).await?;
     db::require_writer(&mut tx, brain).await?;
-    let (selection, _) = scope(state, &mut tx, brain, auth.user.id, auth.device_id, &input).await?;
-    let policy = model_policy::current(state, &mut tx, brain).await?;
-    model_policy::permits(
-        state,
-        &policy.policy,
-        "synthesis",
-        &["claim".into(), "query".into()],
-    )?;
-    model_policy::permits(state, &policy.policy, "extraction", &["claim".into()])?;
     let key = commands::key(headers)?;
     if let Some(saved) = commands::reserve::<HandoverRun>(
         &mut tx,
@@ -138,6 +129,15 @@ async fn save(
         tx.commit().await?;
         return Ok(saved);
     }
+    let (selection, _) = scope(state, &mut tx, brain, auth.user.id, auth.device_id, &input).await?;
+    let policy = model_policy::current(state, &mut tx, brain).await?;
+    model_policy::permits(
+        state,
+        &policy.policy,
+        "synthesis",
+        &["claim".into(), "query".into()],
+    )?;
+    model_policy::permits(state, &policy.policy, "extraction", &["claim".into()])?;
     if let Some(id) = retry {
         let old = row(&mut tx, brain, id).await?;
         if !matches!(old.state.as_str(), "failed" | "cancelled") {

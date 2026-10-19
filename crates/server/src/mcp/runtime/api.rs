@@ -79,10 +79,7 @@ pub async fn list(
     } else {
         None
     };
-    let mut calls = Vec::with_capacity(rows.len());
-    for row in rows {
-        calls.push(dto(&mut tx, row, false).await?);
-    }
+    let calls = dtos(&mut tx, rows).await?;
     tx.commit().await?;
     Ok(Json(McpCallPage { calls, next_cursor }))
 }

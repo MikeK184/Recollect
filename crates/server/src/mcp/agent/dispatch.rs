@@ -36,6 +36,18 @@ fn id(value: &Value) -> Result<Uuid> {
         .ok_or_else(invalid)
 }
 
+/// Compare two JSON values as UUIDs so spelling (case, braces, hyphens) never
+/// decides authorization; anything that is not a UUID never matches.
+fn same_uuid(a: &Value, b: &Value) -> bool {
+    match (
+        a.as_str().map(Uuid::parse_str),
+        b.as_str().map(Uuid::parse_str),
+    ) {
+        (Some(Ok(a)), Some(Ok(b))) => a == b,
+        _ => false,
+    }
+}
+
 impl AgentService {
     async fn request(
         &self,
@@ -51,10 +63,10 @@ impl AgentService {
         let mut request = axum::http::Request::builder()
             .method(method)
             .uri(format!("/api/brains/{}{suffix}", self.brain))
-            .header(
-                header::AUTHORIZATION,
-                format!("Bearer {}", self.auth.session),
-            );
+            // The device was authenticated once for this HTTP request. Handing
+            // the result to the extractor avoids re-reading it per tool call;
+            // each handler still opens its own device-checked transaction.
+            .extension((*self.auth).clone());
         if bytes.is_some() {
             request = request.header(header::CONTENT_TYPE, "application/json");
         }
@@ -65,7 +77,7 @@ impl AgentService {
             .body(axum::body::Body::from(bytes.unwrap_or_default()))
             .map_err(|_| invalid())?;
         // This router contains only the existing application routes, never the
-        // MCP adapter itself. Each handler authenticates and opens its own tx.
+        // MCP adapter itself. Each handler opens its own role-checked tx.
         let response = self
             .routes
             .clone()
@@ -183,7 +195,7 @@ impl AgentService {
                     None,
                 )
                 .await?;
-            if call["operation_id"] != arguments["operation_id"] {
+            if !same_uuid(&call["operation_id"], &arguments["operation_id"]) {
                 return Err(Error::forbidden().into());
             }
             if spec.tool.name == "mcp.status" {
@@ -288,5 +300,21 @@ impl AgentService {
         Ok(
             json!({"state":"ready","scope_id":snapshot,"operation_id":operation.id,"inventory":inventory,"recall":recall}),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn operation_ids_compare_as_uuids_not_spellings() {
+        let id = Uuid::new_v4();
+        let canonical = json!(id.to_string());
+        assert!(same_uuid(&canonical, &json!(id.to_string().to_uppercase())));
+        assert!(same_uuid(&canonical, &json!(id.simple().to_string())));
+        assert!(!same_uuid(&canonical, &json!(Uuid::new_v4().to_string())));
+        assert!(!same_uuid(&Value::Null, &Value::Null));
+        assert!(!same_uuid(&json!("x"), &json!("x")));
     }
 }

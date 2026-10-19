@@ -546,6 +546,7 @@ test("desktop registers a paired private runner, selects exact placement and han
   });
   await command(page, `/api/devices/pairings/${pairing.user_code}/approve`, {
     approve: true,
+    confirm: true,
   });
   const poll = await command(page, "/api/devices/pairings/poll", {
     device_code: pairing.device_code,

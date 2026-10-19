@@ -116,7 +116,7 @@ def main():
                             "native pairing code", 20)
                 view = owner.call("GET", "/api/devices/pairings/" + code)
                 assert view["name"] == "Ubuntu filesystem demo runner"
-                owner.call("POST", "/api/devices/pairings/" + code + "/approve", {"approve": True})
+                owner.call("POST", "/api/devices/pairings/" + code + "/approve", {"approve": True, "confirm": True})
                 assert child.wait(timeout=30) == 0, "Native pairing failed; private log retained"
             finally:
                 if child.poll() is None:

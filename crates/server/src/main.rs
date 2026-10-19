@@ -4,6 +4,9 @@ use recollect_server::{
 use tracing_subscriber::{Layer, layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 
+/// How long active requests may finish after a shutdown request.
+const DRAIN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(30);
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let command = std::env::args().nth(1).unwrap_or("serve".into());
@@ -137,14 +140,31 @@ async fn main() -> anyhow::Result<()> {
                 state.clone(),
                 stop.clone(),
             ));
-            let shutdown = stop.clone();
-            let served = axum::serve(listener, app(state))
-                .with_graceful_shutdown(async move {
-                    let _ = recollect_server::shutdown::requested().await;
-                    shutdown.cancel();
-                    tracing::info!("Draining active MCP calls before shutdown");
-                })
-                .await;
+            let (requested, signalled) = tokio::sync::oneshot::channel::<()>();
+            let server = axum::serve(
+                listener,
+                app(state).into_make_service_with_connect_info::<std::net::SocketAddr>(),
+            )
+            .with_graceful_shutdown(async move {
+                let _ = recollect_server::shutdown::requested().await;
+                let _ = requested.send(());
+                tracing::info!("Draining active requests before shutdown");
+            });
+            // Connections get a bounded drain from the moment shutdown is
+            // requested; the MCP executor stops only once they are done.
+            let served = tokio::select! {
+                served = std::future::IntoFuture::into_future(server) => served,
+                () = async {
+                    if signalled.await.is_ok() {
+                        tokio::time::sleep(DRAIN_DEADLINE).await;
+                    } else {
+                        std::future::pending::<()>().await;
+                    }
+                } => {
+                    tracing::warn!("Drain deadline reached; closing remaining connections");
+                    Ok(())
+                }
+            };
             stop.cancel();
             executor.await?;
             served?;

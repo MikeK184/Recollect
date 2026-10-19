@@ -2,6 +2,7 @@ use crate::{
     AppState, auth,
     error::{Error, Result},
     team,
+    throttle::{self, Peer},
 };
 use axum::{
     Json,
@@ -14,8 +15,13 @@ use openidconnect::{core::*, *};
 use recollect_protocol::{AuthOptions, User};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc, time::Duration, time::Instant};
 use uuid::Uuid;
+
+/// Provider metadata (endpoints and signing keys) stays valid this long unless
+/// a verification failure shows the provider rotated keys.
+const METADATA_TTL: Duration = Duration::from_secs(30 * 60);
+pub type MetadataCache = Arc<tokio::sync::Mutex<Option<(Instant, CoreProviderMetadata)>>>;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ExtraClaims {
@@ -60,14 +66,28 @@ fn unavailable() -> Error {
         "Organization sign-in is unavailable. Retry or use a local account.",
     )
 }
-async fn client(state: &AppState) -> Result<TeamClient> {
+async fn metadata(state: &AppState, refresh: bool) -> Result<CoreProviderMetadata> {
     let settings = state.config.oidc.as_ref().ok_or_else(unavailable)?;
-    let metadata = CoreProviderMetadata::discover_async(
+    // Held across discovery so concurrent sign-ins share one fetch.
+    let mut cached = state.oidc_metadata.lock().await;
+    if !refresh
+        && let Some((at, metadata)) = cached.as_ref()
+        && at.elapsed() < METADATA_TTL
+    {
+        return Ok(metadata.clone());
+    }
+    let discovered = CoreProviderMetadata::discover_async(
         IssuerUrl::new(settings.issuer.clone()).map_err(|_| unavailable())?,
         &state.http,
     )
     .await
     .map_err(|_| unavailable())?;
+    *cached = Some((Instant::now(), discovered.clone()));
+    Ok(discovered)
+}
+async fn client(state: &AppState, refresh: bool) -> Result<TeamClient> {
+    let settings = state.config.oidc.as_ref().ok_or_else(unavailable)?;
+    let metadata = metadata(state, refresh).await?;
     Ok(TeamClient::from_provider_metadata(
         metadata,
         ClientId::new(settings.client_id.clone()),
@@ -119,14 +139,19 @@ pub async fn options(State(state): State<AppState>) -> Json<AuthOptions> {
     })
 }
 #[utoipa::path(get,path="/api/auth/oidc/start",responses((status=303)))]
-pub async fn start(State(state): State<AppState>) -> Response {
+pub async fn start(State(state): State<AppState>, Peer(peer): Peer) -> Response {
+    // Unauthenticated and writes a row: bound each address so the shared
+    // pending-flow cap cannot be exhausted by one caller.
+    if !throttle::allow(&state.start_attempts, &format!("oidc|{peer}"), 30) {
+        return Redirect::to("/?auth_error=organization_unavailable").into_response();
+    }
     match begin(&state).await {
         Ok(response) => response,
         Err(_) => Redirect::to("/?auth_error=organization_unavailable").into_response(),
     }
 }
 async fn begin(state: &AppState) -> Result<Response> {
-    let client = client(state).await?;
+    let client = client(state, false).await?;
     let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
     let mut authorization = client.authorize_url(
         CoreAuthenticationFlow::AuthorizationCode,
@@ -218,7 +243,7 @@ async fn finish(state: &AppState, headers: &HeaderMap, input: Callback) -> Resul
         .code
         .filter(|v| !v.is_empty() && v.len() <= 8192)
         .ok_or_else(Error::unauthorized)?;
-    let client = client(state).await?;
+    let client = client(state, false).await?;
     let tokens = client
         .exchange_code(AuthorizationCode::new(code))
         .map_err(|_| unavailable())?
@@ -227,10 +252,18 @@ async fn finish(state: &AppState, headers: &HeaderMap, input: Callback) -> Resul
         .await
         .map_err(|_| Error::unauthorized())?;
     let id_token = tokens.id_token().ok_or_else(Error::unauthorized)?;
-    let verifier = client.id_token_verifier();
-    let claims = id_token
-        .claims(&verifier, &Nonce::new(nonce))
-        .map_err(|_| Error::unauthorized())?;
+    let nonce = Nonce::new(nonce);
+    let claims = match id_token.claims(&client.id_token_verifier(), &nonce) {
+        Ok(claims) => claims,
+        Err(_) => {
+            // The signing keys may have rotated since the metadata was cached:
+            // verify once more against freshly discovered keys.
+            let fresh = self::client(state, true).await?;
+            id_token
+                .claims(&fresh.id_token_verifier(), &nonce)
+                .map_err(|_| Error::unauthorized())?
+        }
+    };
     let seconds = (claims.expiration() - Utc::now()).num_seconds().min(300);
     if seconds <= 0 {
         return Err(Error::unauthorized());
