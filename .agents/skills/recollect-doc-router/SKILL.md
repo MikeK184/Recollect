@@ -25,12 +25,12 @@ from the request rather than requiring a separate input form.
    | Which decisions and behavior govern this change? | [ADRs](../../../docs/adr/README.md) and [contracts](../../../docs/contracts/README.md) |
    | What product and stack are accepted? | [Foundation index](../../../docs/foundation/README.md); read vision, techstack and engineering principles before product work |
    | Who owns this capability, and what comes first? | [Epic index](../../../docs/roadmap/epics/index.md), then the owning epic's slice map and dependencies |
-   | What is the slice specification or delivery history? | [Execution lifecycle](../../../docs/roadmap/execution/README.md), [active](../../../docs/roadmap/execution/active/README.md) and [archive](../../../docs/roadmap/execution/archive/README.md) |
+   | What is the slice specification or delivery history? | The owning epic's slice row (acceptance inline), then [execution lifecycle](../../../docs/roadmap/execution/README.md) and the [active packs](../../../docs/roadmap/execution/active/README.md); shipped packs exist only in Git history |
    | What has been observed or can be operated? | Relevant [mapping](../../../docs/mappings/README.md) or [runbook](../../../docs/runbooks/README.md), followed by current evidence |
 
 3. Distinguish authority from implementation. Accepted ADRs/contracts govern;
    proposed, pending, rejected or superseded sources do not. Mappings and code
-   establish observations, not product decisions. A shipped pack proves only
+   establish observations, not product decisions. A shipped slice proves only
    its recorded delivery and checks, not current deployment or connectivity.
 4. Inspect relevant code/tests/configuration for implementation or debugging
    questions. Use `rg` for literals/docs and the Rust Analyzer and Graft MCPs in the
@@ -48,8 +48,10 @@ Keep the brief proportional to the task and cite exact local paths:
 - **Governing sources and intent:** accepted decisions and relevant constraints.
 - **Current-state facts:** separate specified, locally implemented, validated
   and deployed/connected behavior; identify which evidence supports each claim.
-- **Owner and execution route:** epic, slice ID, pack/status, predecessors and
-  affected docs; identify the documented small-fix exception only when it applies.
+- **Owner and execution route:** epic, slice ID, Execution value (`pack`,
+  `inline:` or `archived`), pack status if any, predecessors and affected docs;
+  say when risky work (schema/migration, new integration or paid evaluation,
+  uncovered security/authz, open multi-session decisions) needs a pack.
 - **Conflicts or gaps:** stale signals, missing authority, unavailable runtime
   proof and any conservative evidence-derived assumptions.
 - **Next action:** the concrete authorized implementation, investigation or

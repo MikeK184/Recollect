@@ -51,7 +51,7 @@ producer), and the dated design and preparation notes moved out of this pack on
   fails; blind label usefulness and final integrated closeout remain open.
   Independent implementation and deterministic/native proof can continue.
 
-## Surface and Interface Changes
+## Decisions
 
 - Interfaces: Bounded optional interpretation candidates, typed semantic
   organization APIs and version-checked topic/alias overrides; no fake claims.
@@ -119,7 +119,7 @@ Decisions that govern the remaining work (the full design notes are in the
 - Failure handling: Bounded input/output, short checked publication, leases and
   visible blocked/failed coverage; no confidence-only scope or truth acceptance.
 
-## Tests and Acceptance
+## Acceptance
 
 - Automated: Native Unicode/exact span/input/endpoint gates; actual persistence,
   scope/alias and override/idempotency controls; correction/erasure/restore;

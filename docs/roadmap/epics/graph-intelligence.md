@@ -52,17 +52,17 @@ scope, with queued work and explicit resource limits.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `graph-projection-and-traversal` | shipped | contract-backed | pack | Delivered scoped structural/knowledge generations, autonomous recovery and qualified native paths with actual Neo4j/PG and browser proof |
-| `graph-cross-repository-views` | shipped | contract-backed | pack | Delivered exact combined inputs and parsed pinned Terraform links with qualified native paths, correction/recovery and browser proof |
-| `graph-analytics` | shipped | contract-backed | pack | Delivered native GDS reports, complete qualification/invalidation, owned scratch recovery and reader concurrency with normal runtime/browser proof |
-| `graph-exploration` | shipped | contract-backed | pack | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and test-Brain runtime proof |
-| `graph-desktop-workspace` | shipped | adr-backed, contract-backed | pack | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
+| `graph-projection-and-traversal` | shipped | contract-backed | archived | Delivered scoped structural/knowledge generations, autonomous recovery and qualified native paths with actual Neo4j/PG and browser proof |
+| `graph-cross-repository-views` | shipped | contract-backed | archived | Delivered exact combined inputs and parsed pinned Terraform links with qualified native paths, correction/recovery and browser proof |
+| `graph-analytics` | shipped | contract-backed | archived | Delivered native GDS reports, complete qualification/invalidation, owned scratch recovery and reader concurrency with normal runtime/browser proof |
+| `graph-exploration` | shipped | contract-backed | archived | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and test-Brain runtime proof |
+| `graph-desktop-workspace` | shipped | adr-backed, contract-backed | archived | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
 | `graph-concurrent-preparation` | in-progress | contract-backed | pack | Off-lock preparation and checked publication implemented; mixed 10k and normal-data clone gates pass locally, with normal-installation update and final closeout outstanding |
 | `graph-automatic-knowledge-mapping` | in-progress | adr-backed, contract-backed | pack | Worker, aliases, topics, overlays, navigation and privacy are locally implemented; actual extractor, grouping and canonical quality fail and no producer/recipe is selected |
 
 The native qualification setup also corrects the existing selector's exact
 automatic-support-excerpt lineage within `graph-automatic-knowledge-mapping`.
-This isolated small fix follows accepted capture reconciliation and independent
+This isolated correction follows accepted capture reconciliation and independent
 support contracts: no new schema, interface, semantic match or arbitrary ancestor
 authority. The active pack records the exact gates and focused proof boundary.
 

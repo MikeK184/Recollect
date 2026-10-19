@@ -81,29 +81,29 @@ MCP clients is implied.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `mcp-agent-coordination` | shipped | adr-backed, contract-backed | pack | Cross-machine presence, explainable work overlap, durable peer messages, SSE/pull/hooks and narrow A2A 1.0 adapter; synthetic macOS/Ubuntu proof passed 15 checks |
-| `mcp-native-skill-reload` | shipped | adr-backed, contract-backed | pack | Native Codex/Claude/OpenCode exports, cross-host scope leases, temporary/retained lifetime and actual host reload/activation proof |
-| `mcp-managed-skills` | shipped | adr-backed, contract-backed | pack | Brain/environment managed guidance, progressive MCP fetch, plugin cache lifetime and manager UI |
-| `mcp-plugin-workflow-repair` | shipped | contract-backed | pack | Supported evidence tools, observed usage, bounded learning recovery and compact visible policy/token UI |
-| `mcp-ubuntu-private-runner-proof` | shipped | contract-backed | pack | Real Ubuntu filesystem MCP with separate reader caller, permission/boundary denials, offline recovery and fresh OS-store reuse |
-| `mcp-equivalent-http-schema-inspection` | shipped | contract-backed | pack | Bounded equivalent Draft 7 declaration conversion during HTTP inspection; strict manifest approval retained |
+| `mcp-agent-coordination` | shipped | adr-backed, contract-backed | archived | Cross-machine presence, explainable work overlap, durable peer messages, SSE/pull/hooks and narrow A2A 1.0 adapter; synthetic macOS/Ubuntu proof passed 15 checks |
+| `mcp-native-skill-reload` | shipped | adr-backed, contract-backed | archived | Native Codex/Claude/OpenCode exports, cross-host scope leases, temporary/retained lifetime and actual host reload/activation proof |
+| `mcp-managed-skills` | shipped | adr-backed, contract-backed | archived | Brain/environment managed guidance, progressive MCP fetch, plugin cache lifetime and manager UI |
+| `mcp-plugin-workflow-repair` | shipped | contract-backed | archived | Supported evidence tools, observed usage, bounded learning recovery and compact visible policy/token UI |
+| `mcp-ubuntu-private-runner-proof` | shipped | contract-backed | archived | Real Ubuntu filesystem MCP with separate reader caller, permission/boundary denials, offline recovery and fresh OS-store reuse |
+| `mcp-equivalent-http-schema-inspection` | shipped | contract-backed | archived | Bounded equivalent Draft 7 declaration conversion during HTTP inspection; strict manifest approval retained |
 | `mcp-copy-ready-agent-config` | in-progress | contract-backed | pack | Browser direct-token native config and visible account token management, preserving plugin OS storage |
-| `mcp-approved-connector-icons` | shipped | contract-backed | pack | Explicit discovery preserves safe optional connector icons with bounded local cache/fallback |
-| `mcp-plugin-session-memory` | shipped | adr-backed, contract-backed | pack | Complete native plugin capture/automatic recall with bundled runtime, OpenCode adapter and optional runner flag |
-| `mcp-direct-auth-repair` | shipped | contract-backed | pack | test-Brain credential handoff repaired through Keychain; installed Codex 0.157.1 workspace read and deployed concrete setup instructions verified |
-| `mcp-direct-connections` | shipped | contract-backed | pack | Direct HTTP host setup and token, anonymous name/URL form; real Context7 metadata/protocol proof with useful documentation quota-blocked |
-| `mcp-catalogue-and-profiles` | shipped | contract-backed | pack | Operator-approved cached definitions, Brain/environment connections, independent profile use/manage/share and desktop catalogue with real RLS/browser proof |
-| `mcp-runtime-and-credentials` | shipped | adr-backed, contract-backed | pack | Actual central/paired stdio and HTTP calls, isolated credentials, fenced recovery without effect replay, desktop/native workflow and verified local schema 022 upgrade |
-| `mcp-vault-and-private-runners` | shipped | adr-backed, contract-backed | pack | Optional per-connection Vault Proxy delivery, real issuance/renewal/rotation, authenticated private stdio/HTTP/native/desktop execution and preserved normal migration 023 |
-| `mcp-memory-and-workspace-tools` | shipped | adr-backed, contract-backed | pack | Stateless paired MCP, native bridge, scoped memory/graph/handover tools and fresh capture defaults proven through real coding hosts |
-| `mcp-observation-capture` | shipped | adr-backed, contract-backed | pack | Actual central/local/private receipts become scoped canonical evidence; automatic learning, separate reconciliation, retries, native erasure synchronization, older-state replay and desktop state verified; normal migration 024 preserved |
-| `mcp-desktop-setup` | shipped | adr-backed, contract-backed | pack | Guided approved connection setup, profiles/runners and uncertain-call inspection without widening grants |
-| `mcp-codex-plugin` | shipped | adr-backed, contract-backed | pack | Local Codex memory skills in the generated capture plugin and stdio MCP rendering for OpenCode |
-| `mcp-plugin-direct-auth` | shipped | adr-backed, contract-backed | pack | Direct plugin/MCP user auth (API token or browser device code, Cognee-style) with no CLI download; companion stays capture-only |
-| `mcp-successor-cleanup` | shipped | adr-backed, contract-backed | pack | Device dedupe by normalized name, review-UI removal to autonomous learning log, Ask/Search read-only simplification |
-| `desktop-connection-authority` | shipped | adr-backed, contract-backed | pack | Agents as the sole incoming-connect home, Connections outbound-MCP only, plain-language placement and tool-group naming with session/context views |
-| `mcp-brain-agent-roster` | shipped | contract-backed | pack | Per-Brain agent roster (plugin vs MCP-token agents, host kind, brain-scoped last use), Devices out of global nav with hidden pairing deep link, two-integration copy cleanup and the external-MCP-through-Brain proof |
-| `agents-surface-refinement` | shipped | contract-backed | pack | Per-Brain roster shows only agents used on this Brain; new global `/agents` page lists every agent with the Brains it is used in and last use there; account-scoped `GET /api/agents` read |
+| `mcp-approved-connector-icons` | shipped | contract-backed | archived | Explicit discovery preserves safe optional connector icons with bounded local cache/fallback |
+| `mcp-plugin-session-memory` | shipped | adr-backed, contract-backed | archived | Complete native plugin capture/automatic recall with bundled runtime, OpenCode adapter and optional runner flag |
+| `mcp-direct-auth-repair` | shipped | contract-backed | archived | test-Brain credential handoff repaired through Keychain; installed Codex 0.157.1 workspace read and deployed concrete setup instructions verified |
+| `mcp-direct-connections` | shipped | contract-backed | archived | Direct HTTP host setup and token, anonymous name/URL form; real Context7 metadata/protocol proof with useful documentation quota-blocked |
+| `mcp-catalogue-and-profiles` | shipped | contract-backed | archived | Operator-approved cached definitions, Brain/environment connections, independent profile use/manage/share and desktop catalogue with real RLS/browser proof |
+| `mcp-runtime-and-credentials` | shipped | adr-backed, contract-backed | archived | Actual central/paired stdio and HTTP calls, isolated credentials, fenced recovery without effect replay, desktop/native workflow and verified local schema 022 upgrade |
+| `mcp-vault-and-private-runners` | shipped | adr-backed, contract-backed | archived | Optional per-connection Vault Proxy delivery, real issuance/renewal/rotation, authenticated private stdio/HTTP/native/desktop execution and preserved normal migration 023 |
+| `mcp-memory-and-workspace-tools` | shipped | adr-backed, contract-backed | archived | Stateless paired MCP, native bridge, scoped memory/graph/handover tools and fresh capture defaults proven through real coding hosts |
+| `mcp-observation-capture` | shipped | adr-backed, contract-backed | archived | Actual central/local/private receipts become scoped canonical evidence; automatic learning, separate reconciliation, retries, native erasure synchronization, older-state replay and desktop state verified; normal migration 024 preserved |
+| `mcp-desktop-setup` | shipped | adr-backed, contract-backed | archived | Guided approved connection setup, profiles/runners and uncertain-call inspection without widening grants |
+| `mcp-codex-plugin` | shipped | adr-backed, contract-backed | archived | Local Codex memory skills in the generated capture plugin and stdio MCP rendering for OpenCode |
+| `mcp-plugin-direct-auth` | shipped | adr-backed, contract-backed | archived | Direct plugin/MCP user auth (API token or browser device code, Cognee-style) with no CLI download; companion stays capture-only |
+| `mcp-successor-cleanup` | shipped | adr-backed, contract-backed | archived | Device dedupe by normalized name, review-UI removal to autonomous learning log, Ask/Search read-only simplification |
+| `desktop-connection-authority` | shipped | adr-backed, contract-backed | archived | Agents as the sole incoming-connect home, Connections outbound-MCP only, plain-language placement and tool-group naming with session/context views |
+| `mcp-brain-agent-roster` | shipped | contract-backed | archived | Per-Brain agent roster (plugin vs MCP-token agents, host kind, brain-scoped last use), Devices out of global nav with hidden pairing deep link, two-integration copy cleanup and the external-MCP-through-Brain proof |
+| `agents-surface-refinement` | shipped | contract-backed | archived | Per-Brain roster shows only agents used on this Brain; new global `/agents` page lists every agent with the Brains it is used in and last use there; account-scoped `GET /api/agents` read |
 
 ## Completion Criteria
 

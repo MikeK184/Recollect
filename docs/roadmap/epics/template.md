@@ -18,12 +18,14 @@ Status: planned
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `<unique-slice-id>` | planned | needs-contract | pack | <Concrete slice outcome> |
+| `<unique-slice-id>` | planned | needs-contract | inline: <acceptance; validation> | <Concrete slice outcome> |
 
 Slice statuses: planned, in-progress, blocked, shipped. IDs use lowercase words
-separated by hyphens and are unique across the repo. Execution is `pack`, or
-`small-fix: <reason>` for a qualifying isolated fix that needs no pack.
-Planned/blocked slices may await a pack; implementation/shipping requires one
-unless the documented small-fix exception applies. Evidence labels are
-comma-separated values from the index legend. Epic statuses are planned,
-active, blocked, or complete; complete requires every slice shipped.
+separated by hyphens and are unique across the repo. Execution is one of:
+`pack` (an active pack `execution/active/<slice-id>.md` exists; only for
+planned, in-progress or blocked slices), `inline: <acceptance; validation>` (no
+pack; the row carries acceptance and validation) or `archived` (shipped; the
+pack was removed at closeout and stays in Git history). Packs are required only
+for the risky work listed in the [execution guide](../execution/README.md).
+Evidence labels are comma-separated values from the index legend. Epic statuses
+are planned, active, blocked, or complete; complete requires every slice shipped.

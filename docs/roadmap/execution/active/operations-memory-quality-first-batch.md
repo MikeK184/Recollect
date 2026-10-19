@@ -26,7 +26,7 @@ Implementation: first-batch checkpoint retained; October 18 graph follow-up is l
 - Out of scope: changing existing Brain provider policies, remote deployment, recursive summaries, schema reset, deletion of migration history and full-corpus learning.
 - Blockers: No unresolved authority decision. The historical normal-installation graph failure remains unresolved there; later local mixed-workload and normal-data clone repairs pass. A reviewed installed update, final normal-runtime acceptance and comparable memory-quality rerun remain open. Later research targets are separate scope.
 
-## Surface and Interface Changes
+## Decisions
 
 - Interfaces: `stack.sh update`; root recovery registration backed by existing encrypted recovery; secret-free build information; optional `windowed` graph requests with compatible false defaults.
 - Storage: migrations 042–043 optimize existing audit-target and support predicates without changing eligibility or stored memory; retain all existing migrations. Later graph/candidate/deadline migrations 044–046 have their own governing slices. Migration 047 adds only bounded audit scan progress and deletion inventory below. Private ignored recovery descriptors, recipients/key references and encrypted checkpoints use current recovery format.
@@ -83,7 +83,7 @@ No model policy, paid allowance, retry authority or supported-memory rule change
 - Secrets: reuse private recovery configuration and encryption; no copying secrets to code/logs/output.
 - Failure handling: preserve deadlines, unknown bills and no automatic paid retry/fallback.
 
-## Tests and Acceptance
+## Acceptance
 
 The audit repair compares old/new current and historical identity sets through
 the actual app role, including bottom-up lineage, cycle/rejection/current-head

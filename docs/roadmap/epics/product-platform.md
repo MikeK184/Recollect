@@ -54,7 +54,7 @@ database engine is introduced.
 
 ## Slice Map
 
-Small-fix exception, 2026-09-14: claims regression exposed a valid numeric pairing
+Inline slice (no pack), 2026-09-14: claims regression exposed a valid numeric pairing
 code being coerced by router JSON search parsing and removed by route validation.
 The existing pairing contract defines an opaque eight-hex-character identifier.
 Preserve its exact string through parsing/stringifying; deterministic browser
@@ -63,14 +63,14 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `platform-bootstrap` | shipped | adr-backed, contract-backed | pack | Runnable Rust service and React UI with selected databases, local owner login, Brain administration and two-Brain isolation through an auditable command boundary |
-| `platform-durable-work` | shipped | contract-backed | pack | Atomic mutation/audit/outbox support, idempotent bounded workers and explicit job/projection state |
-| `platform-team-access` | shipped | contract-backed | pack | Invited local accounts, optional OIDC, effective grants and tested internal/external revocation behavior |
-| `platform-device-pairing` | shipped | contract-backed | pack | Native companion enrollment with individually revocable credentials and shared protocol types |
-| `desktop-experience-contracts` | shipped | adr-backed, contract-backed | pack | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
-| `platform-desktop-shell` | shipped | adr-backed, contract-backed | pack | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
-| `platform-brain-deletion` | shipped | adr-backed, contract-backed | pack | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
-| `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | pack | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
+| `platform-bootstrap` | shipped | adr-backed, contract-backed | archived | Runnable Rust service and React UI with selected databases, local owner login, Brain administration and two-Brain isolation through an auditable command boundary |
+| `platform-durable-work` | shipped | contract-backed | archived | Atomic mutation/audit/outbox support, idempotent bounded workers and explicit job/projection state |
+| `platform-team-access` | shipped | contract-backed | archived | Invited local accounts, optional OIDC, effective grants and tested internal/external revocation behavior |
+| `platform-device-pairing` | shipped | contract-backed | archived | Native companion enrollment with individually revocable credentials and shared protocol types |
+| `desktop-experience-contracts` | shipped | adr-backed, contract-backed | archived | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
+| `platform-desktop-shell` | shipped | adr-backed, contract-backed | archived | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
+| `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
+| `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 
 ## Completion Criteria
 

@@ -62,17 +62,17 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `retrieval-attributed-feedback` | shipped | contract-backed | pack | Explicit scoped utility signals, privacy/recovery and frozen zero-call comparison locally delivered; two bad promotions retained, production RRF stays fixed |
-| `retrieval-scoped-project-brief` | shipped | contract-backed | pack | Current supported compact context and authenticated continuation |
-| `retrieval-semantic-discovery-plans` | shipped | contract-backed | pack | Missing-input cohorts preserve eligibility/replay, pass native and normal-data equivalence, and are deployed locally; remaining graph failures stay with the graph/operations owners |
-| `retrieval-exact-and-lexical` | shipped | contract-backed | pack | Delivered canonical exact/text candidates, correction-aware bounded context, immutable scope, temporal/manifest filters and browser/native consumers with database/runtime proof |
-| `retrieval-semantic` | shipped | contract-backed | pack | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
-| `retrieval-graph-fusion` | shipped | contract-backed | pack | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
-| `retrieval-investigation-ui` | shipped | contract-backed | pack | Desktop result/disagreement/source views, frozen history, exact evidence and scoped native graph links; expiry/access/epoch clearing and actual retained test-Brain proof |
-| `retrieval-ask-experience` | shipped | adr-backed, contract-backed | pack | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
-| `desktop-ask-primary` | shipped | adr-backed, contract-backed | pack | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
-| `ask-chat-conversation` | shipped | contract-backed | pack | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
-| `retrieval-set-based-read-path` | shipped | contract-backed | pack | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
+| `retrieval-attributed-feedback` | shipped | contract-backed | archived | Explicit scoped utility signals, privacy/recovery and frozen zero-call comparison locally delivered; two bad promotions retained, production RRF stays fixed |
+| `retrieval-scoped-project-brief` | shipped | contract-backed | archived | Current supported compact context and authenticated continuation |
+| `retrieval-semantic-discovery-plans` | shipped | contract-backed | archived | Missing-input cohorts preserve eligibility/replay, pass native and normal-data equivalence, and are deployed locally; remaining graph failures stay with the graph/operations owners |
+| `retrieval-exact-and-lexical` | shipped | contract-backed | archived | Delivered canonical exact/text candidates, correction-aware bounded context, immutable scope, temporal/manifest filters and browser/native consumers with database/runtime proof |
+| `retrieval-semantic` | shipped | contract-backed | archived | Approved automatic batches, full-dimension exact semantic recall/RRF, scope/erasure/recovery, browser/native proof and measured actual-model corpus |
+| `retrieval-graph-fusion` | shipped | contract-backed | archived | Native qualified graph candidates, shared fusion, bounded source coverage/depth, desktop/native proof and measured actual-model ablations |
+| `retrieval-investigation-ui` | shipped | contract-backed | archived | Desktop result/disagreement/source views, frozen history, exact evidence and scoped native graph links; expiry/access/epoch clearing and actual retained test-Brain proof |
+| `retrieval-ask-experience` | shipped | adr-backed, contract-backed | archived | Read-only temporary answers, exact eligible retrieval bundles, default-off answering policy and retained evidence search |
+| `desktop-ask-primary` | shipped | adr-backed, contract-backed | archived | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
+| `ask-chat-conversation` | shipped | contract-backed | archived | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
+| `retrieval-set-based-read-path` | shipped | contract-backed | archived | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
 
 ## Completion Criteria
 

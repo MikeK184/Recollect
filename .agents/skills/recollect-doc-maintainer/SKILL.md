@@ -42,7 +42,7 @@ Choose the existing document owner instead of adding a competing specification:
 | Authorized durable product/stack/principle decision | Relevant [foundation](../../../docs/foundation/README.md); reflect actual decision status |
 | Architecture decision or testable behavior | [ADR](../../../docs/adr/README.md) or [contract](../../../docs/contracts/README.md), using its template and preserving supersession history |
 | Dated source, dependency or runtime observation | [Mapping](../../../docs/mappings/README.md), with method, date, confidence and limits |
-| Capability ownership, dependencies or new slice | Owning [epic](../../../docs/roadmap/epics/index.md), then the [execution template](../../../docs/roadmap/execution/template.md) when required |
+| Capability ownership, dependencies or new slice | Owning [epic](../../../docs/roadmap/epics/index.md) slice row with acceptance and validation inline; the [execution template](../../../docs/roadmap/execution/template.md) only for risky work |
 | Delivered operating procedure | Relevant [runbook](../../../docs/runbooks/README.md), with tested prerequisites and failure behavior |
 | Navigation or developer workflow | Affected index, agent guide, role or skill; link to canonical docs rather than copying their rules |
 
@@ -56,22 +56,31 @@ an observation or cleanup request does not silently redefine the product.
 
 Follow [the lifecycle](../../../docs/README.md) and [pack rules](../../../docs/roadmap/execution/README.md):
 
-- Add the slice to its owner before a required pack and finish the relevant
-  decisions before implementation. Keep the pack filename equal to the unique
-  slice ID and its repo-relative owning-epic field accurate.
-- Keep planned, in-progress and blocked packs in active; shipped packs belong
-  in archive. Update pack status, owning slice, epic status, epic index and
-  active/archive indexes in the same change.
+- Add the slice to its owner (Execution `inline: <acceptance; validation>`)
+  and finish the relevant decisions before implementation. A pack is required
+  only for risky work: schema/migration with restore or compatibility impact; a
+  new external integration or paid/frozen evaluation; an uncovered security,
+  credential or authz change; multi-session work with open decisions. Keep the
+  pack filename equal to the unique slice ID and its owning-epic field accurate.
+- Keep planned, in-progress and blocked packs in active; there is no archive
+  and no `shipped` pack. Update pack status, owning slice, epic status, epic
+  index and the active index in the same change. Any behavior change updates
+  its governing contract in the same change.
 - Label missing decisions `needs-adr`/`needs-contract`; record the blocker and
   next action. Preserve independent authorized progress. Do not infer missing
   schemas, interfaces or product choices just to fill a template.
-- Use the documented small-fix exception only with established authority and
-  a reason in the owning epic. Foundation-only authoring does not create
-  speculative product work. Accepted foundations do not replace detailed contracts.
-- Close out against actual acceptance evidence: Planned, Shipped, Not shipped,
-  New blockers, Docs updated and Validation. Use meaningful
-  `N/A` reasons. Unmet acceptance stays open; later changes normally get a new
-  slice rather than rewriting a shipped pack's historical delivery.
+- An `inline:` slice still needs established authority. Foundation-only
+  authoring does not create speculative product work. Accepted foundations do
+  not replace detailed contracts.
+- Close out against actual acceptance evidence: run focused validation and
+  `./scripts/validate.sh`, update affected contracts and runbooks, set the
+  slice to `shipped` with Execution `archived` and a one-line Summary naming the
+  validation evidence, delete the pack, and update the active and epic indexes.
+  Record deferrals and failures in the Summary or a successor slice. Unmet
+  acceptance stays open; later changes normally get a new slice.
+- Mappings need an `Observed:` line; keep paid or frozen campaigns as a compact
+  receipts table (approval, calls, spend, input hashes, outcome, failures) and
+  link long narrative ledgers at a pinned Git revision.
 
 Keep specified, implemented, locally tested and deployed/connected claims
 separate. Record failed Context7/official lookups and verification limits. A
@@ -83,7 +92,8 @@ different owners and evidence.
 
 For requests about what is done, half done or remaining, compare the full agreed
 scope with its acceptance evidence. Keep a concise capability summary in the
-existing epic index, linking to the owning packs and dated evidence. Distinguish
+existing epic index (the single status entry point), linking to the owning
+slices and dated evidence. Distinguish
 implemented and locally validated work from failed quality gates, untested
 behavior and an installation that has not been updated. These descriptions do
 not introduce new pack statuses or close an unfinished parent slice.
@@ -100,7 +110,7 @@ Run focused checks appropriate to the changed records and `./scripts/validate.sh
 For changed skill entrypoints, also validate frontmatter, local references and
 host discovery; the existing governance checker does not scan skill bodies.
 Check `git diff --check` and inspect new untracked files explicitly because
-ordinary Git diffs omit them. Recheck affected indexes after pack moves.
+ordinary Git diffs omit them. Recheck affected indexes after pack deletions.
 
 Report the mode, meaningful findings, files changed, checks and outcomes,
 unresolved blockers and next actions. Triage substantive issues first:

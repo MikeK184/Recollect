@@ -36,7 +36,7 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
   normal-data clone performance gates pass; normal-installation update and
   final integrated acceptance remain outstanding.
 
-## Surface and Interface Changes
+## Decisions
 
 - Interfaces: Existing graph APIs retain wire formats; stale preparation has
   static `graph_preparation_changed` failure; session is checked at final commit.
@@ -77,7 +77,7 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
 - Secrets: Never output tokens or source payloads in profiling.
 - Failure handling: Existing request/statements, leases, bounded retry/backoff.
 
-## Tests and Acceptance
+## Acceptance
 
 - Automated: Actual snapshot/write concurrency, preparation write denial, final
   invalidation and access controls; native knowledge/exploration/path tests;

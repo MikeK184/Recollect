@@ -1,7 +1,7 @@
 # Management vision fidelity correction — 2026-10-05
 
 Status: delivered local evidence
-Observation date: 2026-10-05
+Observed: 2026-10-05
 Confidence: verified for final rendered review, focused functional proof, local rebuild, preserved identities and comparison provenance; external connectivity is outside this visual slice.
 
 ## Sources and method

@@ -4,7 +4,7 @@
 
 Read [docs/README.md](docs/README.md), applicable nested instructions, and the
 governing sources for the task before meaningful implementation. Follow the
-epic and execution-pack lifecycle documented there.
+epic-slice lifecycle documented there; execution packs are for risky work only.
 
 Current explicit user instructions take precedence over repository guidance.
 Complete already authorized work without adding approval ceremonies. Ask about
@@ -30,10 +30,15 @@ unresolved product decisions; do not invent them in code.
 
 ## Working rules
 
-- Accepted ADRs and contracts govern implementation. Epics sequence work;
-  execution packs specify slices; mappings record evidence.
-- Create the owning epic slice, then its decision-complete execution pack,
-  before significant implementation. See the documented small-fix exception.
+- Accepted ADRs and contracts govern implementation. Epics sequence work and
+  hold each slice's acceptance and validation inline; execution packs specify
+  only risky slices; mappings record evidence.
+- Record the owning epic slice (Execution `inline: <acceptance; validation>`)
+  before significant implementation. Create a decision-complete pack only for
+  risky work: schema/migration with restore or compatibility impact, a new
+  external integration or paid/frozen evaluation, an uncovered security,
+  credential or authz change, or multi-session work with open decisions. A
+  behavior change still updates its governing contract in the same change.
 - An ADR or contract gap blocks the dependent work, not independent authorized
   work. Record the gap and resolve it before broad implementation.
 - Use Context7 for current dependency guidance and primary official sources
@@ -42,7 +47,7 @@ unresolved product decisions; do not invent them in code.
   runtime evidence distinct. Never report a configured service as connected
   without a successful call.
 - Run focused proof and `./scripts/validate.sh`. Update affected docs and
-  reconcile the pack, epic, and indexes in the same change.
+  reconcile the slice row, any pack, and the indexes in the same change.
 - Keep secrets in the environment or ignored local secret files. Never copy
   secrets into source, configuration, docs, test fixtures, or output.
 - No automatic release bump, commit, push, or deployment policy exists yet.

@@ -14,33 +14,28 @@ if sys.version_info < (3, 11):
 ROOT = Path(__file__).resolve().parents[2]
 ROLES = ("default", "explorer", "architect", "worker", "qa", "reviewer")
 FOUNDATIONS = ("vision", "techstack", "engineering-principles")
-PACK_STATES = {"planned", "in-progress", "blocked", "shipped"}
+SLICE_STATES = {"planned", "in-progress", "blocked", "shipped"}
+PACK_STATES = {"planned", "in-progress", "blocked"}  # a pack is deleted when its slice ships
 EPIC_STATES = {"planned", "active", "blocked", "complete"}
 EVIDENCE = {"adr-backed", "contract-backed", "mapping-only", "needs-adr", "needs-contract"}
 UNRESOLVED = {"mapping-only", "needs-adr", "needs-contract"}
 RESERVED = {"README.md", "index.md", "template.md"}
+MAPPING_WORD_WARNING = 5000
 LINK = re.compile(r"\[[^\]\n]+\]\(([^\s)]+)\)")
 PLACEHOLDER = re.compile(r"<[A-Za-z][A-Za-z0-9 _./-]*>|\b(?:TODO|TBD)\b|Pending (?:validation|implementation)")
 PACK_FIELDS = {
-    "Summary": ("Goal", "Non-goals", "Delivery shape"),
+    "Summary": ("Goal", "Non-goals"),
     "Governing Sources": (),
     "Scope": ("In scope", "Out of scope", "Blockers"),
-    "Surface and Interface Changes": ("Interfaces", "Storage", "Ownership"),
-    "Data and Authority": ("Inputs", "Authority", "Blind spots"),
-    "States and Edge Cases": (
-        "Loading", "Empty", "Error", "Blocked", "No-access", "Duplicate or replay",
-        "Stale data", "Reconciliation divergence",
-    ),
-    "Integrations and Runtime Inputs": ("Providers", "Environment", "Secrets", "Failure handling"),
-    "Tests and Acceptance": ("Automated", "Manual", "Acceptance"),
-    "Closeout": ("Planned", "Shipped", "Not shipped", "New blockers", "Docs updated", "Validation"),
-}
+    "Decisions": (),
+    "Acceptance": ("Automated", "Manual", "Acceptance"),
+}  # packs may carry further sections; only these are required
 REQUIRED = (
     "AGENTS.md", "README.md", ".gitignore", ".codex/README.md", ".codex/config.toml",
     "docs/README.md", "docs/foundation/README.md", "docs/roadmap/README.md",
     "docs/roadmap/epics/index.md", "docs/roadmap/epics/template.md",
     "docs/roadmap/execution/README.md", "docs/roadmap/execution/template.md",
-    "docs/roadmap/execution/active/README.md", "docs/roadmap/execution/archive/README.md",
+    "docs/roadmap/execution/active/README.md",
     "docs/runbooks/validation.md", "docs/tools/lint_agent_governance.sh",
     "docs/tools/lint_agent_governance.py", "docs/tools/tests/test_governance.py",
     "scripts/validate.sh",
@@ -64,6 +59,7 @@ class Validator:
     def __init__(self, root: Path):
         self.root = root.resolve()
         self.documents: dict[str, str] = {}
+        self.warnings: list[str] = []
 
     def path(self, file: str) -> Path:
         path = self.root / file
@@ -105,6 +101,8 @@ class Validator:
 
     def fields(self, file: str, heading: str, names: tuple[str, ...], filled: bool) -> dict[str, str]:
         body = self.section(file, heading)
+        if not names:  # free-text section: only presence is required
+            return {}
         pairs = re.findall(r"^- ([^:\n]+):[ \t]*(.*?)(?=^- |\Z)", body, re.MULTILINE | re.DOTALL)
         values = dict(pairs)
         require(len(values) == len(pairs), file, f"duplicate field in {heading}")
@@ -228,10 +226,17 @@ class Validator:
             for slice_id, status, evidence, execution, _ in rows:
                 require(bool(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slice_id)) and slice_id + ".md" not in RESERVED, file, f"invalid slice ID: {slice_id}")
                 require(slice_id not in slices, file, f"duplicate slice ID: {slice_id}")
-                require(status in PACK_STATES, file, f"invalid slice status: {slice_id}")
+                require(status in SLICE_STATES, file, f"invalid slice status: {slice_id}")
                 labels = {value.strip() for value in evidence.split(",")}
                 require(labels <= EVIDENCE, file, f"invalid evidence labels: {slice_id}")
-                require(execution == "pack" or (execution.startswith("small-fix: ") and bool(execution.removeprefix("small-fix: ").strip())), file, f"invalid execution requirement: {slice_id}")
+                require(
+                    execution in {"pack", "archived"} or (execution.startswith("inline: ") and bool(execution.removeprefix("inline: ").strip())),
+                    file, f"invalid execution value (use pack, inline: <acceptance; validation> or archived): {slice_id}",
+                )
+                if execution == "pack":
+                    require(status != "shipped", file, f"shipped slice must be archived or inline, not pack: {slice_id}")
+                if execution == "archived":
+                    require(status == "shipped", file, f"archived execution requires a shipped slice: {slice_id}")
                 if status in {"in-progress", "shipped"}:
                     require(not (labels & UNRESOLVED), file, f"unresolved authority on implemented slice: {slice_id}")
                     self.governing(file, accepted)
@@ -243,39 +248,39 @@ class Validator:
         self.index("docs/roadmap/epics/index.md", "Epic Overview", ("Epic", "Status", "Current focus"), epics)
 
         packs: set[str] = set()
-        for location in ("active", "archive"):
-            expected = {}
-            for file in self.records(f"docs/roadmap/execution/{location}"):
-                slice_id = Path(file).stem
-                require(slice_id not in packs, file, f"duplicate execution pack: {slice_id}")
-                packs.add(slice_id)
-                status = self.metadata(file, "Status")
-                require(status in PACK_STATES, file, "invalid pack status")
-                require((status == "shipped") == (location == "archive"), file, "pack status does not match active/archive location")
-                owner = self.metadata(file, "Owning epic")
-                self.path(owner)
-                require(slice_id in slices, file, "filename has no owning epic slice")
-                require(slices[slice_id][0] == owner, file, "Owning epic does not own this slice")
-                require(slices[slice_id][1] == status, file, "pack and epic slice statuses differ")
-                require(slices[slice_id][2] == "pack", file, "pack attached to a small-fix exemption")
-                work_type = self.metadata(file, "Work type")
-                require(work_type in {"governance", "product"}, file, "invalid Work type")
-                implementing = status in {"in-progress", "shipped"}
-                if implementing and work_type == "product":
-                    require(not pending, file, "product implementation requires accepted foundations")
-                # Even a draft pack must not cite pending documents as authority.
-                self.governing(file, accepted)
-                for heading, fields in PACK_FIELDS.items():
-                    filled = status == "shipped" if heading == "Closeout" else implementing
-                    values = self.fields(file, heading, fields, filled)
-                    if status == "blocked" and heading == "Scope":
-                        blocker = values["Blockers"].strip()
-                        require(not blocker.lower().startswith(("none", "n/a")) and not PLACEHOLDER.search(blocker), file, "blocked pack needs a concrete blocker and next action")
-                expected[file] = status
-            self.index(f"docs/roadmap/execution/{location}/README.md", None, ("Pack", "Status"), expected)
+        expected = {}
+        for file in self.records("docs/roadmap/execution/active"):
+            slice_id = Path(file).stem
+            packs.add(slice_id)
+            status = self.metadata(file, "Status")
+            require(status in PACK_STATES, file, "invalid pack status (planned, in-progress or blocked; shipped packs are deleted)")
+            owner = self.metadata(file, "Owning epic")
+            self.path(owner)
+            require(slice_id in slices, file, "filename has no owning epic slice")
+            require(slices[slice_id][0] == owner, file, "Owning epic does not own this slice")
+            require(slices[slice_id][2] == "pack", file, "active pack but the slice Execution is not pack")
+            require(slices[slice_id][1] == status, file, "pack and epic slice statuses differ")
+            implementing = status == "in-progress"
+            # Even a draft pack must not cite pending documents as authority.
+            self.governing(file, accepted)
+            for heading, names in PACK_FIELDS.items():
+                values = self.fields(file, heading, names, implementing)
+                if status == "blocked" and heading == "Scope":
+                    blocker = values["Blockers"].strip()
+                    require(not blocker.lower().startswith(("none", "n/a")) and not PLACEHOLDER.search(blocker), file, "blocked pack needs a concrete blocker and next action")
+            if implementing:
+                require(not PLACEHOLDER.search(self.section(file, "Decisions")), file, "unfilled Decisions")
+            expected[file] = status
+        self.index("docs/roadmap/execution/active/README.md", None, ("Pack", "Status"), expected)
         for slice_id, (file, status, execution) in slices.items():
-            if execution == "pack" and status in {"in-progress", "shipped"}:
-                require(slice_id in packs, file, f"implemented slice missing required pack: {slice_id}")
+            if execution == "pack":
+                require(slice_id in packs, file, f"slice declares pack but no active pack file exists: {slice_id}")
+
+        for file in self.records("docs/mappings"):
+            self.metadata(file, "Observed")
+            words = len(self.read(file).split())
+            if words > MAPPING_WORD_WARNING:
+                self.warnings.append(f"{file}: {words} words exceeds the {MAPPING_WORD_WARNING}-word mapping guideline; keep a compact receipts table and link the full text at a pinned revision")
 
         # Only scan this repo's governed docs/config; do not walk the repo root.
         markdown = ["README.md", "AGENTS.md", ".codex/README.md"] + [
@@ -293,11 +298,14 @@ def main() -> int:
         print("Usage: lint_agent_governance.py (validates its own repository)", file=sys.stderr)
         return 2
     try:
-        pending = Validator(ROOT).validate()
+        validator = Validator(ROOT)
+        pending = validator.validate()
     except (GovernanceError, OSError, UnicodeError) as error:
         print(f"Governance lint failed: {error}", file=sys.stderr)
         return 1
     print("Governance lint passed")
+    for warning in validator.warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
     if pending:
         print("Pending foundations (not implementation authority): " + ", ".join(Path(p).name for p in pending))
     return 0
