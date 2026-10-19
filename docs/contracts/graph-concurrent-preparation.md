@@ -161,6 +161,38 @@ Until the replacement is ready, reads of the damaged generation continue to fail
 closed on any damaged selected content. A read can only ask for earlier
 re-verification; it never queues work.
 
+## Worker reliability amendment — 2026-10-19
+
+The user authorized the follow-ups found while hardening the test suite. They
+change no evidence meaning and add no schema.
+
+**Retry keeps the native attempt ordinal.** A native import is fenced by the
+job's durable attempt ordinal, and an unpublished earlier attempt leaves its
+ordinal on the Neo4j generation. An admin retry of a failed or cancelled graph
+generation therefore continues the job's attempt count and raises its ceiling to
+three attempts above it. Restarting the count at zero made every new attempt
+look older than that import, so setup was refused and the retry could not
+succeed once the earlier attempts reached the ceiling. Other job kinds still
+restart at zero.
+
+**Stale workers report the loss.** A graph worker whose failure report is
+refused because it no longer holds the exact live lease (a replacement lease,
+cancellation or expiry owns the job; its fenced native write returned zero rows)
+reports a lost lease, never success. It has published nothing: the final
+publication transaction checks the lease on the locked job row and writer
+authority under the exclusive Brain lock, independently of the native fences.
+
+**Scan attempts are committed before the work.** Graph Brain selection serves
+its 100-Brain window ordered by the last scan attempt. The attempt is recorded in
+its own short committed statement before a Brain's maintenance transaction
+starts, not inside it. An attempt that errors, waits out its lock timeout or
+exceeds the per-Brain budget still moves that Brain behind Brains not yet
+scanned, so a stuck Brain cannot lead every window while its rolled-back stamp
+never advances. The statement skips a Brain row another transaction holds rather
+than waiting for it, because the work that follows would only time out on the
+same lock; a skipped stamp costs one more look at that Brain. The discovery lane
+rotation stays inside the work transaction and advances with its discovery.
+
 ## Acceptance
 
 - Actual PostgreSQL preparation observes a stable snapshot while a concurrent
@@ -179,6 +211,11 @@ re-verification; it never queues work.
   returned. A due generation is fully re-verified and stamped without advancing the
   analytics epoch, a changed sealing token is never stamped, and damage queues
   exactly one replacement however many passes follow.
+- Against actual PostgreSQL and Neo4j: an admin retry after a native import that
+  never published reaches readiness; a stale worker whose lease was replaced,
+  cancelled, or whose writer was revoked after its import sealed reports a lost
+  lease or cancellation and publishes nothing; a Brain whose maintenance always
+  fails is stamped by its attempt and no longer leads the selection window.
 - Pause actual digest/handover preparation while a same-Brain writer commits;
   race correction, access/policy changes, erasure and expiry against publication.
   Prove restart/wrap fairness and that timeouts cannot erase valid old coverage.

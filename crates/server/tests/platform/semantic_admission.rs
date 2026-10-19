@@ -279,7 +279,31 @@ async fn fixture() -> (
     );
     (h, owner, url, provider, server, job, preview)
 }
+/// The staged cancellation or reclaim is proven against the gateway boundary only
+/// if the worker completes on its own. The production worker also heartbeats its
+/// lease every five seconds (`worker::with_lease`), and a heartbeat that lands
+/// between the staged mutation and the worker's completion sees the lost lease
+/// first and drops the work future. That result is fail-closed (nothing is
+/// reserved, sent or published) but it says nothing about the gateway, so it
+/// cannot count as proof. This choreography normally takes one to three seconds;
+/// on a machine loaded enough to stretch it past one heartbeat the attempt is
+/// inconclusive and is repeated on a fresh fixture. Only the "lease lost" outcome
+/// of an attempt that lasted long enough for a heartbeat is repeated: a lost
+/// lease from a short attempt, and every other assertion, still fail the test.
+const HEARTBEAT_WINDOW: Duration = Duration::from_secs(4);
 async fn run(previewed: bool, mutation: Option<&str>) {
+    for attempt in 1..=3 {
+        if Box::pin(run_attempt(previewed, mutation)).await {
+            return;
+        }
+        eprintln!("Attempt {attempt}: a lease heartbeat overlapped the staged mutation; repeating");
+    }
+    panic!(
+        "Every attempt outlasted a lease heartbeat; the machine is too loaded to prove the boundary"
+    );
+}
+/// Returns false when the attempt is inconclusive (see `HEARTBEAT_WINDOW`).
+async fn run_attempt(previewed: bool, mutation: Option<&str>) -> bool {
     let (h, _owner, _url, p, server, job, preview) = fixture().await;
     let id = Uuid::new_v4();
     let stem = format!(
@@ -313,6 +337,7 @@ async fn run(previewed: bool, mutation: Option<&str>) {
             .execute(&h.admin).await.unwrap();
         gate = Some((connection, gate_pid, key));
     }
+    let worker_started = std::time::Instant::now();
     let state = h.state.clone();
     let work_job = job.clone();
     let work_preview = gateway::Preview {
@@ -413,6 +438,8 @@ async fn run(previewed: bool, mutation: Option<&str>) {
         .await
         .unwrap()
         .unwrap();
+    let inconclusive =
+        mutation.is_some() && completion.is_err() && worker_started.elapsed() >= HEARTBEAT_WINDOW;
     let mut after = snapshot(&h, &job).await;
     if let Some(token) = replacement_token {
         let preserved:bool=sqlx::query_scalar("SELECT state='running' AND lease_token=$2 AND lease_until>clock_timestamp() FROM jobs WHERE id=$1").bind(job.id).bind(token).fetch_one(&h.admin).await.unwrap();
@@ -421,10 +448,13 @@ async fn run(previewed: bool, mutation: Option<&str>) {
     let bodies = p.bodies.lock().unwrap().clone();
     let expected = serde_json::to_vec(&preview.body).unwrap();
     let parity = bodies.iter().all(|b| b == &expected);
-    let proof = json!({"database":h.database,"job":job.id,"batch":job.target_id,"mutation":mutation,"previewed":previewed,"barrier":barrier,"control_committed_before_worker_completion":control_committed,"before":before,"after":after,"provider_transmissions":bodies.len(),"preview_provider_bytes_equal":parity,"worker_completed_without_heartbeat_loss":completion.is_ok(),"external_calls":0});
+    let proof = json!({"database":h.database,"job":job.id,"batch":job.target_id,"mutation":mutation,"previewed":previewed,"barrier":barrier,"control_committed_before_worker_completion":control_committed,"before":before,"after":after,"provider_transmissions":bodies.len(),"preview_provider_bytes_equal":parity,"worker_completed_without_heartbeat_loss":completion.is_ok(),"inconclusive_heartbeat_overlap":inconclusive,"external_calls":0});
     persist(&format!("{stem}.json"), &proof);
     server.abort();
     cleanup(h, &format!("{stem}-cleanup.json")).await;
+    if inconclusive {
+        return false;
+    }
     assert!(
         completion.is_ok(),
         "Heartbeat loss cannot count as gateway lease-boundary proof"
@@ -459,6 +489,7 @@ async fn run(previewed: bool, mutation: Option<&str>) {
         assert_eq!(after["embeddings"], after["entry_count"]);
         assert_eq!(after["publication_audits"], 1);
     }
+    true
 }
 #[tokio::test]
 #[ignore = "Requires isolated repository-owned PostgreSQL"]

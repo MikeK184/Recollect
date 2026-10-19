@@ -174,7 +174,35 @@ pub async fn rebuild(
     Ok(ResponseJson(g))
 }
 
+/// Record that this pass is about to attempt `brain`, in its own short committed
+/// statement. `recollect_graph_brains` orders its 100-Brain window by this
+/// timestamp, so it must advance even when the attempt later errors, waits out
+/// its lock timeout or exceeds the per-Brain budget and rolls back: written
+/// inside the work transaction, a Brain that never completes would keep its old
+/// stamp and lead every window forever, crowding out the Brains behind it.
+///
+/// Best effort and never waiting: the row is skipped if another transaction
+/// holds it (a held Brain admission lock covers that row), because the work
+/// that follows would only time out on the same lock. A skipped or failed stamp
+/// costs one more look at that Brain next pass, never correctness.
+async fn record_scan(state: &AppState, brain: Uuid, actor: Uuid) {
+    let stamped = async {
+        let mut tx = db::actor_tx(&state.pool, actor).await?;
+        sqlx::query("UPDATE brains SET graph_scanned_at=clock_timestamp() WHERE id=(SELECT id FROM brains WHERE id=$1 FOR NO KEY UPDATE SKIP LOCKED)")
+            .bind(brain)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        Ok::<(), Error>(())
+    }
+    .await;
+    if let Err(error) = stamped {
+        tracing::debug!(brain_id=%brain,code=error.1,"Graph scan attempt was not recorded");
+    }
+}
+
 pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Result<usize> {
+    record_scan(state, brain, actor).await;
     // A Brain whose admission lock is held elsewhere must not pin a connection
     // for the rest of its time budget; the pass moves on and retries.
     let mut tx = admission::brain_tx_as(
@@ -186,7 +214,9 @@ pub async fn maintain_brain(state: &AppState, brain: Uuid, actor: Uuid) -> Resul
     )
     .await?
     .tx;
-    let first: i16 = sqlx::query_scalar("UPDATE brains SET graph_scanned_at=clock_timestamp(),graph_discovery_cursor=(graph_discovery_cursor+1)%3 WHERE id=$1 RETURNING (graph_discovery_cursor+2)::smallint%3::smallint")
+    // The scan stamp was committed by `record_scan`; only the discovery lane
+    // rotation, which must advance together with the discovery it orders, stays here.
+    let first: i16 = sqlx::query_scalar("UPDATE brains SET graph_discovery_cursor=(graph_discovery_cursor+1)%3 WHERE id=$1 RETURNING (graph_discovery_cursor+2)::smallint%3::smallint")
         .bind(brain)
         .fetch_one(&mut *tx)
         .await?;

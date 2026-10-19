@@ -131,6 +131,19 @@ override it (the config never replaces an existing variable). Failed runs keep t
 idle ones with `--drop`. It matches only those two exact name patterns and never
 touches the installed Brain's database.
 
+Two platform tests bound real time and are sensitive to machine load.
+`organization_weighted_5000_inputs_publish_without_a_long_brain_lock` prepares
+5,000 sources under the contract's five-second read-only bound. On a shared
+developer machine (unoptimized server library, PostgreSQL shared with other work)
+one preparation took 3.7 to 6.9 seconds, so the scheduling pass and the job can
+each defer and retry as in production. The test repeats those retries up to fixed
+ceilings, records `preparation_deferrals` in its `.cache/automatic-mapping`
+receipts and still fails if every attempt overruns. The semantic execution
+admission tests drive the production worker, whose five-second lease heartbeat can
+land between the staged cancellation or reclaim and the worker's completion; such
+an attempt is inconclusive and is repeated on a fresh fixture (at most three
+times), never counted as gateway-boundary proof.
+
 ```sh
 curl -fsS http://127.0.0.1:8787/health/ready
 cargo run -p recollect-agent -- health
