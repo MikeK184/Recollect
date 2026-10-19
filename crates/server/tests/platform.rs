@@ -10,6 +10,10 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 use uuid::Uuid;
 
+/// The product has no built-in text model; fixture installations name this one
+/// explicitly so no test depends on a code default.
+const FIXTURE_TEXT_MODEL: &str = "gpt-5.6-luna";
+
 struct Harness {
     router: Router,
     state: AppState,
@@ -949,6 +953,8 @@ impl Harness {
     async fn new_through_fixture(migrations: usize, semantic_admission: bool) -> Self {
         let mut config = Config::from_env()
             .expect("Use ./scripts/test-platform.sh with repository-owned databases");
+        // The product has no built-in text model; fixtures name theirs explicitly.
+        config.models.text_model = Some(FIXTURE_TEXT_MODEL.into());
         // Validate the scoped state before creating a database. Existing tests
         // retain their original state path and configured identity behavior.
         let semantic_state = semantic_admission.then(Self::prepare_semantic_admission_state_dir);

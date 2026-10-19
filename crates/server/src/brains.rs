@@ -107,7 +107,7 @@ pub async fn create(
     let audit = db::audit(&mut tx, auth.user.id, id, "brain.create", id, "created").await?;
     jobs::enqueue(&mut tx, auth.user.id, id, audit).await?;
     if input.managed_memory {
-        crate::automation::apply(&state, &mut tx, id, auth.user.id).await?;
+        crate::automation::apply(&state, &mut tx, id, auth.user.id, None).await?;
     }
     let row = sqlx::query_as::<_, BrainRow>(
         "SELECT id,owner_id,name,description,archived,icon_revision,created_at,updated_at,recollect_role(id) AS role FROM brains WHERE id=$1",

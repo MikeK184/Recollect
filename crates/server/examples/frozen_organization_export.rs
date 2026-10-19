@@ -417,7 +417,7 @@ async fn conformance(root: &Path, out: &Path) -> Result<Value> {
     ensure!(
         config.models.embedding_dimensions == 3072
             && config.models.embedding_model == "text-embedding-3-large"
-            && config.models.text_model == "gpt-5.6-luna",
+            && config.models.text_model.as_deref() == Some("gpt-5.6-luna"),
         "Frozen installed model configuration drift"
     );
     let native = native::Native::verify(&config, root, out, "2026.08.1").await?;

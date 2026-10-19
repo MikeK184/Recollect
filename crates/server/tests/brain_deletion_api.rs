@@ -33,6 +33,8 @@ impl Harness {
     async fn new() -> Self {
         let mut config = Config::from_env()
             .expect("Use ./scripts/test-platform.sh with repository-owned databases");
+        // The product has no built-in text model; fixtures name theirs explicitly.
+        config.models.text_model = Some("gpt-5.6-luna".into());
         let admin_url = std::env::var("DATABASE_ADMIN_URL").expect("DATABASE_ADMIN_URL required");
         let root = db::pool(&admin_url).await.unwrap();
         let database = format!("recollect_test_brain_del_api_{}", Uuid::new_v4().simple());

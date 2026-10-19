@@ -443,7 +443,14 @@ async fn execute_owned(
         schedule.len() == 60,
         "All original 60 document denominators are required"
     );
-    validate_pricing(&recipe["pricing"], &config.models.text_model)?;
+    validate_pricing(
+        &recipe["pricing"],
+        config
+            .models
+            .text_model
+            .as_deref()
+            .context("Set RECOLLECT_TEXT_MODEL to the frozen text model")?,
+    )?;
     // Persist the campaign directory entry as well as the create-new lock.
     File::open(out)?.sync_all()?;
     File::open(out.parent().context("Campaign parent")?)?.sync_all()?;
@@ -502,7 +509,15 @@ async fn execute_owned(
             continue;
         }
         let (body_hash, body_artifact, body_bytes) = persist_body(out, operation, &preview.body)?;
-        if let Err(error) = validate_pricing(&recipe["pricing"], &state.config.models.text_model) {
+        if let Err(error) = validate_pricing(
+            &recipe["pricing"],
+            state
+                .config
+                .models
+                .text_model
+                .as_deref()
+                .unwrap_or_default(),
+        ) {
             result["state"] = json!("pricing_expired_before_reservation");
             result["error"] = json!(error.to_string());
             stopped = true;

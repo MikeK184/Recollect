@@ -769,6 +769,7 @@ async fn execute(
                     && matches!(
                         error.1,
                         "model_policy_denied"
+                            | "model_not_selected"
                             | "model_credentials_missing"
                             | "semantic_profile_mismatch"
                             | "semantic_scope_too_large"

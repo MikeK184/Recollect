@@ -35,13 +35,23 @@ pub struct Config {
     pub oidc: Option<OidcConfig>,
 }
 
+/// An operator-named model; an unset or blank value names none.
+fn explicit_model(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
 #[derive(Clone)]
 pub struct ModelConfig {
     pub key: Option<String>,
     pub endpoint: String,
     pub openrouter_key: Option<String>,
     pub openrouter_endpoint: String,
-    pub text_model: String,
+    /// Optional explicit operator override from `RECOLLECT_TEXT_MODEL`. There
+    /// is no built-in default: when absent the installation reports no text
+    /// model and each Brain chooses its own.
+    pub text_model: Option<String>,
     pub embedding_model: String,
     pub embedding_dimensions: i32,
 }
@@ -56,7 +66,7 @@ impl ModelConfig {
                 .ok()
                 .filter(|v| !v.trim().is_empty()),
             openrouter_endpoint: "https://openrouter.ai/api/v1".into(),
-            text_model: std::env::var("RECOLLECT_TEXT_MODEL").unwrap_or("gpt-5.6-luna".into()),
+            text_model: explicit_model(std::env::var("RECOLLECT_TEXT_MODEL").ok()),
             embedding_model: std::env::var("RECOLLECT_EMBEDDING_MODEL")
                 .unwrap_or("text-embedding-3-large".into()),
             embedding_dimensions: std::env::var("RECOLLECT_EMBEDDING_DIMENSIONS")
@@ -72,7 +82,11 @@ impl ModelConfig {
             value.embedding_model != "text-embedding-3-small" || value.embedding_dimensions <= 1536,
             "text-embedding-3-small supports at most 1,536 dimensions"
         );
-        for name in [&value.text_model, &value.embedding_model] {
+        for name in value
+            .text_model
+            .iter()
+            .chain(std::iter::once(&value.embedding_model))
+        {
             ensure!(
                 !name.is_empty()
                     && name.len() <= 120
@@ -200,5 +214,21 @@ impl Config {
         );
         config.public_origin = origin.origin().ascii_serialization();
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::explicit_model;
+
+    #[test]
+    fn the_text_model_has_no_default_and_only_an_explicit_value_names_one() {
+        assert_eq!(explicit_model(None), None);
+        assert_eq!(explicit_model(Some(String::new())), None);
+        assert_eq!(explicit_model(Some("  \t".into())), None);
+        assert_eq!(
+            explicit_model(Some(" gpt-4.1-mini ".into())).as_deref(),
+            Some("gpt-4.1-mini")
+        );
     }
 }

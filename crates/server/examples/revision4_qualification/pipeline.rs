@@ -103,7 +103,7 @@ pub fn config(base: &Config, address: std::net::SocketAddr) -> Config {
 }
 pub fn configured(c: &Config) -> Result<()> {
     ensure!(
-        c.models.text_model == "gpt-5.6-luna"
+        c.models.text_model.as_deref() == Some("gpt-5.6-luna")
             && c.models.embedding_model == "text-embedding-3-large"
             && c.models.embedding_dimensions == 3072,
         "Frozen installed models/dimensions drift"

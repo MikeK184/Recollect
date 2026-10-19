@@ -48,6 +48,11 @@ pub(crate) fn denied() -> Error {
 pub(crate) fn failure(code: &'static str, message: &'static str) -> Error {
     Error(StatusCode::CONFLICT, code, message)
 }
+/// No text model is selected for this Brain, so nothing may be transmitted.
+/// There is no built-in model: the Brain's administrator chooses one.
+pub(crate) fn model_not_selected() -> Error {
+    failure("model_not_selected", "Choose a text model for this Brain")
+}
 pub(crate) fn installed(state: &AppState) -> InstalledModels {
     let model = &state.config.models;
     InstalledModels {
@@ -65,7 +70,7 @@ pub(crate) fn providers(state: &AppState) -> Vec<InstalledModels> {
         InstalledModels {
             provider: "openrouter".into(),
             endpoint: state.config.models.openrouter_endpoint.clone(),
-            text_model: "z-ai/glm-5.3-flash".into(),
+            text_model: Some("z-ai/glm-5.3-flash".into()),
             embedding_model: "qwen/qwen3-embedding-8b".into(),
             embedding_dimensions: 1024,
             credentials_present: state.config.models.openrouter_key.is_some(),
@@ -77,7 +82,8 @@ pub(crate) fn defaults(state: &AppState) -> ModelPolicy {
     ModelPolicy {
         enabled: false,
         provider: "openai".into(),
-        text_model: model.text_model.clone(),
+        // Empty unless the operator configured an explicit text model.
+        text_model: model.text_model.clone().unwrap_or_default(),
         embedding_model: model.embedding_model.clone(),
         embedding_dimensions: model.embedding_dimensions,
         purposes: vec!["extraction".into(), "synthesis".into(), "embedding".into()],
@@ -123,21 +129,31 @@ pub(crate) fn identifier(s: &str, max: usize) -> bool {
         && s.bytes()
             .all(|c| c.is_ascii_alphanumeric() || b"_.-/:".contains(&c))
 }
-pub(crate) fn matches_installation(state: &AppState, policy: &ModelPolicy) -> bool {
+/// Whether the policy's provider and models are an installable selection.
+/// `require_text` is false only while validating a disabled policy that has no
+/// text model selected yet.
+fn installation_matches(state: &AppState, policy: &ModelPolicy, require_text: bool) -> bool {
     let model = &state.config.models;
     (policy.provider == "openai"
-        && (catalogue::text_supported(&policy.text_model) || policy.text_model == model.text_model)
+        && (!require_text
+            || catalogue::text_supported(&policy.text_model)
+            || model.text_model.as_deref() == Some(policy.text_model.as_str()))
         && (catalogue::embedding_supported(&policy.embedding_model, policy.embedding_dimensions)
             || (catalogue::max_dimensions(&policy.embedding_model).is_none()
                 && policy.embedding_model == model.embedding_model
                 && policy.embedding_dimensions == model.embedding_dimensions)))
         || (policy.provider == "openrouter"
-            && catalogue::text_supported_for("openrouter", &policy.text_model)
+            && (!require_text || catalogue::text_supported_for("openrouter", &policy.text_model))
             && catalogue::embedding_supported_for(
                 "openrouter",
                 &policy.embedding_model,
                 policy.embedding_dimensions,
             ))
+}
+/// A policy with no selected text model never matches the installation: it
+/// cannot authorize any model transmission.
+pub(crate) fn matches_installation(state: &AppState, policy: &ModelPolicy) -> bool {
+    !policy.text_model.is_empty() && installation_matches(state, policy, true)
 }
 fn values(values: &mut Vec<String>, allowed: &[&str]) -> Result<()> {
     if values.len() > allowed.len() || values.iter().any(|v| !allowed.contains(&v.as_str())) {
@@ -157,7 +173,12 @@ async fn validate(
 ) -> Result<()> {
     values(&mut p.purposes, PURPOSES)?;
     values(&mut p.content_classes, CLASSES)?;
-    if !matches_installation(state, p) {
+    // A text model may be absent only while the policy is disabled.
+    let selected = !p.text_model.is_empty();
+    if !selected && p.enabled {
+        return Err(model_not_selected());
+    }
+    if !installation_matches(state, p, selected) {
         return Err(failure(
             "model_configuration_changed",
             "Choose compatible supported text and embedding models and dimensions.",
@@ -235,6 +256,9 @@ pub(crate) fn permits(
     purpose: &str,
     classes: &[String],
 ) -> Result<()> {
+    if policy.text_model.is_empty() {
+        return Err(model_not_selected());
+    }
     if !policy.enabled
         || !matches_installation(state, policy)
         || !policy.purposes.iter().any(|p| p == purpose)

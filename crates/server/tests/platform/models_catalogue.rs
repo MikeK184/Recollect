@@ -194,7 +194,7 @@ async fn model_selection_rebuild_is_atomic_idempotent_dimension_safe_and_policy_
     // Even a configured legacy ID listed by the account cannot become a new
     // selection unless its adapter compatibility has been reviewed.
     let mut configured = (*h.state.config).clone();
-    configured.models.text_model = "unknown-future-model".into();
+    configured.models.text_model = Some("unknown-future-model".into());
     h.state = AppState::new(h.state.pool.clone(), configured).unwrap();
     h.router = app(h.state.clone());
     catalogue(&h, &owner, &base, true).await;
