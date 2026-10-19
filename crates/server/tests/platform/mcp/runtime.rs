@@ -249,8 +249,8 @@ async fn mcp_runtime_revocation_configuration_loss_and_late_receipt() {
             .await,
     );
     assert!(!stopped.dispatch);
-    assert_eq!(stopped.state, "failed");
     let metadata = ok(&h, &owner, "GET", &path, Value::Null).await;
+    assert_eq!(metadata["state"], "failed");
     assert_eq!(metadata["output_access"], "permission_required");
     let mut tx = db::actor_tx(&h.state.pool, plan.actor_id)
         .await

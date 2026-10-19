@@ -63,7 +63,7 @@ impl DispatchOutcome {
             result: None,
         }
     }
-    fn failed(code: &'static str) -> Self {
+    pub(crate) fn failed(code: &'static str) -> Self {
         Self {
             state: "failed".into(),
             code: code.into(),
@@ -79,6 +79,7 @@ pub struct Connected {
     credentials: Arc<ResolvedCredentials>,
     tools: BTreeMap<String, ToolValidation>,
     subscription: Option<tokio_util::task::AbortOnDropHandle<()>>,
+    /// Provider process id of a stdio transport, for teardown proofs.
     pub owned_pid: Option<u32>,
 }
 impl Connected {
@@ -298,6 +299,16 @@ impl Connected {
         if let Err(error) = self.validate(name, &arguments) {
             return DispatchOutcome::failed(error.0);
         }
+        self.dispatch(name, arguments, timeout, cancel).await
+    }
+    /// `call` for arguments the caller has already passed through `validate`.
+    pub(crate) async fn dispatch(
+        &self,
+        name: &str,
+        arguments: Value,
+        timeout: Duration,
+        cancel: CancellationToken,
+    ) -> DispatchOutcome {
         if cancel.is_cancelled() {
             return DispatchOutcome::failed("cancelled_before_send");
         }

@@ -182,7 +182,6 @@ pub struct McpRunnerEpoch {
 pub struct McpRunnerLease {
     pub runner_reference: String,
     pub epoch: Uuid,
-    pub lease_until: DateTime<Utc>,
     pub cancel_calls: Vec<Uuid>,
     pub drain_instances: Vec<Uuid>,
     pub released_sessions: Vec<McpReleasedSession>,
@@ -208,7 +207,6 @@ pub struct McpExecutionPlan {
     pub runner_reference: String,
     pub runner_epoch: Uuid,
     pub attempt_token: Uuid,
-    pub lease_until: DateTime<Utc>,
     pub connection_revision: Uuid,
     pub definition_revision: DateTime<Utc>,
     pub definition: McpDefinitionManifest,
@@ -244,8 +242,6 @@ pub struct McpStart {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct McpStartPermit {
     pub dispatch: bool,
-    pub state: String,
-    pub code: Option<String>,
     pub deadline: Option<DateTime<Utc>>,
 }
 

@@ -337,6 +337,7 @@ async fn credential_reference_native_store_rotation_and_invalid_delivery() {
     );
     let numeric = (Uuid::new_v4().as_u128() % 9_000_000_000 + 1_000_000_000).to_string();
     entry.0.set_password(&numeric).unwrap();
+    resolver.invalidate().await;
     let numeric_secret = resolver
         .resolve(connection, Some("fixture"), "central")
         .await
@@ -369,6 +370,7 @@ async fn credential_reference_native_store_rotation_and_invalid_delivery() {
     connected.close().await.unwrap();
     let second = Uuid::new_v4().to_string();
     entry.0.set_password(&second).unwrap();
+    resolver.invalidate().await;
     let two = resolver
         .resolve(connection, Some("fixture"), "central")
         .await
@@ -527,7 +529,7 @@ async fn concurrent_startup_operation_leases_idle_threshold_sessions_and_rotatio
         )
         .await;
     assert_eq!(c_result.state, "succeeded");
-    manager.release_session(other.actor_id, other.client_session_id);
+    manager.release_brain_session(other.brain_id, other.actor_id, other.client_session_id);
     let stopped = manager
         .maintain(Instant::now() + USEFUL_IDLE + Duration::from_secs(1))
         .await;
