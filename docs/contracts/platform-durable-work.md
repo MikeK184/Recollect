@@ -78,7 +78,11 @@ Canonical mutation audit and projections are not deleted by this queue cleanup.
 `GET /api/brains/{id}/jobs` returns the latest 100 safe job records to Brain readers.
 `POST /api/brains/{id}/jobs/{job}/retry` lets a Brain admin retry failed/cancelled
 work, setting that approving actor as the new submitter; completed/active work
-returns 409. `POST .../cancel` cancels queued/running jobs and clears their lease;
+returns 409. A retry restarts the attempt count at zero, except for
+`graph.project`, which keeps its count and receives three fresh attempts above
+it because its durable attempt ordinal fences native imports
+([graph preparation](graph-concurrent-preparation.md#worker-reliability-amendment--2026-10-19)).
+`POST .../cancel` cancels queued/running jobs and clears their lease;
 already-terminal calls are harmless. Both changes are auditable transactions.
 All job/processing paths enforce Brain/resource matching; inaccessible IDs return
 404. The UI shows processing state, attempt/progress/error information and admin

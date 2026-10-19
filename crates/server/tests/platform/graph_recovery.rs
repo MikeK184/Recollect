@@ -924,3 +924,262 @@ async fn graph_path_checks_expiry_after_query_and_maintenance_rebuilds_without_e
     cleanup(&h, brain).await;
     h.finish().await;
 }
+
+/// Native imports are fenced by the job's durable attempt ordinal. An admin retry
+/// of a failed generation must continue that ordinal, not restart it at zero:
+/// the earlier unpublished import left its ordinal in Neo4j, and a lower or equal
+/// number would be refused as an older attempt for the rest of the new ceiling.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
+async fn graph_admin_retry_keeps_the_native_attempt_ordinal_above_an_unpublished_import() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (brain, base) = base(&h, &owner).await;
+    let (_, snapshot, _) = materialized(&h, &owner, &base, '1', None).await;
+    let (p, proxied, server) = proxy(&h).await;
+    p.arm(Rule {
+        contains: "MERGE (g:RecollectGraphGeneration",
+        pause: false,
+        before: false,
+        response: Some((
+            StatusCode::ACCEPTED,
+            json!({"errors":[{"code":"Neo.ClientError.Statement.SyntaxError","message":"PRIVATE_BACKEND_PAYLOAD"}]}),
+        )),
+    });
+    let generation = queued(&h, &owner, &base, &snapshot).await;
+    assert!(worker::run_once(&proxied, "heavy").await.unwrap());
+    let failed = state(&h, &generation).await;
+    assert_eq!(failed["state"], "failed", "{failed}");
+    assert_eq!(failed["error_code"], "graph_query_invalid");
+    let job: Uuid = generation["job_id"].as_str().unwrap().parse().unwrap();
+    let counts = || async {
+        sqlx::query_as::<_, (i32, i32)>("SELECT attempts,max_attempts FROM jobs WHERE id=$1")
+            .bind(job)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap()
+    };
+    assert_eq!(counts().await, (1, 3));
+    ok(
+        &h,
+        "POST",
+        &format!("{base}/jobs/{job}/retry"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(
+        counts().await,
+        (1, 4),
+        "The retry keeps the ordinal and grants three fresh attempts above it"
+    );
+    assert!(worker::run_once(&h.state, "heavy").await.unwrap());
+    let recovered = state(&h, &generation).await;
+    assert_eq!(recovered["state"], "ready", "{recovered}");
+    assert_eq!(counts().await, (2, 4));
+    server.abort();
+    cleanup(&h, brain).await;
+    h.finish().await;
+}
+
+/// The batches are fenced natively, but a stale worker can also reach the final
+/// publication transaction after its import sealed. That transaction alone must
+/// refuse it: the lease is checked on the locked job row and writer authority
+/// under the exclusive Brain lock, whatever happened to the native attempt.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
+async fn graph_publication_transaction_rechecks_lease_and_writer_after_native_seal() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (brain, base) = base(&h, &owner).await;
+    let (_, snapshot, _) = materialized(&h, &owner, &base, 'f', None).await;
+    let (p, proxied, server) = proxy(&h).await;
+    let sealed = || Rule {
+        contains: "SET g.import_open=false",
+        pause: true,
+        before: false,
+        response: None,
+    };
+
+    // Lease lost after the seal: the replacement lease publishes first.
+    p.arm(sealed());
+    let generation = queued(&h, &owner, &base, &snapshot).await;
+    let job = worker::claim(&h.state.pool, "heavy")
+        .await
+        .unwrap()
+        .unwrap();
+    let (old, state_copy) = (job.clone(), proxied.clone());
+    let work = tokio::spawn(async move { worker::execute(&state_copy, &old).await });
+    p.entered().await;
+    sqlx::query("UPDATE jobs SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1")
+        .bind(job.id)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    let replacement = worker::claim(&h.state.pool, "heavy")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(replacement.id, job.id);
+    assert_ne!(replacement.lease_token, job.lease_token);
+    worker::execute(&h.state, &replacement).await.unwrap();
+    assert_eq!(state(&h, &generation).await["state"], "ready");
+    p.release.notify_one();
+    assert_eq!(work.await.unwrap(), Err(worker::Failure::LostLease));
+    let published = state(&h, &generation).await;
+    assert_eq!(published["state"], "ready");
+    assert_eq!(
+        published["native_attempt_token"],
+        json!(replacement.lease_token),
+        "The stale attempt must not become the sealed import of record"
+    );
+    let publishes:i64=sqlx::query_scalar("SELECT count(*) FROM mutation_audit WHERE brain_id=$1 AND target_id=$2 AND action='graph.publish'")
+        .bind(brain).bind(job.target_id).fetch_one(&h.admin).await.unwrap();
+    assert_eq!(publishes, 1);
+
+    // Writer authority revoked after the seal: nothing publishes, the job is
+    // cancelled, and the generation that was ready stays the current one.
+    let (writer_id, writer) = h.fixture_member().await;
+    ok(
+        &h,
+        "PUT",
+        &format!("{base}/grants/{writer_id}"),
+        &owner,
+        json!({"role":"writer"}),
+    )
+    .await;
+    p.arm(sealed());
+    let revoked = queued(&h, &writer, &base, &snapshot).await;
+    let job = worker::claim(&h.state.pool, "heavy")
+        .await
+        .unwrap()
+        .unwrap();
+    let state_copy = proxied.clone();
+    let work = tokio::spawn(async move { worker::execute(&state_copy, &job).await });
+    p.entered().await;
+    ok(
+        &h,
+        "DELETE",
+        &format!("{base}/grants/{writer_id}"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    p.release.notify_one();
+    work.await.unwrap().unwrap();
+    let revoked = state(&h, &revoked).await;
+    assert_eq!(revoked["state"], "cancelled");
+    assert_eq!(revoked["error_code"], "permission_revoked");
+    assert_eq!(state(&h, &generation).await["state"], "ready");
+    let publishes: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM mutation_audit WHERE brain_id=$1 AND action='graph.publish'",
+    )
+    .bind(brain)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(publishes, 1);
+    server.abort();
+    cleanup(&h, brain).await;
+    h.finish().await;
+}
+
+async fn graph_window(h: &Harness) -> Vec<Uuid> {
+    sqlx::query_scalar("SELECT brain_id FROM recollect_graph_brains()")
+        .fetch_all(&h.state.pool)
+        .await
+        .unwrap()
+}
+
+/// `recollect_graph_brains` serves its 100-Brain window by `graph_scanned_at`.
+/// A Brain that errors or times out rolls its whole maintenance transaction
+/// back, so the stamp has to be committed separately or that Brain leads every
+/// window for ever, even though the in-process attempt order moves it back
+/// inside the window.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL and Neo4j"]
+async fn graph_scan_stamp_survives_a_failed_attempt_so_a_stuck_brain_leaves_the_window_head() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (a, a_base) = base(&h, &owner).await;
+    let (b, b_base) = base(&h, &owner).await;
+    materialized(&h, &owner, &a_base, 'a', None).await;
+    materialized(&h, &owner, &b_base, 'b', None).await;
+    let initial = graph_window(&h).await;
+    assert_eq!(initial.len(), 2);
+    assert!(initial.contains(&a) && initial.contains(&b));
+    // Never-scanned Brains tie on the epoch and fall back to id: `stuck` leads.
+    let (stuck, healthy) = (initial[0], initial[1]);
+    let actor: Uuid = sqlx::query_scalar("SELECT owner_id FROM brains WHERE id=$1")
+        .bind(stuck)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    // This Brain's discovery fails the same way every pass: it cannot even
+    // insert the generation it wants to queue.
+    sqlx::raw_sql(&format!("CREATE FUNCTION fixture_graph_scan_poison() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'fixture: this Brain cannot queue graph work';END;$$;CREATE TRIGGER fixture_graph_scan_poison BEFORE INSERT ON graph_generations FOR EACH ROW WHEN(NEW.brain_id='{stuck}') EXECUTE FUNCTION fixture_graph_scan_poison()"))
+        .execute(&h.admin)
+        .await
+        .unwrap();
+
+    assert!(
+        graph::maintain_brain(&h.state, stuck, actor).await.is_err(),
+        "The poisoned discovery must fail its maintenance transaction"
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM graph_generations WHERE brain_id=$1")
+            .bind(stuck)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap(),
+        0,
+        "The failed attempt rolled its work back"
+    );
+    let stamped: bool =
+        sqlx::query_scalar("SELECT graph_scanned_at>'epoch' FROM brains WHERE id=$1")
+            .bind(stuck)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    assert!(stamped, "The attempt itself is committed, work or no work");
+    assert_eq!(
+        graph_window(&h).await,
+        vec![healthy, stuck],
+        "A Brain that was attempted and failed no longer outranks one never scanned"
+    );
+
+    // A held admission lock is the other way a Brain stays stuck. Recording the
+    // attempt must never wait for it: the pass costs that Brain only its own
+    // lock timeout, and the Brain behind it is still served.
+    let actor_b: Uuid = sqlx::query_scalar("SELECT owner_id FROM brains WHERE id=$1")
+        .bind(healthy)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    let mut hold = db::actor_tx(&h.state.pool, actor_b)
+        .await
+        .unwrap_or_else(|e| panic!("{}", e.1));
+    db::lock_brain(&mut hold, healthy, true)
+        .await
+        .unwrap_or_else(|e| panic!("{}", e.1));
+    let started = std::time::Instant::now();
+    assert!(
+        graph::maintain_brain(&h.state, healthy, actor_b)
+            .await
+            .is_err()
+    );
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(8),
+        "Recording a scan attempt must not wait on a held Brain lock"
+    );
+    hold.rollback().await.unwrap();
+    assert_eq!(
+        graph::maintain_brain(&h.state, healthy, actor_b)
+            .await
+            .unwrap_or_else(|e| panic!("{}", e.1)),
+        1,
+        "Once the lock is released the same Brain's repository graph is queued"
+    );
+    assert_eq!(graph_window(&h).await, vec![stuck, healthy]);
+    h.finish().await;
+}

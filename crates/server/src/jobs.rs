@@ -213,7 +213,13 @@ pub async fn retry(
         "retry_requested",
     )
     .await?;
-    let row = sqlx::query_as::<_,JobRow>("UPDATE jobs SET actor_id=$3,device_id=recollect_device(),state='queued',attempts=0,progress=0,error_code=NULL,not_before=now(),lease_token=NULL,lease_until=NULL,updated_at=now() WHERE id=$1 AND brain_id=$2 RETURNING *")
+    // A graph generation's native import is fenced by this job's durable attempt
+    // ordinal, and an unpublished earlier attempt leaves its ordinal in Neo4j.
+    // Restarting the count at zero would make every new attempt look older than
+    // that import and be refused until the count caught up (never, when the
+    // old attempts exhausted the ceiling). Keep the ordinal and grant three
+    // fresh attempts above it, as the other lanes' explicit retries do.
+    let row = sqlx::query_as::<_,JobRow>("UPDATE jobs SET actor_id=$3,device_id=recollect_device(),state='queued',attempts=CASE WHEN kind='graph.project' THEN attempts ELSE 0 END,max_attempts=CASE WHEN kind='graph.project' THEN greatest(max_attempts,attempts+3) ELSE max_attempts END,progress=0,error_code=NULL,not_before=now(),lease_token=NULL,lease_until=NULL,updated_at=now() WHERE id=$1 AND brain_id=$2 RETURNING *")
         .bind(job).bind(id).bind(auth.user.id).fetch_one(&mut *tx).await?;
     tx.commit().await?;
     Ok(Json(row.into()))

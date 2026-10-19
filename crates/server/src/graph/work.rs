@@ -267,13 +267,23 @@ pub async fn execute(state: &AppState, job: &ClaimedJob) -> std::result::Result<
         };
         // Reuse the durable queue's bounded backoff and lease fencing, retaining
         // only a static error code. Backend payloads are never stored or logged.
-        sqlx::query("SELECT recollect_fail_job($1,$2,$3,$4)")
+        let recorded: bool = sqlx::query_scalar("SELECT recollect_fail_job($1,$2,$3,$4)")
             .bind(job.id)
             .bind(job.lease_token)
             .bind(outcome)
             .bind(reason)
-            .execute(&state.pool)
+            .fetch_one(&state.pool)
             .await?;
+        // The recorder matches only this exact live token and an accepted reason.
+        // A refusal means a replacement lease, cancellation or expiry already
+        // owns the job (for example the fenced native write of a reclaimed
+        // attempt returned zero rows and surfaced as `graph_import_mismatch`),
+        // or the reason is not recordable and the lease simply expires as
+        // before. Either way report it rather than a success the worker did not
+        // earn. Nothing was published.
+        if !recorded {
+            return Err(Failure::LostLease);
+        }
     }
     Ok(())
 }
