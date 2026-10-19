@@ -9,9 +9,21 @@ path, or run this from the repository root:
 ./scripts/validate.sh
 ```
 
-The command uses only the Python standard library. It validates governed files
-and runs checker tests in disposable temporary directories. It does not install
+The default run checks document shape only: governed files, links and metadata.
+It does not compile or test any Rust or web code, so a passing run says nothing
+about whether the application builds. It uses only the Python standard library,
+runs checker tests in disposable temporary directories, and does not install
 packages, call a network service, traverse Cognee, or select an application stack.
+
+To also check code, add `--code`:
+
+```sh
+./scripts/validate.sh --code
+```
+
+After the document checks it runs `cargo test --workspace --lib` and
+`npm --prefix web run typecheck`, so it needs the Rust toolchain and installed web
+dependencies. It runs no integration, platform or browser tests.
 
 ## Checks
 

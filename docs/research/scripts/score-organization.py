@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 import re
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_GOLD = [
     ROOT / 'docs/research/automatic-knowledge-mapping-fixtures-2026-10-09.json',
     ROOT / 'docs/research/graph-organization-adversarial-fixtures-2026-10-18.json',

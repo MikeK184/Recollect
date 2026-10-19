@@ -103,6 +103,7 @@ fn current(root: &Path, config: &Config) -> Result<(Value, Value, Value, Vec<Val
         "crates/server/src/semantic/work.rs",
         "crates/server/src/db.rs",
         "compose.yaml",
+        "infra/product/compose.yaml",
         "scripts/docker.sh",
     ] {
         recipe["code_sha256"][path] = json!(common::sha256(&fs::read(root.join(path))?)?);

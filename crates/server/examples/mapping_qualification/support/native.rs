@@ -74,9 +74,13 @@ fn labels(value: &Value, root: &Path) -> bool {
         && value["com.docker.compose.project.config_files"]
             .as_str()
             .is_some_and(|p| {
-                p.split(',').count() == 1
-                    && Path::new(p).canonicalize().ok().as_deref()
-                        == Some(root.join("compose.yaml").as_path())
+                // The development stack is infra/product/compose.yaml plus the root override.
+                p.split(',')
+                    .map(|file| Path::new(file).canonicalize().ok())
+                    .eq([
+                        Some(root.join("infra/product/compose.yaml")),
+                        Some(root.join("compose.yaml")),
+                    ])
             })
 }
 #[cfg(test)]
@@ -264,7 +268,7 @@ mod tests {
             .join("../..")
             .canonicalize()
             .unwrap();
-        let mut value = json!({"com.docker.compose.project":"recollect","com.docker.compose.service":"neo4j","com.docker.compose.project.working_dir":root,"com.docker.compose.project.config_files":root.join("compose.yaml")});
+        let mut value = json!({"com.docker.compose.project":"recollect","com.docker.compose.service":"neo4j","com.docker.compose.project.working_dir":root,"com.docker.compose.project.config_files":format!("{},{}",root.join("infra/product/compose.yaml").display(),root.join("compose.yaml").display())});
         assert!(labels(&value, &root));
         value["com.docker.compose.project"] = json!("neighbor");
         assert!(!labels(&value, &root));

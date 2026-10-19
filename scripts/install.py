@@ -145,6 +145,7 @@ def compose_command(saved):
     command = [str(ROOT / "scripts/docker.sh"), "compose", "--project-directory", str(ROOT / "infra/product"),
             "--project-name", saved["project"], "--env-file", str(directory(saved["name"]) / "compose.env"),
             "-f", str(ROOT / "infra/product/compose.yaml"),
+            "-f", str(ROOT / "infra/product/installation.yaml"),
             "-f", str(ROOT / "infra/product" / (saved["mode"] + ".yaml"))]
     override = directory(saved["name"]) / "overrides.yaml"
     if override.is_file():

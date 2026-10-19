@@ -35,6 +35,8 @@ class LocalUpdateProof(unittest.TestCase):
                 script.chmod(0o700)
             (root / '.env').write_text('RECOLLECT_CREDENTIAL_FILE=.data/runtime/credentials.json\nRECOLLECT_PUBLIC_ORIGIN=http://127.0.0.1:8787\nCOMPOSE_PROJECT_NAME=foreign\nCOMPOSE_FILE=/foreign.yaml\n')
             (root / 'compose.yaml').write_text('name: recollect\nservices: {}\n')
+            (root / 'infra/product').mkdir(parents=True)
+            (root / 'infra/product/compose.yaml').write_text('services: {}\n')
             env = {k:v for k,v in os.environ.items() if not k.startswith('RECOLLECT_')}
             env.update({'COMPOSE_PROJECT_NAME':'neighbor','COMPOSE_FILE':'/neighbor.yaml'})
             result = subprocess.run([str(stack), 'up'], env=env, capture_output=True, text=True)
@@ -42,7 +44,7 @@ class LocalUpdateProof(unittest.TestCase):
             commands = [json.loads(line) for line in (root / 'commands.jsonl').read_text().splitlines()]
             self.assertEqual(len(commands), 4)
             for command in commands:
-                self.assertEqual(command[:9], ['compose','--project-directory',str(root),'--project-name','recollect','--env-file',str(root/'.env'),'-f',str(root/'compose.yaml')])
+                self.assertEqual(command[:11], ['compose','--project-directory',str(root),'--project-name','recollect','--env-file',str(root/'.env'),'-f',str(root/'infra/product/compose.yaml'),'-f',str(root/'compose.yaml')])
                 self.assertNotIn('foreign', command)
                 self.assertNotIn('neighbor', command)
 

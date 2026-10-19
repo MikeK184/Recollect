@@ -26,9 +26,9 @@ The provider is accessed only through the existing governed gateway.
 Choose a new quality directory for each intentionally new paid experiment:
 
 ```sh
-python3 scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-quality-example prepare
-python3 scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-quality-example quality
-python3 scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-quality-example synthesize
+python3 docs/research/scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-quality-example prepare
+python3 docs/research/scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-quality-example quality
+python3 docs/research/scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-quality-example synthesize
 ```
 
 Preparation imports seven documents and ten claims and waits for their graph and
@@ -43,7 +43,7 @@ and must remain private.
 Use a separate, new directory for each workload attempt:
 
 ```sh
-python3 scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-workload-example workload
+python3 docs/research/scripts/evaluate-integrated.py proof-integrated-example .cache/integrated-workload-example workload
 ```
 
 The workload Brain disables model transmission. The harness uses 50 repository

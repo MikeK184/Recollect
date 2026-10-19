@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(__file__).resolve().parents[3]
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('run',type=Path)
 parser.add_argument('--resume-primary',action='store_true',help='Explicit recovery of a terminal partial judge run; retain completed prefix')

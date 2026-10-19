@@ -6,7 +6,7 @@ import urllib.request
 
 URL = "https://datasets-server.huggingface.co/rows?dataset=hotpotqa/hotpot_qa&config=distractor&split=validation&offset=0&length=50"
 SHA256 = "32dd92947d6c50194bc2e76588bc78ad6ad08805a4b05728336ac70cd7e19b96"
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 DEST = ROOT / ".cache/public-benchmark-input/hotpotqa-validation-50.json"
 
 if DEST.exists():

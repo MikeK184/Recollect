@@ -45,3 +45,13 @@ Completed UI proposals, the delivered automatic-memory design and the earlier
 claude-mem comparison were removed as duplicate current guidance. Their chosen
 behavior is in contracts, runbooks and delivery packs; original studies remain
 in the [fixed Git snapshot](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research).
+
+## Research tooling
+
+[scripts/](scripts/) holds evaluation, benchmark and probe tooling cited only by
+mappings, runbooks and research notes (LongMemEval fetch/judge/summarize,
+OpenRouter and OpenAI probes, integrated and retrieval-fusion evaluation, the
+organization and feedback scorers). Run each from the repository root; scripts
+that need operator modules put `scripts/` on `sys.path` themselves. Scorers and
+corpus tools that Rust examples or tests hash and invoke by path stay under
+`scripts/`.

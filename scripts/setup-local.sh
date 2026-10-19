@@ -50,6 +50,10 @@ updates = {}
 for key, current in [('RECOLLECT_LOCAL_UID', os.getuid()), ('RECOLLECT_LOCAL_GID', os.getgid())]:
     if value(key) is None:
         updates[key] = str(current)
+# The root compose.yaml is an override of the shared product services; make plain
+# `docker compose` commands load both files, as ./scripts/stack.sh does explicitly.
+if value('COMPOSE_FILE') is None:
+    updates['COMPOSE_FILE'] = 'infra/product/compose.yaml:compose.yaml'
 credentials = value('RECOLLECT_CREDENTIAL_FILE', '.data/credentials.json')
 if Path(credentials) == Path('.data/credentials.json'):
     old, new = Path(credentials), runtime / 'credentials.json'

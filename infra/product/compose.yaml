@@ -1,3 +1,8 @@
+# Installation-agnostic service definitions shared by every Recollect stack.
+# Layer one of these on top, with the same project directory:
+#   - installation.yaml + personal.yaml|shared.yaml: named installations (scripts/install.py)
+#   - ../../compose.yaml: the repository development stack (scripts/stack.sh)
+# Relative paths and secrets belong in the layers, never here.
 x-logging: &logging
   driver: local
   options:
@@ -6,22 +11,11 @@ x-logging: &logging
 x-app: &app
   image: ${RECOLLECT_IMAGE:-recollect-product:local}
   build:
-    context: ../..
     dockerfile: infra/product/Dockerfile
   init: true
   read_only: true
   tmpfs:
     - /tmp:size=128m,mode=1777
-  volumes:
-    - app_data:/var/lib/recollect
-    - type: bind
-      source: ${RECOLLECT_INSTALL_DIR:?Select a saved installation}/mcp-bindings.json
-      target: /run/recollect/mcp-bindings.json
-      read_only: true
-      bind:
-        create_host_path: false
-  environment:
-    RECOLLECT_MCP_CREDENTIALS_FILE: /run/recollect/mcp-bindings.json
   stop_signal: SIGTERM
   stop_grace_period: 90s
   pids_limit: 256
@@ -29,11 +23,8 @@ x-app: &app
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17
-    env_file: ${RECOLLECT_INSTALL_DIR}/database.env
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ../postgres-init.sh:/docker-entrypoint-initdb.d/recollect.sh:ro
+    # pgvector/pgvector:pg17
+    image: pgvector/pgvector@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
     healthcheck:
       test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -U recollect_admin -d recollect -Atqc 'SELECT 1'"]
       interval: 5s
@@ -46,18 +37,14 @@ services:
     stop_grace_period: 90s
     logging: *logging
   neo4j:
-    image: neo4j:2026.08
-    env_file: ${RECOLLECT_INSTALL_DIR}/graph.env
+    # neo4j:2026.08
+    image: neo4j@sha256:d8f4c156caa3af76499134947deb11d13042e471d9733060449f2a01eb7a248e
     environment:
       NEO4J_PLUGINS: '["graph-data-science"]'
       NEO4J_dbms_security_procedures_unrestricted: "gds.*"
       NEO4J_server_memory_heap_initial__size: 512m
       NEO4J_server_memory_heap_max__size: 1G
       NEO4J_server_memory_pagecache_size: 512m
-    volumes:
-      - graph_data:/data
-      - graph_logs:/logs
-      - graph_plugins:/plugins
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
       interval: 5s
@@ -72,9 +59,6 @@ services:
   migrate:
     <<: *app
     command: ["migrate"]
-    env_file:
-      - ${RECOLLECT_INSTALL_DIR}/runtime.env
-      - ${RECOLLECT_INSTALL_DIR}/operator.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,7 +68,6 @@ services:
   api:
     <<: *app
     command: ["serve"]
-    env_file: ${RECOLLECT_INSTALL_DIR}/runtime.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,7 +87,6 @@ services:
   worker:
     <<: *app
     command: ["worker"]
-    env_file: ${RECOLLECT_INSTALL_DIR}/runtime.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,10 +97,3 @@ services:
     mem_limit: ${RECOLLECT_WORKER_MEMORY:-2g}
     cpus: ${RECOLLECT_WORKER_CPUS:-4}
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  graph_data:
-  graph_logs:
-  graph_plugins:
-  app_data:

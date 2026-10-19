@@ -66,6 +66,15 @@ fn unavailable() -> Error {
         "Organization sign-in is unavailable. Retry or use a local account.",
     )
 }
+// openidconnect/oauth2 still drive reqwest 0.12; keep its client separate from the
+// workspace reqwest while preserving the shared no-redirect, 5 s transport limits.
+fn oidc_http() -> Result<openidconnect::reqwest::Client> {
+    openidconnect::reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .redirect(openidconnect::reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|_| unavailable())
+}
 async fn metadata(state: &AppState, refresh: bool) -> Result<CoreProviderMetadata> {
     let settings = state.config.oidc.as_ref().ok_or_else(unavailable)?;
     // Held across discovery so concurrent sign-ins share one fetch.
@@ -78,7 +87,7 @@ async fn metadata(state: &AppState, refresh: bool) -> Result<CoreProviderMetadat
     }
     let discovered = CoreProviderMetadata::discover_async(
         IssuerUrl::new(settings.issuer.clone()).map_err(|_| unavailable())?,
-        &state.http,
+        &oidc_http()?,
     )
     .await
     .map_err(|_| unavailable())?;
@@ -248,7 +257,7 @@ async fn finish(state: &AppState, headers: &HeaderMap, input: Callback) -> Resul
         .exchange_code(AuthorizationCode::new(code))
         .map_err(|_| unavailable())?
         .set_pkce_verifier(PkceCodeVerifier::new(verifier))
-        .request_async(&state.http)
+        .request_async(&oidc_http()?)
         .await
         .map_err(|_| Error::unauthorized())?;
     let id_token = tokens.id_token().ok_or_else(Error::unauthorized)?;

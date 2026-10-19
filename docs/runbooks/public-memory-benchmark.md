@@ -3,7 +3,7 @@
 Run from the Recollect checkout with the local PostgreSQL/Neo4j stack available:
 
 ```sh
-python3 scripts/fetch-public-benchmark.py
+python3 docs/research/scripts/fetch-public-benchmark.py
 RECOLLECT_PUBLIC_BENCHMARK=1 ./scripts/test-ui.sh tests/public-benchmark.spec.ts
 ```
 

@@ -334,16 +334,16 @@ Upstream commit: `9e0b455f4ef0e2ab8f2e582289761153549043fc`.
 | `evaluate_qa.py` | `ecce9c4c79dc89d99534ac17b383a5cbb5b9f0c69ee98adaf0684742e3d95251` |
 | `print_qa_metrics.py` | `e9283933a0cefb7a0ded7365e436ae3d1be5aac41853325e6155d83bf07607f0` |
 
-The fetcher is `scripts/fetch-longmemeval.py`; the opt-in native harness is
+The fetcher is `docs/research/scripts/fetch-longmemeval.py`; the opt-in native harness is
 `web/tests/longmemeval.spec.ts` through `scripts/test-ui.sh`. Paid dispatch requires
-explicit opt-in and an owned database. `scripts/judge-longmemeval.py` runs the
-unchanged evaluator through `scripts/benchmark-openrouter-proxy.mjs`.
+explicit opt-in and an owned database. `docs/research/scripts/judge-longmemeval.py` runs the
+unchanged evaluator through `docs/research/scripts/benchmark-openrouter-proxy.mjs`.
 The following commands regenerate summaries **offline**, without provider calls:
 
 ```sh
-python3 scripts/summarize-longmemeval.py .cache/longmemeval-glm53-throughput
-python3 scripts/summarize-longmemeval.py .cache/longmemeval-glm53-recovery-wave2
-python3 scripts/summarize-openrouter-campaign.py --recovered-run .cache/longmemeval-glm53-recovery-wave2
+python3 docs/research/scripts/summarize-longmemeval.py .cache/longmemeval-glm53-throughput
+python3 docs/research/scripts/summarize-longmemeval.py .cache/longmemeval-glm53-recovery-wave2
+python3 docs/research/scripts/summarize-openrouter-campaign.py --recovered-run .cache/longmemeval-glm53-recovery-wave2
 ```
 
 The LongMemEval directories each retain `report.json`, original responses,

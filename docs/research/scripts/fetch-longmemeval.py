@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import urllib.request
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]
 DEST = ROOT / ".cache/longmemeval-input"
 DATA_REV = "98d7416c24c778c2fee6e6f3006e7a073259d48f"
 CODE_REV = "9e0b455f4ef0e2ab8f2e582289761153549043fc"

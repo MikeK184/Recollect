@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 
 root_compose() {
   ./scripts/docker.sh compose --project-directory "$PWD" --project-name recollect \
-    --env-file "$PWD/.env" -f "$PWD/compose.yaml" "$@"
+    --env-file "$PWD/.env" -f "$PWD/infra/product/compose.yaml" -f "$PWD/compose.yaml" "$@"
 }
 
 case "${1:-status}" in
