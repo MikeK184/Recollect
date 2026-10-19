@@ -347,3 +347,135 @@ async fn account_agent_roster() {
     let _ = (definition_id, brain_b_id);
     h.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
+async fn agent_rosters_read_only_the_newest_capture_of_each_binding() {
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let (status, brain, _) = h
+        .call(
+            "POST",
+            "/api/brains",
+            Some(&owner),
+            json!({"name":"Busy capture"}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let brain_id = Uuid::parse_str(brain["id"].as_str().unwrap()).unwrap();
+    let (device, _) = h
+        .pair_with(&owner, "Busy capture host", None, Some("plugin"))
+        .await;
+    let owner_id: Uuid = sqlx::query_scalar("SELECT id FROM accounts WHERE username=$1")
+        .bind(h.state.config.owner_username.clone())
+        .fetch_one(&h.admin)
+        .await
+        .unwrap();
+    let (task, scope, operation) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+    sqlx::query(
+        "INSERT INTO workspace_tasks(id,brain_id,account_id,label) VALUES($1,$2,$3,'busy capture')",
+    )
+    .bind(task)
+    .bind(brain_id)
+    .bind(owner_id)
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO scope_snapshots(id,brain_id,task_id,account_id,snapshot) VALUES($1,$2,$3,$4,'{}')").bind(scope).bind(brain_id).bind(task).bind(owner_id).execute(&h.admin).await.unwrap();
+    sqlx::query("INSERT INTO operation_bindings(id,brain_id,task_id,scope_id,account_id,kind) VALUES($1,$2,$3,$4,$5,'context')").bind(operation).bind(brain_id).bind(task).bind(scope).bind(owner_id).execute(&h.admin).await.unwrap();
+    let (busy, quiet) = (Uuid::new_v4(), Uuid::new_v4());
+    for (binding, host) in [(busy, "codex"), (quiet, "opencode")] {
+        sqlx::query("INSERT INTO capture_bindings(id,brain_id,operation_id,actor_id,device_id,host,host_version,selection) VALUES($1,$2,$3,$4,$5,$6,'fixture','{}')").bind(binding).bind(brain_id).bind(operation).bind(owner_id).bind(device).bind(host).execute(&h.admin).await.unwrap();
+    }
+    // A long accepted history used to be read event by event, running the
+    // Brain role and retention checks on every row (seconds per roster read).
+    sqlx::query("INSERT INTO capture_events(id,brain_id,binding_id,retention_class,captured_at,received_at,expires_at,state) SELECT gen_random_uuid(),$1,$2,'raw_session',now()-interval '2 hours'-n*interval '1 second',now()-interval '2 hours'-n*interval '1 second',now()+interval '1 day','accepted' FROM generate_series(1,20000) n").bind(brain_id).bind(busy).execute(&h.admin).await.unwrap();
+    // Newer busy-binding events that must not count: removed, and accepted but
+    // past the effective retention deadline before the sweep marks it.
+    sqlx::query("INSERT INTO capture_events(id,brain_id,binding_id,retention_class,captured_at,received_at,expires_at,state) VALUES(gen_random_uuid(),$1,$2,'raw_session',now(),now()-interval '1 minute',now()+interval '1 day','removed'),(gen_random_uuid(),$1,$2,'raw_session',now()-interval '2 years',now()-interval '5 minutes',now()+interval '1 day','accepted')").bind(brain_id).bind(busy).execute(&h.admin).await.unwrap();
+    let expected: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("INSERT INTO capture_events(id,brain_id,binding_id,retention_class,captured_at,received_at,expires_at,state) VALUES(gen_random_uuid(),$1,$2,'raw_session',now()-interval '10 minutes',now()-interval '10 minutes',now()+interval '1 day','accepted') RETURNING received_at").bind(brain_id).bind(quiet).fetch_one(&h.admin).await.unwrap();
+    // An agent seen on this Brain only through usage, with no capture binding
+    // and no reported host, takes the Brain roster's legacy capture-host path.
+    let (usage_only, _) = h
+        .pair_with(&owner, "Usage-only host", None, Some("mcp"))
+        .await;
+    sqlx::query(
+        "INSERT INTO agent_brain_usage(brain_id,device_id,host_kind) VALUES($1,$2,'unknown')",
+    )
+    .bind(brain_id)
+    .bind(usage_only)
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    sqlx::query("ANALYZE capture_events")
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    let scans = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT coalesce(sum(idx_scan),0)::bigint FROM pg_stat_user_indexes WHERE indexrelname='capture_binding_latest'",
+        )
+        .fetch_one(&h.admin)
+        .await
+        .unwrap()
+    };
+    // Statistics reach other sessions asynchronously.
+    let scanned_since = |before: i64, read: &'static str| async move {
+        let mut waited = 0;
+        while scans().await <= before {
+            assert!(waited < 60, "{read} did not use capture_binding_latest");
+            waited += 1;
+            tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        }
+        scans().await
+    };
+    let at = |value: &Value| {
+        chrono::DateTime::parse_from_rfc3339(value.as_str().unwrap())
+            .unwrap()
+            .with_timezone(&chrono::Utc)
+    };
+    // The per-event reads took about 10 s here; per-binding reads take
+    // milliseconds, so the bound only catches a return to history scans.
+    let bound = std::time::Duration::from_secs(2);
+
+    let before = scans().await;
+    let started = std::time::Instant::now();
+    let (status, roster, _) = h
+        .call("GET", "/api/agents", Some(&owner), Value::Null)
+        .await;
+    let elapsed = started.elapsed();
+    assert_eq!(status, StatusCode::OK);
+    assert!(elapsed < bound, "GET /api/agents took {elapsed:?}");
+    let agents = roster["groups"][0]["agents"].as_array().unwrap();
+    let agent = agents
+        .iter()
+        .find(|a| a["device_id"] == json!(device))
+        .unwrap();
+    let usage = agent["brains"].as_array().unwrap();
+    assert_eq!(usage.len(), 1);
+    assert_eq!(usage[0]["brain_id"], json!(brain_id));
+    assert_eq!(at(&usage[0]["last_used_at"]), expected);
+    assert_eq!(agent["observed_hosts"], json!(["codex", "opencode"]));
+    let before = scanned_since(before, "GET /api/agents").await;
+
+    let path = format!("/api/brains/{brain_id}/agents");
+    let started = std::time::Instant::now();
+    let (status, shared, _) = h.call("GET", &path, Some(&owner), Value::Null).await;
+    let elapsed = started.elapsed();
+    assert_eq!(status, StatusCode::OK);
+    assert!(elapsed < bound, "GET {path} took {elapsed:?}");
+    let rows = shared["groups"][0]["agents"].as_array().unwrap();
+    let row = rows
+        .iter()
+        .find(|a| a["device_id"] == json!(device))
+        .unwrap();
+    assert_eq!(at(&row["last_used_on_brain_at"]), expected);
+    assert_eq!(row["host_kind"], "codex");
+    let usage_row = rows
+        .iter()
+        .find(|a| a["device_id"] == json!(usage_only))
+        .unwrap();
+    assert!(usage_row["host_kind"].is_null());
+    scanned_since(before, "the Brain roster").await;
+    h.finish().await;
+}
