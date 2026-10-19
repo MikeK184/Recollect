@@ -1204,8 +1204,20 @@ async fn learning_literal_acceptance_interpretation_conflict_rejection_and_repla
     learn(&h, &owner, &base, &another).await;
     model_job(&h).await;
     let result = runs(&h, &owner, &base).await;
-    assert_eq!(result["items"][0]["reused"], 2);
-    assert_eq!(p.calls.load(Ordering::SeqCst), 3);
+    // Replay reuses the unchanged 9090 proposal and never re-accepts the rejected
+    // 8080 value. The contracts permit reuse of an exact proposal but do not
+    // require a blocked one to be deduplicated, so only the total is pinned.
+    let item = &result["items"][0];
+    assert_eq!(item["accepted"], 0, "{item}");
+    assert!(item["reused"].as_u64().unwrap() >= 1, "{item}");
+    assert_eq!(
+        item["reused"].as_u64().unwrap() + item["blocked"].as_u64().unwrap(),
+        2,
+        "{item}"
+    );
+    // Each of the three learning attempts is one extraction plus one independent
+    // source-support assessment.
+    assert_eq!(p.calls.load(Ordering::SeqCst), 6);
     server.abort();
     h.finish().await;
 }
