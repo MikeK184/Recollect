@@ -112,6 +112,8 @@ pub async fn explore(
             return Err(display_limit());
         }
         pinned_scope=selected.view.scope.clone();
+        // The snapshot is complete, so release it before the Neo4j round trips.
+        tx.commit().await?;
         read::verify(&state, &selected).await?;
         let (included, reach) = if let Some(center) = &input.center {
             let mut reach = adapter::reach(&state, &selected, &input, DISPLAY_NODES + 1).await?;
@@ -128,7 +130,6 @@ pub async fn explore(
         if edges.len() > DISPLAY_EDGES {
             return Err(display_limit());
         }
-        tx.commit().await?;
         let mut tx = auth.publication_tx(&state.pool).await?;
         sqlx::query("SET LOCAL statement_timeout='2s'").execute(&mut *tx).await?;
         if let Err(error)=read::interactive_final_gate(&state, &mut tx, &auth, &mut selected).await {

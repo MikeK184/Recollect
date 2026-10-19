@@ -253,9 +253,16 @@ pub async fn run_once(state: &AppState) -> Result<usize> {
         .await?;
     let mut count = 0;
     for (brain, actor) in brains {
-        match maintain_brain(state, brain, actor).await {
-            Ok(n) => count += n,
-            Err(_) => tracing::warn!(brain_id=%brain,"Graph maintenance remains pending"),
+        match tokio::time::timeout(
+            crate::worker::BRAIN_BUDGET,
+            maintain_brain(state, brain, actor),
+        )
+        .await
+        {
+            Ok(Ok(n)) => count += n,
+            Ok(Err(_)) | Err(_) => {
+                tracing::warn!(brain_id=%brain,"Graph maintenance remains pending")
+            }
         }
     }
     Ok(count)

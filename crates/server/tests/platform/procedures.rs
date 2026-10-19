@@ -535,6 +535,7 @@ async fn handover_erasure_replays_into_pre_handover_database() {
     // Seven-day maintenance must not delete a job still referenced by durable history.
     sqlx::query("UPDATE jobs SET updated_at=clock_timestamp()-interval '8 days' WHERE id IN(SELECT job_id FROM handover_runs)")
         .execute(&backup_admin).await.unwrap();
+    worker::cleanup(&h.state.pool).await.unwrap();
     assert!(worker::run_once(&h.state, "interactive").await.unwrap());
     assert_eq!(
         sqlx::query_scalar::<_, i64>(

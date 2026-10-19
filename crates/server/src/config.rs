@@ -1,5 +1,21 @@
 use anyhow::{Context, ensure};
 
+/// Connections held by the whole process. Six worker lanes each pin a job
+/// transaction while a heartbeat connection renews its lease, three maintenance
+/// tasks and the observation/privacy loops poll, and recall, graph reads and
+/// HTTP requests run alongside them.
+pub const DEFAULT_DB_POOL_SIZE: u32 = 32;
+
+/// Pool size from `RECOLLECT_DB_POOL_SIZE`; an unset or invalid value falls
+/// back to the default so a typo cannot stop the server from starting.
+pub fn db_pool_size() -> u32 {
+    std::env::var("RECOLLECT_DB_POOL_SIZE")
+        .ok()
+        .and_then(|value| value.trim().parse::<u32>().ok())
+        .filter(|size| (4..=500).contains(size))
+        .unwrap_or(DEFAULT_DB_POOL_SIZE)
+}
+
 #[derive(Clone)]
 pub struct Config {
     pub database_url: String,

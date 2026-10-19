@@ -797,6 +797,7 @@ async fn support_audit_local_recovery_is_bounded_and_preserves_operation_attempt
         .execute(&h.admin)
         .await
         .unwrap();
+    worker::cleanup(&h.state.pool).await.unwrap();
     assert_eq!(
         recollect_server::autonomous::run_once(&h.state)
             .await
