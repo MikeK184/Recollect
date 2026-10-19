@@ -333,6 +333,10 @@ async fn automatic_digest_final_excerpt_expiry_scrubs_partition_and_preserves_co
     h.finish().await;
 }
 
+/// Sixteen identities per pass: ceil(101/16) = 7 passes to discover every session
+/// plus one rotation over all partitions, with margin for the wrap point.
+const ROTATION_PASSES: usize = 16;
+
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL"]
 async fn automatic_digest_scanner_rotates_past_one_hundred_settled_sessions() {
@@ -358,8 +362,12 @@ async fn automatic_digest_scanner_rotates_past_one_hundred_settled_sessions() {
     model_job(&h).await;
     sqlx::query("UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE brain_id=$1")
         .bind(brain).execute(&h.admin).await.unwrap();
+    // Identity discovery and the digest walk each examine at most sixteen
+    // identities per pass, so 101 sessions need several passes; the useful
+    // partition sits at a random position (UUID order). Seven passes discover
+    // every session and one more full rotation reaches every partition.
     let mut queued = 0;
-    for _ in 0..3 {
+    for _ in 0..ROTATION_PASSES {
         queued += autonomous::run_once(&h.state).await.ok().unwrap();
     }
     assert_eq!(
@@ -384,7 +392,7 @@ async fn automatic_digest_scanner_rotates_past_one_hundred_settled_sessions() {
     device_ok(&h, "POST", &format!("{base}/capture/events"), &token, late).await;
     sqlx::query("UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE brain_id=$1")
         .bind(brain).execute(&h.admin).await.unwrap();
-    for _ in 0..3 {
+    for _ in 0..ROTATION_PASSES {
         assert_eq!(autonomous::run_once(&h.state).await.ok(), Some(0));
     }
     assert_eq!(p.calls.load(Ordering::SeqCst), 4);

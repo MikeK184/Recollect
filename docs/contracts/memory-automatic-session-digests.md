@@ -32,9 +32,12 @@ most twelve contributors/twenty distinct supports, omits whole over-budget input
 and records coverage. Admit at most two new generations per coordinator pass. Prioritize uncovered
 receipts and rotate bounded scans through otherwise unchanged partitions using
 server last-checked time. This prevents old settled sessions from starving later
-corrections or policy changes. Record denied source classes separately from whole
-input-budget omissions. A failed ancestor does not invalidate a permitted active
-retry; once the bounded leaf is terminal, unchanged inputs cannot revive it.
+corrections or policy changes. A settled partition with nothing to publish records
+its coverage in the same bounded pass and does not end the walk, so the sixteen-
+identity scan reaches later partitions; only one with a page to publish does.
+Record denied source classes separately from whole input-budget omissions. A failed
+ancestor does not invalidate a permitted active retry; once the bounded leaf is
+terminal, unchanged inputs cannot revive it.
 Never summarize another handover. Preserve one claim identity per partition/page
 across supported updates, using existing frozen base and support checks. Late
 arrivals or changed contributor heads immediately invalidate continuation until

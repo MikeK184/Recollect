@@ -204,6 +204,9 @@ impl Cursor {
 
 pub struct PreparedDigest {
     cursor: Cursor,
+    /// Examined partitions with nothing to publish. Recording their coverage
+    /// lets the bounded walk move past them instead of ending the pass.
+    empty: Vec<session_digests::PreparedPartition>,
     partition: Option<session_digests::PreparedPartition>,
 }
 
@@ -228,6 +231,7 @@ pub async fn prepare_digest(
     let ids = cursor.batch(&mut tx).await?;
     tx.commit().await?;
     let mut prepared = None;
+    let mut empty = Vec::new();
     let started = Instant::now();
     // A fresh read-only snapshot for each candidate permits statement cancellation
     // without poisoning the whole walk or accepting an incomplete partition.
@@ -256,9 +260,18 @@ pub async fn prepare_digest(
         match result {
             Ok(Ok(Some((epoch, value)))) => {
                 preparation_timeouts().clear(id);
-                cursor.epoch = epoch;
-                prepared = Some(value);
-                break;
+                // One publication cohort shares an input epoch; an earlier
+                // empty partition prepared under another epoch is revisited by
+                // the rotation instead of being recorded under this one.
+                if cursor.epoch != epoch {
+                    empty.clear();
+                    cursor.epoch = epoch;
+                }
+                if session_digests::pages(&value) > 0 {
+                    prepared = Some(value);
+                    break;
+                }
+                empty.push(value);
             }
             Ok(Ok(None)) => preparation_timeouts().clear(id),
             Ok(Err(error)) => {
@@ -276,6 +289,7 @@ pub async fn prepare_digest(
     }
     Ok(Some(PreparedDigest {
         cursor,
+        empty,
         partition: prepared,
     }))
 }
@@ -367,6 +381,41 @@ pub async fn publish_handovers(
     Ok(queued)
 }
 
+/// Record the coverage of partitions that had nothing to publish in one short
+/// writer transaction. Each is rechecked against its exact snapshot first. A
+/// deferral or failure leaves them uncovered for the next rotation; it never
+/// claims coverage and never blocks the page publication that follows.
+async fn settle_empty(
+    state: &AppState,
+    cursor: &Cursor,
+    empty: &[session_digests::PreparedPartition],
+) {
+    if empty.is_empty() {
+        return;
+    }
+    let outcome = bounded(async {
+        let Some((mut tx, _)) = cursor.writer(state, true).await? else {
+            return Ok(());
+        };
+        for partition in empty {
+            session_digests::finish_partition(
+                &mut tx,
+                cursor.brain,
+                cursor.policy,
+                partition,
+                false,
+            )
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    })
+    .await;
+    if let Err(error) = outcome {
+        tracing::debug!(brain_id=%cursor.brain,code=error.1,"Empty digest partition coverage deferred");
+    }
+}
+
 pub async fn publish_digest(
     state: &AppState,
     prepared: PreparedDigest,
@@ -376,6 +425,7 @@ pub async fn publish_digest(
     if !cursor.advance(state).await? {
         return Ok(0);
     }
+    settle_empty(state, cursor, &prepared.empty).await;
     let Some(partition) = prepared.partition else {
         return Ok(0);
     };
