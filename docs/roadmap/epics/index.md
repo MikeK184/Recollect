@@ -15,7 +15,7 @@ numbers below are dated observations until replacement proof is recorded.
 | [product-platform.md](product-platform.md) | active | Accounts, Brain access, durable work, installation identity and canonical Brain deletion are delivered; the typed Brain admission refactor is in progress |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Versioned sources, collections, workspace scope, capture and repository publication |
 | [memory-lifecycle.md](memory-lifecycle.md) | active | Existing automatic learning/digests/correction delivered; derived mapping privacy remains an active dependency |
-| [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Delivered recall baseline, set-based read path (lexical index windows, one candidate pass per transaction, set gating) and locally validated attributed-feedback offline comparison; production ranking fixed |
+| [hybrid-retrieval.md](hybrid-retrieval.md) | active | Delivered recall baseline, set-based read path (lexical index windows, one candidate pass per transaction, set gating) and locally validated attributed-feedback offline comparison; production ranking fixed |
 | [graph-intelligence.md](graph-intelligence.md) | active | Locally passing graph reliability and lease repair; failed semantic qualification and final integrated acceptance remain open |
 | [mcp-coordination.md](mcp-coordination.md) | active | Shared/native skills and cross-machine coordination locally delivered; direct-token and normal installed-host acceptance remain separate |
 | [operational-readiness.md](operational-readiness.md) | active | Normal graph reliability and a comparable memory-quality rerun |

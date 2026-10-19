@@ -1,6 +1,6 @@
 # Hybrid Retrieval and Investigation
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -74,6 +74,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `ask-chat-conversation` | shipped | contract-backed | archived | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
 | `retrieval-set-based-read-path` | shipped | contract-backed | archived | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
 | `retrieval-support-gate-cost` | shipped | contract-backed | archived | Application-role support gate 60-66 ms to 3-4 ms per revision (0.75 ms batched) with identical verdicts, owner-rights callers unchanged, and field paging repaired; proven by native equivalence, policy-guard and cost tests and a 218-test subset with no new failure against its baseline |
+| `retrieval-semantic-large-scopes` | in-progress | contract-backed | pack | Semantic recall refuses scopes above 5,000 representations because exact cosine fetches and computes each out-of-line vector twice; keep the exact ranking up to the bound, add a labelled bit-signature shortlist with exact re-rank up to the 50,000 entry cap, report method and counts honestly, and keep semantic search in auto mode |
 
 ## Completion Criteria
 
