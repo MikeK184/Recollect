@@ -277,8 +277,8 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../migrations/064_mapping_overlapping_anchors.sql"),
     ),
     (
-        "065_review_accounting_and_intents",
-        include_str!("../migrations/065_review_accounting_and_intents.sql"),
+        "067_review_accounting_and_intents",
+        include_str!("../migrations/067_review_accounting_and_intents.sql"),
     ),
 ];
 
