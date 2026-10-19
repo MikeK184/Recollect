@@ -388,9 +388,10 @@ async fn recall_preserves_native_scope_manifests_time_and_erasure() {
         "first knowledge",
     );
     let earlier = ok(&h, "POST", &format!("{base}/claims"), &owner, input.clone()).await;
+    super::review::supported(&h, &base, &owner, &earlier).await;
     input["base_revision"] = earlier["id"].clone();
     input["content"]["value"] = json!("late knowledge");
-    ok(
+    let late = ok(
         &h,
         "PUT",
         &format!("{base}/claims/{}", earlier["claim_id"].as_str().unwrap()),
@@ -398,6 +399,7 @@ async fn recall_preserves_native_scope_manifests_time_and_erasure() {
         input,
     )
     .await;
+    super::review::supported(&h, &base, &owner, &late).await;
     let then=recall(&h,&base,&owner,json!({"query":"Temporal value","knowledge_at":earlier["recorded_at"],"fact_at":"2026-01-15T00:00:00Z"})).await;
     assert!(then["context"].to_string().contains("first knowledge"));
     assert!(!then["context"].to_string().contains("late knowledge"));
@@ -530,6 +532,7 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
     input["content"]["validity"] =
         json!({"kind":"unknown","from":null,"to":null,"precision":"unknown"});
     let proposed = ok(&h, "POST", &format!("{base}/claims"), &owner, input).await;
+    super::review::supported(&h, &base, &owner, &proposed).await;
     assert!(has(
         &recall(&h, &base, &owner, json!({"query":"Amber"})).await,
         &proposed["claim_id"]
@@ -785,7 +788,7 @@ async fn canonical_recall_keeps_corrections_out_of_raw_copies_and_survives_rebui
         json!({"query":"EVIDENCE_LIMIT","context_bytes":4096}),
     )
     .await;
-    assert!(has(&bounded, &large["version"]["id"]));
+    assert!(has(&bounded, &large["version"]["id"]), "{bounded}");
     assert!(has(&bounded, &second_source["version"]["id"]));
     assert!(
         bounded["coverage"]["reasons"]

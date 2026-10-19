@@ -257,7 +257,11 @@ async fn automatic_digest_final_excerpt_expiry_scrubs_partition_and_preserves_co
     }
     sqlx::query("UPDATE capture_events SET received_at=clock_timestamp()-interval '6 minutes' WHERE brain_id=$1")
         .bind(brain).execute(&h.admin).await.unwrap();
-    assert_eq!(autonomous::run_once(&h.state).await.ok(), Some(2));
+    let mut digests = 0;
+    for _ in 0..2 {
+        digests += autonomous::run_once(&h.state).await.ok().unwrap();
+    }
+    assert_eq!(digests, 2, "one prepared partition per bounded pass");
     *p.candidates.lock().unwrap() = json!({"summary":"The captured port configuration remains recorded.","completed":[],"next_steps":[],"risks":[]});
     model_job(&h).await;
     model_job(&h).await;

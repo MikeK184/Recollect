@@ -117,6 +117,10 @@ async fn mcp_agent_http_sdk_scoped_tools_and_cold_discovery() {
         "shared idempotency preserves one revision"
     );
     let read = task["context"]["operation_id"].clone();
+    while recollect_server::worker::run_once(&h.state, "capture")
+        .await
+        .unwrap()
+    {}
     let recalled = tool(
         peer,
         "memory.recall",
@@ -126,6 +130,12 @@ async fn mcp_agent_http_sdk_scoped_tools_and_cold_discovery() {
     assert!(
         recalled.to_string().contains("exact operations"),
         "{recalled}"
+    );
+    assert!(
+        !recalled
+            .to_string()
+            .contains(claim["claim_id"].as_str().unwrap()),
+        "an unsupported device proposal is not model-facing: {recalled}"
     );
     let inspected = tool(
         peer,

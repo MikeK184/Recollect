@@ -548,12 +548,17 @@ async fn erasure_closure_preserves_independent_revisions_and_history_gaps() {
     )
     .await;
     ok(&h,"POST",&format!("{base}/claims/{}/review",rejected["claim_id"].as_str().unwrap()),&owner,json!({"base_revision":rejected["id"],"action":"reject","reason":"Sensitive synthetic review text removed with its source.","content":null,"revalidation_basis":null})).await;
+    // A separate co-support: erasing `co` fences every source it cites (migration 011),
+    // which would also make claims citing `b` unusable under the support predicate.
+    let co_source = test_source(&h, &base, &owner, "Co-support synthetic evidence").await;
     let mut co = proposal(av, "Two co-supports", "delta");
-    co["content"]["supports"]
-        .as_array_mut()
-        .unwrap()
-        .push(json!({"kind":"source_version","id":bv,"line_from":1,"line_to":1}));
+    co["content"]["supports"].as_array_mut().unwrap().push(
+        json!({"kind":"source_version","id":co_source["version"]["id"],"line_from":1,"line_to":1}),
+    );
     let co = ok(&h, "POST", &format!("{base}/claims"), &owner, co).await;
+    for r in [&old, &independent] {
+        crate::review::supported(&h, &base, &owner, r).await;
+    }
     let target = json!({"kind":"source","id":a["id"]});
     let preview_url = format!("{base}/erasures/preview");
     assert_eq!(
@@ -856,6 +861,7 @@ async fn retention_deadlines_excerpt_independence_and_policy_authority() {
         proposal(&version, "Raw supported service", "alpha"),
     )
     .await;
+    let claim = crate::review::accepted(&h, &base, &owner, &claim).await;
     let page = ok(&h, "GET", &format!("{base}/claims"), &owner, Value::Null).await;
     assert_eq!(
         page["expires_at"], raw["version"]["expires_at"],
@@ -1086,16 +1092,16 @@ async fn retention_deadlines_excerpt_independence_and_policy_authority() {
         .unwrap()
         .parse::<chrono::DateTime<chrono::Utc>>()
         .unwrap();
-    let canonical: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT min(recollect_retention_deadline(brain_id,'claim',recorded_at)) FROM claim_revisions WHERE brain_id=$1")
+    let canonical: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT min(recollect_retention_deadline(r.brain_id,'claim',r.recorded_at)) FROM claims c JOIN claim_revisions r ON r.id=c.current_revision WHERE c.brain_id=$1")
         .bind(brain_id).fetch_one(&h.admin).await.unwrap();
     assert_eq!(
         deadline, canonical,
         "The claim policy owns the advertised page deadline"
     );
     sqlx::query(
-        "UPDATE claim_revisions SET recorded_at=clock_timestamp()-interval '2 days' WHERE id=$1",
+        "UPDATE claim_revisions SET recorded_at=recorded_at-interval '2 days' WHERE claim_id=$1",
     )
-    .bind(claim["id"].as_str().unwrap().parse::<Uuid>().unwrap())
+    .bind(claim["claim_id"].as_str().unwrap().parse::<Uuid>().unwrap())
     .execute(&h.admin)
     .await
     .unwrap();

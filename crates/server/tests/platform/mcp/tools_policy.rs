@@ -58,16 +58,20 @@ async fn mcp_agent_current_permissions_retention_rejection_and_erasure() {
         ("Bridge expired", "EXPIRED_PAYLOAD"),
         ("Bridge erased", "ERASED_PAYLOAD"),
     ] {
+        let own = ok(&h,&owner,"POST",&format!("{base}/sources"),json!({"title":format!("Policy proof {subject}"),"media_type":"text/plain","content":"Independent documented observations.","retain_content":true,"source_uri":null,"group_ids":[]})).await;
         claims.push(
             ok(
                 &h,
                 &owner,
                 "POST",
                 &format!("{base}/claims"),
-                crate::review::proposal(&source["version"]["id"], subject, value),
+                crate::review::proposal(&own["version"]["id"], subject, value),
             )
             .await,
         );
+    }
+    for c in &claims {
+        crate::review::supported(&h, &base, &owner, c).await;
     }
     let before = tool(
         peer,
