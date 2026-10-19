@@ -21,6 +21,10 @@ FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595
 ARG RECOLLECT_BUILD_REVISION=development
 ARG RECOLLECT_BUILD_TIME=unknown
 LABEL org.opencontainers.image.revision=$RECOLLECT_BUILD_REVISION org.opencontainers.image.created=$RECOLLECT_BUILD_TIME
+# ca-certificates is load-bearing: reqwest verifies every outbound HTTPS call (model
+# providers, OIDC discovery and token exchange) against the system trust store and
+# SSL_CERT_FILE / SSL_CERT_DIR. Without it the server cannot build its HTTP client.
+# Check a built image with `docker run --rm IMAGE tls-probe` (docs/runbooks/installation.md).
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl openssh-client \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 recollect \

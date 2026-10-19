@@ -105,7 +105,12 @@ Environment inputs are `RECOLLECT_OIDC_ISSUER`, `RECOLLECT_OIDC_CLIENT_ID` and
 single-tenant issuer over HTTPS, except loopback HTTP for a local test provider.
 The callback is `{RECOLLECT_PUBLIC_ORIGIN}/api/auth/oidc/callback`. Metadata,
 authorization/token endpoints and signing keys come from trusted discovery.
-HTTP calls have a five-second timeout and do not follow redirects.
+HTTP calls have a five-second timeout and do not follow redirects. They run through
+the server's shared outbound HTTP client, so discovery, key-set and token requests
+verify the provider against the same trust store as every other server call (the
+system store, plus `SSL_CERT_FILE` and `SSL_CERT_DIR` on Linux); no second root
+set is bundled, and an issuer with a private CA is trusted by supplying that CA
+to the server process. Each provider response is limited to 1 MiB.
 `RECOLLECT_OIDC_SCOPES` is a space-separated provider scope list, defaulting to
 `profile groups`; `openid` is always included by the client. For Entra use `profile`
 and configure group claims in the application registration; `groups` is not an

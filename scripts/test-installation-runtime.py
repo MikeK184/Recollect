@@ -143,8 +143,23 @@ def verify(name, ca):
                     child.wait(timeout=15)
                 child.stdout.close()
 
+    def tls_probe():
+        # `recollect-server tls-probe` needs no configuration. An HTTP response from the
+        # public provider proves the image's trust store end to end. A proof host without
+        # outbound access may fail at connect, but never at roots (the image has no usable
+        # trust store) or handshake (a certificate the store cannot verify).
+        result = subprocess.run(installation.compose_command(saved) + ["exec", "-T", "api", "recollect-server", "tls-probe"],
+            env=process_environment(), cwd=ROOT, capture_output=True, text=True, timeout=30)
+        (proof / "tls-probe.log").write_text(result.stdout + result.stderr)
+        line = json.loads(result.stdout.strip().splitlines()[-1])
+        assert set(line) == {"tls", "stage", "status"}, "tls-probe printed an unexpected report"
+        assert line["tls"] == "ok" or line["stage"] == "connect", "The API image cannot verify outbound HTTPS"
+        assert (result.returncode == 0) == (line["tls"] == "ok")
+        return line
+
     owner = Session(saved["origin"], ca)
     owner.call("GET", "/health/ready")
+    outbound_tls = tls_probe()
     owner.login(runtime["RECOLLECT_OWNER_USERNAME"], runtime["RECOLLECT_OWNER_PASSWORD"])
     initial_instance = owner.call("GET", "/api/operations")["http"]["instance_id"]
     marker = "OwnedInstallationProof " + uuid.uuid4().hex
@@ -260,6 +275,7 @@ def verify(name, ca):
         "api_sigint_drained": True, "dependency_outage_detected": True,
         "failed_migration_kept_application_stopped": True, "restart_preserved_evidence": True,
         "private_inputs_absent_from_service_logs": True,
+        "outbound_tls_probe": outbound_tls["tls"] + "/" + outbound_tls["stage"],
         "model_requests": 0, "proof_directory": str(proof)}
     (proof / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))
