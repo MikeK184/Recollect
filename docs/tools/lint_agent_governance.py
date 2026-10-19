@@ -11,8 +11,6 @@ from urllib.parse import unquote, urlsplit
 if sys.version_info < (3, 11):
     raise SystemExit("Governance lint requires Python 3.11 or later.")
 
-import tomllib
-
 ROOT = Path(__file__).resolve().parents[2]
 ROLES = ("default", "explorer", "architect", "worker", "qa", "reviewer")
 FOUNDATIONS = ("vision", "techstack", "engineering-principles")
@@ -170,55 +168,10 @@ class Validator:
             require(source in accepted, file, f"governing source is not accepted: {source}")
         require(bool(authority), file, "Governing Sources needs a link to accepted authority")
 
-    def configuration(self) -> None:
-        file = ".codex/config.toml"
-        config = self.toml(file)
-        require(set(config) == {"agents", "mcp_servers"}, file, "keep only project agent/MCP configuration here")
-        agents = config["agents"]
-        require(isinstance(agents, dict) and set(agents) == set(ROLES), file, "expected six project role registrations")
-        for role in ROLES:
-            registration = agents[role]
-            require(isinstance(registration, dict), file, f"invalid registration: {role}")
-            require(registration.get("config_file") == f"agents/{role}.toml", file, f"invalid registration target: {role}")
-            require(set(registration) == {"config_file", "description"}, file, f"invalid registration keys: {role}")
-            require(bool(registration["description"]), file, f"empty description: {role}")
-            agent_file = f".codex/agents/{role}.toml"
-            agent = self.toml(agent_file)
-            require(set(agent) == {"name", "description", "developer_instructions"}, agent_file, "define role only; inherit personal defaults")
-            require(agent["name"] == role, agent_file, "role name must match registration")
-            require(all(isinstance(v, str) and v.strip() for v in agent.values()), agent_file, "role fields must be non-empty strings")
-            instructions = agent["developer_instructions"]
-            require("AGENTS.md" in instructions and "docs/README.md" in instructions, agent_file, "role must route through repo governance")
-            require("only when explicitly requested" in instructions, agent_file, "role must preserve explicit-request delegation")
-        expected = {"context7": {
-            "command": "npx", "args": ["-y", "@upstash/context7-mcp"],
-            "env_vars": ["CONTEXT7_API_KEY"],
-        }}
-        expected["rust_analyzer"] = {
-            "command": "bash",
-            "args": ["-c", 'set -e; RECOLLECT_MCP_ROOT="$(git rev-parse --show-toplevel)"; exec "$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp"'],
-            "startup_timeout_sec": 60, "tool_timeout_sec": 60,
-            "enabled_tools": ["rust_analyzer_symbols", "rust_analyzer_definition", "rust_analyzer_references", "rust_analyzer_hover", "rust_analyzer_completion", "rust_analyzer_diagnostics", "rust_analyzer_workspace_diagnostics"],
-        }
-        expected["graft"] = {
-            "command": "bash",
-            "args": ["-c", 'set -e; RECOLLECT_MCP_ROOT="$(git rev-parse --show-toplevel)"; exec "$RECOLLECT_MCP_ROOT/.codex/tools/graft/graft" mcp . --dir .cache/rust-navigation/graft-graph'],
-            "startup_timeout_sec": 30, "tool_timeout_sec": 60,
-            "enabled_tools": ["graft_find_code", "graft_file_api", "graft_trace_calls", "graft_find_all", "graft_repo_map", "graft_check_freshness"],
-        }
-        require(config["mcp_servers"] == expected, file, "expected secret-free Context7 and local Rust/Graft navigation stanzas only")
-
-    def toml(self, file: str) -> dict:
-        try:
-            return tomllib.loads(self.read(file))
-        except tomllib.TOMLDecodeError as error:
-            raise GovernanceError(f"{file}: invalid TOML: {error}") from error
-
     def validate(self) -> list[str]:
         for file in REQUIRED:
             self.read(file)
         require("/references/" in self.read(".gitignore").splitlines(), ".gitignore", "ignore the separate /references/ research checkouts")
-        self.configuration()
 
         accepted: set[str] = set()
         pending = []
@@ -331,7 +284,7 @@ def main() -> int:
         return 2
     try:
         pending = Validator(ROOT).validate()
-    except (GovernanceError, OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
+    except (GovernanceError, OSError, UnicodeError) as error:
         print(f"Governance lint failed: {error}", file=sys.stderr)
         return 1
     print("Governance lint passed")

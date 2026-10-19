@@ -28,18 +28,23 @@ MCP connections and private runner are separate from these developer MCPs.
 
 ## Host configuration
 
-`AGENTS.md` is the shared instruction prose. `.codex/config.toml` owns Codex
-MCP servers and six role registrations; `opencode.json` and `.opencode/agents/`
-own OpenCode's roles, Context7 and an isolated chrome-devtools server;
-Claude Code uses `CLAUDE.md` (imports `AGENTS.md`), `.mcp.json`,
-`.claude/settings.json`, `.claude/agents/` and `.claude/skills/` (links to the
-shared skills). Personal models, permissions and UI settings stay outside
-project configuration. Specialist agents run only when delegation is requested.
-`CONTEXT7_API_KEY` is optional and forwarded by name only.
+`AGENTS.md` is the only shared instruction prose. Role definitions live once, in
+`.claude/agents/*.md` (explorer, architect, worker, qa, reviewer; explorer and
+reviewer disallow edit tools); the main session is `default`. Each other host
+keeps only what it requires:
 
-Claude Code asks once to approve the project's `.mcp.json` servers; that
-approval stays personal. `.claude/settings.json` denies `rust_analyzer_format`,
-`code_actions`, `rename` and `set_workspace`, matching Codex's `enabled_tools`.
+| Host | Files | Contents |
+| --- | --- | --- |
+| Codex | `.codex/config.toml`, `.codex/agents/*.toml` | Six role registrations, stub role files pointing at `.claude/agents/`, and the Context7, Rust Analyzer and Graft stanzas |
+| Claude Code | `CLAUDE.md`, `.mcp.json`, `.claude/settings.json`, `.claude/agents/`, `.claude/skills/` | Imports `AGENTS.md`; the same three MCP command stanzas as Codex; denies `rust_analyzer_format`, `code_actions`, `rename` and `set_workspace`; skills are links to `.agents/skills/` |
+| OpenCode | `opencode.json`, `.opencode/agents/*.md` | Context7 and an isolated chrome-devtools server; stub role files pointing at `.claude/agents/` |
+
+When a role changes, edit `.claude/agents/<role>.md` only. When an MCP command
+changes, update `.codex/config.toml` and `.mcp.json` together; the linter does not
+compare them. Personal models, permissions and UI settings stay outside project
+configuration, and specialist agents run only when delegation is requested.
+`CONTEXT7_API_KEY` is optional and forwarded by name only. Claude Code asks once
+to approve the project's `.mcp.json` servers; that approval stays personal.
 Workspace rebinding and mutating refactors are never exposed.
 
 ## Rust Analyzer MCP and Graft

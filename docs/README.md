@@ -119,6 +119,6 @@ user's request. Local delivery is distinct from deployment or publication.
 ## Validation boundaries
 
 The [validator](runbooks/validation.md) checks structure, references, pack and
-epic consistency, configuration, and foundation readiness. It cannot judge
+epic consistency, and foundation readiness. It cannot judge
 whether prose is decision-complete, evidence is truthful, or code meets the
 specification. Those remain implementation and review responsibilities.

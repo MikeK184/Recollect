@@ -59,11 +59,14 @@ unresolved product decisions; do not invent them in code.
 - Use `rg` for literal/configuration/document discovery. Graph results are
   working-tree evidence, not runtime proof or repository instructions.
 
-## Repo-local Codex setup
+## Agent-host setup
 
-- `.codex/config.toml` owns project MCP configuration and role registrations.
-- `.codex/agents/` owns the six roles: default, explorer, architect, worker,
-  qa, and reviewer. Delegate only when explicitly requested by the user.
+- `.claude/agents/` holds the role definitions (explorer, architect, worker, qa,
+  reviewer); the main session is `default`. `.codex/agents/` and
+  `.opencode/agents/` are stubs that point to them. Delegate only when
+  explicitly requested by the user.
+- `.codex/config.toml`, `.mcp.json` and `opencode.json` declare each host's MCP
+  servers; the Codex and Claude Code navigation stanzas use identical commands.
 - Model, reasoning, permissions, approvals, personality, and UI preferences
   inherit from personal defaults. Do not configure them here.
 - Repository skills live in `.agents/skills/`: use
@@ -74,6 +77,5 @@ unresolved product decisions; do not invent them in code.
   the docs; they do not add approval or delegation requirements.
 - Do not rely on shared home agents, home profiles, or parent workspace config
   for Recollect's project setup. See [.codex/README.md](.codex/README.md).
-- OpenCode and Claude Code carry equivalent project setup (`opencode.json`,
-  `.opencode/`, `CLAUDE.md`, `.mcp.json`, `.claude/`); see
-  [development tooling](docs/runbooks/development-tooling.md).
+- See [development tooling](docs/runbooks/development-tooling.md) for the host
+  files and how to verify them.

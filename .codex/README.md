@@ -2,11 +2,12 @@
 
 Start Codex from the Recollect repository root. The repository-local
 [config.toml](config.toml) contains project MCP configuration and explicit role
-registrations; [agents/](agents/) holds standalone role definitions. These
-formats are supported by the [official configuration schema](https://learn.chatgpt.com/docs/config-schema.json)
+registrations; [agents/](agents/) holds one stub per role that points to the
+shared definition in `.claude/agents/`. These formats are supported by the [official configuration schema](https://learn.chatgpt.com/docs/config-schema.json)
 and [agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-Roles are default, explorer, architect, worker, qa, and reviewer. They inherit
+Roles are default, explorer, architect, worker, qa, and reviewer (`default` is
+the main session; the other five are defined in `.claude/agents/`). They inherit
 personal model, reasoning, permission, and approval defaults. Instructions
 limit explorer/reviewer to read-only work; this is not a sandbox override.
 Delegate only when explicitly requested.

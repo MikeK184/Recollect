@@ -16,7 +16,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "set -e; if [ -n \"$CLAUDE_PROJECT_DIR\" ]; then cd \"$CLAUDE_PROJECT_DIR\"; fi; RECOLLECT_MCP_ROOT=\"$(git rev-parse --show-toplevel)\"; exec \"$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp\""
+        "set -e; RECOLLECT_MCP_ROOT=\"$(git rev-parse --show-toplevel)\"; exec \"$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp\""
       ]
     },
     "graft": {
@@ -24,7 +24,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "set -e; if [ -n \"$CLAUDE_PROJECT_DIR\" ]; then cd \"$CLAUDE_PROJECT_DIR\"; fi; RECOLLECT_MCP_ROOT=\"$(git rev-parse --show-toplevel)\"; exec \"$RECOLLECT_MCP_ROOT/.codex/tools/graft/graft\" mcp . --dir .cache/rust-navigation/graft-graph"
+        "set -e; RECOLLECT_MCP_ROOT=\"$(git rev-parse --show-toplevel)\"; exec \"$RECOLLECT_MCP_ROOT/.codex/tools/graft/graft\" mcp . --dir .cache/rust-navigation/graft-graph"
       ]
     }
   }

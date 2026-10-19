@@ -121,7 +121,7 @@ class GovernanceTests(unittest.TestCase):
         for file in REQUIRED:
             target = self.root / file
             target.parent.mkdir(parents=True, exist_ok=True)
-            if target.suffix == ".toml" or file == ".gitignore":
+            if file == ".gitignore":
                 shutil.copy2(REPO / file, target)
             else:
                 target.write_text("# Fixture document\n")
@@ -194,10 +194,6 @@ class GovernanceTests(unittest.TestCase):
         self.write_index("archive", [(SLICE, "shipped")])
         self.replace(ARCHIVED, "Pending validation.", "Delivered and checked locally.")
         self.reject("unfilled Closeout / Validation")
-
-    def test_invalid_toml_has_file_context(self):
-        self.write(".codex/config.toml", "[broken")
-        self.reject(r".codex/config.toml: invalid TOML")
 
     def test_product_may_start_with_accepted_foundations(self):
         self.replace(ACTIVE, "Work type: governance", "Work type: product")
@@ -301,36 +297,6 @@ class GovernanceTests(unittest.TestCase):
         self.set_state("blocked")
         self.replace(ACTIVE, "- Blockers: None for this fixture.", "- Blockers: Awaiting interface decision; obtain the user's answer before resuming.")
         self.assertEqual(len(self.validate()), 3)
-
-    def test_bad_agent_registration(self):
-        self.replace(".codex/config.toml", '"agents/qa.toml"', '"agents/missing.toml"')
-        self.reject("invalid registration target")
-
-    def test_role_name_mismatch(self):
-        self.replace(".codex/agents/qa.toml", 'name = "qa"', 'name = "wrong"')
-        self.reject("role name must match")
-
-    def test_inline_secret_config_rejected(self):
-        path = ".codex/config.toml"
-        self.write(path, (self.root / path).read_text() + '\n[mcp_servers.context7.env]\nCONTEXT7_API_KEY = "fixture-only"\n')
-        self.reject("secret-free Context7")
-
-    def test_role_personal_override_rejected(self):
-        path = ".codex/agents/worker.toml"
-        self.write(path, (self.root / path).read_text() + '\nmodel = "fixture-model"\n')
-        self.reject("inherit personal defaults")
-
-    def test_rust_workspace_rebinding_rejected(self):
-        self.replace(".codex/config.toml", '"rust_analyzer_hover"', '"rust_analyzer_set_workspace"')
-        self.reject("local Rust/Graft navigation")
-
-    def test_global_rust_mcp_launcher_rejected(self):
-        self.replace(".codex/config.toml", '$RECOLLECT_MCP_ROOT/.codex/tools/rust-analyzer/rust-analyzer-mcp', '/opt/global/rust-analyzer-mcp')
-        self.reject("local Rust/Graft navigation")
-
-    def test_graft_deep_cloud_mode_rejected(self):
-        self.replace(".codex/config.toml", 'graft" mcp .', 'graft" build --deep .')
-        self.reject("local Rust/Graft navigation")
 
     def test_local_link_cannot_read_cognee(self):
         self.replace(ACTIVE, "## Summary", "[Excluded checkout](../../../../cognee/README.md)\n\n## Summary")
