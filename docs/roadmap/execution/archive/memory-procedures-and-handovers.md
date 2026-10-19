@@ -72,5 +72,3 @@ incorporate the user's later clarification before dependent implementation.
 - New blockers: None.
 - Docs updated: ADR 0006, autonomous/procedure/provider contracts and indexes, foundations, proof mapping, model/procedure/claims/review/local-development runbooks, README, historical Atlas amendment, epic and execution indexes.
 - Validation: 33 API/database scenarios passed in 29.81s, clean Clippy, four browser regressions in 22.5s and one real-Luna autonomous browser scenario in 34.2s. The final normal-runtime demo verified automatic typed procedure learning, port revision and handover refresh with five successful calls and one preserved timeout; test-Brain and the earlier demo passed read-only preservation. API generation verified 105 unique operations; TypeScript/Vite and CodeGraph checks passed. Governance lint and all 32 checker tests passed; see the dated evidence for commands, failures and limits.
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

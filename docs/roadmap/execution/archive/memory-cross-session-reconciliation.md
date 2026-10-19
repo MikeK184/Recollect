@@ -67,5 +67,3 @@ Work type: product
 - New blockers: None for this local slice.
 - Docs updated: Governing contracts, operating runbooks, research/evaluation evidence, owner epics and active/archive indexes.
 - Validation: Native exact-family fixture proves new-session correction, same-identity reuse and unsupported control with eight accounted calls; all 29 support scenarios pass surrounding human/rule/scope/manifest/deadline/frozen-target and recovery controls. Independent consumer/source review found no remaining material blocker. The actual-model assertion corpus is reported separately from controlled producer-action enforcement. [Dated evidence and limitations](../../../mappings/memory-source-support-staging-2026-10-07.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted; local working-tree implementation.

@@ -105,5 +105,3 @@ Work type: product
   1,227 charged tokens in an isolated database. Normal test-Brain recall found 73
   connected candidates; all seven Brains and 33 existing model requests were
   preserved, with no new customer reads or model calls in that runtime.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

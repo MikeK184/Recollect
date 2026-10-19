@@ -102,5 +102,3 @@ Work type: product
   Final interrupted restore/resume/product verification took 28.848 s for the
   recorded small corpus. Normal login/inventory preserved seven Brains, 33 model
   requests, 24 migrations and zero active jobs before its separate local upgrade.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

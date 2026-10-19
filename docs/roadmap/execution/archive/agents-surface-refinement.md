@@ -67,5 +67,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Contracts `mcp-plugin-direct-auth.md` (global roster read) and `desktop-experience.md` (global nav with Agents, used-only per-Brain roster, global Agents row); epic slice and indexes reconciled; evidence mapping added.
 - Validation: Focused platform test `account_agent_roster` passes on a disposable database (grouping, usage ordering, member scoping, hidden count, no credential material); existing `pairing_markers_and_brain_agent_roster` still passes; clippy clean; web typecheck and design checks clean; `./scripts/validate.sh` passes; live stack rebuilt via `./scripts/stack.sh up --build` with api/worker healthy.
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

@@ -73,5 +73,3 @@ Work type: product
   final actual-pixel review, frontend production build/type/design checks and
   local stack readiness pass. Creation defaults are covered by model fixtures.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

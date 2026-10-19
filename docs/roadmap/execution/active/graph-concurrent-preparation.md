@@ -95,8 +95,6 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
 - New blockers: None for independent local implementation; normal-runtime state remains unchanged.
 - Docs updated: Accepted graph contract/ADR amendment, owning epic/pack/index, [historical progress](../../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md) and [current local evidence](../../../mappings/graph-organization-implementation-2026-10-18.md).
 - Validation: October 18 migration-063 mixed 10k proof passes 602/602 reads with zero errors and p95 0.459626 seconds during captures, audits, native import and two ready rebuilds. Both normal-data clone series pass 40/40 with the same hydrated payload, at p95 1.629 and 0.951 seconds. Four focused maintenance cases pass. The October 9 normal-installation failure (35/40, p95 4.027 seconds), earlier capture-only 40/40 proof and prior fixture failures remain retained; they are not the latest local repair result. Detailed workload versions and limits follow below.
-- Version: N/A — local development; no release.
-- Commit: Original checkpoint `f2673d7`; the October 18 implementation and documentation reconciliation are uncommitted.
 
 October 18 local evidence: all four focused autonomous maintenance cases pass.
 The final migration-061 sustained mixed 10k workload completed 600/600 requests

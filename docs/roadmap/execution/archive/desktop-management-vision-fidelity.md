@@ -15,7 +15,7 @@ Work type: product
 ## Governing Sources
 
 - [Desktop contract](../../../contracts/desktop-experience.md)
-- [Design system](../../desktop-experience/design-system.md)
+- [Design system](../../../foundation/design-system.md)
 - [Catalogue contract](../../../contracts/mcp-catalogue-and-profiles.md)
 - [Runtime credentials](../../../contracts/mcp-runtime-and-credentials.md)
 - [Retention](../../../contracts/memory-retention-and-erasure.md)
@@ -112,5 +112,3 @@ are not the target. Generated records, marks and commands remain illustrative.
   definition/device identities preserved. Final governance and whitespace checks
   passed (32 governance cases); results are recorded in the dated mapping,
   alongside scope and evidence limits. Whitespace checks also passed.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

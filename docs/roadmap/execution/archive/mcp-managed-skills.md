@@ -137,5 +137,3 @@ Work type: product
   baseline tests; zero provider calls. Scoped diff check passed. Exact boundaries
   and commands are retained in the
   [evidence](../../../mappings/managed-skills-host-consumption-2026-10-18.md).
-- Version: N/A: no release policy or release action requested.
-- Commit: uncommitted.

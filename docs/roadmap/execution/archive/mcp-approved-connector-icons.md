@@ -79,5 +79,3 @@ Work type: product
   normalized PNG passes canonical approval and loads in list and inspector;
   absent icon keeps the generic fallback. Build/type/design and Clippy pass.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

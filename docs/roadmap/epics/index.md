@@ -1,17 +1,17 @@
 # Product status and implementation roadmap
 
 Reviewed: 2026-10-18 against repository checkpoint `f2673d7` and the current
-source. The user subsequently resumed the complete graph, automatic organization,
-grouped 3D and bounded feedback-ranking implementation. The independent
-documentation cleanup remains preserved. Runtime and benchmark numbers below
-are dated observations until replacement proof is recorded.
+source. On 2026-10-18 implementation of the complete graph, automatic
+organization, grouped 3D and bounded feedback-ranking work resumed; the
+documentation cleanup of the same date is preserved. Runtime and benchmark
+numbers below are dated observations until replacement proof is recorded.
 
 ## Epic Overview
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
 | [repository-governance.md](repository-governance.md) | complete | Current documentation, governance and public website delivered |
-| [developer-tooling.md](developer-tooling.md) | complete | Repository-local Rust Analyzer MCP, Graft, CodeGraph and documentation skills |
+| [developer-tooling.md](developer-tooling.md) | complete | Repository-local Rust Analyzer MCP, Graft and documentation skills |
 | [product-platform.md](product-platform.md) | complete | Accounts, Brain access, durable work, installation identity and canonical Brain deletion |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Versioned sources, collections, workspace scope, capture and repository publication |
 | [memory-lifecycle.md](memory-lifecycle.md) | active | Existing automatic learning/digests/correction delivered; derived mapping privacy remains an active dependency |

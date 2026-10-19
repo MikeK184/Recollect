@@ -67,8 +67,6 @@ Work type: product
 - New blockers: None.
 - Docs updated: Governing ADR/contracts, owning epic/index, active/archive indexes and handoff; this pack carries the dated evidence without an additional mapping or hashes.
 - Validation: Web production build/typecheck/design, Rust check/clippy/format, existing five Ask lifecycle cases, focused Recall/formatted-answer cases and scoped native recall test passed. Dependency audit reports zero production vulnerabilities. Independent source and live screenshot review has no material blocker. CodeGraph sync and final `validate.sh`/whitespace checks passed. Live browser proof and limits are recorded below.
-- Version: N/A; no release bump.
-- Commit: Uncommitted.
 
 ## Dated evidence — 2026-10-03
 

@@ -115,5 +115,3 @@ Work type: product
   (11 coordination), API generation (200 unique operations), web typecheck/design,
   `git diff --check` and `./scripts/validate.sh` (35 governance + 10 baseline tests)
   passed. Prior failed fixture/review cases and fixes remain in the proof record.
-- Version: N/A: no release requested.
-- Commit: uncommitted.

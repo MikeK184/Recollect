@@ -22,8 +22,8 @@ packages, call a network service, traverse Cognee, or select an application stac
   required packs, and active/archive plus epic index agreement.
 - Explicit execution requirements and documented small-fix exemptions.
 - Filled implementation fields and shipped closeout evidence fields.
-- TOML syntax, role names/registration targets, inherited personal defaults,
-  and secret-free Context7 configuration.
+- Presence of the Codex configuration and role files; their contents and the
+  MCP stanzas are not compared (see the development tooling runbook).
 - Parent-repo ignore rule for the separate Cognee checkout.
 
 The checker accepts the documented simple Markdown tables and inline links.

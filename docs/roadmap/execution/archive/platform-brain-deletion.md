@@ -75,5 +75,3 @@ Work type: product
 - New blockers: None for this slice. Unrelated desktop acceptance packs and the held Ask slice remain open.
 - Docs updated: Governing desktop priority amendment, dated evidence, desktop/agent/capture runbooks as applicable, this pack, owning epic and epic/execution indexes, and CONTINUE_HERE.md.
 - Validation: Four focused Rust HTTP/companion deletion cases passed, including authorization, replay, closure and restore/fence behavior. Disposable browser deletion passed wrong-name rejection, stale preview, absence from listing and direct reads, cleanup completion and reader restrictions. Fresh/upgrade migration evidence is retained from the implementation handover; current disposable database migration also passed. Web design/typecheck/build, workspace Rust tests, platform integration with documented focused reruns, Clippy, formatting, all 32 governance checker tests and git diff --check passed. The evidence mapping distinguishes opt-in skips, real external results and current deployment.
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

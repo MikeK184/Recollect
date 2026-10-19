@@ -21,31 +21,18 @@ Status: accepted
 - Product packs cannot enter implementation or ship while foundation docs are
   pending. Pending sources cannot be listed under Governing Sources.
 - Each shipped pack records all closeout fields and concrete validation
-  evidence. Version/commit may explicitly be N/A or uncommitted.
-- Project Codex configuration contains Context7, the Rust Analyzer/Graft
-  developer tools of [ADR 0019](../adr/0019-rust-semantic-developer-navigation.md),
-  and six agent registrations.
-  Role files define names, descriptions, and instructions. Personal execution
-  preferences remain inherited. Delegation requires explicit user request.
-- OpenCode v2 has equivalent repository-local configuration in `opencode.json`
-  and six Markdown roles in `.opencode/agents/`. Preserve role descriptions and
-  instructions from `.codex/agents/`: `default` is the primary agent and the
-  five specialist roles are subagents invoked only at the user's request.
-  Both hosts use the same root `AGENTS.md`, `.agents/skills/` and CodeGraph CLI.
-  The configured development MCPs are Context7 on both hosts plus secret-free
-  local stdio chrome-devtools on OpenCode only for browser control. Codex
-  also includes the repository-local Rust Analyzer and Graft stdio servers.
-  Their launchers enforce the [navigation contract](rust-semantic-developer-navigation.md).
-  Keep credentials and
-  personal model, provider, permission and UI settings out of project files.
-- Claude Code has equivalent repository-local configuration: root `CLAUDE.md`
-  imports `AGENTS.md`; `.mcp.json` carries the Codex Context7, Rust Analyzer
-  and Graft stanzas; `.claude/agents/` holds the five specialist roles with the
-  `.codex/agents/` descriptions and instructions, invoked only at the user's
-  request; the main session is `default`. `.claude/skills/` links to the shared
-  `.agents/skills/` entrypoints instead of copying them. `.claude/settings.json`
-  only denies the Rust Analyzer tools Codex omits from `enabled_tools`; project
-  MCP approval and other permissions remain the user's.
+  evidence. Packs do not record a version or commit.
+- `AGENTS.md` is the only shared instruction prose. Role definitions live once in
+  `.claude/agents/`; Codex (`.codex/agents/`) and OpenCode (`.opencode/agents/`)
+  keep stubs that reference them, and the main session is `default`. Specialist
+  roles run only at the user's request. Each host declares its MCP servers once
+  in its own file (`.codex/config.toml`, `.mcp.json`, `opencode.json`): Context7
+  on all hosts, the repository-local Rust Analyzer and Graft stdio servers on
+  Codex and Claude Code with identical commands, and secret-free chrome-devtools
+  on OpenCode. The
+  [development tooling runbook](../runbooks/development-tooling.md) lists the
+  files and launcher rules. Keep credentials and personal model, provider,
+  permission and UI settings out of project files.
 - Repo-local `recollect-doc-router` and `recollect-doc-maintainer` skills live
   in `.agents/skills/`. The router identifies applicable authority, ownership,
   current evidence and decision gaps. The maintainer audits or updates affected
@@ -68,14 +55,12 @@ Status: accepted
 ## Acceptance
 
 Run the validator on the actual repository and exercise valid lifecycle states
-plus invalid ownership, IDs, statuses, indexes, source authority, and config.
+plus invalid ownership, IDs, statuses, indexes, and source authority.
 Verify local Codex configuration discovery and a read-only Context7 request
 separately; network verification is not part of the offline validation command.
 Compare Cognee's Git state and tracked-file content before and after setup.
-For OpenCode setup, verify role parity, project configuration/agent/skill
-discovery and a read-only Context7 call through the installed host separately.
-For Claude Code setup, verify the same role parity and successful read-only
-calls through each `.mcp.json` server separately from host discovery.
+For each host, verify configuration and role discovery and a successful read-only
+call through each MCP server separately.
 Neither configuration discovery nor tool listing alone proves a successful call.
 For skill changes, validate the entrypoints and their local references, check
 Codex discovery separately, and exercise routing/maintenance against actual

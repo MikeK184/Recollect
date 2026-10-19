@@ -108,5 +108,3 @@ Work type: product
   the [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-exploration-interfaces-2026-09-22.md)
   for evidence boundaries and retained coverage limits. Governance validation
   and all 32 checker tests passed after lifecycle reconciliation.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

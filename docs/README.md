@@ -68,10 +68,13 @@ acceptance history; accepted decisions/contracts, frozen evaluation inputs,
 current baselines and unresolved failures remain accessible. Never remove a
 failure to make a remaining slice appear complete.
 
-The 2026-10-18 cleanup follows the user's explicit request. It does not implement
-product features, change product decisions or refresh runtime/benchmark
-measurements. The earlier snapshot is available at
-[checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
+The 2026-10-18 documentation cleanup removed superseded studies and duplicate
+reports. It implemented no product feature, changed no product decision and
+refreshed no runtime or benchmark measurement. The earlier snapshot is available
+at [checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
+On 2026-10-19 the developer-tooling ADRs, contracts and packs were collapsed into
+the [development tooling runbook](runbooks/development-tooling.md); that state is
+available at [commit f1b6bb3](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
 
 `output/` (browser screenshots, generated imagery and review captures) is
 ignored and no longer tracked. Where earlier records cite `output/...`, the last
@@ -110,7 +113,7 @@ an explicit user request; a reviewer role does not create a new approval gate.
 Run focused validation and `./scripts/validate.sh`. Review delivered behavior
 against the pack and update affected authority, evidence, and runbooks. Fill
 the closeout fields: Planned, Shipped, Not shipped, New blockers, Docs updated,
-Validation, Version, and Commit. Use evidence, not an anticipated result.
+and Validation. Use evidence, not an anticipated result.
 
 After the agreed slice is delivered and required checks pass, mark the pack
 `shipped`, move it from `active/` to `archive/`, and update the owning epic,
@@ -118,13 +121,13 @@ epic index, and active/archive indexes together. Record legitimate deferrals
 and successor slices; unfinished acceptance criteria cannot be relabeled as
 shipped. A blocked slice stays active with its blocker and next action.
 
-There is no application release policy yet. Version is `N/A` and commit is
-uncommitted unless actual release/commit work is separately included in the
-user's request. Local delivery is distinct from deployment or publication.
+There is no application release policy yet, and packs record neither a version
+nor a commit; Git holds the history. Local delivery is distinct from deployment
+or publication.
 
 ## Validation boundaries
 
 The [validator](runbooks/validation.md) checks structure, references, pack and
-epic consistency, configuration, and foundation readiness. It cannot judge
+epic consistency, and foundation readiness. It cannot judge
 whether prose is decision-complete, evidence is truthful, or code meets the
 specification. Those remain implementation and review responsibilities.

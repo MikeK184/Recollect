@@ -25,8 +25,6 @@ has its own epic and cannot silently register new global integrations.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `repository-current-documentation` | shipped | contract-backed | pack | Remove superseded documentation and concepts, reconcile current status and retain auditable delivery history |
-| `repository-governance-bootstrap` | shipped | adr-backed, contract-backed | pack | Deliver lifecycle checks, roles, Context7, supplied product foundations, and upstream/tooling guidance |
 | `foundation-access-and-workspace-clarifications` | shipped | contract-backed | small-fix: bounded documentation clarification and fixture-isolation repair; no runtime change | Clarify dataset ownership, SSO group mapping, managed-operation enforcement, and workspace/developer configuration boundaries |
 | `repository-license-and-readme` | shipped | contract-backed | small-fix: established user license choice, README and package metadata; no runtime change | Apply Apache-2.0 consistently, simplify the entry point and retain private GitHub visibility with authentic history |
 | `repository-readme-discoverability` | shipped | contract-backed | small-fix: user-requested README presentation and GitHub metadata using existing product authority; no runtime or interface change | Deliver the local README presentation and peer comparison; verify the description and 19 topics on the existing public GitHub repository |
@@ -34,14 +32,14 @@ has its own epic and cannot silently register new global integrations.
 | `repository-readme-concept-imagery` | shipped | contract-backed | small-fix: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
 | `repository-readme-branded-workflows` | shipped | contract-backed | small-fix: image/documentation refinement using the existing original logo and accepted MCP scope/placement behavior; no runtime or interface change | Original identity on approved layouts and a closer Tool access illustration clarify environment scope and service dispatch |
 | `repository-readme-product-positioning` | shipped | contract-backed | small-fix: user-requested README copy refinement grounded in existing memory, environment, permission and runner contracts; no runtime or interface change | Lead with shared engineering memory, governed MCP tools and private execution as one self-hosted workflow |
-| `repository-product-docs-site` | shipped | contract-backed | pack | Branded product page and 27 canonical guides published through GitHub Pages, with successful Actions and live browser proof |
 
 ## Current status
 
 The governance lifecycle, repository-local developer setup, license and public
-documentation site are delivered. The documentation cleanup is complete;
-[its delivery record](../execution/archive/repository-current-documentation.md)
-records the removals and validation. Release/version automation remains undecided.
+documentation site are delivered. The bootstrap, documentation-cleanup and
+public-site packs were collapsed on 2026-10-19; the site contract and
+[development tooling runbook](../../runbooks/development-tooling.md) carry the
+current behavior. Release/version automation remains undecided.
 
 See the [current roadmap](index.md) for priorities and the
 [active packs](../execution/active/README.md) for exact remaining acceptance.
@@ -49,6 +47,8 @@ See the [current roadmap](index.md) for priorities and the
 ## Delivery evidence
 
 [Archived packs](../execution/archive/README.md) retain the delivered slices.
-The superseded chronological closeouts and original research references remain
-in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/repository-governance.md).
+The removed packs, the superseded chronological closeouts and original research
+references remain at commit
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs)
+and the earlier [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/repository-governance.md).
 Dated test/deployment observations are not a current runtime health claim.

@@ -71,5 +71,3 @@ Work type: product
 - New blockers: None for this slice.
 - Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
 - Validation: Claims, Retention, Review and Procedures pass in the 65-case matrix. Two separately opted-in real-provider browser tests prove model settings and autonomous learn/revise/handover without human review. The new correction regression and deployed evidence-to-correction-to-recall journey pass. Final repository checks are recorded in the linked evidence.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.

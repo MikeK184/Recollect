@@ -67,5 +67,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Accepted contract, pack, owning epic, runbook, dated proof and indexes.
 - Validation: Full 24-core run plus added device/revocation proof, final Clippy, real OpenAI browser and three browser regressions passed. Normal-runtime migration, selected pair, learned claim, mobile/desktop UI and test-Brain preservation passed; governance/32 checker tests and diff checks passed. See [dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/provider-learning-proof-2026-09-14.md).
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

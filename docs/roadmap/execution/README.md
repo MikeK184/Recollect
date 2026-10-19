@@ -42,6 +42,6 @@ pack once with its actual status. Reconcile the pack, epic slice, both indexes,
 and epic overview in the same change. Follow [the closeout rules](../../README.md).
 
 Shipped closeout includes Planned, Shipped, Not shipped, New blockers, Docs
-updated, Validation, Version, and Commit. Use `N/A: no release policy` and
-`uncommitted` when accurate. Document partial deferrals without marking unmet
-acceptance criteria as shipped.
+updated, and Validation. Version and commit are not recorded in packs; Git holds
+the commit history. Document partial deferrals without marking unmet acceptance
+criteria as shipped.

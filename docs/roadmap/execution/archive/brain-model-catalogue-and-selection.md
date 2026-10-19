@@ -117,5 +117,3 @@ Work type: product
   flags passes 19 cases. `cargo test -p recollect-server --lib
   model_policy::catalogue::tests` passes 2 units.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted.

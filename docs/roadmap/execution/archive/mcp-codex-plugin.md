@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None. The earlier macOS approval gate is resolved; no broad Keychain access-policy change was made.
 - Docs updated: This pack, MCP epic/status, epic and active/archive indexes, handoff, pairing/memory/capture runbooks and [final host/deployment evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
 - Validation: 19 agent unit tests and all-target Clippy pass; current workspace library tests pass 34 cases with three live-Vault opt-ins ignored. Web checks and deployment passed. Real installed-host model calls and CLI preflight pass, separately from earlier Linux synthetic-transport capture proof. Disposable Brain deletion completed and subsequent read returned 404; the paired device was revoked, its local profile forgotten, both temporary HTTP tokens revoked and the dedicated OpenCode proof server stopped. Original 16 Brain IDs and 26 sources/27 versions/29 claims/37 revisions match the pre-upgrade inventory; readiness passes. Final governance validation and diff checks pass as recorded in the mapping.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

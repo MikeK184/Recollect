@@ -85,5 +85,3 @@ Work type: product
   retry, inherited/source and demo reader/two-tool inspection passed. Canonical
   configuration/grants/rights/Brain/call inventory restored unchanged.
   Independent final source and 1384/2504 px review reports no remaining blocker.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

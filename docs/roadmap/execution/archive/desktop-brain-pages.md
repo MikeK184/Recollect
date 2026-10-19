@@ -66,5 +66,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Existing contracts/ADR, research proposal, epic/indexes and handoff; this pack is the delivery record, with no extra mapping or hashes.
 - Validation: Web build/design/typecheck, scoped clippy, existing workspace/source PostgreSQL tests, existing five Ask browser cases, CodeGraph and validate.sh pass. Live repository response is 50 of 79; a disposable database verified 122 repositories, search, aliases, paging, exact identity and grant denial. Real source identity/history remains canonical. Six pages at 1440/1920 pass overflow and settled accessibility checks (zero findings), with zero page errors; 1280×800 disabled Ask composer is visible. Repository reopen/origin controls, source scroll bounds and simulated Graph-status failure clearing pass. Independent read-only UI review has no remaining blocker. Ten browser fixtures were deleted; all original 16 Brains remain. Logs/screens are in ignored `.cache/brain-ui-implementation/`; no paid provider calls were made by the transport fixtures.
-- Version: N/A; no release policy.
-- Commit: Uncommitted.

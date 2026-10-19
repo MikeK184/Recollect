@@ -77,5 +77,3 @@ Work type: product
   visual review and frontend production build/type/design checks pass.
   Browser regression sources are authored, not executed as a browser suite.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

@@ -79,5 +79,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Contract, epic, archived pack/index, handoff and [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-inspection-readability-2026-10-06.md).
 - Validation: Five pure formatting tests, production type/design/build, governance32, whitespace, CodeGraph and independent source/pixel acceptance. CUA loading/error/reload, Exa/Context7, exact wide viewport and actual expired call proven.
-- Version: N/A.
-- Commit: Uncommitted.

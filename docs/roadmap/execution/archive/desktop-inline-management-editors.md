@@ -84,5 +84,3 @@ Work type: product
   Independent actual screenshots at laptop/large desktop scale pass. Frontend
   build/type/design and Clippy pass; browser regression sources remain unexecuted.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

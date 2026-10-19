@@ -1,6 +1,6 @@
 # Desktop design
 
-The accepted [design system](design-system.md) specifies the light cream/ink/sage
+The accepted [design system](../../foundation/design-system.md) specifies the light cream/ink/sage
 palette, typography, motion, layout and management presentation. The
 [desktop contract](../../contracts/desktop-experience.md) and
 [Knowledge surface contract](../../contracts/desktop-knowledge-surface.md)

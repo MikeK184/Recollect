@@ -74,5 +74,3 @@ Work type: product
 - New blockers: None for this local slice.
 - Docs updated: Governing contracts, operating runbooks, research/evaluation evidence, owner epics and active/archive indexes.
 - Validation: All 29 controlled native support tests and 20 server library tests passed, including supported/unsupported mixed batches, direct/legacy audits, cache/semantic/graph consumers, near-limit windows, exact manifests, human/contributor controls, leased recovery and old-backup replay. The inherited assessment replacement additionally retains its permitted excerpt with only three calls. Frozen v3 actual-model support comparison and independent receipt audit pass; final retention/deadline regression and governance checks pass. [Dated evidence and limitations](../../../mappings/memory-source-support-staging-2026-10-07.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted; local working-tree implementation.

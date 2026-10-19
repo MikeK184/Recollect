@@ -84,5 +84,3 @@ Work type: product
   migration, dependency outage, restart persistence and credential/log/resource
   boundaries now pass. See the [current acceptance](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/installation-2026-09-26.md)
   for proof and its browser certificate-trust boundary.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

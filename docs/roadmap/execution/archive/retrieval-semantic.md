@@ -129,5 +129,3 @@ Work type: product
   measurements. Desktop/mobile source/readiness/reindex and post-rebuild search
   were inspected. All six prior Brains and their model totals stayed unchanged;
   only the new synthetic Brain enabled embeddings, with zero customer-file reads.
-- Version: N/A; no release policy.
-- Commit: Uncommitted.

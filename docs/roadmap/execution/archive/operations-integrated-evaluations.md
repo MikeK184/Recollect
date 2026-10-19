@@ -97,5 +97,3 @@ Work type: product
   workload; final encrypted restore; both desktop workflows together (18.0 s);
   normal migration/inventory/test-Brain proof; governance and diff/format checks recorded
   in the dated evidence. Ignored and carried integration checks are not fresh proof.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

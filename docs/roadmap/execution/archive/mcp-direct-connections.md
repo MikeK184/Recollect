@@ -68,5 +68,3 @@ normal MCP the primary connection; capture integration is optional.
 - New blockers: None.
 - Docs updated: Governing contracts, setup/catalogue runbooks, dated mapping, handoff, owning epic and indexes.
 - Validation: Six MCP browser cases, owner/member/device authority test, design/typecheck/build, clippy and formatting passed. Live Context7 metadata discovery and save passed; actual isolated documentation call returned provider quota exceeded. Root Compose readiness and equal seven-Brain before/after inventory verified on image 56202feeeabb.
-- Version: N/A: no release policy.
-- Commit: uncommitted.

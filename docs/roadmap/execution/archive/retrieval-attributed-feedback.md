@@ -127,5 +127,3 @@ and experiment, excluding current-task/held-out feedback when fitting rewards.
   The feature stays capped at five percent, production RRF stays k=60, and model
   calls are zero. Focused and full repository validation pass; see the current
   implementation ledger for exact receipts.
-- Version: N/A — local delivery without a release or deployment.
-- Commit: uncommitted.

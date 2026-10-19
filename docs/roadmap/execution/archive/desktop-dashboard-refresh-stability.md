@@ -65,5 +65,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Desktop contract, owning epic, epic/execution indexes and dated mapping.
 - Validation: CUA reproduced the old reset and verified pending refresh, metadata, role, hidden, expiry and failure scenarios on the corrected build. Six live polls kept the same graph DOM without loading/stale states; no unexpected console errors. Web build/design/typecheck, two pure pipeline regressions, 32 governance fixtures, CodeGraph sync and diff checks passed. Browser regression authored and collected; its CLI browser run was not used. [Dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/dashboard-refresh-stability-2026-10-07.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted.

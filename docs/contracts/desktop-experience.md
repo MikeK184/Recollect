@@ -298,7 +298,7 @@ The user explicitly approved the complete desktop proposal on 2026-09-26 and
 requested implementation, consistent fonts/icons/SVGs and an original SVG logo.
 [ADR 0014](../adr/0014-desktop-experience-and-answers.md), the accepted
 [plan](../roadmap/desktop-experience/README.md),
-[design tokens](../roadmap/desktop-experience/design-system.md) and existing
+[design tokens](../foundation/design-system.md) and existing
 [foundations](../foundation/README.md) govern this work. Concept images illustrate
 layout; invented labels, counts and generated icon variations are not API data.
 

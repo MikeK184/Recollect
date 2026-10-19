@@ -82,5 +82,3 @@ Work type: product
   - `./scripts/validate.sh` — pass (includes the web design checks).
   - `./scripts/stack.sh up --build` — rebuilt and healthy at `http://127.0.0.1:8787`; UI reports all services connected.
   - Browser verification on real data as itemized above, including at least one observed live diff animation (memory count tick + edge pulse from real source imports).
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

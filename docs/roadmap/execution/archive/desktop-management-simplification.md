@@ -70,8 +70,6 @@ Work type: product
 - New blockers: None.
 - Docs updated: Desktop, capture and MCP contracts; this archived pack, owning epic/index, execution indexes and `CONTINUE_HERE.md`.
 - Validation: Focused backend and existing browser tests, frontend typecheck/design/build, clippy and independent live UI review passed. Final governance, whitespace and CodeGraph checks are recorded below.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.
 
 ## Delivery evidence — 2026-10-04
 

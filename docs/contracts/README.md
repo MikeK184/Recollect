@@ -18,8 +18,6 @@ behavior; it is not itself implementation or runtime proof.
 
 - [Repository governance](repository-governance.md)
 - [Public product and documentation website](public-product-and-docs-site.md)
-- [Local CodeGraph navigation](local-codegraph-navigation.md)
-- [Repository-local Rust Analyzer MCP and Graft](rust-semantic-developer-navigation.md)
 - [Platform bootstrap](platform-bootstrap.md)
 - [Durable commands and workers](platform-durable-work.md)
 - [Team identity and effective access](platform-team-access.md)

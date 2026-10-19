@@ -87,5 +87,3 @@ Work type: product
   exact test-Brain snapshot/manifest selection, 99 entities/183 relationships, path UI,
   all seven Brains and recall preservation with zero new model calls or customer
   file reads. Local delivery on 2026-09-15; no external deployment.
-- Version: N/A; no release policy.
-- Commit: uncommitted.

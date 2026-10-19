@@ -86,5 +86,3 @@ Work type: product
   labeled read/edit pixel review accepted the form without visual blockers.
   Source audit confirms implemented activity-detail expiry and recovery archive
   windows; no fresh backup, schedule inspection or policy write used for proof.
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

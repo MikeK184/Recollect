@@ -1,6 +1,6 @@
 # 0019: Rust semantic navigation and Graft developer context
 
-Status: accepted
+Status: superseded
 
 ## Decision
 
@@ -34,8 +34,8 @@ graph heuristics and gives actual compiler-backed type/definition evidence.
 Graft 0.21.1 includes telemetry and background update/wiring maintenance. Its
 normal initialization can modify home-level Codex configuration. Repository
 launchers must prevent that behavior rather than copy the global quick start.
-The [local contract](../contracts/rust-semantic-developer-navigation.md) specifies
-the permitted setup/runtime boundary and actual MCP proof.
+The permitted setup/runtime boundary and actual MCP proof are now recorded in
+the [development tooling runbook](../runbooks/development-tooling.md).
 
 ## Consequences
 
@@ -48,8 +48,8 @@ do not report a registered server as connected without a successful call.
 
 ## Supersession
 
-Extends the developer tooling of [ADR 0002](0002-local-codegraph-navigation.md).
-Its existing CodeGraph CLI remains; no product architecture decision is replaced.
-The prior Context7-only Codex registration restriction in the governance contract
-is superseded for these two explicitly authorized developer servers. The checker
-retains exact secret-free configuration and tool allowlists for all three servers.
+Superseded on 2026-10-19 by the [development tooling runbook](../runbooks/development-tooling.md).
+The tool selection above is unchanged and recorded there; no product architecture
+decision is replaced. The contract, pack and proof mapping this ADR referenced
+remain at commit
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).

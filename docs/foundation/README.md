@@ -5,6 +5,7 @@
 | [vision.md](vision.md) | Personal/team Brains, collections, graphs, MCP coordination and the seven evidence/lifecycle capabilities |
 | [techstack.md](techstack.md) | Rust/React, PostgreSQL/pgvector, Neo4j/GDS and local/shared deployment architecture |
 | [engineering-principles.md](engineering-principles.md) | Scope, provenance, correction, time, retrieval, execution and validation invariants |
+| [design-system.md](design-system.md) | Accepted light cream/ink/sage desktop tokens, typography, motion and layout; moved here from the desktop-experience roadmap folder on 2026-10-19 |
 
 These are accepted product requirements, not a progress report. The independent
 Rust product and its detailed contracts already exist. Use the

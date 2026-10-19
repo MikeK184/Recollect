@@ -14,7 +14,7 @@ Work type: product
 
 - [ADR 0014](../../../adr/0014-desktop-experience-and-answers.md)
 - [Desktop contract](../../../contracts/desktop-experience.md)
-- [Approved tokens](../../desktop-experience/design-system.md)
+- [Approved tokens](../../../foundation/design-system.md)
 - [Team access](../../../contracts/platform-team-access.md) and [devices](../../../contracts/platform-device-pairing.md)
 - [Owning epic](../../epics/product-platform.md)
 
@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None for this shell slice. Remaining domain/integrated verification is tracked in the dated mapping and active acceptance pack.
 - Docs updated: [Desktop guide](../../../runbooks/desktop-experience.md), [implementation/assets/dependency evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md), [current handoff](../../../../CONTINUE_HERE.md), affected domain runbooks, owning epic and indexes.
 - Validation: Frontend typecheck/design and final image build passed; workspace clippy and 21 unit tests passed with 3 live-Vault cases explicitly ignored; governance lint and 32 tests passed. Desktop seven cases passed across a six-pass run and the repaired font-fallback targeted rerun; real Team/OIDC two, Ask five and MCP setup/runtime six passed. The dated mapping separates each owner result, initial failures, fixture/provider boundaries and remaining checks.
-- Version: N/A: no release requested.
-- Commit: uncommitted.

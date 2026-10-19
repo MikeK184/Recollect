@@ -18,7 +18,7 @@ The Python GLiNER prototype remains development evidence. It does not select a
 mandatory Python service: candidate validation, identities, grouping,
 invalidation and serving belong in Rust. An extractor/provider adapter must
 retain the existing policy boundary and pass the fixture gates before selection.
-The [Rust Analyzer/Graft developer integration](../contracts/rust-semantic-developer-navigation.md)
+The [Rust Analyzer/Graft developer integration](../runbooks/development-tooling.md)
 supports implementation navigation; it does not implement Brain entities/topics.
 
 The [implementation progress and second two-agent review](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
@@ -69,7 +69,7 @@ Local evidence: [learning schema](../../crates/server/src/learning.rs),
 [group APIs](../../crates/server/src/evidence.rs),
 [native analytics](../../crates/server/src/graph/analytics/native.rs),
 [analytics UI](../../web/src/AnalyticsPanel.tsx),
-[CodeGraph contract](../contracts/local-codegraph-navigation.md) and
+the retired CodeGraph developer index and
 [repository extraction](../../crates/agent/src/publication.rs).
 
 The [analytics contract](../contracts/graph-analytics.md) currently permits only

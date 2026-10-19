@@ -71,5 +71,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: owning epic slice map and dependencies, active/archive indexes, this pack, device-pairing runbook, successor-cleanup evidence mapping.
 - Validation: `cargo clippy --locked -p recollect-server --all-targets` clean; `cargo test --locked -p recollect-server --test operations_offline` 3 passed; live ignored pairing test passed; web `npm run typecheck` passed; live dedupe proof reused=True with 1 live row then revoked; live web chunks contain new copy and zero review-mutation strings; `./scripts/validate.sh` 32/32; `git diff --check` clean.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

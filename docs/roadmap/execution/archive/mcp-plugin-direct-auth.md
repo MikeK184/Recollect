@@ -81,5 +81,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: ADR 0015, plugin direct-auth contract, ADR/contract README indexes, memory/workspace tools contract pointer, owning epic slice map/status/dependencies/governing sources, active/archive indexes, this pack, agent-memory-tools runbook, coding-agent dialog text, evidence mapping.
 - Validation: `cargo test --locked -p recollect-agent --lib` 17/17 (3 new); `cargo clippy --locked --all-targets -p recollect-agent` clean; web `typecheck` clean; `./scripts/validate.sh` 32/32; `git diff --check` clean. Live stack `ready:true`; no secrets in proof output.
-- Version: N/A (no release policy).
-- Commit: uncommitted.

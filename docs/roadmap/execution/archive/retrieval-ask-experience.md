@@ -69,5 +69,3 @@ Work type: product
 - New blockers: None for this slice.
 - Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
 - Validation: Five deterministic Ask browser cases, production handler/provider fixtures and graph-backed lifecycle proof pass. Six earlier actual-provider quality cases remain dated evidence; the October 1 deployed journey is a fresh integration proof. Disabled fallback and no model calls on navigation pass. Final repository checks are recorded in the linked evidence.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.

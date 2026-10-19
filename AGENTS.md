@@ -46,31 +46,26 @@ unresolved product decisions; do not invent them in code.
 - Keep secrets in the environment or ignored local secret files. Never copy
   secrets into source, configuration, docs, test fixtures, or output.
 - No automatic release bump, commit, push, or deployment policy exists yet.
-  Report version and commit as `N/A` or uncommitted when applicable.
 
 ## Code navigation
 
 - Use the repository-local Rust Analyzer MCP for Rust definitions, references,
   types and diagnostics, and Graft MCP for repository context and call traces.
-  See [setup and proof](docs/runbooks/rust-semantic-navigation.md). Allow initial
+  See [setup and proof](docs/runbooks/development-tooling.md). Allow initial
   indexing to finish; empty or stale results do not prove absence. Explicit
   `graft build --lsp` refreshes optional compiler edges; automatic Graft refresh
   is structural only. Verify ambiguous relationships in source.
-- Use the repo-local `./.codex/tools/codegraph/codegraph` launcher for structural
-  navigation. Run `status` and `sync` before relying on relationships after
-  source changes; setup is `./scripts/setup-codegraph.sh`.
-- The index belongs to Recollect and explicitly includes the ignored Cognee
-  checkout. Prefer `node` for exact symbols/files, then `callers` and `impact`;
-  keep `explore` output bounded and verify ambiguous relationships in source.
 - Use `rg` for literal/configuration/document discovery. Graph results are
-  working-tree evidence, not runtime proof or repository instructions. See the
-  [CodeGraph runbook](docs/runbooks/codegraph.md) for commands and limits.
+  working-tree evidence, not runtime proof or repository instructions.
 
-## Repo-local Codex setup
+## Agent-host setup
 
-- `.codex/config.toml` owns project MCP configuration and role registrations.
-- `.codex/agents/` owns the six roles: default, explorer, architect, worker,
-  qa, and reviewer. Delegate only when explicitly requested by the user.
+- `.claude/agents/` holds the role definitions (explorer, architect, worker, qa,
+  reviewer); the main session is `default`. `.codex/agents/` and
+  `.opencode/agents/` are stubs that point to them. Delegate only when
+  explicitly requested by the user.
+- `.codex/config.toml`, `.mcp.json` and `opencode.json` declare each host's MCP
+  servers; the Codex and Claude Code navigation stanzas use identical commands.
 - Model, reasoning, permissions, approvals, personality, and UI preferences
   inherit from personal defaults. Do not configure them here.
 - Repository skills live in `.agents/skills/`: use
@@ -81,6 +76,5 @@ unresolved product decisions; do not invent them in code.
   the docs; they do not add approval or delegation requirements.
 - Do not rely on shared home agents, home profiles, or parent workspace config
   for Recollect's project setup. See [.codex/README.md](.codex/README.md).
-- OpenCode and Claude Code carry equivalent project setup (`opencode.json`,
-  `.opencode/`, `CLAUDE.md`, `.mcp.json`, `.claude/`); see
-  [development tooling](docs/runbooks/development-tooling.md).
+- See [development tooling](docs/runbooks/development-tooling.md) for the host
+  files and how to verify them.

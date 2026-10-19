@@ -69,5 +69,3 @@ authorizes repairing only test-Brain's Recollect integration outside this reposi
 - New blockers: none.
 - Docs updated: Agent MCP contract/runbook, dated evidence, continuation handoff, epic and execution indexes.
 - Validation: Three focused browser cases, installed-host workspace read, design/typecheck/build, documentation checks and 32 governance tests passed. Live readiness and equal recorded seven-Brain inventory confirmed. An initial test locator and fixture trust loading were corrected; the unrelated opt-in Context7 probe was skipped.
-- Version: N/A.
-- Commit: uncommitted.

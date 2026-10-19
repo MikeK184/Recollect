@@ -2,11 +2,12 @@
 
 Start Codex from the Recollect repository root. The repository-local
 [config.toml](config.toml) contains project MCP configuration and explicit role
-registrations; [agents/](agents/) holds standalone role definitions. These
-formats are supported by the [official configuration schema](https://learn.chatgpt.com/docs/config-schema.json)
+registrations; [agents/](agents/) holds one stub per role that points to the
+shared definition in `.claude/agents/`. These formats are supported by the [official configuration schema](https://learn.chatgpt.com/docs/config-schema.json)
 and [agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-Roles are default, explorer, architect, worker, qa, and reviewer. They inherit
+Roles are default, explorer, architect, worker, qa, and reviewer (`default` is
+the main session; the other five are defined in `.claude/agents/`). They inherit
 personal model, reasoning, permission, and approval defaults. Instructions
 limit explorer/reviewer to read-only work; this is not a sandbox override.
 Delegate only when explicitly requested.
@@ -76,27 +77,6 @@ queries need no model key or paid API call.
 The project registrations locate this Git checkout from root or nested launch
 directories. Inspect them with `codex mcp get rust_analyzer` and
 `codex mcp get graft`. A fresh host session may be required to expose newly
-registered tools. The [runbook](../docs/runbooks/rust-semantic-navigation.md)
-contains the actual Rust stdio proof and refresh commands; the
-[dated evidence](../docs/mappings/rust-semantic-navigation-proof-2026-10-09.md)
-separates configuration discovery from successful calls and coverage limits.
-
-## Local CodeGraph CLI
-
-[tools/codegraph/](tools/codegraph/) contains an independent npm-locked
-CodeGraph 1.6.0 installation and launcher. Run `./scripts/setup-codegraph.sh`
-from Recollect, then:
-
-```bash
-./.codex/tools/codegraph/codegraph node get_authorized_dataset
-```
-
-No home configuration or session restart is required;
-the launcher is available directly through the shell.
-
-Recollect's root index explicitly includes the ignored `references/cognee/`
-checkout and leaves its source/Git state untouched. The runtime, caches, and index stay
-local and ignored; source manifests and settings remain reviewable. Refresh
-with `sync` after source changes. See the
-[runbook](../docs/runbooks/codegraph.md) and
-[verification evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/codegraph-setup-2026-09-13.md).
+registered tools. The [development tooling runbook](../docs/runbooks/development-tooling.md)
+contains the actual Rust stdio proof, refresh commands and coverage limits, and
+separates configuration discovery from successful calls.

@@ -24,7 +24,7 @@ correction and independent reinspection; prior functional proof remains history.
 - [Desktop contract](../../../contracts/desktop-experience.md)
 - [Catalogue contract](../../../contracts/mcp-catalogue-and-profiles.md)
 - [Runtime credentials](../../../contracts/mcp-runtime-and-credentials.md)
-- [Design system](../../desktop-experience/design-system.md)
+- [Design system](../../../foundation/design-system.md)
 - [ADR 0003](../../../adr/0003-product-runtime.md)
 - [Owner](../../epics/desktop-visual-experience.md)
 
@@ -121,5 +121,3 @@ correction and independent reinspection; prior functional proof remains history.
   succeeded for Mantine 8 and keyring; primary parser guidance and versions are
   recorded in the mapping. Final diagnostic interaction proof comes from isolated
   tests; subagent recheck used independent inspection of parent live captures.
-- Version: N/A; no release policy.
-- Commit: Uncommitted; no new commit/push request.

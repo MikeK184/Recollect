@@ -88,5 +88,3 @@ Work type: product
   checks passed. Browser canonical Save/Cancel and token search/history/revoke
   cancel passed. Installed 26-tool source list/inspect and normal Compose
   readiness passed. Live test-Brain failures remain budget-blocked, not falsely recovered.
-- Version: N/A; no release requested.
-- Commit: Uncommitted.

@@ -109,5 +109,3 @@ Implementation: paused; status reviewed 2026-10-18 against checkpoint f2673d7
 - Next action: Repeat the isolated native-host launch once the installed OpenCode
   service starts; retain this pack in active until that acceptance is recorded.
 - Evidence: [Coordinated delivery and limits](../../../mappings/desktop-browser-management-2026-10-05.md).
-- Version: N/A; no release requested.
-- Commit: Implementation included in `f2673d7`; this documentation reconciliation is uncommitted.

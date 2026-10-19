@@ -91,5 +91,3 @@ Work type: product
   focused integrations run separately. Clippy, 156-operation API/web build,
   governance and diff checks pass. See the [dated mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-tools-2026-09-22.md)
   and [runbook](../../../runbooks/agent-memory-tools.md) for evidence and limits.
-- Version: N/A: no release policy.
-- Commit: Uncommitted.

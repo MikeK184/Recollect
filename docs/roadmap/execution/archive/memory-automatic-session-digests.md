@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None for this local slice.
 - Docs updated: Governing contracts, operating runbooks, research/evaluation evidence, owner epics and active/archive indexes.
 - Validation: Six native automatic-session/digest scenarios pass, including staged response loss boundaries, recovery/budget omissions, settled/late/no-charge behavior, pending leased rollback artifact cleanup/erasure/restore, final excerpt expiry with preserved control and scanner rotation beyond 100 sessions. Independent storage review found no remaining source blocker; controlled verdict fixtures prove lifecycle rather than model reasoning. [Dated evidence and limitations](../../../mappings/memory-source-support-staging-2026-10-07.md).
-- Version: N/A; no release requested.
-- Commit: uncommitted; local working-tree implementation.

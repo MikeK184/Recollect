@@ -135,5 +135,3 @@ scope; its external grant authorized the now-completed campaign, whose quality g
   provider calls, exact source evidence and laptop/wide visual review. Duplicate
   source titles receive a short version suffix in the editor. See the
   [implementation ledger](../../../mappings/graph-organization-implementation-2026-10-18.md).
-- Version: N/A — local development.
-- Commit: uncommitted.

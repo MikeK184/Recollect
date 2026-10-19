@@ -65,5 +65,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Evaluation contract, benchmark runbook, dated mapping, owning epic and indexes.
 - Validation: Both 50-question reports complete; lexical supporting-document recall 5%, semantic 100%; 97 succeeded embedding requests and 78,323 charged tokens; three correction/access/erasure production-handler tests passed. Owned test data reconciled and removed. No universal quality claim or Cognee ranking.
-- Version: N/A: no release policy.
-- Commit: uncommitted.

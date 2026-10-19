@@ -70,5 +70,3 @@ Work type: product
 - New blockers: None for this slice.
 - Docs updated: This pack, owning epic, active/archive and epic indexes, handoff, relevant runbooks and [final acceptance evidence](../../../mappings/desktop-final-acceptance-2026-10-01.md).
 - Validation: The completed 65-case browser matrix includes Evidence, Publication, Workspace and Capture. Production workspace integration proves foreign-account task/path isolation; current exact-source reload, history and foreign-Brain tests pass. Final repository checks are recorded in the linked evidence.
-- Version: N/A: no release requested.
-- Commit: Uncommitted.

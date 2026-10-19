@@ -68,5 +68,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Workspace contract, [proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/workspace-scope-proof-2026-09-14.md), [operator runbook](../../../runbooks/workspace-scope.md), local development, README and reconciled epic/execution indexes.
 - Validation: Two protocol/discovery tests, eight core API/database scenarios, dedicated real OIDC proof, five existing browser workflows plus the final expanded workspace/native workflow passed. Inspected desktop/mobile screens; 60 unique API operations, frontend build, Clippy with warnings denied, rustfmt, governance lint and all 32 checker tests passed. Native workers drained persisted queues; normal startup/migration, readiness and owner sign-in were verified. External deployment remains out of scope.
-- Version: N/A: no release or strict versioning.
-- Commit: uncommitted.

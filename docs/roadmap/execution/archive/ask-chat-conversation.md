@@ -66,5 +66,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Contract `desktop-experience.md` (chat-style Ask default view); epic slice and indexes reconciled; evidence mapping added.
 - Validation: Web typecheck and design checks clean; no backend tests required (no API change); `./scripts/validate.sh` passes; live stack rebuilt via `./scripts/stack.sh up --build` with api/worker healthy.
-- Version: N/A: no release policy or version bump in this scope.
-- Commit: Uncommitted; no commit, push or release performed.

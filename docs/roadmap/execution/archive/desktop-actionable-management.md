@@ -64,5 +64,3 @@ Work type: product
 - New blockers: None.
 - Docs updated: Desktop amendment, dated evidence, this archived pack, epic and execution/evidence indexes, and `CONTINUE_HERE.md`.
 - Validation: Six existing focused browser journeys pass across targeted disposable runs: name/URL and real metadata Test; catalogue/environment creation/rename; access invitation/revocation; inline retention/storage safeguards; managed defaults; empty catalogue registration. Build/typecheck/design pass. Independent source and actual deployed UI review found no blocker. Final governance/whitespace and CodeGraph sync pass; rebuilt local stack reports ready. See [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-actionable-management-2026-10-04.md) for limits and the corrected required-label test locator.
-- Version: N/A; no release policy.
-- Commit: Uncommitted.
