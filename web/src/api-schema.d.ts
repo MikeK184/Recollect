@@ -3016,6 +3016,12 @@ export interface components {
             capture_change: string;
             /** Format: uuid */
             model_change: string;
+            /**
+             * @description Text model to select for the Brain's current provider while adopting the
+             *     preset. Without a selected model the preset still enables capture but
+             *     leaves model transmission off until a model is chosen.
+             */
+            text_model?: string | null;
         };
         Brain: {
             archived: boolean;
@@ -4306,7 +4312,11 @@ export interface components {
             embedding_model: string;
             endpoint: string;
             provider: string;
-            text_model: string;
+            /**
+             * @description The operator's explicit text-model override; absent when the
+             *     installation supplies none and each Brain chooses its own.
+             */
+            text_model?: string | null;
         };
         Invitation: {
             /** Format: uuid */
@@ -5135,6 +5145,10 @@ export interface components {
             max_output_tokens: number;
             provider: string;
             purposes: string[];
+            /**
+             * @description The Brain's selected text model. An empty value means none is selected,
+             *     which is valid only while `enabled` is false.
+             */
             text_model: string;
         };
         ModelPolicyUpdate: {
@@ -5529,8 +5543,10 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             name: string;
-            /** @description Name of the existing active device whose token approval would replace,
-             *     because it matches this pairing's name. */
+            /**
+             * @description Name of the existing active device whose token approval would replace,
+             *     because it matches this pairing's name.
+             */
             reuses_device?: string | null;
             state: string;
             user_code: string;

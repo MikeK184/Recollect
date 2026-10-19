@@ -294,3 +294,165 @@ test("AI cards edit inline, preserve Cancel and require explicit embedding rebui
     fullPage: true,
   });
 });
+
+test("a Brain without a text model chooses one and adopts the managed preset", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByLabel(/^Username/)
+    .fill(process.env.RECOLLECT_OWNER_USERNAME!);
+  await page
+    .getByLabel(/^Password/)
+    .fill(process.env.RECOLLECT_OWNER_PASSWORD!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your Brains", exact: true }),
+  ).toBeVisible();
+  const session = await (await page.request.get("/api/auth/me")).json();
+  const created = await page.request.post("/api/brains", {
+    data: { name: "Choose a model fixture", managed_memory: true },
+    headers: { "x-csrf-token": session.csrf_token },
+  });
+  expect(created.ok()).toBeTruthy();
+  const brain = await created.json();
+  const base = `/api/brains/${brain.id}`;
+  // Start from the real managed settings, then remove the model the fixture
+  // installation names: this is an installation that supplies none.
+  const managed = await (await page.request.get(`${base}/automation`)).json();
+  let current = structuredClone(managed);
+  Object.assign(current.models.current.policy, {
+    text_model: "",
+    enabled: false,
+    automatic_learning: false,
+    automatic_embedding: false,
+  });
+  for (const installed of [
+    current.models.installed,
+    ...current.models.providers,
+  ])
+    if (installed.provider === "openai") installed.text_model = null;
+  const writes: { body: Record<string, unknown>; key: string | undefined }[] =
+    [];
+  let refreshes = 0;
+  const entry = (
+    id: string,
+    input: number,
+    cached: number,
+    output: number,
+  ) => ({
+    id,
+    kind: "text",
+    available: true,
+    selectable: true,
+    max_dimensions: null,
+    input_usd_per_million: input,
+    cached_input_usd_per_million: cached,
+    output_usd_per_million: output,
+    pricing_tier: "standard",
+    checked_on: "2026-10-05",
+    source_url: `https://developers.openai.com/api/docs/models/${id}`,
+    pricing_stale: false,
+  });
+  await page.route(`**${base}/models/catalogue*`, async (route) => {
+    if (route.request().method() === "POST") refreshes++;
+    await route.fulfill({
+      json: {
+        models: [
+          entry("gpt-5.6-luna", 0.2, 0.02, 1.2),
+          entry("gpt-4.1-mini", 0.4, 0.1, 1.6),
+          {
+            ...entry("text-embedding-3-large", 0.13, 0, 0),
+            kind: "embedding",
+            max_dimensions: 3072,
+          },
+        ],
+        observed_at: refreshes ? "2026-10-05T12:00:00Z" : null,
+        stale: !refreshes,
+        error_code: null,
+      },
+    });
+  });
+  await page.route(`**${base}/models/policy`, async (route) => {
+    await route.fulfill({ json: current.models });
+  });
+  await page.route(`**${base}/automation`, async (route) => {
+    if (route.request().method() === "PUT") {
+      const body = route.request().postDataJSON();
+      writes.push({
+        body,
+        key: route.request().headers()["idempotency-key"],
+      });
+      current = structuredClone(managed);
+      current.models.current.policy.text_model = body.text_model;
+    }
+    await route.fulfill({ json: current });
+  });
+
+  await page.goto(`/brains/${brain.id}/settings?tab=ai`);
+  await expect(
+    page.getByRole("heading", { name: "Selected models", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Text model", exact: true }),
+  ).toHaveValue("");
+  await expect(
+    page.getByText(/No text model is selected for this Brain/),
+  ).toBeVisible();
+  // Editing the policy cannot allow processing before a model is picked.
+  await page
+    .getByRole("button", { name: "Edit AI permissions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("switch", { name: /^Allow AI processing/ }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Choose a text model below, then allow"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(writes).toHaveLength(0);
+
+  // Choosing a model refreshes the account list, then adopts the preset.
+  await page
+    .getByRole("button", { name: "Choose a model", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Choose a model",
+    exact: true,
+  });
+  await expect.poll(() => refreshes).toBe(1);
+  const use = dialog.getByRole("button", {
+    name: "Use this model",
+    exact: true,
+  });
+  await expect(use).toBeDisabled();
+  await dialog
+    .getByRole("textbox", { name: "Text model", exact: true })
+    .click();
+  await expect(
+    page.getByRole("option", { name: "text-embedding-3-large" }),
+  ).toHaveCount(0);
+  await page.getByRole("option", { name: "gpt-4.1-mini", exact: true }).click();
+  await expect(
+    dialog.getByText(/\$0\.40 input · \$1\.60 output/),
+  ).toBeVisible();
+  await dialog.screenshot({
+    path: "../.cache/ui/choose-model-dialog.png",
+    animations: "disabled",
+  });
+  await use.click();
+  await expect(dialog).toHaveCount(0);
+  expect(writes).toHaveLength(1);
+  expect(writes[0].body).toEqual({
+    model_change: managed.models.current.change_id,
+    capture_change: managed.capture.change_id,
+    text_model: "gpt-4.1-mini",
+  });
+  expect(writes[0].key).toBeTruthy();
+  await expect(
+    page.getByRole("button", { name: "Choose a model", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Text model", exact: true }),
+  ).toHaveValue("gpt-4.1-mini");
+});

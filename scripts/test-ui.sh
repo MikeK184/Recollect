@@ -22,9 +22,15 @@ if [[ $# == 0 ]]; then
   exit 0
 fi
 RECOLLECT_UI_NEEDS_WORKER="${RECOLLECT_TEST_MODEL_WORKER:-0}"
+# The product has no built-in text model, so fixture installations name theirs
+# explicitly. model-selection.spec.ts runs an installation that names none.
+RECOLLECT_UI_TEXT_MODEL=gpt-5.6-luna
 RECOLLECT_UI_MCP_FIXTURE=0
 RECOLLECT_UI_MCP_RUNTIME=0
 for RECOLLECT_UI_SPEC in "$@"; do
+  if [[ "${RECOLLECT_UI_SPEC##*/}" == model-selection.spec.ts ]]; then
+    RECOLLECT_UI_TEXT_MODEL=''
+  fi
   if [[ "${RECOLLECT_UI_SPEC##*/}" == mcp.spec.ts ]]; then
     RECOLLECT_UI_MCP_FIXTURE=1
   fi
@@ -132,6 +138,11 @@ export RECOLLECT_MCP_CREDENTIALS_FILE=".cache/ui/$RECOLLECT_TEST_DB-credentials.
 export RECOLLECT_ARTIFACT_DIR="$PWD/.cache/ui/$RECOLLECT_TEST_DB-artifacts"
 export RECOLLECT_ERASURE_JOURNAL="$PWD/.cache/ui/$RECOLLECT_TEST_DB-erasure-journal"
 export RECOLLECT_STATIC_DIR="$PWD/.cache/ui/web-dist"
+if [[ -n "$RECOLLECT_UI_TEXT_MODEL" ]]; then
+  export RECOLLECT_TEXT_MODEL="$RECOLLECT_UI_TEXT_MODEL"
+else
+  unset RECOLLECT_TEXT_MODEL
+fi
 cargo build -q -p recollect-server -p recollect-agent
 ./scripts/generate-api.sh
 npm --prefix web run build -- --outDir ../.cache/ui/web-dist

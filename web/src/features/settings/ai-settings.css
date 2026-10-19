@@ -20,6 +20,9 @@
 .models-management .ai-installed-models .mantine-Select-root {
   margin-top: 14px;
 }
+.models-management .ai-choose-model {
+  margin-top: 14px;
+}
 .models-management .ai-model-price {
   margin: 6px 0 14px;
   font-size: 12px;

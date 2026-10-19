@@ -9,6 +9,8 @@ const reasons: Record<string, string> = {
     "Some source ancestry falls outside this request’s lookup bounds.",
   automatic_model_policy_denied:
     "Meaning search is not enabled for this Brain. Exact and text search were used.",
+  automatic_model_not_selected:
+    "Meaning search is not enabled for this Brain until a text model is chosen. Exact and text search were used.",
   automatic_model_credentials_missing:
     "Meaning search is unavailable. Exact and text search were used.",
   automatic_semantic_attempt_required:
