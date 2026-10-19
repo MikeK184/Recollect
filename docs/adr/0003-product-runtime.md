@@ -22,6 +22,9 @@ hashes; no product hash contract is introduced.
 
 Local owner authentication compares an environment-provided password and issues
 an opaque, revocable, server-backed session. No password is saved to the database.
+Amended 2026-10-19: the no-hashing allowance for invited local account passwords
+is superseded by [ADR 0024](0024-local-password-hashing.md); they are stored as
+Argon2id hashes.
 The initial local stack binds host ports to loopback. Team credential enrollment
 and shared HTTPS operation remain in their named slices. This override does not
 remove Brain access checks, source provenance, transactional integrity, retention,
@@ -49,3 +52,8 @@ must be assessed in the operations slice under the user's current constraints.
 Overrides only the hashing and strict version/pinning portions of the accepted
 foundations for this authorized development goal. The rest of the product
 baseline and all 29 slice obligations remain in force.
+
+Partly superseded 2026-10-19: [ADR 0024](0024-local-password-hashing.md) restores
+Argon2id hashing for local account passwords and strict credential-file reads.
+The rest of this record, including the dependency and version relaxations and
+the environment-compared owner password, stays accepted.

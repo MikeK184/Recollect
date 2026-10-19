@@ -1,6 +1,6 @@
 # Product Platform and Access
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -17,6 +17,7 @@ Personal use and internal-team use share one application and permission model.
 - [Brain deletion ADR](../../adr/0016-brain-deletion.md)
 - [Brain deletion contract](../../contracts/platform-brain-deletion.md)
 - [Runtime ADR](../../adr/0003-product-runtime.md)
+- [Local password hashing ADR](../../adr/0024-local-password-hashing.md)
 - [Bootstrap contract](../../contracts/platform-bootstrap.md)
 - [Durable-work contract](../../contracts/platform-durable-work.md)
 - [Team access contract](../../contracts/platform-team-access.md)
@@ -71,6 +72,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-desktop-shell` | shipped | adr-backed, contract-backed | archived | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
 | `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
 | `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
+| `platform-local-credential-hardening` | in-progress | adr-backed, contract-backed | pack | Argon2id hashing of invited local account passwords, automatic conversion of legacy plaintext entries and a fail-closed strict credential-file read |
 
 ## Completion Criteria
 
