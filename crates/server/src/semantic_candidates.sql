@@ -28,6 +28,20 @@ WITH missing_chunks AS MATERIALIZED (
 ), known_snapshots AS (
   SELECT DISTINCT ON(repository_id) id FROM repository_snapshots
   WHERE brain_id=$1 ORDER BY repository_id,created_at DESC,id DESC
+), claim_inputs AS MATERIALIZED (
+  -- Cheap eligibility first, so the shared support closure below is evaluated
+  -- only for revisions that could be embedded. Referenced only by the claim
+  -- branch, so an EXISTS probe that stops earlier never evaluates it.
+  SELECT r.id,r.brain_id,r.recorded_at
+  FROM missing_claims c CROSS JOIN LATERAL (
+    SELECT r.* FROM claim_revisions r WHERE r.id=c.current_revision AND r.brain_id=c.brain_id LIMIT 1
+  ) r
+  WHERE recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
+    AND r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active'
+    AND r.revision#>>'{content,freshness}'<>'superseded'
+    AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
+), supported_claims AS MATERIALIZED (
+  SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT i.id FROM claim_inputs i)) s WHERE s.supported
 ), candidates AS (
   SELECT 'source_chunk'::text AS kind,c.id AS input_id,v.id AS source_version_id,
     NULL::uuid AS claim_revision_id,NULL::uuid AS fact_id,NULL::uuid AS manifest_revision_id,
@@ -41,14 +55,7 @@ WITH missing_chunks AS MATERIALIZED (
     AND NOT EXISTS(SELECT 1 FROM model_input_fences f WHERE f.brain_id=v.brain_id AND f.source_version_id=v.id)
   UNION ALL
   SELECT 'claim_revision',r.id,NULL,r.id,NULL,NULL,'claim',r.recorded_at
-  FROM missing_claims c CROSS JOIN LATERAL (
-    SELECT r.* FROM claim_revisions r WHERE r.id=c.current_revision AND r.brain_id=c.brain_id LIMIT 1
-  ) r
-  WHERE recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
-    AND recollect_memory_supported(r.brain_id,r.id)
-    AND r.revision->>'review'<>'rejected' AND coalesce(r.revision->>'lifecycle','active')='active'
-    AND r.revision#>>'{content,freshness}'<>'superseded'
-    AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
+  FROM claim_inputs r WHERE r.id IN (SELECT revision_id FROM supported_claims)
   UNION ALL
   SELECT 'repository_fact',f.id,NULL,NULL,f.id,NULL,'repository',s.created_at
   FROM missing_facts f CROSS JOIN LATERAL (

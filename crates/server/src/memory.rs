@@ -664,12 +664,20 @@ pub async fn list(
         AND ($7='' OR (recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
           AND position(lower($7) in lower(concat_ws(' ',r.revision#>>'{{content,subject}}',r.revision#>>'{{content,predicate}}',r.revision#>>'{{content,value}}',r.revision#>>'{{content,rationale}}')))>0))"
     );
-    let filtered = if query.mode.as_deref() == Some("history") {
-        filtered
+    // Unless history is requested, support is evaluated once per statement for
+    // the revisions that passed every cheap filter, sharing one dependency
+    // closure, instead of once per candidate row.
+    let (gate, filtered) = if query.mode.as_deref() == Some("history") {
+        (String::new(), filtered)
     } else {
-        format!("{filtered} AND recollect_memory_supported(r.brain_id,r.id)")
+        (
+            format!(
+                "WITH base AS MATERIALIZED (SELECT r.* {filtered}), gate AS MATERIALIZED (SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT b.id FROM base b)) s WHERE s.supported) "
+            ),
+            "FROM base r WHERE r.id IN (SELECT revision_id FROM gate)".to_string(),
+        )
     };
-    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) {filtered}"))
+    let total: i64 = sqlx::query_scalar(&format!("{gate}SELECT count(*) {filtered}"))
         .bind(brain)
         .bind(at)
         .bind(query.environment_id)
@@ -681,7 +689,7 @@ pub async fn list(
         .fetch_one(&mut *tx)
         .await?;
     let sql = format!(
-        "SELECT r.id,r.claim_id,r.recorded_at,recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at) AS state,CASE WHEN recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' THEN r.revision END AS revision {filtered} ORDER BY recorded_at DESC,id LIMIT {PAGE} OFFSET $9"
+        "{gate}SELECT r.id,r.claim_id,r.recorded_at,recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at) AS state,CASE WHEN recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active' THEN r.revision END AS revision {filtered} ORDER BY recorded_at DESC,id LIMIT {PAGE} OFFSET $9"
     );
     // Eligibility for the requested mode is canonical Rust policy over each view,
     // so it cannot move into the paging SQL. A page of candidates that are all

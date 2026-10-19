@@ -20,11 +20,11 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
 ), known_claims AS (
   SELECT DISTINCT ON(claim_id) * FROM claim_revisions
   WHERE brain_id=$1 AND recorded_at<=$2 /* graph_window:claim_histories */ ORDER BY claim_id,recorded_at DESC
-), /* graph_window_ctes */ selected_claims AS (
+), /* graph_window_ctes */ claim_scope AS MATERIALIZED (
   -- Apply the same exact manifest boundary as claim_manifest before any
   -- channel ranks or counts claim representations. Keep the canonical view
   -- recheck as well; similarity and projection coverage cannot supply scope.
-  SELECT r.* FROM /* graph_window:claims */ known_claims r WHERE recollect_memory_supported(r.brain_id,r.id) AND ($6::jsonb IS NULL OR (
+  SELECT r.* FROM /* graph_window:claims */ known_claims r WHERE ($6::jsonb IS NULL OR (
     NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(r.revision#>'{content,selection,repository_ids}') repo
       WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements($6->'entries') entry
         WHERE entry->>'repository_id'=repo))
@@ -47,6 +47,12 @@ WITH /* graph_requested_ctes */ captured_sources AS MATERIALIZED (
               AND jsonb_build_object('repository_id',old_entry->'repository_id','revision',old_entry->'revision',
                 'snapshot_id',old_entry->'snapshot_id','config_paths',coalesce(old_entry->'config_paths','[]'::jsonb))=selected_entry))))
   ))
+), claim_support AS MATERIALIZED (
+  -- One shared dependency closure for every claim the exact manifest boundary
+  -- kept, instead of one support evaluation per row.
+  SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT c.id FROM claim_scope c)) s WHERE s.supported
+), selected_claims AS (
+  SELECT r.* FROM claim_scope r WHERE r.id IN (SELECT revision_id FROM claim_support)
 ), known_sources AS (
   SELECT DISTINCT ON(source_id) id FROM source_knowledge
   WHERE brain_id=$1 AND recorded_at<=$2 ORDER BY source_id,recorded_at DESC,id DESC

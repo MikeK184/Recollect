@@ -129,7 +129,8 @@ pub async fn matching_many(
         })
         .collect())
 }
-/// `recollect_memory_supported` for many revisions in one statement.
+/// `recollect_memory_supported` for many revisions in one statement: one
+/// shared dependency closure, each distinct revision evaluated once.
 pub async fn supported(
     tx: &mut Tx<'_>,
     brain: Uuid,
@@ -139,7 +140,7 @@ pub async fn supported(
         return Ok(Default::default());
     }
     Ok(sqlx::query_as::<_, (Uuid, bool)>(
-        "SELECT t.id,recollect_memory_supported($1,t.id) FROM unnest($2::uuid[]) AS t(id)",
+        "SELECT revision_id,supported FROM recollect_memory_supported_many($1,$2)",
     )
     .bind(brain)
     .bind(ids)

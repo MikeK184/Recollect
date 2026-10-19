@@ -281,12 +281,12 @@ pub(crate) async fn discover_families(
             continue;
         }
         let rows: Vec<Json<ClaimRevision>> = sqlx::query_scalar(
-            "SELECT r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
+            "WITH base AS MATERIALIZED (SELECT r.id,r.revision FROM claims c JOIN claim_revisions r ON r.id=c.current_revision AND r.brain_id=c.brain_id
              WHERE c.brain_id=$1 AND r.subject_key=$2 AND r.predicate_key=$3
-             AND recollect_memory_supported(r.brain_id,r.id)
              AND recollect_content_state(r.brain_id,'claim',r.privacy_state,r.recorded_at)='active'
-             AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)
-             ORDER BY r.id LIMIT 500")
+             AND NOT EXISTS(SELECT 1 FROM model_claim_fences f WHERE f.brain_id=r.brain_id AND f.revision_id=r.id)),
+             gate AS MATERIALIZED (SELECT s.revision_id FROM recollect_memory_supported_many($1,ARRAY(SELECT b.id FROM base b)) s WHERE s.supported)
+             SELECT b.revision FROM base b WHERE b.id IN (SELECT revision_id FROM gate) ORDER BY b.id LIMIT 500")
             .bind(run.brain_id).bind(crate::memory_policy::assertion_key(&c.content.subject,true))
             .bind(crate::memory_policy::assertion_key(&c.content.predicate,true)).fetch_all(&mut **tx).await?;
         let mut matches = Vec::new();
