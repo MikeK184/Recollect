@@ -6,6 +6,7 @@ import { mkdir, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { openDetails } from "./desktop-helpers";
+import { profileBinary } from "./profile-binary";
 
 test("native committed publication resumes and browser preserves manifest history", async ({
   page,
@@ -19,7 +20,7 @@ test("native committed publication resumes and browser preserves manifest histor
   const bundles = resolve(fixture, "bundles");
   await mkdir(resolve(checkout, "src"), { recursive: true });
   await mkdir(resolve(fixture, ".recollect"), { recursive: true });
-  const binary = resolve("../target/debug/recollect-agent");
+  const binary = profileBinary("recollect-agent");
   let failUpload = true;
   const origin = process.env.RECOLLECT_UI_TEST_ORIGIN!;
   const proxy = createServer((incoming, outgoing) => {
@@ -254,7 +255,7 @@ test("native committed publication resumes and browser preserves manifest histor
     expect(
       (await readdir(bundles)).filter((n) => n.endsWith(".json")),
     ).toHaveLength(0);
-    worker = spawn(resolve("../target/debug/recollect-server"), ["worker"], {
+    worker = spawn(profileBinary("recollect-server"), ["worker"], {
       env: process.env,
       stdio: "ignore",
     });

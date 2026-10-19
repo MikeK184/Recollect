@@ -187,8 +187,8 @@ async fn installed_host(selected_host: &str) {
         })
         .canonicalize()
         .unwrap();
-    let binary = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../target/debug/recollect-plugin")
+    let binary = crate::profile_dir()
+        .join("recollect-plugin")
         .canonicalize()
         .unwrap();
     for (host, program) in [

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
+import { profileBinary } from "./profile-binary";
 
 test("paired workspace refresh and task/subagent history preserve operation scope", async ({
   page,
@@ -13,7 +14,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const fixture = resolve(`../.cache/workspace-ui-${randomUUID()}`);
-  const binary = resolve("../target/debug/recollect-agent");
+  const binary = profileBinary("recollect-agent");
   const env = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,

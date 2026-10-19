@@ -2,6 +2,7 @@ import { openDetails } from "./desktop-helpers";
 import { test, expect } from "@playwright/test";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { profileBinary } from "./profile-binary";
 
 const original =
   "# Vault production evidence\n\nThe repository declares a dedicated production role.\nObserved deployment still needs verification.\n\n<script>window.evidenceExecuted=true</script>\n";
@@ -102,7 +103,7 @@ test("import evidence, preserve history and share one source across collection v
     .click();
   await expect(dialog.getByTestId("source-content")).toHaveText(original);
   expect(await page.evaluate(() => "evidenceExecuted" in window)).toBe(false);
-  await promisify(execFile)("../target/debug/recollect-server", [
+  await promisify(execFile)(profileBinary("recollect-server"), [
     "worker-once",
     "capture",
   ]);
@@ -186,7 +187,7 @@ test("import evidence, preserve history and share one source across collection v
   await expect(
     page.getByRole("button", { name: /Production Vault/ }),
   ).toBeVisible();
-  await promisify(execFile)("../target/debug/recollect-server", [
+  await promisify(execFile)(profileBinary("recollect-server"), [
     "worker-once",
     "capture",
   ]);

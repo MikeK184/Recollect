@@ -4,6 +4,13 @@ cd "$(dirname "$0")/.."
 set -a
 source .env
 set +a
+# The Compose services come from the two files setup-local.sh records in .env;
+# an .env written before that line existed still selects the same stack.
+export COMPOSE_FILE="${COMPOSE_FILE:-infra/product/compose.yaml:compose.yaml}"
+# Built binaries live under the Cargo target directory, which CARGO_TARGET_DIR or
+# build.target-dir may move away from ./target.
+RECOLLECT_TARGET_DIR="$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
+export RECOLLECT_PROFILE_DIR="$RECOLLECT_TARGET_DIR/debug"
 # The disposable database gets a disposable owner credential too. Browser
 # failure artifacts must never contain the installation owner's password.
 export RECOLLECT_OWNER_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
@@ -100,7 +107,7 @@ cleanup() {
       return 0
     fi
   fi
-  if ! env -u VAULT_TOKEN target/debug/recollect-server privacy-reconcile >> .cache/ui/cleanup.log 2>&1; then
+  if ! env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" privacy-reconcile >> .cache/ui/cleanup.log 2>&1; then
     printf 'Owned UI database and journals retained because privacy/analytics cleanup is uncertain: %s\n' "$RECOLLECT_TEST_DB" >&2
     return 1
   fi
@@ -135,25 +142,25 @@ export RECOLLECT_STATIC_DIR="$PWD/.cache/ui/web-dist"
 cargo build -q -p recollect-server -p recollect-agent
 ./scripts/generate-api.sh
 npm --prefix web run build -- --outDir ../.cache/ui/web-dist
-env -u VAULT_TOKEN target/debug/recollect-server migrate
+env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" migrate
 if [[ "$RECOLLECT_UI_MCP_FIXTURE" == 1 ]]; then
-  env -u VAULT_TOKEN target/debug/recollect-server mcp-definition-import crates/server/tests/fixtures/mcp-catalogue.json
+  env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" mcp-definition-import crates/server/tests/fixtures/mcp-catalogue.json
 fi
 if [[ "$RECOLLECT_UI_MCP_RUNTIME" == 1 ]]; then
   cargo build -q -p recollect-mcp-runtime --example mcp-fixture
   export RECOLLECT_UI_MCP_MARKER="$RECOLLECT_ARTIFACT_DIR/desktop-effect-proof.txt"
   mkdir -p "$RECOLLECT_ARTIFACT_DIR"
-  python3 - "$PWD" ".cache/ui/$RECOLLECT_TEST_DB-mcp-runtime.json" <<'PY'
+  python3 - "$PWD" ".cache/ui/$RECOLLECT_TEST_DB-mcp-runtime.json" "$RECOLLECT_PROFILE_DIR" <<'PY'
 import json, pathlib, sys
 root = pathlib.Path(sys.argv[1])
 definition = json.loads((root / 'crates/server/tests/fixtures/mcp-runtime.json').read_text())
-definition['command'] = str(root / 'target/debug/examples/mcp-fixture')
+definition['command'] = str(pathlib.Path(sys.argv[3]) / 'examples/mcp-fixture')
 pathlib.Path(sys.argv[2]).write_text(json.dumps(definition))
 PY
-  env -u VAULT_TOKEN target/debug/recollect-server mcp-definition-import ".cache/ui/$RECOLLECT_TEST_DB-mcp-runtime.json"
+  env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" mcp-definition-import ".cache/ui/$RECOLLECT_TEST_DB-mcp-runtime.json"
 fi
 mkdir -p .cache/ui
-env -u VAULT_TOKEN target/debug/recollect-server serve > .cache/ui/server.log 2>&1 &
+env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" serve > .cache/ui/server.log 2>&1 &
 RECOLLECT_UI_PID=$!
 RECOLLECT_UI_READY=0
 for attempt in {1..180}; do
@@ -163,12 +170,12 @@ for attempt in {1..180}; do
 done
 [[ "$RECOLLECT_UI_READY" == 1 ]] || { printf 'Owned UI server did not become ready; inspect .cache/ui/server.log\n' >&2; exit 1; }
 if [[ "$RECOLLECT_UI_NEEDS_WORKER" == 1 ]]; then
-  env -u VAULT_TOKEN target/debug/recollect-server worker > .cache/ui/worker.log 2>&1 &
+  env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" worker > .cache/ui/worker.log 2>&1 &
   RECOLLECT_UI_WORKER_PID=$!
 fi
 env -u VAULT_TOKEN npm --prefix web run test:ui -- "$@"
 if [[ -z "$RECOLLECT_UI_WORKER_PID" ]]; then
-  env -u VAULT_TOKEN target/debug/recollect-server worker > .cache/ui/worker.log 2>&1 &
+  env -u VAULT_TOKEN "$RECOLLECT_PROFILE_DIR/recollect-server" worker > .cache/ui/worker.log 2>&1 &
   RECOLLECT_UI_WORKER_PID=$!
 fi
 # macOS can delay a newly started native binary before main; use the same

@@ -901,6 +901,17 @@ async fn invited_team_recovery_effective_grants_and_ownership() {
     h.finish().await;
 }
 
+/// `<target>/<profile>` holding this test binary (`.../deps/platform-<hash>`), so
+/// helper executables resolve under CARGO_TARGET_DIR / build.target-dir and the
+/// active profile instead of `<checkout>/target/debug`.
+pub(crate) fn profile_dir() -> std::path::PathBuf {
+    let exe = std::env::current_exe().expect("test executable path");
+    exe.parent()
+        .and_then(std::path::Path::parent)
+        .expect("<target>/<profile>")
+        .to_path_buf()
+}
+
 impl Harness {
     async fn new() -> Self {
         Self::new_through(db::MIGRATIONS.len()).await
@@ -1005,11 +1016,14 @@ impl Harness {
         let mut url = reqwest::Url::parse(&config.database_url).unwrap();
         url.set_path(&database);
         config.database_url = url.to_string();
+        // Per-test state lives under the Cargo target directory (removed with the
+        // database on success), not in a directory relative to the test's cwd.
         let test_state = semantic_state.unwrap_or_else(|| {
             std::env::var_os("RECOLLECT_TEST_STATE_DIR")
                 .map(std::path::PathBuf::from)
-                .unwrap_or_else(|| ".cache".into())
+                .unwrap_or_else(|| profile_dir().join("test-state"))
         });
+        std::fs::create_dir_all(&test_state).expect("Create the per-test state directory");
         config.credential_file = test_state
             .join(format!("{database}-credentials.json"))
             .to_string_lossy()
@@ -1140,6 +1154,10 @@ impl Harness {
         let _ = std::fs::remove_file(&self.state.config.credential_file);
         let _ = std::fs::remove_dir_all(&self.state.config.artifact_dir);
         let _ = std::fs::remove_dir_all(&self.state.config.erasure_journal);
+        let _ = std::fs::remove_dir_all(
+            std::path::Path::new(&self.state.config.credential_file)
+                .with_file_name(format!("{}-credential-store", self.database)),
+        );
         self.state.pool.close().await;
         self.admin.close().await;
         sqlx::query(&format!("DROP DATABASE {} WITH (FORCE)", self.database))
