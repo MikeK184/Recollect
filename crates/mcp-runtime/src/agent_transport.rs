@@ -71,7 +71,7 @@ pub async fn connect(
     tokio::time::timeout(
         Duration::from_secs(10),
         ().serve(StreamableHttpClientTransport::with_client(
-            BoundedHttp(http),
+            BoundedHttp(http, None),
             config,
         )),
     )

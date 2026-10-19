@@ -180,18 +180,26 @@ pub async fn login(
     let mut tx = state.pool.begin().await?;
     let account: Option<(Uuid, String, bool, Option<Uuid>)> = sqlx::query_as("SELECT id,username,installation_owner,credential_id FROM accounts WHERE username=$1 AND enabled AND auth_kind='local' FOR SHARE")
         .bind(username).fetch_optional(&mut *tx).await?;
-    let (id, username, installation_owner, credential) = account.ok_or_else(Error::unauthorized)?;
+    // Every local sign-in spends one Argon2id verification, real or dummy, so
+    // response time does not reveal which usernames exist or who the owner is.
+    let Some((id, username, installation_owner, credential)) = account else {
+        credentials::burn(&input.password).await;
+        return Err(Error::unauthorized());
+    };
     let valid = if installation_owner {
-        username == state.config.owner_username
+        let valid = username == state.config.owner_username
             && bool::from(
                 input
                     .password
                     .as_bytes()
                     .ct_eq(state.config.owner_password.as_bytes()),
-            )
+            );
+        credentials::burn(&input.password).await;
+        valid
     } else if let Some(credential) = credential {
         credentials::matches(&state.config.credential_file, credential, &input.password).await?
     } else {
+        credentials::burn(&input.password).await;
         false
     };
     if !valid {

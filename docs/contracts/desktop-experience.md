@@ -433,7 +433,9 @@ AsyncState, SettingsSection and ActionMenu own recurring behavior. Keep forms,
 dialogs, tables and graphs on that system. No mobile redesign. Apply the display
 and interaction priority above. Keep readable long labels and non-color status
 meanings. Auth, invitation, OIDC error/recovery and expired-session views use the
-same system.
+same system; the expired-session view is the sign-in view with a
+"Your session ended — sign in again" notice, shown only after
+`GET /api/auth/me` confirms the session ended and never after an explicit sign-out.
 
 ### Page responsibilities
 

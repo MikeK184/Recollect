@@ -13,7 +13,7 @@ pending foundation documents as accepted authority.
 
 - [0001: Repository governance](0001-repository-governance.md)
 - [0002: Local CodeGraph navigation](0002-local-codegraph-navigation.md) (superseded by the [development tooling runbook](../runbooks/development-tooling.md))
-- [0003: Product runtime](0003-product-runtime.md)
+- [0003: Product runtime](0003-product-runtime.md) (password-hashing allowance superseded by [0024](0024-local-password-hashing.md))
 - [0004: Committed repository publication](0004-committed-repository-publication.md)
 - [0005: Canonical claims and time](0005-canonical-claims-and-time.md)
 - [0006: Autonomous memory](0006-autonomous-memory.md)
@@ -36,3 +36,4 @@ pending foundation documents as accepted authority.
 
 - [0022: Brain-managed skills and shared guidance](0022-brain-managed-skills.md)
 - [0023: Brain-scoped agent-to-agent coordination](0023-agent-to-agent-coordination.md)
+- [0024: Local password hashing and strict credential-file reads](0024-local-password-hashing.md)

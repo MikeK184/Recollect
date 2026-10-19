@@ -1,5 +1,5 @@
 import { BrainIcon } from "./components/BrainIcon";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Alert,
   Badge,
@@ -36,6 +36,7 @@ import {
   onUnauthorized,
   type Session,
 } from "./api";
+import { checkSession, revalidateSession } from "./sessionCheck";
 import { Brand } from "./components/Brand";
 import { ErrorState as Failure } from "./components/AsyncState";
 import { PageTransition } from "./components/PageTransition";
@@ -63,6 +64,11 @@ export function App() {
   const cache = useQueryClient();
   const navigate = useNavigate();
   const [invitation, setInvitation] = useState(initialInvitation);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const check = useMemo(
+    () => checkSession(cache, () => setSessionEnded(true)),
+    [cache],
+  );
   useEffect(() => {
     const readInvite = () => {
       const token = new URLSearchParams(window.location.hash.slice(1)).get(
@@ -82,16 +88,18 @@ export function App() {
   }, []);
   useEffect(() => {
     onUnauthorized(() => {
-      // Any authenticated read that returns 401 ends the session everywhere.
-      if (cache.getQueryData(["session"])) void replaceSession(cache, null);
+      if (cache.getQueryData(["session"])) void revalidateSession(cache, check);
     });
     return () => onUnauthorized(null);
-  }, [cache]);
+  }, [cache, check]);
   const auth = useQuery({
     queryKey: ["session"],
-    queryFn: session,
+    queryFn: check,
     refetchInterval: pollSlow,
   });
+  useEffect(() => {
+    if (auth.data) setSessionEnded(false);
+  }, [auth.data]);
   useEffect(() => {
     if (!auth.data) return;
     try {
@@ -130,11 +138,11 @@ export function App() {
         <Failure error={auth.error} retry={() => void auth.refetch()} />
       </div>
     );
-  if (!auth.data) return <Login />;
+  if (!auth.data) return <Login ended={sessionEnded} />;
   return <Workspace user={auth.data} />;
 }
 
-function Login() {
+function Login({ ended }: { ended: boolean }) {
   const options = useQuery({
     queryKey: ["auth-options"],
     queryFn: async () => result(await client.GET("/api/auth/options")),
@@ -193,6 +201,11 @@ function Login() {
           <Text c="dimmed" mt="xs" mb="xl">
             Sign in to your Recollect installation.
           </Text>
+          {ended && (
+            <Alert color="yellow" mb="md" role="status">
+              Your session ended — sign in again
+            </Alert>
+          )}
           {organizationError && (
             <Alert color="red" mb="md">
               Organization sign-in was not completed. Check your enrolled

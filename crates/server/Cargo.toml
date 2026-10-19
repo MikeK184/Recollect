@@ -32,6 +32,8 @@ uuid.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 base64 = "0.22"
 subtle = "2"
+# Argon2id password hashing (ADR 0024).
+argon2 = "0.6"
 
 [dev-dependencies]
 recollect-agent = { path = "../agent" }

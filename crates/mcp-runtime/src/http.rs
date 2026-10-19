@@ -1,6 +1,6 @@
 //! Bounded POST bodies around the SDK's Streamable HTTP state machine. The SDK
 //! still owns protocol headers, lifecycle, request matching and cancellation.
-use crate::WIRE_LIMIT;
+use crate::{WIRE_LIMIT, credentials::ResolvedCredentials};
 use futures::{StreamExt, stream::BoxStream};
 use http::{HeaderName, HeaderValue};
 use rmcp::{
@@ -12,8 +12,10 @@ use rmcp::{
 use sse_stream::{Sse, SseStream};
 use std::{collections::HashMap, sync::Arc};
 
+/// The optional credentials are those delivered to this upstream; a 401 or 403
+/// from it drops their cached resolution (see `ResolvedCredentials::rejected`).
 #[derive(Clone)]
-pub(crate) struct BoundedHttp(pub reqwest::Client);
+pub(crate) struct BoundedHttp(pub reqwest::Client, pub Option<Arc<ResolvedCredentials>>);
 type Error = StreamableHttpError<reqwest::Error>;
 fn invalid(code: &'static str) -> Error {
     StreamableHttpError::UnexpectedServerResponse(code.into())
@@ -81,6 +83,9 @@ impl StreamableHttpClient for BoundedHttp {
             status,
             http::StatusCode::UNAUTHORIZED | http::StatusCode::FORBIDDEN
         ) {
+            if let Some(credentials) = &self.1 {
+                credentials.rejected().await;
+            }
             return Err(invalid("provider_auth_rejected"));
         }
         let session = response

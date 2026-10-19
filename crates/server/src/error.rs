@@ -5,7 +5,7 @@ use axum::{
 };
 use recollect_protocol::ApiError;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Error(pub StatusCode, pub &'static str, pub &'static str);
 pub type Result<T> = std::result::Result<T, Error>;
 

@@ -65,6 +65,14 @@ bridge. Invalid/missing selected files fail explicitly; never disable TLS
 verification. Generated host settings freeze the selected absolute CA path.
 This is client-local trust, without a machine-global certificate installation.
 
+Invited-account passwords are stored only as Argon2id hashes
+([ADR 0024](../adr/0024-local-password-hashing.md)) in the application's private
+account-credential file in both profiles; shared HTTPS never accepts plaintext
+storage. The API converts a legacy plaintext file when it starts and reads the
+file only when it is a regular, non-symlink file owned by the application user
+with no group/other permissions; otherwise teammate sign-in returns 503 and
+the environment-backed owner is unaffected. Packaging, setup and restore
+must preserve that mode and ownership.
 Retain configured owner bootstrap, invited accounts, optional OIDC and native
 pairing. Neither a model key nor Vault is required for startup or basic knowledge
 operations. The existing configured text and embedding models stay unchanged.
@@ -125,7 +133,9 @@ are absent when not configured. App state mounts exclude other installations.
 
 `scripts/setup-local.sh` prepares owned runtime directories and the local UID/GID
 without replacing existing secrets. It preserves an existing default account
-credential file when moving its configured location into `.data/runtime/`.
+credential file when moving its configured location into `.data/runtime/`,
+keeping mode 0600. A runtime copy that differs from the legacy file only because
+the API hashed the same credential IDs is not a conflict.
 Custom account-file locations require an explicit Compose override. Both native
 development and Compose use the resulting account-file setting.
 

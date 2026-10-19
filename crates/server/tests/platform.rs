@@ -1152,6 +1152,129 @@ impl Harness {
 
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
+async fn local_passwords_are_argon2id_converted_from_legacy_and_fail_closed() {
+    use std::collections::BTreeMap;
+    use std::os::unix::fs::PermissionsExt;
+    let h = Harness::new().await;
+    let owner = h.login().await;
+    let file = h.state.config.credential_file.clone();
+    let mode = |path: &str| std::fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    let stored = || -> BTreeMap<Uuid, String> {
+        serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap()
+    };
+    let sign_in = |password: String| {
+        let h = &h;
+        async move {
+            h.call(
+                "POST",
+                "/api/auth/login",
+                None,
+                json!({"username":"teammate","password":password}),
+            )
+            .await
+            .0
+        }
+    };
+    let (_, invitation, _) = h
+        .call(
+            "POST",
+            "/api/team/invitations",
+            Some(&owner),
+            json!({"username":"teammate"}),
+        )
+        .await;
+    let password = Uuid::new_v4().to_string();
+    assert_eq!(
+        h.call(
+            "POST",
+            "/api/auth/enroll",
+            None,
+            json!({"token":invitation["token"],"password":password})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    // Enrolment stores an Argon2id PHC string, never the password.
+    let values = stored();
+    assert_eq!(values.len(), 1);
+    let (credential, hash) = values.iter().next().unwrap();
+    let credential = *credential;
+    assert!(
+        hash.starts_with("$argon2id$v=19$m=19456,t=2,p=1$"),
+        "{hash}"
+    );
+    assert!(!std::fs::read_to_string(&file).unwrap().contains(&password));
+    assert_eq!(mode(&file), 0o600);
+    assert_eq!(sign_in(password.clone()).await, StatusCode::OK);
+    assert_eq!(
+        sign_in(Uuid::new_v4().to_string()).await,
+        StatusCode::UNAUTHORIZED
+    );
+
+    // A file written by an earlier server holds plaintext. Startup conversion
+    // hashes it atomically and the teammate can still sign in.
+    let legacy = |value: &str| {
+        let body: BTreeMap<Uuid, &str> = [(credential, value)].into();
+        std::fs::write(&file, serde_json::to_vec(&body).unwrap()).unwrap();
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
+    };
+    legacy(&password);
+    assert_eq!(
+        recollect_server::credentials::upgrade_legacy(&file)
+            .await
+            .unwrap(),
+        1
+    );
+    assert!(stored()[&credential].starts_with("$argon2id$v=19$"));
+    assert!(!std::fs::read_to_string(&file).unwrap().contains(&password));
+    assert_eq!(mode(&file), 0o600);
+    assert_eq!(sign_in(password.clone()).await, StatusCode::OK);
+    assert_eq!(
+        sign_in(Uuid::new_v4().to_string()).await,
+        StatusCode::UNAUTHORIZED
+    );
+
+    // Without startup conversion a legacy entry is accepted once and upgraded.
+    legacy(&password);
+    assert_eq!(
+        sign_in(Uuid::new_v4().to_string()).await,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        stored()[&credential],
+        password,
+        "a wrong password converts nothing"
+    );
+    assert_eq!(sign_in(password.clone()).await, StatusCode::OK);
+    assert!(stored()[&credential].starts_with("$argon2id$v=19$"));
+    assert_eq!(mode(&file), 0o600);
+
+    // An insecure or substituted file is refused rather than trusted. The
+    // environment-backed owner can still sign in to repair it.
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o644)).unwrap();
+    assert_eq!(
+        sign_in(password.clone()).await,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    h.login().await;
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
+    assert_eq!(sign_in(password.clone()).await, StatusCode::OK);
+    let real = format!("{file}.real");
+    std::fs::rename(&file, &real).unwrap();
+    std::os::unix::fs::symlink(&real, &file).unwrap();
+    assert_eq!(
+        sign_in(password.clone()).await,
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    std::fs::remove_file(&file).unwrap();
+    std::fs::rename(&real, &file).unwrap();
+    assert_eq!(sign_in(password).await, StatusCode::OK);
+    h.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
 async fn owner_brain_isolation_audit_and_recovery() {
     let h = Harness::new().await;
     db::migrate(&h.admin).await.unwrap();

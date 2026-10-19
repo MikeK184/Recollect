@@ -15,7 +15,9 @@ export const client = createClient<paths>({
   credentials: "same-origin",
 });
 let unauthorized: (() => void) | null = null;
-// The app registers what an expired session means; reads never decide it alone.
+// A 401 outside /api/auth/ means the caller's session or device credential was
+// not accepted for that one request; it is not proof the session ended. The app
+// registers the revalidation (a /api/auth/me check) that decides.
 export const onUnauthorized = (handler: (() => void) | null) => {
   unauthorized = handler;
 };
@@ -25,12 +27,12 @@ client.use({
     return request;
   },
   onResponse({ request, response }) {
-    // Sign-in and session reads report their own 401.
+    // Sign-in and session reads report their own 401. The CSRF token stays
+    // until the revalidation confirms the session is gone (see session()).
     if (
       response.status === 401 &&
       !new URL(request.url).pathname.startsWith("/api/auth/")
     ) {
-      setCsrf("");
       unauthorized?.();
     }
     return response;

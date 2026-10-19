@@ -17,6 +17,7 @@ Personal use and internal-team use share one application and permission model.
 - [Brain deletion ADR](../../adr/0016-brain-deletion.md)
 - [Brain deletion contract](../../contracts/platform-brain-deletion.md)
 - [Runtime ADR](../../adr/0003-product-runtime.md)
+- [Local password hashing ADR](../../adr/0024-local-password-hashing.md)
 - [Bootstrap contract](../../contracts/platform-bootstrap.md)
 - [Durable-work contract](../../contracts/platform-durable-work.md)
 - [Team access contract](../../contracts/platform-team-access.md)
@@ -71,6 +72,7 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 | `platform-desktop-shell` | shipped | adr-backed, contract-backed | archived | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
 | `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
 | `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
+| `platform-local-credential-hardening` | shipped | adr-backed, contract-backed | archived | Invited local passwords stored only as Argon2id hashes (ADR 0024), legacy plaintext converted at startup or sign-in and the credential file read fail-closed (503); proven by 5 unit tests, a new platform test, a real `serve` startup run, and unchanged auth/team/MCP platform subsets (30 pass, the same 13 unrelated failures as before the change) |
 
 ## Completion Criteria
 

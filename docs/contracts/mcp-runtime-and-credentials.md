@@ -238,9 +238,14 @@ minimum; shorter values cannot provide the promised exact-output protection.
 Resolve only after authority is checked and again for each new operation. The
 credential-provider interface also exposes expiry/renewability for Vault in slice
 24. Existing environment values are process-local; changing `.env` requires an
-executor restart. OS-store/reference-file changes are observed on the next call.
+executor restart. OS-store/reference-file changes are observed on the next call:
+every operation reads each secret source again, with no age- or file-time-based
+reuse, and a loosened or replaced reference file is refused on that call.
 Resolved value changes produce a fresh random in-memory generation and drain the
-old compatible instance; active old leases can finish. No secret digest is stored.
+old compatible instance; unchanged values keep the same generation so a running
+instance is not restarted. An upstream HTTP 401 or 403 (`provider_auth_rejected`)
+drops that connection's cached resolution, so the next operation resolves anew
+with a fresh generation; the rejected call is not retried. No secret digest is stored.
 
 Construct a cleared child environment with a fixed basic PATH, approved delivery
 variables and non-secret `RECOLLECT_MCP_TARGET` / `RECOLLECT_MCP_CONFIGURATION`.

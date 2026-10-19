@@ -142,7 +142,13 @@ to the selected machine:
 The key is mounted read-only by the proxy. Recollect does not issue a certificate,
 change system trust, create Vault resources or deploy to another machine.
 The shared profile publishes HTTPS only; PostgreSQL, Neo4j and the API stay on
-the installation's Compose network.
+the installation's Compose network. Invited account passwords are stored only as
+Argon2id hashes in the installation's private application volume
+([ADR 0024](../adr/0024-local-password-hashing.md)); a file left by an earlier
+version is converted when the API starts. The API refuses a credential file that
+is a symlink, is not owned by the application user or is readable by group or
+others, and teammate sign-in then returns 503 until it is fixed (owner sign-in
+is unaffected).
 
 ## Build and operate
 
