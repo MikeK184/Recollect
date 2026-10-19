@@ -1019,3 +1019,53 @@ async fn migration_072_backfills_every_signature_in_batches_and_restores_the_tim
     db::ready(&fx.h.admin).await.unwrap();
     fx.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL"]
+async fn shortlist_ranking_equals_exact_ranking_on_the_fixed_semantic_corpus() {
+    // The corpus of the exact-cosine recall test: an exact match, a near match,
+    // a distractor and an out-of-selection canary, with controlled vectors.
+    let (h, owner, base, p, server) = setup().await;
+    let cx = context(&h, &base).await;
+    enable(&h, &owner, &base).await;
+    p.mode.store(5, Ordering::SeqCst);
+    for text in [
+        "Operational executions are retained in the audit journal.",
+        "NEAR_VECTOR: The previous runs view also exposes execution metadata.",
+        "DISTRACTOR_VECTOR: Tea and coffee are available in the kitchen.",
+        "OUTSIDE_SCOPE_CANARY: previous runs must never enter the selected collection.",
+    ] {
+        source(&h, &owner, &base, text).await;
+    }
+    discover(&h, cx).await;
+    while worker::run_once(&h.state, "model").await.unwrap() {}
+    let mut vector = vec![0.0f32; 3072];
+    vector[0] = 1.0;
+    let mut ranked = vec![];
+    for tier in [ProofTier::Exact, ProofTier::Shortlist] {
+        let mut tx = recollect_server::db::actor_tx(&h.state.pool, cx.actor)
+            .await
+            .unwrap();
+        let proof = semantic_proof(
+            &mut tx,
+            cx.brain,
+            ScopeSelection::default(),
+            &vector,
+            tier,
+            SHORTLIST,
+            false,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("proof {tier:?}: {} {}", e.1, e.2));
+        tx.rollback().await.unwrap();
+        ranked.push(proof.ranked);
+    }
+    assert_eq!(ranked[0].len(), 4);
+    assert_eq!(recall_at(&ranked[0], &ranked[1], 100), 1.0);
+    for (exact, short) in ranked[0].iter().zip(&ranked[1]) {
+        assert_eq!(exact.0, short.0, "The shortlist keeps the exact order");
+        assert!((exact.1 - short.1).abs() < 1e-6);
+    }
+    server.abort();
+    h.finish().await;
+}

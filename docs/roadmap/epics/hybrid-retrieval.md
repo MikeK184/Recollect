@@ -1,6 +1,6 @@
 # Hybrid Retrieval and Investigation
 
-Status: active
+Status: complete
 
 ## Purpose
 
@@ -74,7 +74,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `ask-chat-conversation` | shipped | contract-backed | archived | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
 | `retrieval-set-based-read-path` | shipped | contract-backed | archived | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
 | `retrieval-support-gate-cost` | shipped | contract-backed | archived | Application-role support gate 60-66 ms to 3-4 ms per revision (0.75 ms batched) with identical verdicts, owner-rights callers unchanged, and field paging repaired; proven by native equivalence, policy-guard and cost tests and a 218-test subset with no new failure against its baseline |
-| `retrieval-semantic-large-scopes` | in-progress | contract-backed | pack | Semantic recall refuses scopes above 5,000 representations because exact cosine fetches and computes each out-of-line vector twice; keep the exact ranking up to the bound, add a labelled bit-signature shortlist with exact re-rank up to the 50,000 entry cap, report method and counts honestly, and keep semantic search in auto mode |
+| `retrieval-semantic-large-scopes` | shipped | contract-backed | archived | Semantic recall now ranks scopes up to the 50,000-entry cap: exact cosine unchanged to 5,000 representations (50,000 at 384 dimensions or fewer), a labelled bit-signature shortlist with exact re-rank above, honest method/count coverage and a `semantic_exact` evaluation flag; the pool's per-row retention lookups (5.9 s of 6.1 s at 50,000 facts) are resolved per class; proven by ten new platform tests, recall@100 and statement timings at 8-3,072 dimensions ([measurements](../../mappings/semantic-large-scope-2026-10-19.md)), the semantic/retrieval subsets unchanged against their baseline, clippy, web typecheck and `validate.sh` |
 
 ## Completion Criteria
 
@@ -93,6 +93,8 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 ## Current status
 
 The original exact/lexical/semantic/graph consumers and cited Ask are delivered. Source-window/history corrections and semantic discovery query repair are committed in f2673d7. The measured discovery query improved from about 18–20 s to 225–334 ms on the retained fixture; this is not an end-to-end quality score. The October 18 attributed-feedback slice is locally delivered: current native qualification/privacy cases and the frozen zero-call comparison pass. The toy comparison retains two bad promotions; it does not demonstrate real helpfulness or qualify the failed organization model. Production ranking activation, typed-time and ANN changes remain separate decisions.
+
+The October 19 large-scope slice replaces the 5,000-representation semantic refusal with two labelled tiers (exact to the bound, a signature shortlist with exact re-rank above, up to the 50,000-entry cap). It adds no vector index; the shared-index and per-Brain partitioned alternatives stay rejected for the reasons in the semantic contract.
 
 The October 19 support-gate slice evaluates the unchanged support predicate as the database owner after one Brain membership test and gives set-oriented consumers a batch form; it also removes a plan-dependent timeout from the organization field view's candidate statement. Retrieval behavior and ranking are unchanged.
 

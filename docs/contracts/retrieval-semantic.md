@@ -195,8 +195,8 @@ a usable vector (reported uncapped as `semantic.scoped_entries`):
 
 - Exact (`semantic.method` `exact_cosine`): up to 5,000 representations, and up to
   50,000 for profiles of at most 384 dimensions, whose vectors are stored inline and
-  measured 0.6 s over 50,000. Every scoped vector is scored once; the ranking, tie
-  order and results are those of the previous exact scan.
+  measured under one second over 50,000. Every scoped vector is scored once; the
+  ranking, tie order and results are those of the previous exact scan.
 - Shortlist (`binary_shortlist_rerank`): above that bound, up to the 50,000-entry
   per-profile cap. Order the scoped signatures by Hamming distance to the query's
   signature (ties by kind, identity and fragment), keep the nearest 4,000 and rank

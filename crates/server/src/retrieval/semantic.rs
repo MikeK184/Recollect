@@ -10,7 +10,7 @@ use sqlx::{
 pub const EXACT_LIMIT: usize = 5000;
 /// Profiles of at most this many dimensions store their vectors inline (under
 /// the 2 KB row threshold) and are exactly ranked over any scope instead:
-/// 50,000 vectors measured 0.6 s at 8 and 384 dimensions.
+/// 50,000 vectors measured 0.4-0.9 s at 8 and 384 dimensions.
 pub const EXACT_DIMENSIONS: i32 = 384;
 /// A profile holds at most 50,000 entries (the discovery cap), so no recall
 /// scope is larger. Above the exact bound the scope is ranked by a bit-signature

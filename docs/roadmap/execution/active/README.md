@@ -11,4 +11,3 @@ are in the [roadmap](../../epics/index.md); shipped packs are in Git history.
 | [graph-concurrent-preparation](graph-concurrent-preparation.md) | in-progress |
 | [mcp-copy-ready-agent-config](mcp-copy-ready-agent-config.md) | in-progress |
 | [platform-brain-admission](platform-brain-admission.md) | in-progress |
-| [retrieval-semantic-large-scopes](retrieval-semantic-large-scopes.md) | in-progress |
