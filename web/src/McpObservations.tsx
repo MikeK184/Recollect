@@ -14,6 +14,7 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { CapturedSource } from "./CapturePanel";
 import { useContentDeadline } from "./useContentDeadline";
+import { usePollInterval } from "./usePollInterval";
 type Observation = components["schemas"]["McpObservation"];
 const label = (value: string) => value.replaceAll("_", " ");
 
@@ -65,6 +66,7 @@ export function McpObservations({
   disposition: string;
   onInspectChange: (opened: boolean) => void;
 }) {
+  const pollFast = usePollInterval("fast");
   const [offset, setOffset] = useState(0);
   const [viewing, setViewing] = useState<Observation | null>(null);
   const query = useQuery({
@@ -76,7 +78,7 @@ export function McpObservations({
           signal,
         }),
       ),
-    refetchInterval: 2000,
+    refetchInterval: pollFast,
     retry: false,
     gcTime: 0,
   });

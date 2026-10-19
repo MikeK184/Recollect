@@ -28,10 +28,12 @@ import {
   useRunnerCatalogue,
 } from "./features/connections/RunnerConnections";
 import "./features/connections/private-runners.css";
+import { usePollInterval } from "./usePollInterval";
 
 type Runner = components["schemas"]["McpPrivateRunner"];
 type Device = components["schemas"]["Device"];
 export function usePrivateRunners(brain: string) {
+  const pollNormal = usePollInterval("normal");
   return useQuery({
     queryKey: ["mcp", brain, "private-runners"],
     queryFn: async ({ signal }) =>
@@ -41,7 +43,7 @@ export function usePrivateRunners(brain: string) {
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });
@@ -113,6 +115,7 @@ export function McpPrivateRunners({
   canConfigure: boolean;
   onInspectorChange?: (open: boolean) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const runners = usePrivateRunners(brain.id);
   const catalogue = useRunnerCatalogue(brain.id);
   const cache = useQueryClient();
@@ -128,7 +131,7 @@ export function McpPrivateRunners({
       result(await client.GET("/api/devices", { signal })),
     enabled: canConfigure,
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
   });
   useEffect(() => {
     onInspectorChange?.(!!edit);

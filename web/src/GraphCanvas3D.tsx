@@ -26,7 +26,6 @@ import type { GraphDisplayGroup } from "./GraphRenderer";
 import { palette, fonts } from "./design/tokens";
 import {
   spatialModel,
-  spatialTopology,
   type SpatialModel,
   type SpatialNode,
   type SpatialLink,
@@ -59,6 +58,18 @@ function disposeLabel(object: ObjectGroup) {
     object.remove(label);
   }
 }
+// A label is rebuilt only when its text or on-screen scale changes.
+function ensureLabel(object: ObjectGroup, text: string, scale: number) {
+  const existing = object.getObjectByName("evidence-label");
+  if (
+    existing instanceof Sprite &&
+    existing.userData.text === text &&
+    existing.userData.scale === scale
+  )
+    return;
+  disposeLabel(object);
+  addLabel(object, text, scale);
+}
 function addLabel(object: ObjectGroup, text: string, scale: number) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
@@ -85,6 +96,7 @@ function addLabel(object: ObjectGroup, text: string, scale: number) {
   // another mounted view or retaining an old WebGLRenderer.
   label.geometry = label.geometry.clone();
   label.name = "evidence-label";
+  label.userData = { text, scale };
   label.scale.set((scale * canvas.width) / canvas.height, scale, 1);
   label.position.set(0, 14, 0);
   label.renderOrder = 2;
@@ -124,8 +136,10 @@ export default function GraphCanvas3D({
   displayGroups,
   session,
   onFailure,
+  topology,
 }: GraphCanvasProps & {
   displayGroups: GraphDisplayGroup[];
+  topology: string;
   session: MutableRefObject<SpatialSession>;
   onFailure: () => void;
 }) {
@@ -157,7 +171,6 @@ export default function GraphCanvas3D({
     52 /
     (Math.max(1, size.height) *
       (graph.current?.camera().projectionMatrix.elements[5] ?? 2.145));
-  const topology = spatialTopology(nodes, edges, displayGroups);
   const currentTopology = useRef(topology);
   currentTopology.current = topology;
   const restored = useRef(session.current.value?.topology === topology);
@@ -178,6 +191,8 @@ export default function GraphCanvas3D({
     // Only topology changes create mutable inputs; inspection never reheats.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topology]);
+  // Every node shares one sphere; only materials are per node.
+  const sphere = useMemo(() => new SphereGeometry(5, 10, 8), []);
   const nodeObjects = useMemo(
     () =>
       new Map(
@@ -185,14 +200,14 @@ export default function GraphCanvas3D({
           const object = new ObjectGroup();
           object.add(
             new Mesh(
-              new SphereGeometry(5, 10, 8),
+              sphere,
               new MeshLambertMaterial({ color: baseColor(node.kind) }),
             ),
           );
           return [node.id, object] as const;
         }),
       ),
-    [model],
+    [model, sphere],
   );
   const objectFor = useCallback(
     (node: SpatialNode) => nodeObjects.get(node.id)!,
@@ -243,13 +258,13 @@ export default function GraphCanvas3D({
       mesh.scale.setScalar(
         highlighted ? 1.5 : nodePath.has(node.id) ? 1.25 : 1,
       );
-      disposeLabel(object);
       if (
         highlighted ||
         hover === node.id ||
         (model.nodes.length <= 12 && !choice && displayGroups.length === 0)
       )
-        addLabel(object, node.label, labelScale);
+        ensureLabel(object, node.label, labelScale);
+      else disposeLabel(object);
     }
     for (const link of model.links) {
       const edge = edgeLookup.get(link.id);
@@ -277,12 +292,12 @@ export default function GraphCanvas3D({
           SphereGeometry,
           MeshLambertMaterial
         >;
-        mesh.geometry.dispose();
         mesh.material.dispose();
       }
     },
     [nodeObjects],
   );
+  useEffect(() => () => sphere.dispose(), [sphere]);
 
   useLayoutEffect(() => {
     const holder = container.current,
@@ -448,8 +463,15 @@ export default function GraphCanvas3D({
       topicHeadings.current.visible = !choice && !hover && !hoverEdge;
   }, [choice, hover, hoverEdge]);
 
+  const modelTopology = useRef(topology);
   useEffect(() => {
     setSettled(false);
+    // A different node set (for example the shortest path) re-fits once it
+    // settles, as a fresh mount would.
+    if (modelTopology.current !== topology) {
+      modelTopology.current = topology;
+      needsInitialFit.current = true;
+    }
     if (model.nodes.length === 0) {
       needsInitialFit.current = true;
       previous.current = undefined;

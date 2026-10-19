@@ -25,6 +25,7 @@ import { AgentAccessPanel } from "../../DevicesPanel";
 import { TeamPanel } from "../../TeamPanel";
 import { useWorkspace } from "../../app/context";
 import "./control-panel.css";
+import { usePollInterval } from "../../usePollInterval";
 
 const hostLabel = (kind?: string | null) =>
   ({ codex: "Codex", opencode: "OpenCode", claude_code: "Claude Code" })[
@@ -36,6 +37,7 @@ const time = (value?: string | null) =>
   value ? new Date(value).toLocaleString() : "No recorded use";
 
 export function AgentsGlobalPage() {
+  const pollNormal = usePollInterval("normal");
   const reduced = useReducedMotion(),
     navigate = useNavigate();
   const searchStr = useRouterState({
@@ -51,7 +53,7 @@ export function AgentsGlobalPage() {
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/agents", { signal })),
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
   });
   const agents = roster.isError

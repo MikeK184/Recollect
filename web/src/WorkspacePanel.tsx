@@ -34,6 +34,8 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { RepositoryDialog } from "./PublicationPanel";
 import { McpAgentSetup } from "./McpAgentSetup";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue } from "./catalogueQueries";
 
 type Catalogue = components["schemas"]["WorkspaceCatalogue"];
 type Task = components["schemas"]["WorkspaceTask"];
@@ -157,34 +159,16 @@ export function WorkspacePanel({
     handoff,
     onInspectorChange,
   ]);
-  const catalogue = useQuery({
-    queryKey: [
-      "workspace",
-      brain.id,
-      workspace,
-      checkoutOffset,
-      taskOffset,
-      checkoutOnly,
-    ],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          signal,
-          params: {
-            path: { brain: brain.id },
-            query: {
-              workspace_id: workspace ?? undefined,
-              checkout_offset: checkoutOffset,
-              task_offset: taskOffset,
-              include_repositories: checkoutOnly ? false : undefined,
-            },
-          },
-        }),
-      ),
-    refetchInterval: 4000,
-    retry: false,
-    gcTime: 0,
-  });
+  const catalogue = useWorkspaceCatalogue(
+    brain.id,
+    {
+      workspace_id: workspace ?? undefined,
+      checkout_offset: checkoutOffset,
+      task_offset: taskOffset,
+      include_repositories: checkoutOnly ? false : undefined,
+    },
+    { poll: "normal" },
+  );
   const refresh = () => {
     for (const key of [
       "workspace",
@@ -805,6 +789,7 @@ function TaskDialog({
   onFork: (task: Task) => void;
   diagnosticsOnly?: boolean;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [scopeOffset, setScopeOffset] = useState(0);
   const [operationOffset, setOperationOffset] = useState(0);
   const [purpose, setPurpose] = useState<string | null>("context");
@@ -824,7 +809,7 @@ function TaskDialog({
           },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const begin = useMutation({
     mutationFn: async () =>

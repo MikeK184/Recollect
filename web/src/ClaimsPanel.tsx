@@ -46,6 +46,8 @@ import {
   kindContent,
   memoryKinds,
 } from "./MemoryForms";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue } from "./catalogueQueries";
 type Content = components["schemas"]["ClaimContent"];
 type Revision = components["schemas"]["ClaimRevision"];
 type View = components["schemas"]["ClaimView"];
@@ -181,11 +183,12 @@ export function EvidenceDialog({
   returnLabel?: string;
   eraseSource?: boolean;
 }) {
+  const pollNormal = usePollInterval("normal");
   const query = useQuery({
     queryKey: ["claim-evidence-detail", brain.id, evidence.kind, evidence.id],
     gcTime: 0,
     retry: false,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET(
@@ -871,6 +874,7 @@ export function ClaimDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [knowledge, setKnowledge] = useState<string | undefined>(knowledgeAt);
   useEffect(() => setKnowledge(knowledgeAt), [knowledgeAt]);
   const [offset, setOffset] = useState(0);
@@ -895,7 +899,7 @@ export function ClaimDialog({
           },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });
@@ -1272,6 +1276,7 @@ export function ClaimsPanel({
   selectedId?: string | null;
   onSelectedIdChange?: (value: string | null) => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
   const [route, patchRoute] = useBrainSearch();
   const [offset, setOffset] = useState(0);
@@ -1318,17 +1323,9 @@ export function ClaimsPanel({
     patchRoute({ claim: value, revision: null, detail: null });
     onSelectedIdChange?.(value);
   };
-  const catalogue = useQuery({
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, {
     enabled: filtering || noting || structuring || route.detail === "record",
-    queryKey: ["workspace", brain.id],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          signal,
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-    refetchInterval: 4000,
+    poll: "normal",
   });
   const claims = useQuery({
     queryKey: [
@@ -1360,7 +1357,7 @@ export function ClaimsPanel({
           },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const refresh = () => {
     for (const key of ["claims", "claim", "audit", "jobs", "processing"])

@@ -29,6 +29,7 @@ import { EraseAction } from "./RetentionPanel";
 import { Markdown } from "./components/Markdown";
 import { useContentDeadline } from "./useContentDeadline";
 import { ChevronDown } from "lucide-react";
+import { usePollInterval } from "./usePollInterval";
 
 type Settings = components["schemas"]["CaptureSettings"];
 type Event = components["schemas"]["CaptureEventView"];
@@ -522,6 +523,7 @@ export function CapturedSource({
   version: string;
   close: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const evidence = useQuery({
     queryKey: ["capture-source", brain.id, source, version],
     queryFn: async ({ signal }) =>
@@ -531,7 +533,7 @@ export function CapturedSource({
           { signal, params: { path: { brain: brain.id, source, version } } },
         ),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     gcTime: 0,
     retry: false,
   });
@@ -604,6 +606,7 @@ export function CapturePanel({
   onInspectorChange?: (open: boolean) => void;
   compactTimeline?: boolean;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [editing, setEditing] = useState(false);
   const [coverage, setCoverage] = useState(initialCoverage);
   const [kind, setKind] = useState<string | null>(null);
@@ -637,7 +640,7 @@ export function CapturePanel({
           params: { path },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const events = useQuery({
     queryKey: ["capture-events", brain.id, deviceId, offset, kind],
@@ -654,7 +657,7 @@ export function CapturePanel({
           },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const managed = useQuery({
     queryKey: ["capture-managed", brain.id],
@@ -668,7 +671,7 @@ export function CapturePanel({
           params: { path },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   const devices = useQuery({
     queryKey: ["capture-devices", brain.id, deviceOffset],
@@ -682,7 +685,7 @@ export function CapturePanel({
           params: { path, query: { offset: deviceOffset } },
         }),
       ),
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
   });
   useEffect(() => {
     setOffset(0);

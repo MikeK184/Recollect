@@ -20,6 +20,7 @@ import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { ClaimEditor, EvidenceDialog } from "./ClaimsPanel";
 import { useIdempotency } from "./useIdempotency";
+import { usePollInterval } from "./usePollInterval";
 type Content = components["schemas"]["ClaimContent"];
 type Revision = components["schemas"]["ClaimRevision"];
 type View = components["schemas"]["ClaimView"];
@@ -70,12 +71,13 @@ function InspectConflict({
   EvidenceViewer: EvidenceViewer;
   onClose: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const [selected, setSelected] = useState<Evidence | null>(null);
   const query = useQuery({
     queryKey: ["review-evidence", brain.id, claim.id],
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/claims/{claim}", {
@@ -174,6 +176,7 @@ export function ClaimReviewDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const r = view.revision;
   const [openedCurrent] = useState(current);
   const writable = brain.role !== "reader" && !brain.archived && openedCurrent;
@@ -206,7 +209,7 @@ export function ClaimReviewDialog({
     queryKey: ["claim-review", brain.id, r.claim_id, offset],
     retry: false,
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/claims/{claim}/review", {

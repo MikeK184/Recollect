@@ -23,6 +23,7 @@ import {
   type TerminalStatusTone,
 } from "./components/TerminalCard";
 import "./features/connections/call-inspection.css";
+import { usePollInterval } from "./usePollInterval";
 type Call = components["schemas"]["McpCall"];
 type Resolution = components["schemas"]["McpResolution"];
 const callStateTone = (state: string): TerminalStatusTone =>
@@ -91,6 +92,7 @@ export function McpCallDialog({
   close: () => void;
   select: (id: string) => void;
 }) {
+  const pollFast = usePollInterval("fast");
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export function McpCallDialog({
           signal,
         }),
       ),
-    refetchInterval: 2000,
+    refetchInterval: pollFast,
     retry: false,
     gcTime: 0,
   });

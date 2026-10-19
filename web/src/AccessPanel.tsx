@@ -18,6 +18,7 @@ import {
 import { MoreHorizontal, Plus, Users } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
+import { usePollInterval } from "./usePollInterval";
 const roles = ["reader", "writer", "admin"];
 type Action = {
   kind: "grant" | "remove" | "group" | "ungroup" | "owner";
@@ -33,6 +34,7 @@ export function AccessPanel({
   embedded?: boolean;
 }) {
   const [opened, setOpened] = useState(false);
+  const pollNormalWhen0 = usePollInterval("normal", opened || embedded);
   const [editor, setEditor] = useState<Action | null>(null);
   const [username, setUsername] = useState("");
   const [role, setRole] = useState("reader");
@@ -53,7 +55,7 @@ export function AccessPanel({
           signal,
         }),
       ),
-    refetchInterval: opened || embedded ? 5000 : false,
+    refetchInterval: pollNormalWhen0,
     retry: false,
     gcTime: 0,
   });

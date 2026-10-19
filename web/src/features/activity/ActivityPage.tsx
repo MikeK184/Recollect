@@ -32,6 +32,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../../components/AsyncState";
+import { usePollInterval } from "../../usePollInterval";
 const tabs = [
   { value: "capture", label: "Captured activity" },
   { value: "pipeline", label: "Pipeline" },
@@ -43,6 +44,7 @@ const tabs = [
   { value: "timeline", label: "Administrative timeline" },
 ] as const;
 export function ActivityPage() {
+  const pollNormal = usePollInterval("normal");
   const brain = useBrain();
   const session = useWorkspace();
   const navigate = useNavigate();
@@ -52,7 +54,7 @@ export function ActivityPage() {
     enabled: !!search.device && (!search.tab || search.tab === "capture"),
     retry: false,
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/agents", {
@@ -210,6 +212,7 @@ function destination(event: Audit) {
   return null;
 }
 function Timeline() {
+  const pollNormal = usePollInterval("normal");
   const brain = useBrain();
   const [selected, setSelected] = useState<string | null>(null);
   const query = useQuery({
@@ -222,7 +225,7 @@ function Timeline() {
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     gcTime: 0,
   });
   if (brain.role !== "admin")

@@ -22,6 +22,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../../components/AsyncState";
+import { usePollInterval } from "../../usePollInterval";
 
 /**
  * The view filter is also the historical collapse: archived Brains are only
@@ -60,6 +61,7 @@ const views = [
 ] as const;
 
 export function BrainsPage() {
+  const pollNormal = usePollInterval("normal");
   const user = useWorkspace();
   const navigate = useNavigate();
   const cache = useQueryClient();
@@ -69,7 +71,7 @@ export function BrainsPage() {
   const reduced = useReducedMotion();
   const query = useQuery({
     queryKey: ["brains"],
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(await client.GET("/api/brains", { signal })),
   });

@@ -46,6 +46,8 @@ import { ManagedMemoryPanel } from "../settings/ManagedMemoryPanel";
 import { Markdown } from "../../components/Markdown";
 import { EvidenceNotes } from "../../components/EvidenceNotes";
 import "./ask.css";
+import { usePollInterval } from "../../usePollInterval";
+import { useWorkspaceCatalogue, useEvidenceList } from "../../catalogueQueries";
 
 type Request = components["schemas"]["RecallRequest"];
 type Answer = components["schemas"]["AnswerResponse"];
@@ -151,6 +153,8 @@ function AskConversation({
   question: string;
   setQuestion: (value: string) => void;
 }) {
+  const pollSlow = usePollInterval("slow");
+  const pollFast = usePollInterval("fast");
   const cache = useQueryClient();
   const [request, setRequest] = useState<Request>(initialRequest);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -177,7 +181,7 @@ function AskConversation({
   const mounted = useRef(true);
   const policies = useQuery({
     queryKey: ["models-policy", brain.id],
-    refetchInterval: 4000,
+    refetchInterval: pollSlow,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/models/policy", {
@@ -192,23 +196,15 @@ function AskConversation({
     policy.purposes.includes("answering") &&
     policy.content_classes.includes("query") &&
     !!policies.data?.installed.credentials_present;
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id, "ask"],
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, {
     enabled: filtersOpen || turns.length > 0,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
   });
   const validity = useQueries({
     queries: turns.map((turn) => ({
       queryKey: ["answer-status", brain.id, turn.id],
       gcTime: 0,
       retry: false,
-      refetchInterval: 3000,
+      refetchInterval: pollFast,
       queryFn: async ({ signal }: { signal: AbortSignal }) =>
         result(
           await client.GET("/api/brains/{brain}/answer-requests/{id}", {
@@ -900,28 +896,8 @@ function AskFilters({
   request: Request;
   change: (value: Request) => void;
 }) {
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id, "ask"],
-    enabled: opened,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-  });
-  const groups = useQuery({
-    queryKey: ["evidence", brain.id, "ask"],
-    enabled: opened,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-  });
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, { enabled: opened });
+  const groups = useEvidenceList(brain.id, undefined, { enabled: opened });
   const [manifestOffset, setManifestOffset] = useState(0);
   const manifests = useQuery({
     queryKey: [

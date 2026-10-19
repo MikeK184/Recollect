@@ -3,6 +3,7 @@ import { Alert, Button, Group, Select, Stack, Textarea } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { client, result, RequestError } from "./api";
 import type { components } from "./api-schema";
+import { useEvidenceList } from "./catalogueQueries";
 type Input = components["schemas"]["McpResolveInput"];
 export function McpResolveForm({
   brain,
@@ -22,18 +23,7 @@ export function McpResolveForm({
   const [pending, setPending] = useState<Input | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const sources = useQuery({
-    queryKey: ["mcp", brain, "resolution-sources", offset],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/evidence", {
-          params: { path: { brain }, query: { offset } },
-          signal,
-        }),
-      ),
-    retry: false,
-    gcTime: 0,
-  });
+  const sources = useEvidenceList(brain, { offset });
   const versions = useQuery({
     queryKey: ["mcp", brain, "resolution-versions", source, versionOffset],
     queryFn: async ({ signal }) =>

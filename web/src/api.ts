@@ -14,10 +14,26 @@ export const client = createClient<paths>({
   baseUrl: "",
   credentials: "same-origin",
 });
+let unauthorized: (() => void) | null = null;
+// The app registers what an expired session means; reads never decide it alone.
+export const onUnauthorized = (handler: (() => void) | null) => {
+  unauthorized = handler;
+};
 client.use({
   onRequest({ request }) {
     if (csrf) request.headers.set("X-CSRF-Token", csrf);
     return request;
+  },
+  onResponse({ request, response }) {
+    // Sign-in and session reads report their own 401.
+    if (
+      response.status === 401 &&
+      !new URL(request.url).pathname.startsWith("/api/auth/")
+    ) {
+      setCsrf("");
+      unauthorized?.();
+    }
+    return response;
   },
 });
 

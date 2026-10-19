@@ -43,11 +43,14 @@ import {
   type SkillSummary,
 } from "./skillDraft";
 import "./skills.css";
+import { usePollInterval } from "../../usePollInterval";
+import { useWorkspaceCatalogue } from "../../catalogueQueries";
 
 const denied = (error: Error | null) =>
   error instanceof RequestError && [401, 403, 404].includes(error.status);
 
 export function SkillsPanel() {
+  const pollNormal = usePollInterval("normal");
   const brain = useBrain();
   const cache = useQueryClient();
   const admin = brain.role === "admin" && !brain.archived;
@@ -60,18 +63,7 @@ export function SkillsPanel() {
     draft: SkillInput;
   } | null>(null);
   const [notice, setNotice] = useState("");
-  const inventory = useQuery({
-    queryKey: ["workspace", brain.id, "skills"],
-    retry: false,
-    gcTime: 0,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          signal,
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
+  const inventory = useWorkspaceCatalogue(brain.id);
   const catalogue = useQuery({
     queryKey: ["mcp", brain.id, "skills"],
     retry: false,
@@ -95,7 +87,7 @@ export function SkillsPanel() {
     ],
     retry: false,
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/skills", {
@@ -122,7 +114,7 @@ export function SkillsPanel() {
     enabled: !!selected && !skills.isError,
     retry: false,
     gcTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/skills/{id}", {

@@ -23,8 +23,10 @@ import {
   LoadingState,
 } from "../../components/AsyncState";
 import { RepositoryDialog } from "../../PublicationPanel";
+import { usePollInterval } from "../../usePollInterval";
 
 export function RepositoryBrowser({ brain }: { brain: Brain }) {
+  const pollNormal = usePollInterval("normal");
   const [route, patch] = useBrainSearch();
   const { select } = useKnowledgeSelection();
   const [text, setText] = useState("");
@@ -42,7 +44,7 @@ export function RepositoryBrowser({ brain }: { brain: Brain }) {
   const catalogue = useQuery({
     queryKey: ["repository-catalogue", brain.id, query, offset],
     gcTime: 0,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/workspace/repositories", {

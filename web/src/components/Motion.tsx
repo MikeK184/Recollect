@@ -1,11 +1,4 @@
-import {
-  Children,
-  cloneElement,
-  isValidElement,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import type { CSSProperties } from "react";
 
 // Entrance stagger step in ms; mirrors --rc-stagger-step in the token layer.
 const STAGGER_STEP = 40;
@@ -18,39 +11,4 @@ export function staggerStyle(index: number): CSSProperties {
   return {
     animationDelay: `${Math.min(index, MAX_STAGGER_STEPS) * STAGGER_STEP}ms`,
   };
-}
-
-/** Fade+rise entrance with a stagger for a list of children. Each child gets
- * the `rc-enter` class and an incremental animation delay; non-element nodes
- * are wrapped in a plain div so they animate too. */
-export function Stagger({
-  className,
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
-  const items = Children.toArray(children);
-  return (
-    <div className={className ? `rc-stagger ${className}` : "rc-stagger"}>
-      {items.map((child, index) => {
-        const delay = staggerStyle(index);
-        if (!isValidElement(child))
-          return (
-            <div key={index} className="rc-enter" style={delay}>
-              {child}
-            </div>
-          );
-        const element = child as ReactElement<{
-          className?: string;
-          style?: CSSProperties;
-        }>;
-        const props = element.props;
-        return cloneElement(element, {
-          className: `rc-enter ${props.className ?? ""}`.trim(),
-          style: { ...props.style, ...delay },
-        });
-      })}
-    </div>
-  );
 }

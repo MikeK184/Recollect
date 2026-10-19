@@ -20,6 +20,8 @@ import type { components } from "./api-schema";
 import { ContributionPicker, combineContributions } from "./MemoryForms";
 import { ClaimDialog } from "./ClaimsPanel";
 import { useIdempotency } from "./useIdempotency";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue } from "./catalogueQueries";
 type View = components["schemas"]["ClaimView"];
 function GenerateDialog({
   brain,
@@ -107,6 +109,7 @@ function GenerateDialog({
   );
 }
 export function HandoversPanel({ brain }: { brain: Brain }) {
+  const pollNormal = usePollInterval("normal");
   const [offset, setOffset] = useState(0);
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -115,7 +118,7 @@ export function HandoversPanel({ brain }: { brain: Brain }) {
   const cache = useQueryClient();
   const runs = useQuery({
     queryKey: ["handovers", brain.id, offset],
-    refetchInterval: 3000,
+    refetchInterval: pollNormal,
     queryFn: async () =>
       result(
         await client.GET("/api/brains/{brain}/handovers", {
@@ -123,15 +126,7 @@ export function HandoversPanel({ brain }: { brain: Brain }) {
         }),
       ),
   });
-  const catalogue = useQuery({
-    queryKey: ["workspace", brain.id],
-    queryFn: async () =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-        }),
-      ),
-  });
+  const catalogue = useWorkspaceCatalogue(brain.id);
   const refresh = () => {
     for (const key of [
       "handovers",

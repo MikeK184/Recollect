@@ -6,6 +6,8 @@ import type { MouseEvent } from "react";
 import { client, result, RequestError, type Brain } from "../../api";
 import type { components } from "../../api-schema";
 import { McpConnectorIcon } from "../../components/McpConnectorIcon";
+import { usePollInterval } from "../../usePollInterval";
+import { useWorkspaceCatalogue } from "../../catalogueQueries";
 
 type Catalogue = components["schemas"]["McpCatalogue"];
 type Connection = Catalogue["connections"][number];
@@ -13,6 +15,7 @@ type Profile = Catalogue["profiles"][number];
 export type RunnerCatalogue = ReturnType<typeof useRunnerCatalogue>;
 
 export function useRunnerCatalogue(brain: string) {
+  const pollNormal = usePollInterval("normal");
   return useQuery({
     queryKey: ["mcp", brain, "catalogue"],
     queryFn: async ({ signal }) =>
@@ -22,7 +25,7 @@ export function useRunnerCatalogue(brain: string) {
           signal,
         }),
       ),
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     retry: false,
     gcTime: 0,
   });
@@ -39,19 +42,7 @@ export function RunnerConnections({
   catalogue: RunnerCatalogue;
   disabled?: boolean;
 }) {
-  const workspace = useQuery({
-    queryKey: ["mcp", brain.id, "environments"],
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/workspace", {
-          params: { path: { brain: brain.id } },
-          signal,
-        }),
-      ),
-    refetchInterval: 5000,
-    retry: false,
-    gcTime: 0,
-  });
+  const workspace = useWorkspaceCatalogue(brain.id, undefined, { poll: "normal" });
   const data = catalogue.error ? undefined : catalogue.data;
   const assigned =
     data?.connections.filter((c) => c.private_runner_id === runner) ?? [];
@@ -166,6 +157,7 @@ function RunnerConnection({
   scope: string;
   disabled: boolean;
 }) {
+  const pollNormal = usePollInterval("normal");
   const group = groups.find((p) => p.enabled && p.rights.use_profile);
   const enabled =
     canConfigure ||
@@ -255,7 +247,7 @@ function RunnerConnection({
         ? [408, 429, 500, 502, 503, 504].includes(error.status)
         : error instanceof TypeError),
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2000),
-    refetchInterval: (query) => (query.state.error ? false : 5000),
+    refetchInterval: (query) => (query.state.error ? false : pollNormal),
     gcTime: 0,
   });
   const unavailable = tools.data?.some(

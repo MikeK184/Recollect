@@ -13,7 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import { useIdempotency } from "./useIdempotency";
-import { TriangleAlert } from "lucide-react";
+import { usePollInterval } from "./usePollInterval";
 
 const label = (text: string) => text.replaceAll("_", " ");
 type Action =
@@ -21,6 +21,7 @@ type Action =
   | { kind: "retry"; batch: string };
 
 export function SemanticPanel({ brain }: { brain: Brain }) {
+  const pollFast = usePollInterval("fast");
   const [offset, setOffset] = useState(0);
   const cache = useQueryClient();
   const command = useIdempotency();
@@ -32,7 +33,7 @@ export function SemanticPanel({ brain }: { brain: Brain }) {
           params: { path: { brain: brain.id }, query: { offset } },
         }),
       ),
-    refetchInterval: 3000,
+    refetchInterval: pollFast,
   });
   const action = useMutation({
     mutationFn: async (input: Action) => {
@@ -229,92 +230,5 @@ export function SemanticPanel({ brain }: { brain: Brain }) {
         </>
       )}
     </Stack>
-  );
-}
-
-export function SemanticSummary({
-  brain,
-  inspect,
-}: {
-  brain: Brain;
-  inspect: () => void;
-}) {
-  const query = useQuery({
-    queryKey: ["semantic-summary", brain.id],
-    gcTime: 0,
-    retry: false,
-    refetchInterval: 4000,
-    queryFn: async ({ signal }) =>
-      result(
-        await client.GET("/api/brains/{brain}/semantic", {
-          params: { path: { brain: brain.id }, query: { summary: true } },
-          signal,
-        }),
-      ),
-  });
-  const data = query.error ? undefined : query.data;
-  const reason: Record<string, string> = {
-    semantic_work_pending: "Some approved content is still being indexed.",
-    semantic_inputs_unavailable: "Some inputs are blocked or failed.",
-    semantic_representation_truncated:
-      "Some indexed inputs were shortened to fit the representation limit.",
-    semantic_discovery_pending:
-      "Some eligible content has not been discovered yet.",
-    semantic_capacity_reached: "The current index has reached its capacity.",
-  };
-  return (
-    <aside
-      className="management-surface ai-search-coverage"
-      aria-label="Semantic search coverage"
-    >
-      <Group justify="space-between" mb="md">
-        <h3 className="management-title">Search coverage</h3>
-        {data && (
-          <Badge
-            color={data.state === "ready" ? "brand" : "yellow"}
-            leftSection={
-              data.state !== "ready" ? <TriangleAlert size={13} /> : undefined
-            }
-          >
-            {data.state === "ready" ? "Ready" : "Needs attention"}
-          </Badge>
-        )}
-      </Group>
-      {query.isPending && <Loader size="sm" mt="md" />}
-      {query.error && (
-        <Alert color="red" mt="md">
-          {query.error.message}
-        </Alert>
-      )}
-      {data && (
-        <>
-          <div className="management-stats">
-            <div className="management-stat">
-              <strong>{data.counts.ready.toLocaleString()}</strong>
-              <span>Represented</span>
-            </div>
-            <div className="management-stat blocked-stat">
-              <strong>
-                {(data.counts.blocked + data.counts.failed).toLocaleString()}
-              </strong>
-              <span>Blocked or failed</span>
-            </div>
-          </div>
-          {data.coverage.length > 0 && (
-            <div className="semantic-coverage-note">
-              <p>Coverage is incomplete.</p>
-              {data.coverage.map((value) => (
-                <p key={value}>{reason[value] ?? label(value)}</p>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-      <Button mt="md" variant="default" onClick={inspect}>
-        {data && data.counts.blocked + data.counts.failed > 0
-          ? `Review ${data.counts.blocked + data.counts.failed} items →`
-          : "Inspect search coverage →"}
-      </Button>
-    </aside>
   );
 }

@@ -31,8 +31,10 @@ import { AgentsRoster } from "./AgentsRoster";
 import { useBrainSearch } from "../../app/useBrainSearch";
 import { SkillsPanel } from "../skills/SkillsPanel";
 import "./agents.css";
+import { usePollInterval } from "../../usePollInterval";
 
 export function AgentsPage() {
+  const pollNormal = usePollInterval("normal");
   const brain = useBrain();
   const [host, setHost] = useState("codex");
   const [directory, setDirectory] = useState("/path/to/recollect-plugin");
@@ -46,7 +48,7 @@ export function AgentsPage() {
     enabled: !!device,
     gcTime: 0,
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET("/api/brains/{brain}/agents", {

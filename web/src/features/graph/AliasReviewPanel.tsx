@@ -14,6 +14,7 @@ import type { components } from "../../api-schema";
 import { client, result, type Brain } from "../../api";
 import { useContentDeadline } from "../../useContentDeadline";
 import { useIdempotency } from "../../useIdempotency";
+import { useQualifiedRead } from "./useQualifiedRead";
 
 type Scope = components["schemas"]["GraphSelection"];
 type View = components["schemas"]["AliasView"];
@@ -58,9 +59,6 @@ export function AliasReviewPanel({
     [history, setHistory] = useState<(Cursor | null)[]>([]),
     [nonce, setNonce] = useState(0),
     [busy, setBusy] = useState(false);
-  const [read, setRead] = useState<{ key: string; view?: View; error?: Error }>(
-    { key: "" },
-  );
   const requestKey = JSON.stringify([
     brain.id,
     scope,
@@ -72,6 +70,25 @@ export function AliasReviewPanel({
   active.current = requestKey;
   const callbacks = useRef({ onChanged, onFailure });
   callbacks.current = { onChanged, onFailure };
+  const [read, setRead] = useQualifiedRead<View>({
+    key: requestKey,
+    fallback: "Alias evidence could not be read.",
+    read: async (signal) => {
+      const next = result(
+        await client.POST("/api/brains/{brain}/organization/aliases/view", {
+          params: { path: { brain: brain.id } },
+          body: { scope, cursor, limit: 25 },
+          signal,
+        }),
+      );
+      if (next.brain_id !== brain.id || next.epoch !== epoch)
+        throw Error(
+          "Organization inputs changed. Read the current organization again.",
+        );
+      return next;
+    },
+    onError: (error) => callbacks.current.onFailure(error),
+  });
   const idem = useIdempotency();
   const expired = useContentDeadline(
     read.key === requestKey ? read.view?.expires_at : null,
@@ -84,40 +101,13 @@ export function AliasReviewPanel({
     read.view.epoch === epoch
       ? read.view
       : undefined;
+  useEffect(
+    () => () => {
+      active.current = "";
+    },
+    [],
+  );
   const writable = brain.role === "admin" || brain.role === "writer";
-  useEffect(() => {
-    const controller = new AbortController();
-    active.current = requestKey;
-    setRead({ key: requestKey });
-    void client
-      .POST("/api/brains/{brain}/organization/aliases/view", {
-        params: { path: { brain: brain.id } },
-        body: { scope, cursor, limit: 25 },
-        signal: controller.signal,
-      })
-      .then((response) => {
-        const next = result(response);
-        if (controller.signal.aborted || active.current !== requestKey) return;
-        if (next.brain_id !== brain.id || next.epoch !== epoch)
-          throw Error(
-            "Organization inputs changed. Read the current organization again.",
-          );
-        setRead({ key: requestKey, view: next });
-      })
-      .catch((error) => {
-        if (controller.signal.aborted || active.current !== requestKey) return;
-        const failure =
-          error instanceof Error
-            ? error
-            : new Error("Alias evidence could not be read.");
-        setRead({ key: requestKey, error: failure });
-        callbacks.current.onFailure(failure);
-      });
-    return () => {
-      controller.abort();
-      if (active.current === requestKey) active.current = "";
-    };
-  }, [requestKey]);
   useEffect(() => {
     if (expired)
       callbacks.current.onFailure(
@@ -151,13 +141,13 @@ export function AliasReviewPanel({
       callbacks.current.onChanged();
       if (active.current !== key) return;
       idem.reset();
-      setRead({ key: "" });
+      setRead({ key: "", pending: false });
       setNonce((value) => value + 1);
     } catch (error) {
       if (active.current !== key) return;
       const failure =
         error instanceof Error ? error : new Error("Alias review failed.");
-      setRead({ key, error: failure });
+      setRead({ key, error: failure, pending: false });
       callbacks.current.onFailure(failure);
     } finally {
       if (active.current === key) setBusy(false);

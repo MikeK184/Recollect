@@ -9,6 +9,7 @@ import { memoryKinds } from "../../MemoryForms";
 import type { components } from "../../api-schema";
 import { useContentDeadline } from "../../useContentDeadline";
 import "./tv.css";
+import { usePollInterval } from "../../usePollInterval";
 
 type View = components["schemas"]["ClaimView"];
 
@@ -73,6 +74,7 @@ function ItemContent({ view }: { view: View }) {
 }
 
 export function MemoryTv() {
+  const pollNormal = usePollInterval("normal");
   const brain = useBrain();
   const navigate = useNavigate();
   const router = useRouter();
@@ -92,7 +94,7 @@ export function MemoryTv() {
           params: { path: { brain: brain.id }, query: { offset: 0 } },
         }),
       ),
-    refetchInterval: hidden ? false : 4000,
+    refetchInterval: pollNormal,
   });
 
   const expired = useContentDeadline(claims.data?.expires_at);

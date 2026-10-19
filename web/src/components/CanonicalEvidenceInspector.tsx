@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "../api";
 import { EvidenceDialog } from "../ClaimsPanel";
 import { ErrorState, LoadingState } from "./AsyncState";
+import { usePollInterval } from "../usePollInterval";
 
 /** Resolve an exact opaque evidence ID through the authorized canonical read.
  * This also handles deep links whose source is outside the current list page. */
@@ -21,11 +22,12 @@ export function CanonicalEvidenceInspector({
   id: string;
   close: () => void;
 }) {
+  const pollNormal = usePollInterval("normal");
   const query = useQuery({
     queryKey: ["claim-evidence-detail", brain.id, kind, id],
     gcTime: 0,
     retry: false,
-    refetchInterval: 4000,
+    refetchInterval: pollNormal,
     queryFn: async ({ signal }) =>
       result(
         await client.GET(

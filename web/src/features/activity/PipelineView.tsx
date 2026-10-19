@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo } from "react";
+import { useEffect, useMemo, useRef, useState, memo } from "react";
 import {
   Alert,
   Button,
@@ -56,6 +56,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import "./pipeline.css";
 import { useStableRows } from "../../components/useStableRows";
+import { usePollInterval } from "../../usePollInterval";
 
 type StageData = {
   label: string;
@@ -110,6 +111,7 @@ function ObservedEdge(props: EdgeProps<FlowEdge>) {
     </>
   );
 }
+const NO_PULSES: Partial<Record<FlowStage, number>> = {};
 const nodeTypes = { stage: Stage };
 const edgeTypes = { observed: ObservedEdge };
 function Diagram({
@@ -152,109 +154,112 @@ function Diagram({
         ? "Outcomes recorded"
         : "No memory changes"
       : "No outcome recorded";
-  const nodes: StageNode[] = [
-    {
-      id: "origin",
-      type: "stage",
-      position: { x: 0, y: 118 },
-      data: {
-        kind: "origin",
-        label: "Contributed by",
-        value: item.contributor,
-        detail: origin(item),
-        live: false,
+  const { nodes, edges } = useMemo(() => {
+    const nodes: StageNode[] = [
+      {
+        id: "origin",
+        type: "stage",
+        position: { x: 0, y: 118 },
+        data: {
+          kind: "origin",
+          label: "Contributed by",
+          value: item.contributor,
+          detail: origin(item),
+          live: false,
+        },
       },
-    },
-    {
-      id: "input",
-      type: "stage",
-      position: { x: 265, y: 118 },
-      data: {
-        kind: "input",
-        label: "Selected Brain",
-        value: brain.name,
-        detail: item.capture_id ? "Published capture" : "Source import",
-        live: false,
+      {
+        id: "input",
+        type: "stage",
+        position: { x: 265, y: 118 },
+        data: {
+          kind: "input",
+          label: "Selected Brain",
+          value: brain.name,
+          detail: item.capture_id ? "Published capture" : "Source import",
+          live: false,
+        },
       },
-    },
-    {
-      id: "processing",
-      type: "stage",
-      position: { x: 555, y: 18 },
-      data: {
-        kind: "processing",
-        label: "Source processing",
-        value: stateLabel(processing),
-        detail: item.source_version_id
-          ? "Exact source version"
-          : "No source to process",
-        live: processing === "running",
+      {
+        id: "processing",
+        type: "stage",
+        position: { x: 555, y: 18 },
+        data: {
+          kind: "processing",
+          label: "Source processing",
+          value: stateLabel(processing),
+          detail: item.source_version_id
+            ? "Exact source version"
+            : "No source to process",
+          live: processing === "running",
+        },
       },
-    },
-    {
-      id: "learning",
-      type: "stage",
-      position: { x: 805, y: 18 },
-      data: {
-        kind: "learning",
-        label: "Recollect learning",
-        value:
-          learning === "failed"
-            ? learningFailure(run?.job.error_code).label
-            : stateLabel(learning),
-        detail: run ? "Extract + reconcile" : "No learning run recorded",
-        live: learning === "running",
+      {
+        id: "learning",
+        type: "stage",
+        position: { x: 805, y: 18 },
+        data: {
+          kind: "learning",
+          label: "Recollect learning",
+          value:
+            learning === "failed"
+              ? learningFailure(run?.job.error_code).label
+              : stateLabel(learning),
+          detail: run ? "Extract + reconcile" : "No learning run recorded",
+          live: learning === "running",
+        },
       },
-    },
-    {
-      id: "memory",
-      type: "stage",
-      position: { x: 805, y: 205 },
-      data: {
-        kind: "memory",
-        label: "Memory",
-        value: memory,
-        detail:
-          run?.state === "succeeded"
-            ? `${run.accepted} accepted · ${run.proposed} proposed${run.conflicting ? ` (${run.conflicting} conflicting)` : ""}`
-            : "Only recorded results appear",
-        live: false,
+      {
+        id: "memory",
+        type: "stage",
+        position: { x: 805, y: 205 },
+        data: {
+          kind: "memory",
+          label: "Memory",
+          value: memory,
+          detail:
+            run?.state === "succeeded"
+              ? `${run.accepted} accepted · ${run.proposed} proposed${run.conflicting ? ` (${run.conflicting} conflicting)` : ""}`
+              : "Only recorded results appear",
+          live: false,
+        },
       },
-    },
-  ];
-  const edges: FlowEdge[] = [
-    {
-      id: "contribution",
-      source: "origin",
-      target: "input",
-      type: "observed",
-      data: { pulse: pulses.contribution },
-    },
-  ];
-  if (item.source_version_id)
-    edges.push({
-      id: "process",
-      source: "input",
-      target: "processing",
-      type: "observed",
-      data: { pulse: pulses.process },
-    });
-  if (run)
-    edges.push({
-      id: "learn",
-      source: "processing",
-      target: "learning",
-      type: "observed",
-      data: { pulse: pulses.learn },
-    });
-  if (run?.state === "succeeded")
-    edges.push({
-      id: "outcome",
-      source: "learning",
-      target: "memory",
-      type: "observed",
-      data: { pulse: pulses.outcome },
-    });
+    ];
+    const edges: FlowEdge[] = [
+      {
+        id: "contribution",
+        source: "origin",
+        target: "input",
+        type: "observed",
+        data: { pulse: pulses.contribution },
+      },
+    ];
+    if (item.source_version_id)
+      edges.push({
+        id: "process",
+        source: "input",
+        target: "processing",
+        type: "observed",
+        data: { pulse: pulses.process },
+      });
+    if (run)
+      edges.push({
+        id: "learn",
+        source: "processing",
+        target: "learning",
+        type: "observed",
+        data: { pulse: pulses.learn },
+      });
+    if (run?.state === "succeeded")
+      edges.push({
+        id: "outcome",
+        source: "learning",
+        target: "memory",
+        type: "observed",
+        data: { pulse: pulses.outcome },
+      });
+    return { nodes, edges };
+  }, [brain.name, item, at, pulses]);
   return (
     <div
       ref={canvas}
@@ -291,6 +296,15 @@ function Diagram({
     </div>
   );
 }
+function CheckedAgo({ since }: { since: number }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [since]);
+  return <>{`Checked ${Math.max(0, Math.floor((now - since) / 1000))}s ago`}</>;
+}
 export function PipelineView() {
   const brain = useBrain();
   return <BrainPipeline key={brain.id} brain={brain} />;
@@ -304,6 +318,7 @@ export function BrainPipeline({
   compact?: boolean;
   dashboard?: boolean;
 }) {
+  const pollFast = usePollInterval("fast");
   const reduced = useReducedMotion();
   const [visible, setVisible] = useState(() => !document.hidden),
     [now, setNow] = useState(Date.now);
@@ -326,10 +341,8 @@ export function BrainPipeline({
       clearTimeout(pulseTimer.current);
     };
     document.addEventListener("visibilitychange", update);
-    const timer = setInterval(() => setNow(Date.now()), 500);
     return () => {
       clearTimeout(pulseTimer.current);
-      clearInterval(timer);
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
@@ -356,7 +369,7 @@ export function BrainPipeline({
           ),
       };
     },
-    refetchInterval: visible ? 2000 : false,
+    refetchInterval: pollFast,
     refetchIntervalInBackground: false,
     staleTime: 0,
     gcTime: 0,
@@ -444,11 +457,13 @@ export function BrainPipeline({
         </div>
         <Group gap="xs">
           <Text size="xs" c="dimmed">
-            {data
-              ? `Checked ${Math.max(0, Math.floor((now - query.dataUpdatedAt) / 1000))}s ago`
-              : query.isPending
-                ? "Checking activity"
-                : "Updates paused"}
+            {data ? (
+              <CheckedAgo since={query.dataUpdatedAt} />
+            ) : query.isPending ? (
+              "Checking activity"
+            ) : (
+              "Updates paused"
+            )}
           </Text>
           <Button
             size="compact-xs"
@@ -537,7 +552,11 @@ export function BrainPipeline({
             brain={brain}
             item={item}
             at={data.observed_at}
-            pulses={!visible || reduced ? {} : (changed.get(item.id) ?? {})}
+            pulses={
+              !visible || reduced
+                ? NO_PULSES
+                : (changed.get(item.id) ?? NO_PULSES)
+            }
             onInspect={() => {
               setSelected(item.id);
               setInspecting(true);
