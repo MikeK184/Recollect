@@ -138,6 +138,8 @@ class Validator:
         resolved = target.resolve()
         require(resolved.is_relative_to(self.root), file, f"link leaves repository: {url}")
         relative = str(resolved.relative_to(self.root))
+        if resolved.is_relative_to(self.root / "references"):
+            return None  # ignored research checkouts exist only on maintainer machines
         require(self.path(relative).exists(), file, f"broken local link: {url}")
         return relative
 

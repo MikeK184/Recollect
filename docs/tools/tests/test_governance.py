@@ -263,6 +263,14 @@ class GovernanceTests(unittest.TestCase):
         self.replace(ACTIVE, "## Governing Sources\n", "## Governing Sources\n\n- [Vision](../../../foundation/vision.md)\n")
         self.reject("governing source is not accepted")
 
+    def test_missing_references_checkout_link_is_not_checked(self):
+        self.write("docs/mappings/evidence.md", "# Evidence\n\n[Atlas](../../references/agent-memory-atlas/content/overview.md)\n")
+        self.validate()
+
+    def test_broken_link_outside_references_is_rejected(self):
+        self.write("docs/mappings/evidence.md", "# Evidence\n\n[Gone](../../docs/missing.md)\n")
+        self.reject("broken local link")
+
     def test_backtick_pending_source_cannot_bypass_check(self):
         self.replace(ACTIVE, "## Governing Sources\n", "## Governing Sources\n\n- `docs/foundation/vision.md`\n")
         self.reject("governing source is not accepted")
