@@ -67,8 +67,8 @@ proposal, duplicate report or unused illustration. Preserve necessary historical
 citations as links to an exact Git revision. Accepted decisions/contracts,
 frozen evaluation inputs, paid-run approvals, current baselines and unresolved
 failures remain accessible in the tree, as compact receipts rather than long
-narrative ledgers. Never remove a
-failure to make a remaining slice appear complete.
+narrative ledgers. Never remove a failure to make a remaining slice appear
+complete.
 
 The 2026-10-18 documentation cleanup removed superseded studies and duplicate
 reports. It implemented no product feature, changed no product decision and

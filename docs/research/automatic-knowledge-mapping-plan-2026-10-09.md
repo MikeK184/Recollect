@@ -1,33 +1,27 @@
 # Automatic entity mapping, topics and usable graphs
 
-Status: approved; partial checkpoint committed, implementation and acceptance open
-Source comparison: 2026-10-09; implementation status reconciled 2026-10-18
-Confidence: source-verified design comparison; separate local implementation/prototype evidence below, normal-runtime acceptance open
+Status: retained research. [ADR 0020](../adr/0020-automatic-knowledge-organization.md)
+and the [organization contract](../contracts/automatic-knowledge-organization.md)
+decide and govern; current status lives only in the
+[roadmap](../roadmap/epics/index.md). This study stays because those records cite
+but do not repeat its upstream evaluations (pinned Cognee, Graphify, Graphiti and
+GLiNER2.5 sources and licenses), its stage rationale and its acceptance-test design.
+Source comparison: 2026-10-09
+Confidence: source-verified design comparison, not acceptance evidence
 Owner: graph intelligence, with evidence and memory lifecycle dependencies
 
-Implementation authorization: the user requested the full dedicated plan on
-2026-10-09. Stage 0 is owned by the active
-[concurrent preparation pack](../roadmap/execution/active/graph-concurrent-preparation.md).
-The full entity/alias/topic/navigation/invalidation objective remains unfinished.
-It was paused on 2026-10-09 and resumed in a separate implementation task on
-2026-10-18. Follow the [current roadmap](../roadmap/epics/index.md) and active
-packs for that work; this retained plan is not new acceptance evidence.
-
-The user's subsequent instruction requires product implementation in Rust.
-The Python GLiNER prototype remains development evidence. It does not select a
-mandatory Python service: candidate validation, identities, grouping,
-invalidation and serving belong in Rust. An extractor/provider adapter must
-retain the existing policy boundary and pass the fixture gates before selection.
-The [Rust Analyzer/Graft developer integration](../runbooks/development-tooling.md)
+The user's instruction requires product implementation in Rust. The Python
+GLiNER prototype remains development evidence. It does not select a mandatory
+Python service: candidate validation, identities, grouping, invalidation and
+serving belong in Rust. An extractor/provider adapter must retain the existing
+policy boundary and pass the fixture gates before selection. The
+[Rust Analyzer/Graft developer integration](../runbooks/development-tooling.md)
 supports implementation navigation; it does not implement Brain entities/topics.
 
-The [implementation progress and second two-agent review](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
-record local graph preparation, native regression results and a standalone
-GLiNER development run. Rust candidate parsing and persisted staging now have
-native direct-source privacy/restore proof, and the 10k capture test passes.
-The raw extractor failed the precision/recall gates; automatic qualified entities,
-alias decisions and topics remain in progress. Historical statements
-about the read-only study below describe that study, not subsequent installations.
+The [checkpoint mapping](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
+records the standalone GLiNER development run, which failed the precision/recall
+gates. Historical statements about the read-only study below describe that study,
+not later installations.
 
 ## Recommendation
 
@@ -330,28 +324,13 @@ It is design evidence; older system reports are not current package proof.
 
 The graph epic owns derived entities/topics/navigation. Evidence owns source and
 manual grouping semantics; memory lifecycle owns correction and erasure effects.
-[ADR 0020](../adr/0020-automatic-knowledge-organization.md) and the
-[organization contract](../contracts/automatic-knowledge-organization.md) are
-accepted, and the [organization pack](../roadmap/execution/active/graph-automatic-knowledge-mapping.md)
-exists. Rust parsing and source-bound candidate storage are implemented; automatic
-publication, semantic node qualification, aliases, topics and UI remain open.
-The accepted
-[concurrent preparation contract](../contracts/graph-concurrent-preparation.md)
-now governs the graph read/publication prerequisite; normal-runtime acceptance
-has not passed.
 An optional Python extraction service also needs an explicit adapter/runtime
 decision (`needs-adr`); it does not replace native GDS or become a mandatory
-Cognee runtime through this proposal.
-Continue under the existing accepted pack and reconcile any scope expansion
-before implementation. This research document is not an execution pack.
+Cognee runtime through this proposal. This research document is not an execution
+pack and records no delivery status.
 
-Remaining proof: held-out/domain extraction quality, Unicode and long-input model
-behavior, relation/alias accuracy, semantic-topic usefulness, incremental privacy
-and restore closure, full populated concurrent graph acceptance, Graphify coverage
-gains over Enola, and comparable answer-score improvement. Short CPU NER and
-candidate-parser tests do not establish those outcomes.
-
-The [current checkpoint](../mappings/automatic-knowledge-mapping-progress-2026-10-09.md)
-retains native checks, failed normal graph reads, model results and publication
-identity. Version: N/A; implementation checkpoint `f2673d7`. This status cleanup
-is documentation only and remains uncommitted.
+Not established by the short CPU NER and candidate-parser tests it cites: held-out
+and domain extraction quality, Unicode and long-input model behavior,
+relation/alias accuracy, semantic-topic usefulness, incremental privacy and
+restore closure, populated concurrent graph acceptance, Graphify coverage gains
+over Enola, and comparable answer-score improvement.

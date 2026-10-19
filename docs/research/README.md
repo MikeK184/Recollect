@@ -26,10 +26,11 @@ single status and priority entry point.
   human-memory cases. V3 records actual source attribution and actor metadata;
   prior frozen versions remain linked through exact supersession hashes.
 
-- [Automatic organization plan](automatic-knowledge-mapping-plan-2026-10-09.md):
-  authorized Rust entities, reversible aliases, overlapping topics, bounded graph
-  navigation and incremental lifecycle. Implementation and acceptance remain open;
-  the local GLiNER experiment failed its quality gate.
+- [Automatic organization study](automatic-knowledge-mapping-plan-2026-10-09.md):
+  pinned upstream evaluations (Cognee, Graphify, Graphiti, GLiNER2.5), stage
+  rationale and acceptance-test design behind ADR 0020 and the organization
+  contract, which govern; kept because they do not repeat that evidence. Carries
+  no delivery status.
 - [Remaining product improvement proposal](memory-product-improvement-plan-2026-10-08.md):
   outstanding quality, temporal, scale and reliability ideas, with implemented
   first-batch work distinguished from proposed follow-ups.

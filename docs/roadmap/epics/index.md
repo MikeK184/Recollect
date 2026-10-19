@@ -67,7 +67,7 @@ rows, three underlying empty sources and 21 unknown topic pairs per producer.
 
 No producer or recipe is activated. Independent scalar, budget and source
 reviews, exact cohort denominators, prior failed recipes and cleanup limits are
-in the [implementation ledger](../../mappings/graph-organization-implementation-2026-10-18.md#completed-frozen-46-source-qualification).
+in the [evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md#completed-frozen-46-source-qualification).
 
 ### Next graph work
 
@@ -130,7 +130,7 @@ Priorities order the remaining work; they do not turn a partial implementation
 into a shipped slice. Current local reliability receipts replace the older
 capture-only and failing normal-read results without removing their history.
 They do not establish deployment or real extractor/topic quality. Exact methods
-and limits are in the [implementation ledger](../../mappings/graph-organization-implementation-2026-10-18.md).
+and limits are in the [evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md).
 Unfinished product packs remain in [active](../execution/active/README.md).
 The [grouped 3D renderer](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) and
 [bounded feedback experiment](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/retrieval-attributed-feedback.md)
@@ -154,9 +154,11 @@ current behavior. Use current contracts for their exact boundaries.
 
 ## Delivery records and evidence
 
-[Archived packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) retain concrete delivered scope
-and acceptance. [Mappings](../../mappings/README.md) retain current baseline and
-open-issue evidence. Superseded studies and concepts are available at the fixed
+Each epic's slice map is the current delivery record (acceptance and validation
+inline). Shipped packs were removed from the tree on 2026-10-19 and remain in
+[Git history](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive).
+[Mappings](../../mappings/README.md) retain current baseline and open-issue
+evidence. Superseded studies and concepts are available at the fixed
 [pre-cleanup checkpoint](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
 Dates, model scores and successful host connections describe their recorded runs;
 no current connectivity or benchmark claim follows from documentation cleanup.

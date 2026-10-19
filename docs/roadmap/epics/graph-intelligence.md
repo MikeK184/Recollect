@@ -106,14 +106,14 @@ renderer belongs to the desktop epic.
 
 The [roadmap delivery summary and next actions](index.md#graph-delivery-status)
 are the concise current entry point. The
-[implementation evidence](../../mappings/graph-organization-implementation-2026-10-18.md)
-retains exact receipts, source/build identities, all 92 observations/460 mode rows
-and 21 unknown topic pairs per producer. Full acceptance stays with the
+[evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md)
+retain frozen input hashes, cost approvals, all 92 observations/460 mode rows
+and 21 unknown topic pairs per producer, and the failures. Full acceptance stays with the
 [active packs](../execution/active/README.md); version/commit are N/A/uncommitted.
 
 ## Delivery evidence
 
-[Archived packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) retain the delivered slices.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
 in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/graph-intelligence.md).
 Dated test/deployment observations are not a current runtime health claim.

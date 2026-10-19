@@ -93,7 +93,7 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
 - Shipped: N/A for the complete slice. Checkpoint f2673d7 contains earlier partial preparation; the October 18 local implementation adds bounded off-lock maintenance, short checked publication and fair restart-safe discovery. Full slice acceptance remains open.
 - Not shipped: A reviewed normal-runtime update and final integrated closeout. Local mixed 10k and both normal-data clone gates pass; these results do not establish updated installed behavior.
 - New blockers: None for independent local implementation; normal-runtime state remains unchanged.
-- Docs updated: Accepted graph contract/ADR amendment, owning epic/pack/index, [historical progress](../../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md) and [current local evidence](../../../mappings/graph-organization-implementation-2026-10-18.md).
+- Docs updated: Accepted graph contract/ADR amendment, owning epic/pack/index, [historical progress](../../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md) and [current local evidence receipts](../../../mappings/graph-organization-implementation-2026-10-18.md).
 - Validation: October 18 migration-063 mixed 10k proof passes 602/602 reads with zero errors and p95 0.459626 seconds during captures, audits, native import and two ready rebuilds. Both normal-data clone series pass 40/40 with the same hydrated payload, at p95 1.629 and 0.951 seconds. Four focused maintenance cases pass. The October 9 normal-installation failure (35/40, p95 4.027 seconds), earlier capture-only 40/40 proof and prior fixture failures remain retained; they are not the latest local repair result. Detailed workload versions and limits follow below.
 
 October 18 local evidence: all four focused autonomous maintenance cases pass.
@@ -111,8 +111,9 @@ normal-runtime observation. Current normal-data template and logical-restore
 clones each pass 40/40 reads with identical 60-node hydrated payloads at p95
 1.629 and 0.951 seconds respectively; only the destination of the logical restore
 is analyzed. Original data/schema and normal API/worker state stay unchanged.
-The [dated ledger](../../../mappings/graph-organization-implementation-2026-10-18.md)
-records the complete objective and remaining gates.
+The compact [evidence receipts](../../../mappings/graph-organization-implementation-2026-10-18.md)
+record the frozen inputs, cost approvals and failures; remaining gates are in
+the [roadmap](../../epics/index.md#graph-delivery-status).
 
 The later migration-063 regression passes 602/602 reads, zero errors and p95
 0.459626 seconds during eight captures, sixteen forced audit completions and two
