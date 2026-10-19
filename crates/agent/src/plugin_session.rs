@@ -3,7 +3,9 @@ use crate::{
     Client, StoredDevice,
     capture::CachedCaptureBinding,
     capture_scope::{HookSetup, Launch},
-    decode, plugin_skills::BoundaryResources, plugin_storage, privacy,
+    decode,
+    plugin_skills::BoundaryResources,
+    plugin_storage, privacy,
 };
 use anyhow::{Result, anyhow, ensure};
 use chrono::{DateTime, Utc};

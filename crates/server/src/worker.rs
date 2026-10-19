@@ -317,7 +317,9 @@ fn periodic<F, Fut>(
             match tokio::time::timeout(PASS_BUDGET, pass(state.clone())).await {
                 Ok(false) => {}
                 Ok(true) => tracing::warn!(name, "Maintenance pass failed; it will retry"),
-                Err(_) => tracing::warn!(name, "Maintenance pass exceeded its budget; it will retry"),
+                Err(_) => {
+                    tracing::warn!(name, "Maintenance pass exceeded its budget; it will retry")
+                }
             }
             tokio::select! { _=signal.changed()=>{}, _=tokio::time::sleep(every)=>{} }
         }
@@ -328,33 +330,90 @@ pub async fn run(state: AppState) -> anyhow::Result<()> {
     let (stop, signal) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
     let second = Duration::from_secs(1);
-    periodic(&mut tasks, &state, signal.clone(), "observations", second, |state| async move {
-        crate::mcp::runtime::observations::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "privacy", second, |state| async move {
-        crate::privacy_journal::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "autonomous", MAINTENANCE_EVERY, |state| async move {
-        crate::autonomous::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "semantic", MAINTENANCE_EVERY, |state| async move {
-        crate::semantic::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "retained mapping", MAINTENANCE_EVERY, |state| async move {
-        crate::knowledge_mapping::producer::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "graph", MAINTENANCE_EVERY, |state| async move {
-        crate::graph::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "canonical fields", MAINTENANCE_EVERY, |state| async move {
-        crate::knowledge_mapping::fields::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "analytics", MAINTENANCE_EVERY, |state| async move {
-        crate::graph::analytics::run_once(&state).await.is_err()
-    });
-    periodic(&mut tasks, &state, signal.clone(), "cleanup", MAINTENANCE_EVERY, |state| async move {
-        cleanup(&state.pool).await.is_err()
-    });
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "observations",
+        second,
+        |state| async move {
+            crate::mcp::runtime::observations::run_once(&state)
+                .await
+                .is_err()
+        },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "privacy",
+        second,
+        |state| async move { crate::privacy_journal::run_once(&state).await.is_err() },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "autonomous",
+        MAINTENANCE_EVERY,
+        |state| async move { crate::autonomous::run_once(&state).await.is_err() },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "semantic",
+        MAINTENANCE_EVERY,
+        |state| async move { crate::semantic::run_once(&state).await.is_err() },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "retained mapping",
+        MAINTENANCE_EVERY,
+        |state| async move {
+            crate::knowledge_mapping::producer::run_once(&state)
+                .await
+                .is_err()
+        },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "graph",
+        MAINTENANCE_EVERY,
+        |state| async move { crate::graph::run_once(&state).await.is_err() },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "canonical fields",
+        MAINTENANCE_EVERY,
+        |state| async move {
+            crate::knowledge_mapping::fields::run_once(&state)
+                .await
+                .is_err()
+        },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "analytics",
+        MAINTENANCE_EVERY,
+        |state| async move { crate::graph::analytics::run_once(&state).await.is_err() },
+    );
+    periodic(
+        &mut tasks,
+        &state,
+        signal.clone(),
+        "cleanup",
+        MAINTENANCE_EVERY,
+        |state| async move { cleanup(&state.pool).await.is_err() },
+    );
     for (lane, cap) in [
         ("interactive", 2),
         ("interactive", 2),
@@ -368,10 +427,15 @@ pub async fn run(state: AppState) -> anyhow::Result<()> {
         tasks.spawn(async move {
             let mut backoff = Backoff::new(Duration::from_millis(500), Duration::from_secs(cap));
             loop {
-                if *signal.borrow() { break; }
-                let worked = match run_once(&state,lane).await {
+                if *signal.borrow() {
+                    break;
+                }
+                let worked = match run_once(&state, lane).await {
                     Ok(worked) => worked,
-                    Err(_) => { tracing::warn!(lane,"Worker database call failed; retrying"); false }
+                    Err(_) => {
+                        tracing::warn!(lane, "Worker database call failed; retrying");
+                        false
+                    }
                 };
                 if worked {
                     backoff.reset();
@@ -439,7 +503,11 @@ mod tests {
             Box::pin(long_work()),
             || {
                 let call = calls.fetch_add(1, Ordering::SeqCst);
-                std::future::ready(if call < 4 { Err("pool timed out".to_string()) } else { Ok(true) })
+                std::future::ready(if call < 4 {
+                    Err("pool timed out".to_string())
+                } else {
+                    Ok(true)
+                })
             },
             LEASE,
             BEAT,

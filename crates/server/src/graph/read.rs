@@ -617,8 +617,16 @@ pub(super) async fn verify(state: &AppState, selected: &Selected) -> Result<()> 
         let (nodes, edges): (Vec<_>, Vec<_>) = match PROVEN.lock() {
             Ok(proven) => match proven.get(&g.id) {
                 Some(p) if p.epoch == epoch && p.since.elapsed() < PROOF_WINDOW => (
-                    d.nodes.iter().filter(|n| !p.nodes.contains(&n.key())).cloned().collect(),
-                    d.edges.iter().filter(|e| !p.edges.contains(&e.id)).cloned().collect(),
+                    d.nodes
+                        .iter()
+                        .filter(|n| !p.nodes.contains(&n.key()))
+                        .cloned()
+                        .collect(),
+                    d.edges
+                        .iter()
+                        .filter(|e| !p.edges.contains(&e.id))
+                        .cloned()
+                        .collect(),
                 ),
                 _ => (d.nodes.to_vec(), d.edges.to_vec()),
             },

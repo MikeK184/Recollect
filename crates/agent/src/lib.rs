@@ -520,7 +520,10 @@ mod credential_file_store_tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(dir.join("profile.json")).unwrap().permissions().mode();
+            let mode = std::fs::metadata(dir.join("profile.json"))
+                .unwrap()
+                .permissions()
+                .mode();
             assert_eq!(mode & 0o777, 0o600);
         }
         slot.forget().unwrap();
