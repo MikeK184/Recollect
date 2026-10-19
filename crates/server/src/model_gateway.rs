@@ -2,6 +2,7 @@
 //! caller-asserted content classes or provider URLs.
 use crate::{
     AppState, artifacts, db,
+    db::admission::{self, Archived, BrainAccess, Lock},
     error::{Error, Result},
     memory,
     memory_evidence::Tx,
@@ -178,21 +179,27 @@ pub async fn source(
         provenance,
     })
 }
+fn calls_archived() -> Error {
+    policy::failure(
+        "brain_archived",
+        "Reopen this Brain before making model calls.",
+    )
+}
+/// Any member's stored principal, under the exclusive Brain lock; an archived
+/// Brain refuses model calls.
+const CALLS: BrainAccess = BrainAccess::READ
+    .with_lock(Lock::Exclusive)
+    .with_archived(Archived::Reject(calls_archived));
 async fn authorize<'a>(state: &'a AppState, context: Context) -> Result<Tx<'a>> {
-    let mut tx = db::device_tx(&state.pool, context.actor, context.device).await?;
-    db::lock_brain(&mut tx, context.brain, true).await?;
-    db::require_role(&mut tx, context.brain, false).await?;
-    let archived: bool = sqlx::query_scalar("SELECT archived FROM brains WHERE id=$1")
-        .bind(context.brain)
-        .fetch_one(&mut *tx)
-        .await?;
-    if archived {
-        return Err(policy::failure(
-            "brain_archived",
-            "Reopen this Brain before making model calls.",
-        ));
-    }
-    Ok(tx)
+    Ok(admission::brain_tx_as(
+        &state.pool,
+        context.actor,
+        context.device,
+        context.brain,
+        CALLS,
+    )
+    .await?
+    .tx)
 }
 async fn resolve(
     state: &AppState,
@@ -1194,8 +1201,14 @@ pub async fn check(
     Json(input): Json<ModelCheckInput>,
 ) -> Result<Json<ModelCheckResult>> {
     auth.require_browser()?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, true).await?;
+    let mut tx = admission::brain_tx(
+        &state.pool,
+        &auth,
+        brain,
+        BrainAccess::admin(Archived::Allow),
+    )
+    .await?
+    .tx;
     let current = policy::current(&state, &mut tx, brain).await?;
     for purpose in ["extraction", "embedding"] {
         policy::permits(&state, &current.policy, purpose, &["query".into()])?;

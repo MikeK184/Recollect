@@ -1,5 +1,10 @@
 use super::*;
-use crate::{auth::Auth, commands, db, jobs, publication};
+use crate::{
+    auth::Auth,
+    commands, db,
+    db::admission::{self, BrainAccess},
+    jobs, publication,
+};
 use axum::{
     Json as ResponseJson,
     extract::{Path, Query, State},
@@ -87,8 +92,9 @@ pub async fn get(
         offset: page.offset,
     })?;
     let tracked = tracked_ids(page.tracked_generation_ids.as_deref())?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_role(&mut tx, brain, false).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::READ)
+        .await?
+        .tx;
     let generations: Vec<Json<GraphGeneration>> = sqlx::query_scalar(&format!(
         "{STATUS_GENERATIONS} ORDER BY g.created_at DESC,g.id DESC LIMIT 20 OFFSET $2"
     ))
@@ -148,8 +154,9 @@ pub async fn rebuild(
 ) -> Result<ResponseJson<GraphGeneration>> {
     auth.require_browser()?;
     let request_key = commands::key(&headers)?;
-    let mut tx = auth.tx(&state.pool).await?;
-    db::require_writer(&mut tx, brain).await?;
+    let mut tx = admission::brain_tx(&state.pool, &auth, brain, BrainAccess::WRITE)
+        .await?
+        .tx;
     if let Some(saved) = commands::reserve(
         &mut tx,
         request_key.as_deref(),
