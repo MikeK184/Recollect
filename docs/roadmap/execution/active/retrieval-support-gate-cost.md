@@ -130,3 +130,16 @@ Implementation: authorized by the repository owner on 2026-10-19
 - Acceptance: Identical support results for members and non-members on every
   fixture, a measured per-revision cost reduction, and a passing field paging
   test without weakening any bound.
+- Results, 2026-10-19 (a loaded machine, load average about 10): as the
+  application role the previous body took 60.5-66.5 ms per revision over 66
+  revisions (3 handover roots), the definer scalar 3.0-4.0 ms and the batch
+  0.74-0.76 ms. Equivalence and policy-guard tests pass. The 218-test subset
+  (support, autonomous, capture, procedures, organization, field, recall, review,
+  feedback, knowledge graph/retrieval/combined, semantic, answers, production
+  mapping, retention, publication and surface tests; one thread, 16 MiB stack)
+  passed 197 of 215 before the change and 203 of 218 after it, the 3 added tests
+  included: no new failure, and `organization_fields` paging plus two other
+  organization tests that failed before now pass. The 15 remaining failures are
+  the baseline's. `cargo fmt`, `cargo clippy --workspace --all-targets` (no
+  warning in the changed code), `cargo test --workspace --lib` and
+  `./scripts/validate.sh` pass.
