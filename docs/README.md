@@ -76,7 +76,9 @@ foundation does not remove the need for detailed governing ADRs/contracts.
 
 1. Read this guide, applicable `AGENTS.md`, and task-relevant authority.
 2. Verify external or dependency assumptions using Context7 and primary
-   official sources. Record useful evidence and its date in mappings.
+   official sources. Record useful evidence and its date in mappings; link
+   research checkouts under `references/` by upstream URL pinned to the
+   recorded commit, since the linter does not check relative `references/` links.
 3. Resolve missing ADRs/contracts before the dependent code change.
 4. Add the slice to its owning epic. Create a pack when required below.
 5. Make the pack decision-complete and set it and the epic slice to

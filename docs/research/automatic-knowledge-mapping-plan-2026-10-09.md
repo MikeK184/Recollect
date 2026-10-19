@@ -315,8 +315,8 @@ findings. Context7 resolved Cognee, Graphify and Graphiti. A guessed Graphiti
 help URL and a guessed Cognee stage file failed; primary repository source and
 explicit pipeline files supplied the evidence instead.
 
-Atlas supports [evidence before belief](../../references/agent-memory-atlas/content/patterns/evidence-before-belief.md)
-and [scope-aware identities](../../references/agent-memory-atlas/content/patterns/scope-as-a-first-class-key.md).
+Atlas supports [evidence before belief](https://github.com/neoneye/agent-memory-atlas/blob/7eca7f7abd934c2e44bc096fc1dd0cbf94275b99/content/patterns/evidence-before-belief.md)
+and [scope-aware identities](https://github.com/neoneye/agent-memory-atlas/blob/7eca7f7abd934c2e44bc096fc1dd0cbf94275b99/content/patterns/scope-as-a-first-class-key.md).
 It is design evidence; older system reports are not current package proof.
 
 The graph epic owns derived entities/topics/navigation. Evidence owns source and
