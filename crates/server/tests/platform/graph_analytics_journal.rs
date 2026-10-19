@@ -31,7 +31,7 @@ async fn recovery_analytics_ownership_is_mirrored_before_native_work_and_retaine
     let remote = crate::recovery::fixture_script(
         root,
         &[
-            &std::env::var("RECOLLECT_TEST_RECOVERY_FIXTURE").unwrap(),
+            &crate::recovery::recovery_fixture(),
             &installation.to_string(),
             fixture["root"].as_str().unwrap(),
             &attempt.to_string(),
