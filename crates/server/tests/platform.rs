@@ -22,6 +22,8 @@ struct Login {
     csrf: String,
 }
 
+#[path = "platform/admission_locks.rs"]
+mod admission_locks;
 #[path = "platform/admission_matrix.rs"]
 mod admission_matrix;
 #[path = "platform/agents.rs"]

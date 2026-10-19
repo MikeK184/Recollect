@@ -1,3 +1,5 @@
+pub mod admission;
+
 use crate::error::Result;
 use sqlx::{PgPool, Postgres, Transaction, postgres::PgPoolOptions};
 use std::time::Duration;
@@ -292,6 +294,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "069_graph_verification_stamp",
         include_str!("../migrations/069_graph_verification_stamp.sql"),
     ),
+    (
+        "070_brain_admission",
+        include_str!("../migrations/070_brain_admission.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {
@@ -510,11 +516,7 @@ pub async fn require_writer(tx: &mut Transaction<'_, Postgres>, brain: Uuid) -> 
         return Err(crate::error::Error::forbidden());
     }
     if archived {
-        return Err(crate::error::Error(
-            axum::http::StatusCode::CONFLICT,
-            "brain_archived",
-            "Reopen this Brain before changing its evidence.",
-        ));
+        return Err(admission::evidence_archived());
     }
     Ok(())
 }
