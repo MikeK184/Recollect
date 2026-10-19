@@ -47,7 +47,7 @@ canonical gateway receipts separately. Offline checks load no credentials, make
 no provider calls and establish no production support-gate acceptance.
 
 The [evaluation contract](../../../../../docs/contracts/operations-integrated-evaluations.md#automatic-memory-support-baseline-2026-10-07)
-and [archived pack](../../../../../docs/roadmap/execution/archive/memory-support-evaluation-baseline.md)
+and [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/memory-support-evaluation-baseline.md)
 own this baseline. Production scope, eligibility, staging and erasure changes
 belong to the separately delivered support-verification slice.
 

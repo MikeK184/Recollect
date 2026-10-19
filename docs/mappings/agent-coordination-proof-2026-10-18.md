@@ -100,7 +100,7 @@ shared fail-fast lifecycle lock before the final binary rebuild and 15-check run
 
 ## Follow-up
 
-The [archived pack](../roadmap/execution/archive/mcp-agent-coordination.md) records
+The [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-agent-coordination.md) records
 delivered scope. Version: N/A; no release was requested. Commit: uncommitted.
 An installed-host or production rollout needs its own dated evidence; this
 local acceptance creates no deployment or universal host-interruption claim.

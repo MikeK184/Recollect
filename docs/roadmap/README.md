@@ -6,9 +6,11 @@ follow-ups. Product implementation and its acceptance are tracked there;
 documentation maintenance has its own delivery record.
 
 - [Epics](epics/index.md) own capabilities and slice identities.
-- [Active packs](execution/active/README.md) specify unfinished acceptance.
-- [Execution lifecycle](execution/README.md) governs scoped implementation.
-- [Archived packs](execution/archive/README.md) retain delivered scope and proof.
+- [Active packs](execution/active/README.md) specify unfinished risky slices.
+- [Execution lifecycle](execution/README.md) says when a pack is required;
+  every other slice is a row in its epic with acceptance and validation inline.
+- Shipped packs were removed from the tree on 2026-10-19; they remain in
+  [Git history](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive).
 - [Desktop design system](../foundation/design-system.md) governs the
   current light desktop presentation; [desktop operation](../runbooks/desktop-experience.md)
   describes the implemented navigation.

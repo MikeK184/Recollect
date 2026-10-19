@@ -5,7 +5,7 @@
 Verified: 2026-10-18. The [dated proof](../mappings/agent-coordination-proof-2026-10-18.md)
 records all 15 checks passing on macOS and Ubuntu 24.04, zero canonical model
 requests and owned-resource cleanup. The
-[archived pack](../roadmap/execution/archive/mcp-agent-coordination.md) records
+[archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-agent-coordination.md) records
 the delivered scope and host/deployment limits.
 
 Use a macOS checkout with Rust/Cargo, Python 3.11 or newer and the repository Docker wrapper

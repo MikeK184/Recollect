@@ -6,8 +6,8 @@ Brain managers publish skills and instructions once; connected agents discover
 applicable metadata and fetch only the guidance/resources they need. Use a server
 with the managed-skills migration and a plugin built from the same delivered
 source. An older installed plugin may lack the new hook/CLI/bridge behavior.
-The [first pack](../roadmap/execution/archive/mcp-managed-skills.md) records the
-canonical registry/cache delivery. The [native successor](../roadmap/execution/archive/mcp-native-skill-reload.md)
+The [first pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-managed-skills.md) records the
+canonical registry/cache delivery. The [native successor](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-native-skill-reload.md)
 adds actual Codex/Claude/OpenCode registration, lifetime and reload proof. These
 local fixtures do not upgrade your installed package or deploy the server.
 

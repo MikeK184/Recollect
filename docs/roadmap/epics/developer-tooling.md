@@ -26,7 +26,7 @@ which superseded ADRs 0002 and 0019 on 2026-10-19.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `atlas-reference-checkout` | shipped | contract-backed | small-fix: explicit user-authorized reference clone with isolated ignore/docs changes; no application code or runtime integration | Cloned Agent Memory Atlas and verified the requested pattern/comparison sources and generated HTML against the live pages |
+| `atlas-reference-checkout` | shipped | contract-backed | inline: explicit user-authorized reference clone with isolated ignore/docs changes; no application code or runtime integration | Cloned Agent Memory Atlas and verified the requested pattern/comparison sources and generated HTML against the live pages |
 
 ## Current status
 

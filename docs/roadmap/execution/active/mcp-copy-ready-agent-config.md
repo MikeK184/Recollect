@@ -31,7 +31,7 @@ Implementation: paused; status reviewed 2026-10-18 against checkpoint f2673d7
   from history, new credential table or changed grants.
 - Blockers: None; the user's explicit decisions resolve the browser exception.
 
-## Surface and Interface Changes
+## Decisions
 
 - Interfaces: `McpAgentSetup` Direct MCP wizard; own-account Access tokens list;
   compatible optional `host_kind` and `integration` fields on Device reads.
@@ -73,7 +73,7 @@ Implementation: paused; status reviewed 2026-10-18 against checkpoint f2673d7
 - Failure handling: No automatic external/provider test or retry; existing
   pairing retry/cancel semantics and clipboard error state remain explicit.
 
-## Tests and Acceptance
+## Acceptance
 
 - Automated: Parse all generated native formats using temporary synthetic
   values, assert exact copy/masking/clear-on-close, no export, unique issuance

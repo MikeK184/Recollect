@@ -30,11 +30,15 @@ dependencies. It runs no integration, platform or browser tests.
 
 - Required documents, templates, metadata, sections, and local Markdown links.
 - Accepted authority links; pending foundations reported and rejected as
-  governing sources; product packs cannot start or ship against a pending baseline.
+  governing sources; in-progress and shipped slices need accepted authority.
 - Unique epic/slice/pack identities, exact owning-epic relationship, statuses,
-  required packs, and active/archive plus epic index agreement.
-- Explicit execution requirements and documented small-fix exemptions.
-- Filled implementation fields and shipped closeout evidence fields.
+  and active-pack plus epic index agreement.
+- Slice Execution values: `pack` (an active pack file must exist; never for a
+  shipped slice), `inline: <reason>` (no pack) and `archived` (shipped only, no
+  pack). Active packs need the slim sections (Summary, Governing Sources, Scope,
+  Decisions, Acceptance) and may add more; in-progress packs have them filled.
+- Every mapping has an `Observed:` line; a mapping over 5,000 words prints a
+  non-failing warning.
 - Presence of the Codex configuration and role files; their contents and the
   MCP stanzas are not compared (see the development tooling runbook).
 - Parent-repo ignore rule for the separate Cognee checkout.

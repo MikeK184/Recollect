@@ -55,11 +55,11 @@ minimal supporting excerpts under both existing content/retention permissions.
 Memory lifecycle owns synthesis; this epic owns exact source/excerpt lineage,
 coverage and private-workspace metadata boundaries. The accepted
 [digest contract](../../contracts/memory-automatic-session-digests.md) and archived
-[memory-owned pack](../execution/archive/memory-automatic-session-digests.md)
+[memory-owned pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/memory-automatic-session-digests.md)
 record local delivery, intent-ledger recovery, exact scope/class preservation,
 expiry/erasure and older-backup proof. No customer checkout is modified.
 
-Small-fix exception, 2026-09-14: the user authorized test-Brain as real test input.
+Inline slice (no pack), 2026-09-14: the user authorized test-Brain as real test input.
 Expose the existing bounded Git observation helper to an opt-in native integration
 probe. This adds validation tooling under the shipped workspace contract, with
 no new wire behavior, schema or Brain-selection rule. The probe uses an explicit
@@ -68,12 +68,12 @@ it does not place a selector in the customer workspace.
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `evidence-typescript-admission` | shipped | contract-backed | small-fix: distinguish fenced TypeScript type annotations from literal credential assignments | Preserve unchanged history admission while retaining configured-secret, token, URL and literal-value exclusions |
-| `evidence-collections` | shipped | contract-backed | pack | Delivered immutable text/reference sources, durable artifacts, shared collection/area/environment views, provenance, processing and browser proof |
-| `evidence-workspace-scope` | shipped | contract-backed | pack | Delivered nearest/nested discovery, private checkout catalogue, shared repository identities and independent immutable task/subagent operation scope with CLI/browser proof |
-| `evidence-repository-publication` | shipped | adr-backed, contract-backed | pack | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real test-Brain proof |
-| `evidence-session-capture` | shipped | contract-backed | pack | Delivered actual Codex/Claude hooks, native setup/launch and durable delivery, original-scope learning, browser coverage/source controls and local/central retention with replay proof |
-| `evidence-desktop-workflows` | shipped | adr-backed, contract-backed | pack | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
+| `evidence-typescript-admission` | shipped | contract-backed | inline: distinguish fenced TypeScript type annotations from literal credential assignments | Preserve unchanged history admission while retaining configured-secret, token, URL and literal-value exclusions |
+| `evidence-collections` | shipped | contract-backed | archived | Delivered immutable text/reference sources, durable artifacts, shared collection/area/environment views, provenance, processing and browser proof |
+| `evidence-workspace-scope` | shipped | contract-backed | archived | Delivered nearest/nested discovery, private checkout catalogue, shared repository identities and independent immutable task/subagent operation scope with CLI/browser proof |
+| `evidence-repository-publication` | shipped | adr-backed, contract-backed | archived | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real test-Brain proof |
+| `evidence-session-capture` | shipped | contract-backed | archived | Delivered actual Codex/Claude hooks, native setup/launch and durable delivery, original-scope learning, browser coverage/source controls and local/central retention with replay proof |
+| `evidence-desktop-workflows` | shipped | adr-backed, contract-backed | archived | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
 
 ## Completion Criteria
 
@@ -98,7 +98,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Archived packs](../execution/archive/README.md) retain the delivered slices.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
 in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/evidence-and-workspaces.md).
 Dated test/deployment observations are not a current runtime health claim.

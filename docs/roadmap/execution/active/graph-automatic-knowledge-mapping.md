@@ -14,23 +14,29 @@ Implementation: resumed 2026-10-18 by the user's complete graph implementation r
 - Delivery shape: Rust candidate/persistence/worker/protocol/API implementation,
   incremental privacy-safe reconciliation, UI and measured end-to-end proof.
 
-### Current delivery and remaining gates
+### Remaining acceptance gates
 
-| Part | Current evidence state | Remaining completion gate |
-| --- | --- | --- |
-| Worker, spans, entities and human alias decisions | Implemented with focused native/API/browser proof; production release catalogue remains empty. | A qualified real producer; implemented admission is not model quality. |
-| Topics, human overlays, navigation and privacy | Implemented with native/browser, correction/erase and older-backup replay proof. Grouped 3D is separately locally delivered. | Passing automatic grouping/label quality and complete integrated organization acceptance. |
-| Real current4 extraction | Failed: facts P51.67%/R8.73%; reconciliation P40.63%/R3.66%. | At least 95% precision/80% recall under a new frozen candidate and untouched evaluation boundary. |
-| Real canonical semantics | Failed: behavioral 4/6, strict action/citation 3/6. | Correct historical handling, required retirement and exact citation, with actual support/publication linkage. |
-| Real hybrid grouping | Failed: pair F1 26.36%; assignment 27/46 facts or 26/46 reconciliation. Current label usefulness is unmeasured. | Frozen baseline comparison, at least 80% annotated in-scope assignment and independent label/usefulness acceptance. |
-| Semantic execution lease | Applied to main; six native cases pass in 5.47 s with zero stale requests/publications. | No remaining code change for this proven local fix; deployment and documented API/Linux/network-atomicity limits remain separate. |
-| Full delivery | In progress, uncommitted, not installed in the normal runtime. | All contract acceptance and final integrated closeout; no producer/recipe activation from passing technical checks alone. |
+Current delivery status is tracked only in the
+[roadmap](../../epics/index.md#graph-delivery-status). The gates below are this
+pack's acceptance; passing technical checks alone never activates a producer or
+recipe.
 
-The [roadmap](../../epics/index.md#graph-delivery-status) is the concise current
-status entry point. The [implementation mapping](../../../mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger) retains the latest 105-call evidence, earlier
-failures (all 92 observations, 460 mode rows and 21 unknown topic pairs per
-producer), and the dated design and preparation notes moved out of this pack on
-2026-10-19. Those notes are evidence of their own checkpoints, not current completion.
+| Part | Remaining completion gate |
+| --- | --- |
+| Worker, spans, entities and human alias decisions | A qualified real producer; implemented admission is not model quality. |
+| Topics, human overlays, navigation and privacy | Passing automatic grouping/label quality and complete integrated organization acceptance. |
+| Real extraction | At least 95% precision/80% recall under a new frozen candidate and untouched evaluation boundary. |
+| Real canonical semantics | Correct historical handling, required retirement and exact citation, with actual support/publication linkage. |
+| Real hybrid grouping | Frozen baseline comparison, at least 80% annotated in-scope assignment and independent label/usefulness acceptance. |
+| Semantic execution lease | No remaining code change for the proven local fix; deployment and documented API/Linux/network-atomicity limits remain separate. |
+| Full delivery | All contract acceptance and final integrated closeout. |
+
+The compact [evidence receipts](../../../mappings/graph-organization-implementation-2026-10-18.md)
+hold the 105-call results, earlier failures (all 92 observations, 460 mode rows
+and 21 unknown topic pairs per producer), frozen input hashes and cost approvals.
+The 2026-10-18 design and preparation notes are at the pinned
+[full text](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger);
+they are evidence of their own checkpoints, not current completion.
 
 ## Governing Sources
 
@@ -51,7 +57,7 @@ producer), and the dated design and preparation notes moved out of this pack on
   fails; blind label usefulness and final integrated closeout remain open.
   Independent implementation and deterministic/native proof can continue.
 
-## Surface and Interface Changes
+## Decisions
 
 - Interfaces: Bounded optional interpretation candidates, typed semantic
   organization APIs and version-checked topic/alias overrides; no fake claims.
@@ -70,7 +76,7 @@ producer), and the dated design and preparation notes moved out of this pack on
 ## Data and Authority
 
 Decisions that govern the remaining work (the full design notes are in the
-[implementation mapping](../../../mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger)):
+[implementation mapping](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger)):
 
 - A reader qualifies at most 250 exact source contributors per page through
   canonical graph qualification, derives labels and counts only from them, marks
@@ -119,7 +125,7 @@ Decisions that govern the remaining work (the full design notes are in the
 - Failure handling: Bounded input/output, short checked publication, leases and
   visible blocked/failed coverage; no confidence-only scope or truth acceptance.
 
-## Tests and Acceptance
+## Acceptance
 
 - Automated: Native Unicode/exact span/input/endpoint gates; actual persistence,
   scope/alias and override/idempotency controls; correction/erasure/restore;
@@ -160,7 +166,7 @@ Decisions that govern the remaining work (the full design notes are in the
   outputs is measured: four of six canonical controls pass; rc01 replacement and rc03
   retirement fail. The separate six-call diagnostic completed without retries
   or activation. Exact receipts, denominators and earlier failures
-  remain in the implementation ledger. The separately approved 105-call current4
+  remain in the evidence receipts mapping. The separately approved 105-call current4
   campaign fails real extractor/grouping quality, with canonical behavior 4/6
   and exact required-action/citation agreement 3/6. All 92 observations, 460 mode
   rows and 21 unknown pairs remain counted; no producer or recipe is activated.

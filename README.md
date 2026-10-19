@@ -45,7 +45,7 @@ tool coordination. Inspect it all in the desktop web UI.
 
 > **Early project:** intended for individuals and trusted internal teams.
 > The desktop redesign and private-runner workflow have local acceptance evidence.
-> [Remaining work and limits](docs/roadmap/execution/active/README.md) include
+> [Remaining work and limits](docs/roadmap/epics/index.md) include
 > further native-host direct-MCP acceptance and memory evaluation.
 
 ![Recollect product concept with the original logo: Codex, Claude Code and OpenCode share an Engineering Brain through the plugin or direct MCP, with separate approved tool access.](docs/assets/recollect-agent-workflow-v3.png)
@@ -255,7 +255,7 @@ or use the canonical repository guides below.
 The first planned product scope is implemented and locally tested. The desktop
 redesign, compact tool access and private-runner relationship cards have local
 acceptance evidence; mobile views are deferred. The
-[active execution index](docs/roadmap/execution/active/README.md) tracks remaining
+[roadmap](docs/roadmap/epics/index.md) tracks remaining
 direct-MCP native-host acceptance and the blocked LongMemEval evaluation.
 The [evaluation report](docs/mappings/integrated-evaluations-2026-09-26.md)
 records measured results, failures and limits. Local validation is not a

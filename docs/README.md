@@ -24,7 +24,8 @@ Current explicit user instructions take precedence. Then read:
 2. [Vision](foundation/vision.md), [technology stack](foundation/techstack.md),
    and [engineering principles](foundation/engineering-principles.md).
 3. The [epic index](roadmap/epics/index.md) and owning epic.
-4. The relevant [execution pack](roadmap/execution/README.md).
+4. The owning epic's slice row and, for risky work only, its
+   [execution pack](roadmap/execution/README.md).
 5. [Mappings](mappings/README.md) and local code/runtime evidence.
 
 ADRs decide architecture; contracts specify behavior. Resolve contradictions
@@ -43,14 +44,14 @@ record the evidence and reconcile the governing document.
 | `contracts/` | Testable behavior, interfaces, and boundaries |
 | `mappings/` | Dated external and local evidence; never implementation authority |
 | [research/](research/README.md) | Retained studies and design proposals; not implementation authority |
-| `roadmap/epics/` | Capability ownership, dependencies, and slice maps |
-| `roadmap/execution/active/` | Planned, in-progress, and blocked slice specifications |
-| `roadmap/execution/archive/` | Shipped slices with reconciled closeout evidence |
+| `roadmap/epics/` | Capability ownership, dependencies, and slice maps (acceptance and validation inline) |
+| `roadmap/execution/active/` | Packs for planned, in-progress, and blocked risky slices; shipped packs are deleted |
 | `runbooks/` | Verified operator procedures for delivered capabilities |
 
 Templates live alongside each document type. Indexes link current records;
-retain superseded decisions with replacement links and shipped packs in the
-archive. Avoid competing current versions of the same specification.
+retain superseded decisions with replacement links. Shipped packs are not kept
+in the tree: Git history holds them (see the 2026-10-19 note below). Avoid
+competing current versions of the same specification.
 
 ## Current baseline and documentation maintenance
 
@@ -63,10 +64,11 @@ Keep one current status entry point: the [roadmap](roadmap/epics/index.md).
 Do not append chronological handoffs or repeat a completed feature as a proposal.
 When behavior is corrected, update current guidance and remove the superseded
 proposal, duplicate report or unused illustration. Preserve necessary historical
-citations as links to an exact Git revision. Shipped packs retain scope and
-acceptance history; accepted decisions/contracts, frozen evaluation inputs,
-current baselines and unresolved failures remain accessible. Never remove a
-failure to make a remaining slice appear complete.
+citations as links to an exact Git revision. Accepted decisions/contracts,
+frozen evaluation inputs, paid-run approvals, current baselines and unresolved
+failures remain accessible in the tree, as compact receipts rather than long
+narrative ledgers. Never remove a failure to make a remaining slice appear
+complete.
 
 The 2026-10-18 documentation cleanup removed superseded studies and duplicate
 reports. It implemented no product feature, changed no product decision and
@@ -76,6 +78,15 @@ On 2026-10-19 the developer-tooling ADRs, contracts and packs were collapsed int
 the [development tooling runbook](runbooks/development-tooling.md); that state is
 available at [commit f1b6bb3](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
 
+The owner changed the governance workflow on 2026-10-19 (see the
+[ADR 0001 amendment](adr/0001-repository-governance.md)). Execution packs are
+now required only for risky work, the 105 shipped packs were removed from the
+tree, and long mapping ledgers were collapsed into receipts tables. The earlier
+state, including every shipped pack and the full ledgers, is available at
+[commit a0aea9d](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs).
+The change implemented no product feature, changed no product decision and
+refreshed no runtime or benchmark measurement.
+
 `output/` (browser screenshots, generated imagery and review captures) is
 ignored and no longer tracked. Where earlier records cite `output/...`, the last
 tracked copy is at Git revision `f2673d7`: read it with
@@ -83,8 +94,8 @@ tracked copy is at Git revision `f2673d7`: read it with
 summary, not by a link into `output/`.
 
 New foundation decisions remain pending until accepted. Pending foundations
-cannot govern dependent implementation; the small-fix exception does not bypass
-that rule. Foundation authoring does not require speculative product epics.
+cannot govern dependent implementation; an inline slice does not bypass that
+rule. Foundation authoring does not require speculative product epics.
 
 ## Before implementation
 
@@ -94,42 +105,46 @@ that rule. Foundation authoring does not require speculative product epics.
    research checkouts under `references/` by upstream URL pinned to the
    recorded commit, since the linter does not check relative `references/` links.
 3. Resolve missing ADRs/contracts before the dependent code change.
-4. Add the slice to its owning epic. Create a pack when required below.
-5. Make the pack decision-complete and set it and the epic slice to
-   `in-progress` before implementation; update the execution index.
+4. Add the slice to its owning epic's slice map. Record acceptance and
+   validation in the row (Execution `inline: <acceptance; validation>`).
+5. If the work is risky (below), create the pack, make it decision-complete and
+   set it and the epic slice to `in-progress` before implementation; update
+   the active index.
 
-An execution pack is required for cross-module work, persistence or schema
-changes, external integrations, significant security/reliability behavior,
-multiple meaningful user/error states, or ambiguity that could produce
-materially different implementations. A small isolated fix with established
-authority and trivial remaining decisions may proceed without a pack; record
-why it qualifies in the owning epic's slice map.
+An execution pack is required only for risky work: (1) a schema or migration
+change with restore or compatibility impact; (2) a new external integration, or
+a paid or frozen evaluation campaign (cost approval and frozen input hashes);
+(3) a security, credential or authz change that no accepted contract already
+fully specifies; (4) multi-session work with open decisions. Everything else is
+an epic slice row with acceptance and validation inline. Any behavior change
+still updates the governing contract in the same change.
 
-Scope expansions require updating governing docs and the pack before the
-dependent code. Unresolved contract/ADR gaps must be labeled `needs-contract`
+Scope expansions require updating governing docs (and the pack, if any) before
+the dependent code. Unresolved contract/ADR gaps must be labeled `needs-contract`
 or `needs-adr` and block implementation. Delegation is optional and requires
 an explicit user request; a reviewer role does not create a new approval gate.
 
 ## Closeout
 
 Run focused validation and `./scripts/validate.sh`. Review delivered behavior
-against the pack and update affected authority, evidence, and runbooks. Fill
-the closeout fields: Planned, Shipped, Not shipped, New blockers, Docs updated,
-and Validation. Use evidence, not an anticipated result.
+against the slice acceptance and update affected contracts, evidence, and
+runbooks. Use evidence, not an anticipated result.
 
-After the agreed slice is delivered and required checks pass, mark the pack
-`shipped`, move it from `active/` to `archive/`, and update the owning epic,
-epic index, and active/archive indexes together. Record legitimate deferrals
-and successor slices; unfinished acceptance criteria cannot be relabeled as
-shipped. A blocked slice stays active with its blocker and next action.
+After the agreed slice is delivered and required checks pass, set the slice row
+to `shipped` with a one-line Summary that names the validation evidence. For a
+packed slice set Execution to `archived`, delete the pack, and update the
+active index and the epic index in the same change. Deferrals and failures go
+in the slice Summary or a successor slice, never hidden; unfinished acceptance
+cannot be relabeled as shipped. A blocked slice stays with its blocker and next
+action (its pack stays in `active/`).
 
-There is no application release policy yet, and packs record neither a version
-nor a commit; Git holds the history. Local delivery is distinct from deployment
-or publication.
+There is no application release policy yet, and slices record neither a
+version nor a commit; Git holds the history. Local delivery is distinct from
+deployment or publication.
 
 ## Validation boundaries
 
-The [validator](runbooks/validation.md) checks structure, references, pack and
-epic consistency, and foundation readiness. It cannot judge
+The [validator](runbooks/validation.md) checks structure, references, slice-map,
+pack and index consistency, mapping `Observed:` lines, and foundation readiness. It cannot judge
 whether prose is decision-complete, evidence is truthful, or code meets the
 specification. Those remain implementation and review responsibilities.

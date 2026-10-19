@@ -30,10 +30,10 @@ Personal use and internal-team use share one application and permission model.
 
 This is the first product epic. Repository governance and developer tooling are
 already available. Platform-bootstrap is delivered locally under its accepted ADR/contract and
-[archived pack](../execution/archive/platform-bootstrap.md). Durable work is also
-delivered in its [archived pack](../execution/archive/platform-durable-work.md).
-Team access is delivered in its [archived pack](../execution/archive/platform-team-access.md).
-Device pairing is delivered in its [archived pack](../execution/archive/platform-device-pairing.md).
+[archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-bootstrap.md). Durable work is also
+delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-durable-work.md).
+Team access is delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-team-access.md).
+Device pairing is delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-device-pairing.md).
 
 Own the Cargo/server/companion structure, same-origin React/Vite shell, local
 Compose topology, database clients/migrations, local owner bootstrap, Brain
@@ -54,7 +54,7 @@ database engine is introduced.
 
 ## Slice Map
 
-Small-fix exception, 2026-09-14: claims regression exposed a valid numeric pairing
+Inline slice (no pack), 2026-09-14: claims regression exposed a valid numeric pairing
 code being coerced by router JSON search parsing and removed by route validation.
 The existing pairing contract defines an opaque eight-hex-character identifier.
 Preserve its exact string through parsing/stringifying; deterministic browser
@@ -63,14 +63,14 @@ real native pairing proof. No schema, wire protocol or new product decision chan
 
 | Slice ID | Status | Evidence | Execution | Summary |
 | --- | --- | --- | --- | --- |
-| `platform-bootstrap` | shipped | adr-backed, contract-backed | pack | Runnable Rust service and React UI with selected databases, local owner login, Brain administration and two-Brain isolation through an auditable command boundary |
-| `platform-durable-work` | shipped | contract-backed | pack | Atomic mutation/audit/outbox support, idempotent bounded workers and explicit job/projection state |
-| `platform-team-access` | shipped | contract-backed | pack | Invited local accounts, optional OIDC, effective grants and tested internal/external revocation behavior |
-| `platform-device-pairing` | shipped | contract-backed | pack | Native companion enrollment with individually revocable credentials and shared protocol types |
-| `desktop-experience-contracts` | shipped | adr-backed, contract-backed | pack | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
-| `platform-desktop-shell` | shipped | adr-backed, contract-backed | pack | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
-| `platform-brain-deletion` | shipped | adr-backed, contract-backed | pack | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
-| `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | pack | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
+| `platform-bootstrap` | shipped | adr-backed, contract-backed | archived | Runnable Rust service and React UI with selected databases, local owner login, Brain administration and two-Brain isolation through an auditable command boundary |
+| `platform-durable-work` | shipped | contract-backed | archived | Atomic mutation/audit/outbox support, idempotent bounded workers and explicit job/projection state |
+| `platform-team-access` | shipped | contract-backed | archived | Invited local accounts, optional OIDC, effective grants and tested internal/external revocation behavior |
+| `platform-device-pairing` | shipped | contract-backed | archived | Native companion enrollment with individually revocable credentials and shared protocol types |
+| `desktop-experience-contracts` | shipped | adr-backed, contract-backed | archived | Accepted desktop/Ask decisions, domain-owned scope and decision-complete implementation packs |
+| `platform-desktop-shell` | shipped | adr-backed, contract-backed | archived | Shared light tokens, self-hosted fonts, SVG logo, global views and contextual Brain routes |
+| `platform-brain-deletion` | shipped | adr-backed, contract-backed | archived | Irreversible Brain-wide erasure through the canonical mutation, journal and cleanup path |
+| `desktop-knowledge-surface` | shipped | adr-backed, contract-backed | archived | Tiered sidebar, merged Memory/Sources/Graph/Repositories surface, shared lineage inspector, graph chrome and list density |
 
 ## Completion Criteria
 
@@ -94,7 +94,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Archived packs](../execution/archive/README.md) retain the delivered slices.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
 in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/product-platform.md).
 Dated test/deployment observations are not a current runtime health claim.
