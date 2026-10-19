@@ -1,6 +1,6 @@
 # Hybrid Retrieval and Investigation
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -73,6 +73,7 @@ complete local acceptance; the installed host binary is not upgraded by this wor
 | `desktop-ask-primary` | shipped | adr-backed, contract-backed | archived | Question composer as the Ask default with search retained as an explicit mode and disabled-path fallback |
 | `ask-chat-conversation` | shipped | contract-backed | archived | Ask page reworked into a chat-style conversation thread — user questions and model-grounded answers as turns with expandable evidence attachments and inline follow-ups — over the unchanged answer backend |
 | `retrieval-set-based-read-path` | shipped | contract-backed | archived | One candidate pass per recall with index-eligible lexical windows, set-based support/rule/conflict/deadline gating and bounded chunk-span verification; ranking and every gate unchanged |
+| `retrieval-support-gate-cost` | in-progress | contract-backed | pack | App-role support gate costs 25-50 ms per revision because per-row RLS runs `recollect_role` on every visited row; evaluate the same predicate with an up-front Brain membership check, add a batch variant for set-oriented callers, and bound organization field paging |
 
 ## Completion Criteria
 
