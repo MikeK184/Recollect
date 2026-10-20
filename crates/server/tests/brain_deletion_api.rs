@@ -1056,3 +1056,80 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
 
     h.finish().await;
 }
+
+/// A generated Brain of 3,000 sources and 5,000 claims (fixture header in
+/// tests/fixtures/brain_deletion_scale_seed.sql) previews and deletes through
+/// the real handlers: both answer 200, the deletion honors the preview counter
+/// and the Brain is unknown afterwards.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
+async fn brain_deletion_api_large_brain_previews_and_deletes() {
+    let h = Harness::new().await;
+    let owner_account: Uuid =
+        sqlx::query_scalar("SELECT id FROM accounts WHERE installation_owner")
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    let owner = h.login().await;
+    let brain = Uuid::new_v4();
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("brain_deletion_scale_seed.sql");
+    let sql = std::fs::read_to_string(path)
+        .unwrap()
+        .replace("__BRAIN__", &format!("'{brain}'"))
+        .replace("__OWNER__", &format!("'{owner_account}'"))
+        .replace("__NAME__", "'Large'")
+        .replace("__SOURCES__", "2500")
+        .replace("__CLAIMS__", "5000");
+    assert!(!sql.contains("__"), "unreplaced scale seed token remains");
+    let mut tx = h.admin.begin().await.unwrap();
+    sqlx::raw_sql(&sql).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    sqlx::query("ANALYZE").execute(&h.admin).await.unwrap();
+
+    let started = std::time::Instant::now();
+    let (status, preview) = h
+        .call(
+            "POST",
+            &format!("/api/brains/{brain}/deletions/preview"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await;
+    let preview_time = started.elapsed();
+    assert_eq!(status, StatusCode::OK, "{preview}");
+    assert_eq!(preview["counts"]["sources"], 3000);
+    assert_eq!(preview["counts"]["claim_revisions"], 7500);
+    let closure = preview["closure"].as_str().unwrap().to_owned();
+
+    let started = std::time::Instant::now();
+    let (status, deleted) = h
+        .call(
+            "DELETE",
+            &format!("/api/brains/{brain}"),
+            Some(&owner),
+            json!({"closure":closure,"confirmation":"Large"}),
+        )
+        .await;
+    let delete_time = started.elapsed();
+    eprintln!("large API preview {preview_time:?}, delete {delete_time:?}");
+    assert_eq!(status, StatusCode::OK, "{deleted}");
+    assert_eq!(deleted["request"]["closure"], closure);
+    assert_eq!(deleted["request"]["disposition"], "deleted");
+    assert_eq!(count(&h.admin, "source_versions", brain).await, 0);
+    assert_eq!(count(&h.admin, "claim_revisions", brain).await, 0);
+    assert_eq!(
+        h.call(
+            "GET",
+            &format!("/api/brains/{brain}"),
+            Some(&owner),
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    h.finish().await;
+}

@@ -74,6 +74,37 @@ description, subject, value, title, URI, path, excerpt or reason. A recreated
 Brain with an identical name receives a new identity and cannot inherit the
 tombstone's history or grants.
 
+### Closure computation
+
+The Brain-wide closure document is the exact union of the per-class erasure
+closures of every member target: each source, claim, repository snapshot and
+manifest of the Brain. It is computed once per Brain by applying each per-class
+rule, in the same order, to the Brain-wide identity sets, rather than once per
+target. The document, and so the preview counter, the journal manifest and the
+tombstone fingerprint, is identical to the iterated union. The database keeps
+that iterated reference callable only by the migration owner, and an
+equivalence test compares both documents on the rich fixture, a generated Brain
+and an empty Brain. A migration that extends the per-target closure extends the
+Brain-wide closure in the same change.
+
+The apply chain of a Brain-wide request runs every per-class statement
+unchanged: redaction, the artifact cleanup queue, publication fences, receipt
+invalidation and the journal. Row triggers that only maintain derived state of
+the Brain being removed skip its rows, because the same transaction then
+deletes every row they would write. These are the semantic, learning, handover,
+support and memory-epoch triggers. The skip applies only while a
+transaction-local marker names that Brain's own Brain-wide erase request in the
+journal, which only the deletion and journal replay write. A caller that sets
+the marker itself changes nothing.
+
+Preview and `DELETE` run with a 300 s statement timeout instead of the pool's
+10 s default, and lock waits keep a 10 s bound. `DELETE` grows with Brain
+size; a Brain of 3,000 sources and 5,000 claims previews in about 0.3 s and
+deletes in about 6 s. The bound keeps a rare, confirmed administrator erasure
+from failing at an interactive read limit, while a runaway still releases the
+Brain lock and a busy Brain still fails fast. Clients must allow a long
+`DELETE` to finish.
+
 ### Read and recall denial
 
 After commit and before physical cleanup finishes, the Brain is absent from
@@ -162,6 +193,12 @@ a 60-bit fingerprint beyond JavaScript's exact-integer range.
 - Tombstone and audit rows contain no controlled content, verified against a
   fixture whose source title, claim value and file path must not appear in any
   retained row, journal entry, receipt or log.
+- The set-based closure equals the iterated per-target union, document and
+  fingerprint, on the rich fixture, the control Brain, a generated Brain and an
+  empty Brain. A generated Brain of 3,000 sources and 5,000 claims previews and
+  deletes completely under the default 10 s pool timeout and through the API.
+  The removal marker opens the trigger skip only for that Brain's own deletion
+  request.
 - Focused Rust integration and RLS tests, generated client, web typecheck,
   affected browser specs, `./scripts/validate.sh` and `git diff --check`.
 

@@ -18,8 +18,20 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::types::Json as SqlJson;
+use std::time::Duration;
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+/// Statement bound for preview and DELETE, replacing the 10 s pool default
+/// (contract: platform-brain-deletion, "Closure computation"). DELETE runs the
+/// canonical per-class erasure apply chain for every identity of the Brain in
+/// one transaction, so its cost grows with Brain size; a rare, confirmed,
+/// administrator-only erasure must not fail at an interactive read bound,
+/// while a runaway still releases the Brain lock.
+const BRAIN_DELETION_TIMEOUT: Duration = Duration::from_secs(300);
+/// Lock waits keep the 10 s bound the pool statement timeout gave them, so a
+/// busy Brain still fails fast instead of queueing for the statement bound.
+const BRAIN_DELETION_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Per-class dependent identity counts. The keys mirror the migration-owned
 /// preview document exactly; a drift here is a schema break, not a default.
@@ -226,7 +238,9 @@ pub async fn preview(
         &state.pool,
         &auth,
         brain,
-        BrainAccess::admin(Archived::Allow),
+        BrainAccess::admin(Archived::Allow)
+            .with_statement_timeout(BRAIN_DELETION_TIMEOUT)
+            .with_lock_timeout(BRAIN_DELETION_LOCK_TIMEOUT),
     )
     .await?
     .tx;
@@ -282,7 +296,9 @@ pub async fn delete(
         &state.pool,
         &auth,
         brain,
-        BrainAccess::admin(Archived::Allow),
+        BrainAccess::admin(Archived::Allow)
+            .with_statement_timeout(BRAIN_DELETION_TIMEOUT)
+            .with_lock_timeout(BRAIN_DELETION_LOCK_TIMEOUT),
     )
     .await?
     .tx;
