@@ -373,7 +373,7 @@ migrated application builds, performs or passes accessibility review.
 
 ## Management layouts
 
-The [accepted management amendments](../contracts/desktop-experience.md#approved-management-concepts--2026-10-05)
+The [accepted management amendments](../contracts/desktop-experience.md#shared-visual-language)
 and their six concept images guide the composition of Connections, setup,
 global Connectors, Privacy, AI permissions and Agents; version 2 restyles them
 without moving their content. Keep global navigation directly above the Brain

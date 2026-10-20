@@ -10,7 +10,7 @@ The current
 [desktop knowledge contract](../contracts/desktop-knowledge-surface.md) governs
 these presentation changes and bounded repository browsing.
 
-The user's [2026-10-01 display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
+The user's [2026-10-01 display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority)
 supersedes mandatory small-screen and keyboard-polish expectations. Prioritize
 normal laptops and larger desktop monitors, up to about 32 inches.
 

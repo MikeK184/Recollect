@@ -20,7 +20,7 @@ interface until that slice ships.
 Prioritize normal laptop screens and larger desktop monitors up to about 32
 inches, as the user clarified on 2026-10-01. Small-screen polish and extra
 keyboard interaction work are optional; do not block functional delivery on
-them. See the [display priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
+them. See the [display priority](../contracts/desktop-experience.md#display-and-interaction-priority)
 for practical review sizes and the authority over older acceptance checklists.
 
 The assurance band warns only about a current blocker and names it. Historical

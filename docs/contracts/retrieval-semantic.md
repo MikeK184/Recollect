@@ -2,31 +2,10 @@
 
 Status: accepted
 
-Browser presentation follow-up, 2026-10-06: semantic readiness, counts and
-recorded failures remain available through optional diagnostics. Normal AI
-settings do not display a coverage alarm or ask a person to review/retry items.
-The bounded automatic replacements, pre-request block reconciliation and
-uncertain/permanent/exhausted idle outcomes below remain unchanged. Exact and
-lexical retrieval continue independently; no UI removal broadens paid retries,
-provider transmission, policy, generation or erasure authority.
-
-The 2026-10-05 [model selection amendment](brain-model-catalogue-and-selection.md)
-supersedes the fixed 3,072-dimensional storage and installation-pair assumptions
-below. It adds model/dimension-safe full-precision storage and an atomic explicit
-Save-and-rebuild generation while preserving scope, canonical input and erasure fences.
-
-Large-scope amendment, 2026-10-19: the 5,000-representation refusal below is
-replaced by two labelled ranking tiers. Scopes up to the exact bound keep their
-exact cosine ranking unchanged; larger scopes, up to the 50,000-entry per-profile
-cap, use a Hamming shortlist over derived bit signatures with exact re-ranking,
-reported as approximate. No vector index is introduced; the
-[measurements](../mappings/semantic-large-scope-2026-10-19.md) record the
-recall and timings that fixed the bounds.
-
 ## Source
 
 The full product goal authorizes this original slice and its routine decisions.
-The user selected `text-embedding-3-large` at 3,072 dimensions, with
+For it the user selected `text-embedding-3-large` at 3,072 dimensions, with
 `gpt-5.6-luna` for separate text operations. The accepted
 [retrieval baseline](retrieval-exact-and-lexical.md),
 [provider policy](memory-provider-policy-and-learning.md),
@@ -36,7 +15,24 @@ The user selected `text-embedding-3-large` at 3,072 dimensions, with
 [stack](../foundation/techstack.md#storage-ownership-and-hybrid-retrieval) govern.
 [Interface evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/semantic-interfaces-2026-09-15.md) records current
 provider/database limits. The [Atlas audit](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/atlas-implementation-audit-2026-09-15.md)
-supplies consumer obligations, not a competing authority.
+supplies consumer obligations, not a competing authority. Decisions folded into
+this specification:
+
+- 2026-10-05: the [model selection contract](brain-model-catalogue-and-selection.md)
+  replaces the fixed 3,072-dimensional storage and installation-pair assumptions
+  with per-Brain model/dimension selection, model/dimension-safe full-precision
+  storage and an atomic explicit Save-and-rebuild generation, preserving scope,
+  canonical input and erasure fences.
+- 2026-10-06: the browser presentation follow-up moves semantic readiness to
+  optional diagnostics.
+- 2026-10-07: budget-blocked scheduling.
+- 2026-10-19: the large-scope amendment replaces the 5,000-representation
+  refusal with two labelled ranking tiers; its
+  [measurements](../mappings/semantic-large-scope-2026-10-19.md) record the
+  recall and timings that fixed the bounds.
+
+The text before this compaction, with each dated amendment, is at
+[revision a2338a8](https://github.com/MikeK184/Recollect/blob/a2338a80c824f00214ee33e37596e5a92a2cc409/docs/contracts/retrieval-semantic.md).
 
 ## Contract
 
@@ -44,21 +40,23 @@ supplies consumer obligations, not a competing authority.
 
 Add `automatic_embedding`, default false for old/new Brain model policies.
 An admin enables it once through the existing model policy. It requires approved
-embedding purpose and exact installed model/dimensions. Automatic learning remains
-an independent permission. Source classes are server-derived and must be permitted;
-query embedding additionally requires `query`. Existing Brains do not acquire new
-transmission permission during migration. No per-record human approval is required.
+embedding purpose and the exact model/dimensions selected in the Brain's saved
+policy. Automatic learning remains an independent permission. Source classes are
+server-derived and must be permitted; query embedding additionally requires
+`query`. Existing Brains do not acquire new transmission permission during
+migration. No per-record human approval is required.
 
 Each Brain's semantic profile records a UUID generation, provider, model, dimensions,
 representation label, initiating policy/actor and creation time. The first enabled
 profile is created automatically. A model/dimension/representation mismatch makes
 the existing profile unavailable and requires an explicit admin reindex through
-the currently approved installation/policy. Never substitute or silently shorten
-the requested embeddings. Generation UUIDs identify rebuild work; add no content
+the currently approved policy. Never substitute or silently shorten the
+requested embeddings. Generation UUIDs identify rebuild work; add no content
 hashes, strict user version-pinning workflow or alternate canonical writer.
 
-Use full-precision `vector(3072)` with exact cosine distance. Store vectors only in
-the Brain-scoped projection, never in Neo4j, logs, model-request history or browser
+Use full-precision vectors at the profile's model/dimensions, stored as the model
+selection contract specifies, with exact cosine distance. Store vectors only in the
+Brain-scoped projection, never in Neo4j, logs, model-request history or browser
 status responses. Reject wrong returned model, dimensions, duplicate/missing batch
 indices, nonfinite components and zero-length norms. No ANN, half-precision or other
 vector index is introduced. Each stored vector has a derived one-bit-per-dimension
@@ -146,7 +144,11 @@ the outcome and expose uncertain/interrupted work. Under standing policy, confir
 rate-limit/unavailable failures may create at most two separately recorded replacement
 attempts after five and thirty minutes, as for autonomous learning. Pre-admission
 budget/concurrency/policy blocks can resume when their constraint changes. Unknown
-outcomes require an explicit new attempt; there is no automatic retry loop. Writers
+outcomes require an explicit new attempt; there is no automatic retry loop. A
+semantic batch blocked before transmission by `model_budget_exhausted` waits
+until the next UTC day or a changed model policy before automatic rescheduling;
+do not recreate blocked batches every minute. Explicit authorized retry remains
+available and still passes the gateway's current budget and authority checks. Writers
 may explicitly retry a failed batch through the shared command boundary.
 For a partially removed batch, an explicit retry can select its remaining eligible
 inputs; removed inputs stay removed. If no eligible inputs remain, retry is refused.
@@ -218,7 +220,7 @@ needs the semantic channel. A scope above 50,000 representations is refused in e
 mode. Automatic recall keeps the semantic channel for every scope within the cap and
 drops it, with `automatic_semantic_scope_too_large`, only for that refusal.
 Approximate recall is measured against exact on the same eligible scope, not assumed;
-see the measurements linked above.
+see the [measurements](../mappings/semantic-large-scope-2026-10-19.md).
 
 Return up to 100 eligible semantic candidates before the existing result/context
 limits. Expose cosine similarity and a `semantic_similarity_not_truth` qualification.
@@ -256,9 +258,15 @@ strict retrieval remains governed by its current support. Rule-blocked raw copie
 remain excluded after a new source UUID or reindex, with permitted controls.
 
 Extend the existing model-policy and recall panels: standing automatic embedding,
-semantic readiness/progress/blocked reasons, admin reindex and explicit retry,
-semantic-only/combined selection, and distances/qualifications with existing source
-and claim inspection. Use readable labels, not internal generation IDs as primary
+admin reindex and explicit retry, semantic-only/combined selection, and
+distances/qualifications with existing source and claim inspection. Semantic
+readiness/progress/blocked reasons, counts and recorded failures remain available
+through optional diagnostics; normal AI settings do not display a coverage alarm
+or ask a person to review/retry items. That presentation leaves the bounded
+automatic replacements, pre-request block reconciliation and
+uncertain/permanent/exhausted idle outcomes unchanged; exact and lexical
+retrieval continue independently, and no UI removal broadens paid retries,
+provider transmission, policy, generation or erasure authority. Use readable labels, not internal generation IDs as primary
 navigation. Show loading, disabled, missing/partial, mismatch, denied, budget,
 provider and insufficient-support states. Preserve responsive desktop/mobile use.
 Native `scope recall` accepts optional channel selection while retaining its original
@@ -304,11 +312,3 @@ compares recall with the exact baseline.
 No customer content is newly transmitted in local proof. External deployment and
 commits remain outside the goal. These exclusions do not defer current-consumer
 scope, rejection, retention, erasure, provenance or recovery acceptance.
-
-
-## Budget-blocked scheduling — 2026-10-07
-
-A semantic batch blocked before transmission by `model_budget_exhausted` waits
-until the next UTC day or a changed model policy before automatic rescheduling.
-Do not recreate blocked batches every minute. Explicit authorized retry remains
-available and still passes the gateway's current budget and authority checks.

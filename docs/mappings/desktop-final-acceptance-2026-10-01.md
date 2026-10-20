@@ -49,7 +49,7 @@ deleted through the product; existing Brains were not used for mutations.
 - Independent owner visual review approved all twelve destinations and Ask at
   1280x800, 1440x900 and 1920x1080.
 
-The user's [display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority--2026-10-01)
+The user's [display and interaction priority](../contracts/desktop-experience.md#display-and-interaction-priority)
 governs: laptops and larger monitors up to about 32 inches; small-screen polish
 is optional. The ADR 0017 Wiring wording discrepancy remains recorded in the
 continuation mapping; Team authority was not moved or widened.

@@ -2,54 +2,6 @@
 
 Status: accepted
 
-## Equivalent HTTP schema declarations — 2026-10-06
-
-The user's failing Exa server check establishes the need to accept equivalent
-legacy schema declarations during anonymous HTTP inspection. Discovery may
-convert a root Draft 7 declaration to 2020-12 only for a bounded audited subset
-whose assertion semantics are unchanged. Preserve all assertions, property names,
-annotations and descriptions. Reject unknown/dialect-dependent keywords, remote
-references/identifiers, nested dialect changes and tuple-array items; do not guess
-or silently remove constraints. The final candidate still passes the existing
-strict offline validator. Already-approved manifests are unchanged, and direct
-manifest import retains strict 2020-12 validation. The health check does not
-approve or persist the candidate, start tool execution or confer Use access.
-
-### Installation connector library — 2026-10-05
-
-The approved management concepts add owner-browser-only `GET /api/mcp/definitions`
-and `GET /api/mcp/definitions/{key}` for the global `/connectors` library. Reads
-return approved/disabled definition metadata and reviewed manifests; they never
-connect or execute. The existing owner approval POST remains the canonical import
-mutation. Imported host configs are inert drafts; commands are never installed or
-run by parsing/approval. A draft must review transport, fixed executable/arguments,
-placement, cached tools, configuration schema and credential aliases before approval.
-Only actual enabled/disabled states are presented; no fabricated marketplace or
-pending-review database state is introduced. Brain administrators continue to use
-the existing catalogue and configure only approved definitions. Their tool grants
-and runner authority are independent of installation approval.
-
-## HTTP form setup (2026-09-28 clarification)
-
-The installation owner may enter a name and exact HTTP MCP URL and explicitly
-request anonymous metadata discovery. The server uses the shared SDK with no
-credential, redirect, proxy or tool call, bounded wire sizes, pagination, timeout
-and concurrency. Tool descriptions preserve Markdown, newlines and tabs, remove
-other control characters and are clipped to the existing 2,000-character display
-limit; input/output schemas preserve assertions, with only the equivalent root
-declaration conversion above, and must pass the existing offline validators.
-HTTPS and exact loopback HTTP follow the existing transport
-target rules. Discovery returns a candidate manifest for the existing approval
-handler; remote metadata cannot execute commands or grant profile Use. Name/URL
-edits invalidate the preview. The form creates the connection through existing
-Brain authority after approval; duplicate keys and stale revisions retain their
-existing behavior. Advanced manifest import remains available for authenticated,
-local and private-runner definitions.
-
-The [managed experience amendment](memory-managed-experience.md) governs the
-2026-09-28 managed setup, progressive disclosure and owner connector approval
-changes; earlier explicit APIs and stored policies remain compatible.
-
 ## Source
 
 The user-authorized full product goal permits routine implementation decisions
@@ -58,6 +10,21 @@ within the [MCP foundation](../foundation/vision.md#mcp-coordinator-and-vault-in
 and [workspace scope](evidence-workspace-scope.md). This contract governs slice 22
 in the [coordination epic](../roadmap/epics/mcp-coordination.md). It adds no per-call
 human review requirement and no custom hashes or protocol version gate.
+Decisions folded into this specification:
+
+- 2026-09-28: the HTTP form setup clarification. The
+  [managed experience contract](memory-managed-experience.md) governs that
+  date's managed setup, progressive disclosure and owner connector approval
+  changes; earlier explicit APIs and stored policies remain compatible.
+- 2026-10-04: the observed connection result.
+- 2026-10-05: the approved management concepts (installation connector
+  library) and Connections-style tool-group cards with connector icons.
+- 2026-10-06: the compact grant-control revision, the Private Runner card
+  follow-up, and equivalent HTTP schema declarations after the user's failing
+  Exa server check.
+
+The text before this compaction, with each dated amendment, is at
+[revision a2338a8](https://github.com/MikeK184/Recollect/blob/a2338a80c824f00214ee33e37596e5a92a2cc409/docs/contracts/mcp-catalogue-and-profiles.md).
 
 ## Contract
 
@@ -85,7 +52,7 @@ resolution disabled. Only local fragment references are supported. Configuration
 and tool inputs require `type: object`; output schemas may describe other JSON
 types. Configuration rejects undeclared root properties. Validate schema syntax,
 schema/descriptor depth and byte bounds; do not fetch `$ref` or descriptions.
-Optional icons follow only the explicit inspection boundary below.
+Optional icons follow only the explicit [inspection boundary](#connector-icons).
 Resource-rebasing `$id` and model-parameter HTTP header mappings (`x-mcp-header`)
 are unsupported here and rejected instead of introducing an unapproved routing path.
 Tool names are unique, case-sensitive ASCII identifiers up to 128 characters.
@@ -101,14 +68,49 @@ preserving its routing/settings exactly; new or changed settings must validate.
 Runtime reuse/draining on configuration changes is a successor requirement, not
 a catalogue claim. Import of identical content does not create duplicate records.
 
-### Brain connections and profiles
+#### Installation connector library
 
-The Private Runner card follow-up adds nullable `private_runner_id` to connection
-summaries. Derive it only from a private placement's canonical `private:UUID`
-binding; otherwise return null. It exposes no configuration, credential alias,
-target or local-device runner reference. Existing Brain/catalogue visibility
-filters still apply; the UUID is routing metadata, never a grant or live status.
-Older summary payloads may omit it and must remain deserializable.
+Owner-browser-only `GET /api/mcp/definitions` and `GET /api/mcp/definitions/{key}`
+serve the global `/connectors` library. Reads return approved/disabled definition
+metadata and reviewed manifests; they never connect or execute. The existing
+owner approval POST remains the canonical import mutation. Imported host configs
+are inert drafts; commands are never installed or run by parsing/approval. A
+draft must review transport, fixed executable/arguments, placement, cached tools,
+configuration schema and credential aliases before approval. Only actual
+enabled/disabled states are presented; no fabricated marketplace or
+pending-review database state is introduced. Brain administrators continue to use
+the existing catalogue and configure only approved definitions. Their tool grants
+and runner authority are independent of installation approval.
+
+### HTTP form setup
+
+The installation owner may enter a name and exact HTTP MCP URL and explicitly
+request anonymous metadata discovery. The server uses the shared SDK with no
+credential, redirect, proxy or tool call, bounded wire sizes, pagination, timeout
+and concurrency. Tool descriptions preserve Markdown, newlines and tabs, remove
+other control characters and are clipped to the existing 2,000-character display
+limit; input/output schemas preserve assertions, with only the equivalent root
+declaration conversion below, and must pass the existing offline validators.
+HTTPS and exact loopback HTTP follow the existing transport
+target rules. Discovery returns a candidate manifest for the existing approval
+handler; remote metadata cannot execute commands or grant profile Use. Name/URL
+edits invalidate the preview. The form creates the connection through existing
+Brain authority after approval; duplicate keys and stale revisions retain their
+existing behavior. Advanced manifest import remains available for authenticated,
+local and private-runner definitions.
+
+Anonymous HTTP inspection accepts equivalent legacy schema declarations.
+Discovery may convert a root Draft 7 declaration to 2020-12 only for a bounded
+audited subset whose assertion semantics are unchanged. Preserve all assertions,
+property names, annotations and descriptions. Reject unknown/dialect-dependent
+keywords, remote references/identifiers, nested dialect changes and tuple-array
+items; do not guess or silently remove constraints. The final candidate still
+passes the existing strict offline validator. Already-approved manifests are
+unchanged, and direct manifest import retains strict 2020-12 validation. The
+health check does not approve or persist the candidate, start tool execution or
+confer Use access.
+
+### Brain connections and profiles
 
 The Brain owns connections/profiles; `created_by` records contribution, not an
 independent owner bypass. Brain admins provision and edit connections and create
@@ -122,6 +124,20 @@ query and fragment. Stdio targets are bounded non-secret labels/configuration;
 they never replace executable/arguments. Central placement has no runner reference;
 local/private placement requires one (at most 200 safe characters). A configured
 runner/alias is not yet a successfully resolved or connected provider.
+
+Connection summaries carry nullable `private_runner_id`, derived only from a
+private placement's canonical `private:UUID` binding; otherwise it is null. It
+exposes no configuration, credential alias, target or local-device runner
+reference. Existing Brain/catalogue visibility filters still apply; the UUID is
+routing metadata, never a grant or live status. Older summary payloads may omit
+it and must remain deserializable.
+
+Catalogue summaries may report `last_successful_call_at` from completed succeeded
+calls with the connection and connector definition's current revisions, filtered
+by existing call visibility and current explicit Use rights. It is historical
+observation, not connectivity or current health. Missing authorized history is
+reported without claiming a connection has never worked. No tool is contacted by
+this read.
 
 A profile has a unique name, description, optional environment and up to 20
 distinct connections from its Brain. Brain-wide profiles contain only Brain-wide
@@ -213,25 +229,29 @@ no-use, empty/partial discovery and permission loss are visible. Polling every
 five seconds refreshes rights and closes inaccessible/configuration-stale editors;
 failed refresh hides stale sensitive detail. No mobile work is required.
 
-### Inline management and connector icons — 2026-10-05
+Descriptions and schemas use the bundled safe Markdown/highlighting renderer.
+Remote HTML and embedded images remain inert; unknown/oversized languages remain
+readable exact text, and explicit Copy preserves the original code bytes.
 
-The user approved Connections-style tool-group cards with compact independent
-Use, Manage and Share icons beside each person/group name. Green means allowed;
-red means denied. Accessible names/tooltips identify both the power and state.
-Editing updates values in the existing card/connection inspector with stable
-identity, tabs and sections. Manage edits group configuration; Share edits grants.
-Effective account rights remain additive; removable direct/group grants are
-distinct from inherited administrative/group authority, exposed in a concise
-disclosure. The approved compact revision on 2026-10-06 supersedes the repeated
-Direct controls beside each name: one main icon set shows effective access,
-including staged direct/group edits. Inherited powers remain green with a lock;
-they cannot be denied by clearing a direct grant. A small source chip opens the
-direct/admin/group breakdown and on-demand direct-grant controls, preserving
-the ability to remove overlapping direct grants. Admin inheritance applies to
-Manage/Share only; Use stays explicit. Disabled accounts or absent Brain access
-never appear enabled merely because stored direct grants exist. Pending people are marked
-as drafts, rendered only in active authorized editing, and discarded on Share
-loss/archive. Neither the design nor edit mode grants additional rights.
+### Inline management
+
+Tool groups are Connections-style cards. Editing updates values in the existing
+card/connection inspector with stable identity, tabs and sections. Manage edits
+group configuration; Share edits grants. Beside each person/group name, one main
+set of compact, independent Use, Manage and Share icons shows effective access,
+including staged direct/group edits; there are no repeated Direct controls beside
+each name. Green means allowed; red means denied. Accessible names/tooltips
+identify both the power and state. Effective account rights remain additive;
+removable direct/group grants are distinct from inherited administrative/group
+authority. Inherited powers remain green with a lock; they cannot be denied by
+clearing a direct grant. A small source chip opens a concise direct/admin/group
+breakdown and on-demand direct-grant controls, preserving the ability to remove
+overlapping direct grants. Admin inheritance applies to Manage/Share only; Use
+stays explicit. Disabled accounts or absent Brain access never appear enabled
+merely because stored direct grants exist. Pending people are marked as drafts,
+rendered only in active authorized editing, and discarded on Share loss/archive.
+Neither the design nor edit mode grants additional rights.
+
 Where retained same-name group grants belong to different issuers, the member
 DTO cannot identify the matching issuer. Preserve authoritative effective and
 individual-grant values, disable ambiguous projection/group editing and keep
@@ -247,6 +267,8 @@ An observed conflicting configuration revision blocks that configuration save
 while retaining its safe draft for explicit reload. Failed authorization refresh
 hides sensitive detail; current authority is rechecked on every mutation.
 
+### Connector icons
+
 Only explicit owner HTTP metadata inspection may cache optional server icons.
 The SDK's initialize metadata supplies up to three candidate images. Fetch only
 same-origin public HTTPS URLs relative to the explicitly inspected target;
@@ -261,10 +283,6 @@ rejected. Cache one successful normalized PNG in the approved definition's
 existing manifest JSON and expose its bounded data URI in authorized summaries.
 Reads never fetch icons. Missing/rejected/failed icons use the generic icon and
 never fail successful tool metadata inspection or grant execution rights.
-
-Descriptions and schemas use the bundled safe Markdown/highlighting renderer.
-Remote HTML and embedded images remain inert; unknown/oversized languages remain
-readable exact text, and explicit Copy preserves the original code bytes.
 
 ## Acceptance
 
@@ -286,11 +304,3 @@ lifecycle and unknown completion belong to slice 23. Vault/private runner transp
 and rotation are slice 24; shared memory/workspace tools and host refresh are slice
 25; managed observation capture is slice 26. A universal connector marketplace,
 shell sandbox, automatic remote schema approval and mobile UI are outside this slice.
-
-### Observed connection result — 2026-10-04
-
-Catalogue summaries may report `last_successful_call_at` from completed succeeded
-calls with the connection and connector definition's current revisions, filtered by existing call visibility
-and current explicit Use rights. It is historical observation, not connectivity or
-current health. Missing authorized history is reported without claiming a connection
-has never worked. No tool is contacted by this read.

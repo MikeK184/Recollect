@@ -143,16 +143,16 @@ An exact create replay returns the committed session; a conflicting reuse return
 the revision. An exact replay of the previous update may return its committed
 result; otherwise stale revisions return 409. Heartbeats do not change content
 revision and reject a task whose current scope no longer matches the published
-scope; announce the new current selection first. A stable message UUID is the request idempotency key: identical replay
-returns the existing result; changed payload or sender reuse returns 409. Apply a limit of 60 new messages
-per sending session in a rolling minute; exact idempotent replays do not consume
-that allowance. Retries
-cannot create duplicate messages/events. Content announcements/changes, message
-admission and session closure commit with minimal metadata audit. Lease-only
-heartbeats and idempotent delivery acknowledgements persist their timestamps/state
-atomically without a separate mutation-audit row for every tick/read receipt;
-they are presence/transport state, not evidence or content decisions. Payloads
-and credentials are excluded from normal logs/audit.
+scope; announce the new current selection first. A stable message UUID is the
+request idempotency key: identical replay returns the existing result; changed
+payload or sender reuse returns 409. Apply a limit of 60 new messages per
+sending session in a rolling minute; exact idempotent replays do not consume
+that allowance. Retries cannot create duplicate messages/events. Content
+announcements/changes, message admission and session closure commit with minimal
+metadata audit. Lease-only heartbeats and idempotent delivery acknowledgements
+persist their timestamps/state atomically without a separate mutation-audit row
+for every tick/read receipt; they are presence/transport state, not evidence or
+content decisions. Payloads and credentials are excluded from normal logs/audit.
 
 ### Presence, matching and notification lifecycle
 
@@ -309,9 +309,10 @@ version gate.
 
 Validation failures are typed 400/422; missing/foreign resources do not expose
 their contents; unauthenticated/revoked requests deny access; stale/replayed
-conflicts are 409, and an archived Brain is 409 `brain_archived`; bounded capacity is 429; transport failure preserves durable
-cursor/request identity. Server acceptance is not proof of host delivery. Outbox
-retry may replay only idempotent coordination writes, never external tool effects.
+conflicts are 409, and an archived Brain is 409 `brain_archived`; bounded
+capacity is 429; transport failure preserves durable cursor/request identity.
+Server acceptance is not proof of host delivery. Outbox retry may replay only
+idempotent coordination writes, never external tool effects.
 
 ## Acceptance
 
