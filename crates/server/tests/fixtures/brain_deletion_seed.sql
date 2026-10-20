@@ -4,7 +4,8 @@
 -- underscore tokens are replaced by the test with fresh UUIDs and content
 -- markers before execution.
 
--- Extended below through support/digest and native mapping candidate storage.
+-- Extended below through support/digest, native mapping candidate storage and
+-- the later organization, coordination, skill, feedback and field classes.
 
 INSERT INTO accounts (id,username) VALUES (__MEMBER__,'fixture-member');
 INSERT INTO devices (id,account_id,name,token,claimed,expires_at)
@@ -161,9 +162,15 @@ INSERT INTO semantic_heads (brain_id,profile_id) VALUES (__A__,__SP1__);
 INSERT INTO model_requests (id,brain_id,actor_id,operation_id,policy_id,purpose,model,prompt_label,schema_label,state,call_token,reserved_tokens,charged_tokens)
   VALUES (__MREQ1__,__A__,__OWNER__,gen_random_uuid(),__MP__,'extraction','fixture-model','p','s','running',gen_random_uuid(),100,0);
 INSERT INTO model_request_inputs (request_id,brain_id,kind,input_id) VALUES (__MREQ1__,__A__,'source_version',__V2__);
--- Fence the superseded version, not __V2__: fencing a version with live
--- semantic entries cascades to their batches and cancels the batch's job.
-INSERT INTO model_input_fences (brain_id,source_version_id,request_id) VALUES (__A__,__V1__,__SEEDREQ__);
+-- Fence a superseded version without derivatives. Fencing a version with live
+-- semantic entries cascades to their batches and cancels the batch's job, and
+-- since 049 a fence follows exact source ancestry, so fencing __V1__ (the
+-- parent of the __V2__ excerpt) would cancel __V2__'s batch job as well.
+DO $$ DECLARE v0 uuid:=gen_random_uuid(); BEGIN
+ INSERT INTO source_versions (id,source_id,brain_id,title,media_type,source_uri,byte_length,created_by,processing,retention_class)
+ VALUES (v0,__S1__,__A__,'__MT_TITLE__ first','text/plain','__MT_URI__',6,__OWNER__,'ready','document');
+ INSERT INTO model_input_fences (brain_id,source_version_id,request_id) VALUES (__A__,v0,__SEEDREQ__);
+END $$;
 INSERT INTO model_claim_fences (brain_id,revision_id,request_id) VALUES (__A__,__R2__,__SEEDREQ__);
 
 INSERT INTO learning_runs (id,brain_id,source_version_id,policy_id,actor_id,selection,job_id,state,claim_ids)
@@ -242,3 +249,102 @@ DO $$ DECLARE context uuid:=gen_random_uuid(); input uuid:=gen_random_uuid();
  INSERT INTO knowledge_relation_candidates(id,brain_id,input_id,from_mention,to_mention,relation,byte_start,byte_end,quote)
  VALUES(gen_random_uuid(),__A__,input,mention,other_mention,'alias',0,2,'__MT_CLAIM__');
 END $$;
+
+-- Brain-dependent classes added by 047-067: maintenance cursors, managed
+-- skills, coordination, mapping producer/origin/stage/coverage state, source
+-- inputs, organization, shadow and topic state, alias decisions, retrieval
+-- feedback, structured fields and evidence artifact intents.
+INSERT INTO autonomous_maintenance_cursors(brain_id,policy_id,kind,last_id,version)
+ VALUES(__A__,__MP__,'source',__S1__,1);
+DO $$ DECLARE skill uuid:=gen_random_uuid(); BEGIN
+ INSERT INTO managed_skills(id,brain_id,name,version,environment_id,enabled,summary)
+ VALUES(skill,__A__,'fixture-skill',1,__ENV1__,true,'{"description":"__MT_RULE__"}');
+ INSERT INTO managed_skill_versions(id,brain_id,skill_id,version,environment_id,summary,files,created_by)
+ VALUES(gen_random_uuid(),__A__,skill,1,__ENV1__,'{"description":"__MT_RULE__"}','[{"path":"SKILL.md","content":"__MT_RULE__"}]',__OWNER__);
+END $$;
+DO $$ DECLARE one uuid:=gen_random_uuid(); two uuid:=gen_random_uuid(); BEGIN
+ INSERT INTO coordination_sessions(id,brain_id,account_id,device_id,task_id,scope_id,revision,input,projection,expires_at) VALUES
+ (one,__A__,__OWNER__,__DEV__,__T1__,__SS1__,1,'{"intent":"__MT_CLAIM__","paths":["__MT_PATH__"]}','{}',now()+interval '1 hour'),
+ (two,__A__,__OWNER__,__DEV__,__T1__,__SS1__,1,'{"intent":"__MT_CLAIM__ other","paths":["__MT_PATH__"]}','{}',now()+interval '1 hour');
+ INSERT INTO coordination_overlaps(id,brain_id,left_id,right_id,reason_key,signature,active)
+ VALUES(gen_random_uuid(),__A__,one,two,'path','{"path":"__MT_PATH__"}',true);
+ INSERT INTO coordination_messages(id,brain_id,from_session_id,to_session_id,input,payload,expires_at)
+ VALUES(gen_random_uuid(),__A__,one,two,'{"kind":"note"}','{"text":"__MT_CLAIM__"}',now()+interval '7 days');
+ INSERT INTO coordination_events(id,brain_id,session_id,sequence,kind,payload,expires_at)
+ VALUES(gen_random_uuid(),__A__,two,1,'overlap','{"path":"__MT_PATH__"}',now()+interval '7 days');
+END $$;
+DO $$ DECLARE
+ run uuid:=(SELECT id FROM learning_runs WHERE brain_id=__A__);
+ input uuid:=(SELECT id FROM knowledge_mapping_inputs WHERE brain_id=__A__);
+ entity uuid:=(SELECT entity_id FROM knowledge_mentions WHERE brain_id=__A__ AND local_key='one');
+ candidate uuid:=(SELECT id FROM knowledge_relation_candidates WHERE brain_id=__A__);
+ report uuid:=(SELECT id FROM analytics_reports WHERE brain_id=__A__);
+ vector uuid:=(SELECT id FROM semantic_entries WHERE brain_id=__A__);
+ producer uuid:=gen_random_uuid(); recipe uuid:=gen_random_uuid(); source_input uuid:=gen_random_uuid();
+ community uuid:=gen_random_uuid(); split uuid:=gen_random_uuid(); overlay uuid:=gen_random_uuid();
+ topic_change uuid:=gen_random_uuid(); shadow uuid:=gen_random_uuid(); alias_change uuid:=gen_random_uuid();
+ feedback uuid:=gen_random_uuid(); feedback_change uuid:=gen_random_uuid();
+ field_input uuid:=gen_random_uuid(); field_entity uuid:=gen_random_uuid();
+BEGIN
+ INSERT INTO knowledge_mapping_producer_profiles(change_id,brain_id,provider,requested_model,returned_model,prompt_label,schema_label,adapter_revision,mapping_schema)
+ VALUES(producer,__A__,'openai','fixture-model','fixture-model','p','s','fixture','source-mentions-1');
+ INSERT INTO knowledge_mapping_producer_heads(brain_id,change_id) VALUES(__A__,producer);
+ INSERT INTO knowledge_mapping_origins(input_id,brain_id,run_id,request_id,policy_id,producer_change_id,offered_inputs,published_at)
+ VALUES(input,__A__,run,__MREQ1__,__MP__,producer,'[]',now());
+ INSERT INTO knowledge_mapping_stages(run_id,brain_id,request_id,source_version_id,context,payload,expires_at)
+ VALUES(run,__A__,__MREQ1__,__V2__,'{}','{"marker":"__MT_CLAIM__"}',now()+interval '1 day');
+ INSERT INTO knowledge_mapping_coverage(run_id,brain_id,request_id,state,input_id) VALUES(run,__A__,__MREQ1__,'published',input);
+ INSERT INTO knowledge_source_inputs(id,brain_id,source_id,source_version_id,context,created_by)
+ VALUES(source_input,__A__,__S1__,__V2__,'{"title":"__MT_TITLE__"}',__OWNER__);
+
+ INSERT INTO knowledge_organization_recipes(change_id,brain_id,recipe,gds_version) VALUES(recipe,__A__,'entity-idf-bipartite-leiden-1','fixture');
+ INSERT INTO knowledge_organization_heads(brain_id,change_id) VALUES(__A__,recipe);
+ INSERT INTO knowledge_organization_calculations(report_id,brain_id,recipe_change_id,outbox_revision,projection)
+ VALUES(report,__A__,recipe,1,'{}');
+ INSERT INTO knowledge_organization_inputs(brain_id,report_id,input_id) VALUES(__A__,report,input);
+ INSERT INTO knowledge_organization_sources(brain_id,report_id,input_id) VALUES(__A__,report,source_input);
+ INSERT INTO knowledge_organization_vectors(brain_id,report_id,entry_id,profile_id,request_id) VALUES(__A__,report,vector,__SP1__,__MREQ1__);
+ INSERT INTO knowledge_topics(id,brain_id,kind,change_id,recipe,organization_report_id) VALUES
+ (community,__A__,'community',topic_change,'entity-idf-bipartite-leiden-1',report),
+ (split,__A__,'split',gen_random_uuid(),'entity-idf-bipartite-leiden-1',report),
+ (overlay,__A__,'manual_overlay',gen_random_uuid(),'manual',NULL);
+ INSERT INTO knowledge_topic_changes(id,brain_id,topic_id,actor_id,action) VALUES(topic_change,__A__,community,__OWNER__,'create');
+ INSERT INTO knowledge_organization_lineage(id,brain_id,topic_id,previous_topic_id,basis_input,report_id)
+ VALUES(gen_random_uuid(),__A__,community,gen_random_uuid(),input,report);
+ INSERT INTO knowledge_organization_source_lineage(id,brain_id,topic_id,previous_topic_id,basis_input,report_id)
+ VALUES(gen_random_uuid(),__A__,community,gen_random_uuid(),source_input,report);
+ INSERT INTO knowledge_topic_memberships(brain_id,topic_id,entity_id,input_id,reason,weight) VALUES(__A__,community,entity,input,'weighted_leiden',1);
+ INSERT INTO knowledge_topic_sources(brain_id,topic_id,input_id,reason,weight) VALUES(__A__,community,source_input,'hybrid_entity_affinity',1);
+ INSERT INTO knowledge_topic_labels(brain_id,topic_id,basis_input,label,actor_id) VALUES(__A__,community,input,'__MT_CLAIM__',__OWNER__);
+ INSERT INTO knowledge_topic_source_labels(brain_id,topic_id,basis_input,label) VALUES(__A__,community,source_input,'__MT_TITLE__');
+ INSERT INTO knowledge_topic_exclusions(brain_id,topic_id,input_id,actor_id) VALUES(__A__,community,input,__OWNER__);
+ INSERT INTO knowledge_topic_source_exclusions(brain_id,topic_id,input_id) VALUES(__A__,community,source_input);
+ INSERT INTO knowledge_topic_splits(brain_id,original_topic_id,split_topic_id,input_id,actor_id) VALUES(__A__,community,split,input,__OWNER__);
+ INSERT INTO knowledge_topic_source_splits(brain_id,original_topic_id,split_topic_id,input_id) VALUES(__A__,community,split,source_input);
+ INSERT INTO knowledge_topic_intent_mappings(id,brain_id,topic_id,input_id,entity_id) VALUES(gen_random_uuid(),__A__,overlay,input,entity);
+ INSERT INTO knowledge_topic_intent_sources(id,brain_id,topic_id,input_id) VALUES(gen_random_uuid(),__A__,overlay,source_input);
+
+ INSERT INTO knowledge_shadow_candidates(id,brain_id,source_id,source_version_id,request_id,policy_id,actor_id,context,schema_revision,adapter_revision,output_sha256,offered_inputs,payload,expires_at)
+ VALUES(shadow,__A__,__S1__,__V2__,__MREQ1__,__MP__,__OWNER__,'{}','source-mentions-1','learning-quote-anchors-3',md5(shadow::text)||md5(__V2__::text),'[]','{"marker":"__MT_CLAIM__"}',now()+interval '1 day');
+ INSERT INTO knowledge_shadow_sources(id,brain_id,report_id,source_id,source_version_id,candidate_id,context)
+ VALUES(gen_random_uuid(),__A__,report,__S1__,__V2__,shadow,'{"title":"__MT_TITLE__"}');
+ INSERT INTO knowledge_shadow_calculations(report_id,brain_id,feature_parameters,expected_gds_version,projection,preparation)
+ VALUES(report,__A__,'{"neighbors":5,"vector_scale":1.0,"minimum_cosine":0.75}','fixture','{}','{}');
+
+ INSERT INTO knowledge_alias_changes(id,brain_id,candidate_id,actor_id,action) VALUES(alias_change,__A__,candidate,__OWNER__,'accept');
+ INSERT INTO knowledge_alias_heads(brain_id,candidate_id,change_id) VALUES(__A__,candidate,alias_change);
+
+ -- The context's change_id foreign key is deferred to commit.
+ INSERT INTO retrieval_feedback_contexts(id,brain_id,actor_id,task_id,operation_id,scope_id,query_context_id,scope,input_kind,revision_id,change_id)
+ VALUES(feedback,__A__,__OWNER__,__T1__,(SELECT id FROM operation_bindings WHERE brain_id=__A__),__SS1__,gen_random_uuid(),'{}','claim',__R2__,feedback_change);
+ INSERT INTO retrieval_feedback_changes(id,brain_id,context_id,actor_id,vote) VALUES(feedback_change,__A__,feedback,__OWNER__,'helpful');
+
+ INSERT INTO knowledge_field_inputs(id,brain_id,origin_kind,logical_id,revision_id,context,evidence_kind,evidence_id,evidence_revision,created_by)
+ VALUES(field_input,__A__,'claim_revision',__CL1__,__R2__,'{"value":"__MT_CLAIM__"}','claim',__CL1__,__R2__,__OWNER__);
+ INSERT INTO knowledge_field_entities(id,brain_id,kind,repository_id) VALUES(field_entity,__A__,'repository',__REP1__);
+ INSERT INTO knowledge_field_references(id,brain_id,input_id,entity_id,field_pointer,value)
+ VALUES(gen_random_uuid(),__A__,field_input,field_entity,'/repository',__REP1__);
+END $$;
+-- An evidence intent whose canonical version committed (still inside the
+-- settlement grace period), so the artifact is already in the closure.
+INSERT INTO evidence_artifact_intents(artifact_id,brain_id) VALUES(__ART1__,__A__);

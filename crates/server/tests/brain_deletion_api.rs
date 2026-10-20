@@ -776,7 +776,9 @@ async fn brain_deletion_api_full_flow_denial_and_fence() {
     assert_eq!(deleted["request"]["disposition"], "deleted");
     assert_eq!(deleted["request"]["state"], "pending");
     assert_eq!(deleted["request"]["journaled"], false);
-    assert_eq!(deleted["request"]["pending_artifacts"], 1);
+    // The retained artifact and the pending excerpt intent both require
+    // physical cleanup.
+    assert_eq!(deleted["request"]["pending_artifacts"], 2);
     assert_eq!(deleted["request"]["acknowledged_devices"], 0);
     assert_eq!(deleted["backup_days"], 7);
 
