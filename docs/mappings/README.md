@@ -39,9 +39,9 @@ validator warning, so link the full text at a pinned Git revision instead.
 
 Superseded studies, duplicate milestone reports and rejected mockup reviews were
 removed in the 2026-10-18 cleanup. Required historical citations now link to their
-exact files at [checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings).
+exact files at [checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings).
 No baseline was relabeled as a new run, and unfinished acceptance remains active.
 On 2026-10-19 the long graph, checkpoint, first-batch and desktop-acceptance
 ledgers were reduced to receipts and failure tables; their full text is at
-[commit a0aea9d](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings).
+[commit a0aea9d](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings).
 Every frozen input hash, owner cost approval and failure result was kept.

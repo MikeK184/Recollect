@@ -54,7 +54,7 @@ observations as well as ordinary eligibility; generated handovers remain declare
 The API/database proof includes multi-repository composition, conflicting-environment
 denial, stale contributors, policy/access changes, cancellation and real older-backup
 erasure replay. Browser proof covers forms and desktop/mobile history inspection.
-The [dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/procedures-and-handovers-proof-2026-09-14.md) records
+The [dated evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/procedures-and-handovers-proof-2026-09-14.md) records
 actual synthetic Luna generation and the normal-runtime autonomous demo.
 
 ## Failure and Recovery

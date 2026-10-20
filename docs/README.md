@@ -73,17 +73,17 @@ complete.
 The 2026-10-18 documentation cleanup removed superseded studies and duplicate
 reports. It implemented no product feature, changed no product decision and
 refreshed no runtime or benchmark measurement. The earlier snapshot is available
-at [checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
+at [checkpoint f2673d7](https://github.com/MikeK184/Recollect/tree/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs).
 On 2026-10-19 the developer-tooling ADRs, contracts and packs were collapsed into
 the [development tooling runbook](runbooks/development-tooling.md); that state is
-available at [commit f1b6bb3](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
+available at [commit f1b6bb3](https://github.com/MikeK184/Recollect/tree/1e49d772360b1ea12ddf198a5c3dbbed0f714b1b/docs).
 
 The owner changed the governance workflow on 2026-10-19 (see the
 [ADR 0001 amendment](adr/0001-repository-governance.md)). Execution packs are
 now required only for risky work, the 105 shipped packs were removed from the
 tree, and long mapping ledgers were collapsed into receipts tables. The earlier
 state, including every shipped pack and the full ledgers, is available at
-[commit a0aea9d](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs).
+[commit a0aea9d](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs).
 The change implemented no product feature, changed no product decision and
 refreshed no runtime or benchmark measurement.
 

@@ -34,8 +34,8 @@ The user selected `text-embedding-3-large` at 3,072 dimensions, with
 [retention](memory-retention-and-erasure.md),
 [capture reconciliation](memory-capture-reconciliation.md) and
 [stack](../foundation/techstack.md#storage-ownership-and-hybrid-retrieval) govern.
-[Interface evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/semantic-interfaces-2026-09-15.md) records current
-provider/database limits. The [Atlas audit](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-implementation-audit-2026-09-15.md)
+[Interface evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/semantic-interfaces-2026-09-15.md) records current
+provider/database limits. The [Atlas audit](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/atlas-implementation-audit-2026-09-15.md)
 supplies consumer obligations, not a competing authority.
 
 ## Contract

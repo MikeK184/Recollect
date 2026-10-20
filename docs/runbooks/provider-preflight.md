@@ -26,7 +26,7 @@ vector dimensions and token counts. It omits raw vectors and provider payloads.
 Both results must contain `verified: true` and the command must exit zero.
 The embedding result must have 3,072 finite coordinates; the structured response
 must extract the two expected synthetic fields and complete normally.
-The [dated proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/openai-provider-preflight-2026-09-14.md) records the
+The [dated proof](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/openai-provider-preflight-2026-09-14.md) records the
 actual successful calls. These checks establish connectivity and interface shape,
 not extraction quality or persistent semantic search. To verify a Brain through
 the delivered gateway, use [Model learning → Check selected models](provider-learning.md).

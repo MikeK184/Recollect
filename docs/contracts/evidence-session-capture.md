@@ -10,7 +10,7 @@ The accepted [capture vision](../foundation/vision.md),
 [workspace scope](evidence-workspace-scope.md), [retention](memory-retention-and-erasure.md)
 and [autonomous maintenance](memory-autonomous-maintenance.md) govern this producer.
 The full product goal authorizes routine integration and local storage choices.
-[Interface evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/session-capture-interfaces-2026-09-14.md) records
+[Interface evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/session-capture-interfaces-2026-09-14.md) records
 current host documentation and Cognee integration patterns without adopting its runtime.
 
 ## Contract

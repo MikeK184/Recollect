@@ -80,7 +80,7 @@ one fresh query attempt per explicit invocation through the same API handler.
 - Insufficient support: inspect claim qualifications or use the strict modes.
   Semantic similarity and connectivity do not establish support for an answer.
   Unsupported synthetic questions still returned unrelated semantic context in
-  the [measured comparison](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-fusion-2026-09-22.md).
+  the [measured comparison](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/retrieval-fusion-2026-09-22.md).
 
 ## Verification
 

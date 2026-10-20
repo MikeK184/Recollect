@@ -35,7 +35,7 @@ The compact [evidence receipts](../../../mappings/graph-organization-implementat
 hold the 105-call results, earlier failures (all 92 observations, 460 mode rows
 and 21 unknown topic pairs per producer), frozen input hashes and cost approvals.
 The 2026-10-18 design and preparation notes are at the pinned
-[full text](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger);
+[full text](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger);
 they are evidence of their own checkpoints, not current completion.
 
 ## Governing Sources
@@ -76,7 +76,7 @@ they are evidence of their own checkpoints, not current completion.
 ## Data and Authority
 
 Decisions that govern the remaining work (the full design notes are in the
-[implementation mapping](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger)):
+[implementation mapping](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings/graph-organization-implementation-2026-10-18.md#execution-pack-design-and-preparation-ledger)):
 
 - A reader qualifies at most 250 exact source contributors per page through
   canonical graph qualification, derives labels and counts only from them, marks

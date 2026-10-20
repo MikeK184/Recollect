@@ -38,4 +38,4 @@ Superseded on 2026-10-19 by the [development tooling runbook](../runbooks/develo
 which records what is installed and how to verify it. This ADR added an optional
 developer CLI without replacing bootstrap authority or the product extraction
 baseline. The original text and its contract remain at commit
-[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/1e49d772360b1ea12ddf198a5c3dbbed0f714b1b/docs).

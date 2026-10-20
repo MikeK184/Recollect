@@ -11,7 +11,7 @@ implementing real native install/reload for Codex, Claude Code and OpenCode.
 [managed-skills contract](mcp-managed-skills.md),
 [workspace scope](evidence-workspace-scope.md) and
 [plugin lifecycle](mcp-plugin-session-memory.md) govern this successor.
-The [first shipped pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-managed-skills.md)
+The [first shipped pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-managed-skills.md)
 remains delivery history, not a native-install proof.
 
 ## Contract

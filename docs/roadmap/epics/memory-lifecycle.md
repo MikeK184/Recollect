@@ -56,13 +56,13 @@ Provider input, 2026-09-14: the user supplied `OPENAI_API_KEY` in Recollect's ig
 text model and embedding model behind the shared gateway. The opt-in synthetic
 `docs/research/scripts/probe-openai.mjs` checks external connectivity; it does not enable
 Brain enrichment or replace the provider-policy contract and retention dependency.
-The [connection proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/openai-provider-preflight-2026-09-14.md)
+The [connection proof](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/openai-provider-preflight-2026-09-14.md)
 records the initially usable GPT-4.1 mini/embedding-3-small pair. After completing
 organization verification, the user selected `gpt-5.6-luna` as the text model;
 that exact model passed structured extraction and is now the probe's default.
 The user subsequently selected `text-embedding-3-large` for embeddings, verified
 at its default 3,072 dimensions. Use Luna with that embedding model when implementing the
-gateway. The delivered [provider-learning proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/provider-learning-proof-2026-09-14.md)
+gateway. The delivered [provider-learning proof](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/provider-learning-proof-2026-09-14.md)
 records actual browser calls and local runtime. The earlier GPT-5 mini verification denial is historical, not a current
 blocker for the selected model.
 
@@ -74,7 +74,7 @@ testing those rules through their own paths.
 
 ## Slice Map
 
-The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
+The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 authorizes source-support verification, automatic session-derived handovers with
 permitted minimal excerpts, and bounded cross-session correction. These slices
 are locally delivered under accepted contracts and archived execution packs.
@@ -135,7 +135,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
-in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/memory-lifecycle.md).
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/roadmap/epics/memory-lifecycle.md).
 Dated test/deployment observations are not a current runtime health claim.

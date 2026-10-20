@@ -9,7 +9,7 @@ input identities, a paid-campaign receipts table, the failure results and the
 local proof receipts. The full 2026-10-18 text, including the requirement and
 proof ledger and the 18,000-word execution-pack design and preparation ledger,
 is at the pinned revision
-[a0aea9d](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/graph-organization-implementation-2026-10-18.md).
+[a0aea9d](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings/graph-organization-implementation-2026-10-18.md).
 Nothing below was re-measured: the reduction reran no model, performance,
 browser or installed-runtime check.
 

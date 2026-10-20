@@ -26,7 +26,7 @@ hooks deliberately exclude Recollect-derived context and cannot replace a
 coordinator's actual target, runner and outcome records. The runtime already owns
 credential redaction, fenced completion and a durable local receipt outbox. The
 capture engine already owns source retention, scoped learning, erasure and replay.
-The [reference mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-observations-2026-09-26.md) supports reuse of
+The [reference mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/mcp-observations-2026-09-26.md) supports reuse of
 those boundaries rather than copying Cognee's runtime or interpreting host text as
 an independently verified deployment.
 

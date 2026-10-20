@@ -9,7 +9,7 @@ The full product goal authorizes these routine decisions under the
 [ADR 0009](../adr/0009-vault-and-private-execution.md),
 [runtime](mcp-runtime-and-credentials.md) and
 [paired identity](platform-device-pairing.md) contracts. The
-[mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-vault-private-2026-09-22.md) is evidence only.
+[mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/mcp-vault-private-2026-09-22.md) is evidence only.
 
 ## Contract
 

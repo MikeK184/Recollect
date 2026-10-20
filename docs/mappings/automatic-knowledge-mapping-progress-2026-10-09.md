@@ -6,8 +6,8 @@ Status: dated checkpoint, reduced on 2026-10-19 to its measurements and failures
 
 The full 2026-10-09 text (design review, receipts lists, per-step narrative) is
 at the pinned revision
-[a0aea9d](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/automatic-knowledge-mapping-progress-2026-10-09.md).
-Checkpoint commit `f2673d71c4b63b536d41b3143eb39c207955b201` was published on
+[a0aea9d](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings/automatic-knowledge-mapping-progress-2026-10-09.md).
+Checkpoint commit `18a8ba7ee8399f143b6e22d16c71c81b2a608ae0` was published on
 2026-10-09; the reduction reran nothing.
 
 ## Scope and method

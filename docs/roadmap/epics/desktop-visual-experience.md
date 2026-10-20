@@ -23,7 +23,7 @@ below remains the delivered state until the redesign slices ship.
 
 - [Desktop contract](../../contracts/desktop-experience.md) (amended 2026-10-03: visual language and motion; 2026-10-19: two-theme redesign)
 - [Design system document](../../foundation/design-system.md)
-- [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/claude-mem-study-2026-10-03.md) (reference for terminal-card, TV and live-feed visual language; not implementation authority)
+- [claude-mem study, 2026-10-03](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research/claude-mem-study-2026-10-03.md) (reference for terminal-card, TV and live-feed visual language; not implementation authority)
 - [ADR 0014: desktop experience and answers](../../adr/0014-desktop-experience-and-answers.md)
 - [ADR 0025: two-theme desktop redesign](../../adr/0025-two-theme-desktop-redesign.md) (amends ADR 0014 and ADR 0017)
 - [Knowledge surface contract](../../contracts/desktop-knowledge-surface.md) (amended 2026-10-19: inspector, Ask hero, themes)
@@ -110,7 +110,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
-in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/desktop-visual-experience.md).
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/roadmap/epics/desktop-visual-experience.md).
 Dated test/deployment observations are not a current runtime health claim.

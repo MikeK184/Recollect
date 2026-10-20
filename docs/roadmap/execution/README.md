@@ -13,4 +13,4 @@ exists, with Status `planned`, `in-progress` or `blocked`, and keep the
 `pack` (active pack exists), `inline: ...` (no pack), `archived` (shipped; pack
 deleted at closeout). Closeout follows [the lifecycle](../../README.md). Shipped
 packs before 2026-10-19 are in
-[Git history](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive).
+[Git history](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive).

@@ -12,7 +12,7 @@ Status: accepted
 [durable work](platform-durable-work.md) and
 [retention/erasure](memory-retention-and-erasure.md). The active full-product
 goal authorizes these routine interface and implementation decisions. The
-[installed interface evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-analytics-interfaces-2026-09-15.md)
+[installed interface evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/graph-analytics-interfaces-2026-09-15.md)
 records Cognee/Atlas reuse, successful probes and their limits.
 
 ## Contract

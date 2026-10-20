@@ -73,7 +73,7 @@ The inspected claude-mem worker used SQLite WAL, bounded search/detail queries,
 progressive hydration and asynchronous observation work. Those patterns motivate
 bounded discovery and shorter writer transactions; they do not demonstrate that
 replacing Recollect's graph database would fix the measured lock waits. The
-[original pinned comparison](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/memory-product-improvement-plan-2026-10-08.md#graph-performance-reuse-follow-up--2026-10-09)
+[original pinned comparison](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research/memory-product-improvement-plan-2026-10-08.md#graph-performance-reuse-follow-up--2026-10-09)
 retains method and source references.
 
 ## Evaluation that can prove improvement

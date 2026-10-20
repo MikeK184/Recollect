@@ -56,7 +56,7 @@ a common workspace-wide scope ledger plus host-specific owned exports.
 ## Translation and Limits
 
 The [accepted contract](../contracts/mcp-native-skill-reload.md) and
-[successor pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-native-skill-reload.md) require
+[successor pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md) require
 real native registration/activation proof, per-task temporary references, explicit
 persistent intent and unchanged-owned cleanup. Instruction bundles become native
 skill wrappers while the original AGENTS resource and existing local instruction
@@ -165,5 +165,5 @@ Workspace exports remain visible to local readers and cannot retract existing
 conversation content. No installed user plugin was upgraded, normal server
 migration applied, release made, commit/push performed or service deployed.
 
-The [archived successor pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-native-skill-reload.md)
+The [archived successor pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md)
 records the completed local delivery. The first shipped pack remains unchanged.

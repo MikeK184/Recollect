@@ -104,6 +104,6 @@ cargo test -p recollect-server --test platform retention -- --ignored --test-thr
 ```
 
 The fixtures are synthetic and require no actual model charge. The
-[dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/retrieval-investigation-2026-09-22.md) records real
+[dated evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/retrieval-investigation-2026-09-22.md) records real
 database/native/browser calls, controlled browser error/deadline cases and the
 normal retained-runtime check. The implementation is included in checkpoint `f2673d7`; the observations retain their original dates.

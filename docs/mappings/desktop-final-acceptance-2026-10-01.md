@@ -5,14 +5,14 @@ Confidence: observed-once
 Status: dated baseline, reduced on 2026-10-19 to its results and limits; later
 checkpoints control current runtime claims. The full text is at the pinned
 revision
-[a0aea9d](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/desktop-final-acceptance-2026-10-01.md).
+[a0aea9d](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings/desktop-final-acceptance-2026-10-01.md).
 
 ## Sources and method
 
 The user resumed Ask-primary, plugin/OpenCode work and the six older desktop
 acceptance packs and authorized deployment to the existing local installation. The
-record follows the [four-slice continuation](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-continuation-2026-10-01.md)
-and preserves the [September 26 implementation evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/desktop-experience-implementation-2026-09-26.md)
+record follows the [four-slice continuation](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/desktop-continuation-2026-10-01.md)
+and preserves the [September 26 implementation evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/desktop-experience-implementation-2026-09-26.md)
 as dated history. Logs and screenshots were in the ignored, owner-only
 `.cache/final-closeout-20261001/` directory; no credentials belong here.
 

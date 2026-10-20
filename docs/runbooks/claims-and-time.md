@@ -72,7 +72,7 @@ Current access applies to historical reads and idempotent retries as well.
 `./scripts/test-platform.sh` includes the temporal/evidence and environment-manifest
 scenarios. `./scripts/test-ui.sh tests/claims.spec.ts` exercises actual browser
 authoring, retained support, interrupted save, stale editors, history, time filters
-and mobile layout. [The proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/claims-and-time-proof-2026-09-14.md)
+and mobile layout. [The proof mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/claims-and-time-proof-2026-09-14.md)
 records executed checks and local runtime evidence.
 
 The [claims contract](../contracts/memory-claims-and-time.md) owns endpoints and

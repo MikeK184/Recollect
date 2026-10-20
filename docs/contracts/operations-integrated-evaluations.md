@@ -5,7 +5,7 @@ Status: accepted
 ## Automatic-memory support baseline (2026-10-07)
 
 The user's implementation goal for the
-[automated memory plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
+[automated memory plan](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 authorizes a repository-owned synthetic support corpus and offline scoring before
 the new support gate. This evaluation amendment does not itself enable that gate
 or change production memory eligibility. Runtime changes require their own

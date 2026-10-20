@@ -11,7 +11,7 @@ scope and display bounds below remain authoritative in both dimensions.
 The user's authorized full-product implementation includes browser graph,
 path and impact exploration. This contract refines [ADR 0007](../adr/0007-canonical-graph-projections.md),
 [canonical traversal](graph-projection-and-traversal.md), [combined inputs](graph-cross-repository-views.md),
-and [analytics](graph-analytics.md). The [interface evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-exploration-interfaces-2026-09-22.md)
+and [analytics](graph-analytics.md). The [interface evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/graph-exploration-interfaces-2026-09-22.md)
 records the native query probe and renderer choice. These are routine choices
 within the accepted independent Rust and Neo4j baseline.
 

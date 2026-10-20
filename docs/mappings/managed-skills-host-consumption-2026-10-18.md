@@ -120,7 +120,7 @@ passed all three tests (233 unrelated tests filtered), after loading fixture
 configuration without printing credentials. It covers the HTTP, capacity and real
 MCP rows above. Test fixtures were cleaned after the successful run.
 
-The [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-managed-skills.md) records this
+The [archived pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-managed-skills.md) records this
 completed local delivery. No installed plugin upgrade,
 native skill-root registration/reload, customer Brain data or deployed Recollect
 availability was tested by these focused runs.
@@ -128,7 +128,7 @@ availability was tested by these focused runs.
 ## Follow-up
 
 The user subsequently authorized native install/reload and complete lifetime
-proof. Completed local behavior is recorded in the [native successor](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-native-skill-reload.md)
+proof. Completed local behavior is recorded in the [native successor](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md)
 and its [host evidence](native-skill-reload-host-proof-2026-10-18.md); this first
 local typed-fetch delivery does not infer native results. Normal installation
 migration/deployment remains a separate operational scope.

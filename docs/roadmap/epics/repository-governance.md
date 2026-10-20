@@ -50,9 +50,9 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The removed packs, the superseded chronological closeouts and original research
 references remain at commit
-[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs)
-and the earlier [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/repository-governance.md).
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/1e49d772360b1ea12ddf198a5c3dbbed0f714b1b/docs)
+and the earlier [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/roadmap/epics/repository-governance.md).
 Dated test/deployment observations are not a current runtime health claim.

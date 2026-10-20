@@ -14,7 +14,7 @@ Confidence: verified
   native stdio MCP bridge, CUA browser checks, normal Compose build/readiness,
   web type/design/build and repository governance checks.
 - Current source, accepted contract amendments and the archived
-  [execution pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-plugin-workflow-repair.md).
+  [execution pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-plugin-workflow-repair.md).
 
 ## Observations
 

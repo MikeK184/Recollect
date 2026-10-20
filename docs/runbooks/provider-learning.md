@@ -229,7 +229,7 @@ This starts a native model worker during the UI test, verifies the selected pair
 learns the fixed synthetic literal and checks policy acceptance, provenance, token
 limits and mobile layout. Without opt-in, the real-provider browser test is skipped.
 Its database and artifacts are removed by the owned test fixture. See the
-[provider proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/provider-learning-proof-2026-09-14.md).
+[provider proof](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/provider-learning-proof-2026-09-14.md).
 
 The autonomous closed-loop browser proof uses four synthetic Luna calls:
 
@@ -240,7 +240,7 @@ RECOLLECT_TEST_OPENAI=1 RECOLLECT_TEST_MODEL_WORKER=1 \
 
 It checks learning, same-identity revision and handover refresh without individual
 review. Controlled HTTP/database tests cover retirement, bounded retries, expiry,
-in-flight erasure and older-database replay. The [maintenance proof](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/procedures-and-handovers-proof-2026-09-14.md)
+in-flight erasure and older-database replay. The [maintenance proof](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/procedures-and-handovers-proof-2026-09-14.md)
 also records the persistent synthetic demo and its visible provider timeout.
 Persistent semantic indexes, graph inference and host capture remain later consumers.
 A successful embedding call does not establish semantic retrieval or approximate

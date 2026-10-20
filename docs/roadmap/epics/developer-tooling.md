@@ -44,5 +44,5 @@ See the [current roadmap](index.md) for priorities and the
 
 The collapsed packs, ADRs, contracts and the earlier chronological closeouts
 remain at commit
-[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/1e49d772360b1ea12ddf198a5c3dbbed0f714b1b/docs).
 Dated test/deployment observations are not a current runtime health claim.

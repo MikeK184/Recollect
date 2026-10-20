@@ -13,7 +13,7 @@ clarification. Rust is selected for Recollect's own backend and companion.
 The MCP coordinator, Vault integration, collections and graph capabilities
 remain part of the product. This replaces the Cognee/Python extension stack.
 The [vision](vision.md) governs behavior; the
-[research mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-foundation-decisions-2026-09-13.md) records
+[research mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/atlas-foundation-decisions-2026-09-13.md) records
 sources, alternatives and limitations. Current implementation status is in the [roadmap](../roadmap/epics/index.md);
 this document specifies the architectural baseline.
 

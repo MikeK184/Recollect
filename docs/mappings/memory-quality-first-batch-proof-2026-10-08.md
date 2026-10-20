@@ -7,7 +7,7 @@ Status: superseded for runtime status by the [October 9 checkpoint](automatic-kn
 (migration 047, 35/40 normal graph reads). Reduced on 2026-10-19 to the result,
 the installation receipts, the graph runtime failures and the paid-diagnostic
 cost ledger; the full text is at the pinned revision
-[a0aea9d](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/mappings/memory-quality-first-batch-proof-2026-10-08.md).
+[a0aea9d](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings/memory-quality-first-batch-proof-2026-10-08.md).
 
 ## Result
 

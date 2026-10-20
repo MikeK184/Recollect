@@ -40,7 +40,7 @@ remote links from source hints alone.
 
 ## Verification
 
-The [validation mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/cross-repository-interfaces-2026-09-15.md)
+The [validation mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/cross-repository-interfaces-2026-09-15.md)
 records executed proof and remaining closeout. Repeat the synthetic native
 workflow and regressions with:
 

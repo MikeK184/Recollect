@@ -74,7 +74,7 @@ owner decided, as final, to keep the lifecycle but scale its ceremony to risk:
    behavior change still updates the governing contract in the same change.
 2. **Archive removed.** `docs/roadmap/execution/archive/` (105 shipped packs)
    is deleted from the tree. History stays in Git, pinned at commit
-   [`a0aea9d`](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive).
+   [`a0aea9d`](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive).
    Inbound links use pinned blob URLs. At closeout a pack is deleted and its
    slice is marked shipped with Execution `archived`.
 3. **Receipts, not ledgers.** Paid-run approvals, frozen input hashes and

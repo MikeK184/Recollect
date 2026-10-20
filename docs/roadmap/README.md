@@ -10,7 +10,7 @@ documentation maintenance has its own delivery record.
 - [Execution lifecycle](execution/README.md) says when a pack is required;
   every other slice is a row in its epic with acceptance and validation inline.
 - Shipped packs were removed from the tree on 2026-10-19; they remain in
-  [Git history](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive).
+  [Git history](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive).
 - [Desktop design system](../foundation/design-system.md) governs the
   current light desktop presentation; [desktop operation](../runbooks/desktop-experience.md)
   describes the implemented navigation.

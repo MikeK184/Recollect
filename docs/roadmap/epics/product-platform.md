@@ -31,10 +31,10 @@ Personal use and internal-team use share one application and permission model.
 
 This is the first product epic. Repository governance and developer tooling are
 already available. Platform-bootstrap is delivered locally under its accepted ADR/contract and
-[archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-bootstrap.md). Durable work is also
-delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-durable-work.md).
-Team access is delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-team-access.md).
-Device pairing is delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/platform-device-pairing.md).
+[archived pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/platform-bootstrap.md). Durable work is also
+delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/platform-durable-work.md).
+Team access is delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/platform-team-access.md).
+Device pairing is delivered in its [archived pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/platform-device-pairing.md).
 
 Own the Cargo/server/companion structure, same-origin React/Vite shell, local
 Compose topology, database clients/migrations, local owner bootstrap, Brain
@@ -98,7 +98,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
-in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/product-platform.md).
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/roadmap/epics/product-platform.md).
 Dated test/deployment observations are not a current runtime health claim.

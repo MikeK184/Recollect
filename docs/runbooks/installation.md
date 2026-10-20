@@ -3,7 +3,7 @@
 Status: delivered locally. Actual personal/shared containers, desktop/API accounts,
 native HTTPS pairing/MCP, persistent state and operational failure behavior pass.
 The [contract](../contracts/operations-local-and-shared.md) and
-[installed acceptance](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/installation-2026-09-26.md) record the evidence.
+[installed acceptance](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/installation-2026-09-26.md) record the evidence.
 
 ## Existing local app: one Compose group
 
@@ -108,7 +108,7 @@ to rerun their tests; the normal root stack and historical reports remain.
 
 Focused configuration/setup verification: `python3 scripts/test-root-compose.py`.
 Current local conversion evidence is recorded in the
-[root Compose mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/root-compose-2026-09-26.md).
+[root Compose mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/root-compose-2026-09-26.md).
 
 ## Prepare one installation
 

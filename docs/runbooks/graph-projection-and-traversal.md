@@ -44,7 +44,7 @@ and do not promote their raw evidence to accepted knowledge.
 
 ## Verification
 
-The [executed validation](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/graph-validation-2026-09-15.md) records real
+The [executed validation](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/graph-validation-2026-09-15.md) records real
 PostgreSQL/Neo4j failure, recovery, removal, scope and browser checks. The normal
 real test Brain produced 99 eligible entities and 183 relationships for its
 retained snapshot and exact manifest on 2026-09-15. Its partial coverage remained

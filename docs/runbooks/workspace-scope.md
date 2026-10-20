@@ -94,7 +94,7 @@ cargo test -p recollect-protocol -p recollect-agent --lib
 ```
 
 These tests use isolated Git/worktree fixtures, real PostgreSQL/RLS, native
-paired processes and the browser. See the [proof mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/workspace-scope-proof-2026-09-14.md).
+paired processes and the browser. See the [proof mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/workspace-scope-proof-2026-09-14.md).
 
 ## Failure and Recovery
 

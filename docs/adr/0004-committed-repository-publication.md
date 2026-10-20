@@ -35,7 +35,7 @@ or runtime relationships for those formats.
 The [foundations](../foundation/techstack.md#extraction-capture-and-models) select
 Enola subject to fixture proof. The user authorized the complete product and
 routine architecture decisions under the [development posture](0003-product-runtime.md).
-The [adapter experiment](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/enola-extraction-proof-2026-09-14.md) verifies
+The [adapter experiment](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/enola-extraction-proof-2026-09-14.md) verifies
 the native artifact interface and exposes archive, personal-state and language
 coverage constraints before implementation. The shared service must remain useful
 when a contributor or its ordinary source checkout is offline.

@@ -233,4 +233,4 @@ bootstrap, documentation cleanup and the product docs site), the CodeGraph
 launcher, setup script and runbook and the Rust
 navigation and public-site mappings were removed on 2026-10-19. They remain
 readable at commit
-[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/1e49d772360b1ea12ddf198a5c3dbbed0f714b1b/docs).

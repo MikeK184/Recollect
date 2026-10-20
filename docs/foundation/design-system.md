@@ -14,7 +14,7 @@ use these tokens (see [Public site and README](#public-site-and-readme)).
 The [desktop contract](../contracts/desktop-experience.md) makes these tokens
 and shared visual rules authoritative. This document records version 2. The
 version 1 cream/ink/sage system that the shipped interface still uses is
-retained at [commit a0aea9d](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/foundation/design-system.md)
+retained at [commit a0aea9d](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/foundation/design-system.md)
 until the redesign slice ships.
 
 ## Reference and authority

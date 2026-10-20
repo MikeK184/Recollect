@@ -51,8 +51,8 @@ remains unfinished; the two graph packs stay in progress.
 | Mapping, entities and aliases | Durable producer-bound worker, exact source spans, scoped IDs, retained stages and reversible human alias decisions are implemented and locally tested. | Real producer qualification fails; no qualified production extractor is selected. |
 | Topics, overrides and navigation | Native GDS topics, overlapping memberships, stable IDs, manual overlays for edited topics, qualified APIs and browser navigation are implemented and locally tested. | The automatic grouping recipe fails quality/coverage; current blind label usefulness and complete organization acceptance remain open. |
 | Correction, privacy and recovery | Focused correction/erase/scope, older-backup replay and manual-overlay tests pass. | Final integrated acceptance over the complete delivered feature set; focused proof is not universal recovery assurance. |
-| Grouped 3D | [Renderer slice](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) is locally delivered with 2D fallback, selection/evidence, generation clearing, keyboard, visual and bounded hardware proof. | Normal-installation rollout; renderer completion does not qualify automatic topic semantics or universal GPU performance. |
-| Feedback for ranking | [Bounded feedback slice](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) is locally delivered: attributed votes, privacy controls and a frozen zero-call experiment. | Real usefulness is unproved. Online reinforcement training and production ranking activation are not implemented by this slice; production RRF remains fixed. |
+| Grouped 3D | [Renderer slice](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) is locally delivered with 2D fallback, selection/evidence, generation clearing, keyboard, visual and bounded hardware proof. | Normal-installation rollout; renderer completion does not qualify automatic topic semantics or universal GPU performance. |
+| Feedback for ranking | [Bounded feedback slice](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) is locally delivered: attributed votes, privacy controls and a frozen zero-call experiment. | Real usefulness is unproved. Online reinforcement training and production ranking activation are not implemented by this slice; production RRF remains fixed. |
 
 The latest frozen real qualification completed all 105 calls within its separate
 USD 2.20 grant, with no retries. It preserves 92 source observations, 460 mode
@@ -87,27 +87,27 @@ push, release or deployment has been performed for this work.
 
 ## Other locally delivered work
 
-[Attributed feedback](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) is locally
+[Attributed feedback](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) is locally
 delivered with exact scoped votes, current qualification/privacy and a frozen
 zero-call 20-query comparison. Two deliberately mistaken votes cause bad
 promotions. Recorded-eligibility toy gains do not establish real helpfulness;
 production RRF remains fixed and organization quality remains open.
 
-[Brain-managed skills and instructions](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-managed-skills.md)
+[Brain-managed skills and instructions](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-managed-skills.md)
 are locally delivered with administrator publication, environment applicability,
 advisory MCP profile links, progressive fetch, plugin metadata/local copies and
 Agents management. Focused proof uses disposable databases, real MCP and mocked
 browser routes; it does not deploy the feature or update installed host packages.
 See the [dated evidence](../../mappings/managed-skills-host-consumption-2026-10-18.md).
 
-[Cross-machine agent coordination](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-agent-coordination.md)
+[Cross-machine agent coordination](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-agent-coordination.md)
 is locally delivered: authenticated session context, explainable goal/planned-file
 overlap, durable peer discussion, SSE/pull, MCP, native hooks/CLI and a narrow A2A
 1.0 message adapter. The [macOS/Ubuntu proof](../../mappings/agent-coordination-proof-2026-10-18.md)
 passed 15 checks with zero model requests. This does not establish production
 deployment or installed-host model consumption.
 
-[Native managed skills](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-native-skill-reload.md) now have
+[Native managed skills](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md) now have
 owned workspace registration, automatic synchronization, shared cross-host scope
 leases and tested temporary/retained cleanup. Actual isolated Codex 0.162.1,
 Claude Code 2.1.302 and OpenCode 2.0.22 processes proved native v1/v2 body/reference
@@ -138,8 +138,8 @@ capture-only and failing normal-read results without removing their history.
 They do not establish deployment or real extractor/topic quality. Exact methods
 and limits are in the [evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md).
 Unfinished product packs remain in [active](../execution/active/README.md).
-The [grouped 3D renderer](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) and
-[bounded feedback experiment](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/retrieval-attributed-feedback.md)
+The [grouped 3D renderer](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) and
+[bounded feedback experiment](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md)
 are locally delivered; neither closeout qualifies the failed semantic producer
 or establishes deployment.
 
@@ -162,9 +162,9 @@ current behavior. Use current contracts for their exact boundaries.
 
 Each epic's slice map is the current delivery record (acceptance and validation
 inline). Shipped packs were removed from the tree on 2026-10-19 and remain in
-[Git history](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive).
+[Git history](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive).
 [Mappings](../../mappings/README.md) retain current baseline and open-issue
 evidence. Superseded studies and concepts are available at the fixed
-[pre-cleanup checkpoint](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs).
+[pre-cleanup checkpoint](https://github.com/MikeK184/Recollect/tree/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs).
 Dates, model scores and successful host connections describe their recorded runs;
 no current connectivity or benchmark claim follows from documentation cleanup.

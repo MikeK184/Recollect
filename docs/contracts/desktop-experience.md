@@ -190,7 +190,7 @@ redaction stays enabled and excluded values are never discarded by presentation.
 ### Browser feedback implementation — 2026-10-05
 
 The user approved implementation of all ten items in the
-[browser review](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/browser-management-review-2026-10-05.md), with the
+[browser review](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research/browser-management-review-2026-10-05.md), with the
 revised Connections-style tool-group cards replacing the rejected list/inspector
 concept. All routes share one shell scale: the design system's sidebar,
 navigation and compact sans page header (the 248px shell and Newsreader page
@@ -250,7 +250,7 @@ catalogue to it. Resolve that identity against the current authorized Brain list
 hide it on revoked access, archive, failed refresh or account/session change.
 Store only a transient navigation identifier, never protected Brain payloads.
 The
-[fidelity follow-up](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-management-vision-fidelity.md)
+[fidelity follow-up](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-management-vision-fidelity.md)
 requires actual rendered comparison and independent reinspection.
 
 ### Approved management concepts — 2026-10-05
@@ -285,7 +285,7 @@ load only when opened. Agents displays the observed roster with host icons,
 credential state and last use, followed by concise host setup and memory-check
 utilities. Other users' private context and revocation rights remain protected.
 
-The [management concept pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-management-concepts.md)
+The [management concept pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-management-concepts.md)
 specifies delivery; the [credential amendment](mcp-runtime-and-credentials.md#browser-managed-credential-provisioning--2026-10-05)
 governs secret entry independently of visual layout.
 

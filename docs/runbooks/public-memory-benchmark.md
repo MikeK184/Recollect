@@ -80,13 +80,13 @@ the probes accept tombstone reads rather than 404s; untested paths (propagated
 copies, semantic/handover stores without a model) are declared `N/A` with a
 reason. Reports land in `.cache/atlas-lifecycle-<run-id>/report.json`.
 
-The [2026-09-29 result](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-lifecycle-proof-2026-09-29.md)
+The [2026-09-29 result](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/atlas-lifecycle-proof-2026-09-29.md)
 records the 40-cell green matrix, the measured write-to-readable lag and recall
 latencies, the digit-for-digit HotpotQA reproduction of the 2026-09-28 numbers,
 and the harness calibration record. An answer-level LongMemEval run is governed
 by the separate [proposed protocol](../contracts/operations-longmemeval-protocol.md)
 and requires explicit user cost approval before dispatch.
 
-The [2026-09-28 result](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/public-memory-benchmark-2026-09-28.md)
+The [2026-09-28 result](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/public-memory-benchmark-2026-09-28.md)
 records the paired lexical/semantic measurement, provider usage, lifecycle proof
 and comparison limits.

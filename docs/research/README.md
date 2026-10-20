@@ -45,7 +45,7 @@ single status and priority entry point.
 Completed UI proposals, the delivered automatic-memory design and the earlier
 claude-mem comparison were removed as duplicate current guidance. Their chosen
 behavior is in contracts, runbooks and delivery packs; original studies remain
-in the [fixed Git snapshot](https://github.com/MikeK184/Recollect/tree/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research).
+in the [fixed Git snapshot](https://github.com/MikeK184/Recollect/tree/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research).
 
 ## Research tooling
 

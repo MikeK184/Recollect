@@ -2,7 +2,7 @@
 
 Use the named [installation tooling](installation.md) and the accepted
 [recovery contract](../contracts/operations-recovery-drills.md). The
-[dated evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/recovery-2026-09-26.md) distinguishes the local drill
+[dated evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/recovery-2026-09-26.md) distinguishes the local drill
 from an off-machine production backup or a universal capacity claim.
 
 ## Prepare explicit recovery inputs

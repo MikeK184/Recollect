@@ -69,12 +69,12 @@ universal catalogue of customer connectors is introduced.
 
 ## Slice Map
 
-The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/automated-memory-improvement-plan-2026-10-07.md)
+The [automated memory improvement plan](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research/automated-memory-improvement-plan-2026-10-07.md)
 proposes automatic digest scheduling and delivery of a compact canonical project
 brief through the supported plugin/recall path. Memory and retrieval retain primary
 ownership; this epic owns host lifecycle, immutable attribution and delivery proof.
-The memory-owned [digest pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/memory-automatic-session-digests.md)
-and retrieval-owned [brief pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/retrieval-scoped-project-brief.md)
+The memory-owned [digest pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/memory-automatic-session-digests.md)
+and retrieval-owned [brief pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-scoped-project-brief.md)
 are locally delivered with native ended-task resume and escaped hook bounds.
 No installed-binary upgrade or new injection guarantee for third-party direct
 MCP clients is implied.
@@ -124,19 +124,19 @@ MCP clients is implied.
 
 ## Current status
 
-[Managed skills](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-managed-skills.md) are locally delivered:
+[Managed skills](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-managed-skills.md) are locally delivered:
 administrator-authored Brain/environment guidance, scoped progressive HTTP/MCP
 fetch, plugin metadata/local-copy lifecycle and the Agents Skills management tab.
 Focused database, real MCP, protocol/plugin, mocked browser and documentation
 proof passed; see the [first evidence](../../mappings/managed-skills-host-consumption-2026-10-18.md).
-The [native successor](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-native-skill-reload.md) adds owned
+The [native successor](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md) adds owned
 Codex/Claude/OpenCode exports, cross-host scope leases, temporary/retained lifetime
 and actual same-process native activation/reload proof for all three hosts.
 Its [evidence](../../mappings/native-skill-reload-host-proof-2026-10-18.md) records
 94 passing agent tests, nine JavaScript adapter tests and isolated installed-host
 results. Updating the user's installed plugin or normal deployment remains separate.
 
-The [agent coordination pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/mcp-agent-coordination.md) is
+The [agent coordination pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-agent-coordination.md) is
 locally delivered. Its shared session projection preserves private workspace
 tasks, finds topic overlap before edits and planned-file overlap, and supports
 durable peer negotiation through SSE/pull, MCP, native hooks/CLI and A2A 1.0.
@@ -151,7 +151,7 @@ See the [current roadmap](index.md) for priorities and the
 
 ## Delivery evidence
 
-[Shipped packs](https://github.com/MikeK184/Recollect/tree/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
+[Shipped packs](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive) were removed from the tree on 2026-10-19 and remain in Git history.
 The superseded chronological closeouts and original research references remain
-in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/roadmap/epics/mcp-coordination.md).
+in the [pre-cleanup epic record](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/roadmap/epics/mcp-coordination.md).
 Dated test/deployment observations are not a current runtime health claim.

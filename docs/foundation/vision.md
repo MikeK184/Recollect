@@ -446,4 +446,4 @@ Defer adaptive decay/tier promotion, learned retrieval gates, automatic executab
 skill learning, external-source writeback and a general plugin marketplace.
 Keep useful runbooks and explicit review from the start. Atlas informs the design;
 it supplies neither a complete implementation nor measured proof of superiority.
-See the [foundation research mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/atlas-foundation-decisions-2026-09-13.md).
+See the [foundation research mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/atlas-foundation-decisions-2026-09-13.md).

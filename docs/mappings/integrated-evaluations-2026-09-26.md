@@ -130,15 +130,15 @@ readiness probe now checks TCP, avoiding its temporary initialization socket.
 Logs: `.cache/integrated-vault-20260926.log` and
 `.cache/integrated-vault-dynamic-recheck-20260926.log`. No Vault token or lease
 was revoked. Enterprise KV/Proxy proof is carried from the
-[Vault mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/mcp-vault-private-2026-09-22.md); Enterprise dynamic database
+[Vault mapping](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/mcp-vault-private-2026-09-22.md); Enterprise dynamic database
 connectivity remains explicitly unverified there.
 
 The actual review and workspace desktop cases passed in 19.2 seconds against
 the installed migration-025 image. Personal/shared HTTPS installation, two-user
 browser/native access and failure recovery are carried from the
-[installation acceptance](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/installation-2026-09-26.md). Actual encrypted SFTP,
+[installation acceptance](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/installation-2026-09-26.md). Actual encrypted SFTP,
 source-offline restore, interrupted resume and receipt-only effect reconciliation
-are carried from the [recovery evidence](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/recovery-2026-09-26.md). OIDC was excluded
+are carried from the [recovery evidence](https://github.com/MikeK184/Recollect/blob/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/mappings/recovery-2026-09-26.md). OIDC was excluded
 from this new run; its predecessor proof is not described as fresh connectivity.
 
 ## Concurrent-workload investigation

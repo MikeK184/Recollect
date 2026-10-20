@@ -8,7 +8,7 @@ Confidence: verified for final rendered review, focused functional proof, local 
 
 The user rejected the prior match after the explicit before/vision/after artifact,
 then requested a UI agent to reproduce the approved styling, formatting, icons
-and edit controls. The [archived pack](https://github.com/MikeK184/Recollect/blob/a0aea9dfa26a6f9f348423b32b3a0adbaac1196d/docs/roadmap/execution/archive/desktop-management-vision-fidelity.md)
+and edit controls. The [archived pack](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-management-vision-fidelity.md)
 owns the follow-up; existing accepted contracts govern behavior.
 
 Final reference files are the six PNGs listed in that pack in

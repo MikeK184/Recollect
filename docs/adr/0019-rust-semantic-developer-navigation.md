@@ -52,4 +52,4 @@ Superseded on 2026-10-19 by the [development tooling runbook](../runbooks/develo
 The tool selection above is unchanged and recorded there; no product architecture
 decision is replaced. The contract, pack and proof mapping this ADR referenced
 remain at commit
-[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/f1b6bb3040dfe65b7fac90359af782cec1f7df31/docs).
+[`f1b6bb3`](https://github.com/MikeK184/Recollect/tree/1e49d772360b1ea12ddf198a5c3dbbed0f714b1b/docs).
