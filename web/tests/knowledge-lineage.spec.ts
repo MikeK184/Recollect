@@ -3,8 +3,9 @@ import { writeFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 
 // The shared lineage inspector: one canonical definition serving all four
-// Knowledge views, dense rows that keep every status dimension readable as
-// text, and keyboard reachability with focus return.
+// Knowledge views (Explore's Memory, Sources and Repositories plus Graph),
+// dense rows that keep every status dimension readable as text, and keyboard
+// reachability with focus return.
 
 // Chunks that belong to the lazy Knowledge surface. The Claims panel is split
 // into ClaimDialog, ClaimEditor, ClaimEvidenceDialog, claimsShared, the Claims*
@@ -148,13 +149,21 @@ test("one lineage inspector instance serves all four views without remounting", 
   await region.evaluate((node) =>
     node.setAttribute("data-lineage-probe", "mounted"),
   );
-  for (const label of ["Sources", "Graph", "Repositories"]) {
+  for (const label of ["Sources", "Repositories"]) {
     await switcher(page)
       .getByRole("link", { name: label, exact: true })
       .click();
     await expect(region).toHaveCount(1);
     await expect(region).toHaveAttribute("data-lineage-probe", "mounted");
   }
+  // Graph is its own sidebar destination on the same surface.
+  await page
+    .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link", { name: "Graph", exact: true })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/brains/${fixture.brain}/graph`));
+  await expect(region).toHaveCount(1);
+  await expect(region).toHaveAttribute("data-lineage-probe", "mounted");
 });
 
 test("selecting a memory shows content, evidence with exact versions and a bounded neighbourhood", async ({
@@ -288,9 +297,16 @@ test("selecting a source shows versions, availability and what it supports with 
   ).toBeVisible();
   // Versions and availability stay explicit.
   await expect(region).toContainText("Lineage notes");
-  await expect(region.getByText(/recorded version/)).toBeVisible();
-  await expect(region.getByText("Processed", { exact: true })).toBeVisible();
-  await expect(region.locator(".lineage-content")).toContainText(
+  await expect(
+    region.locator("div:has(> dt:text-is('Versions')) > dd"),
+  ).toHaveText("1");
+  await expect(
+    region.getByText("Current version", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    region.getByText("Processed", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(region.getByTestId("source-content")).toContainText(
     "Lineage declares the port 8080.",
   );
   // What it currently supports links into each derived record.
@@ -303,17 +319,15 @@ test("selecting a source shows versions, availability and what it supports with 
   await expect(derived).toBeVisible();
   await expect(region.getByText(/not independent support/i)).toBeVisible();
   await reviewScreenshots(page, "lineage-source");
+  // The same inspector carries the exact source into Graph and back; the
+  // source's versions and actions live in it rather than a second record view.
   await region
     .getByRole("link", { name: "Show in Graph", exact: true })
     .click();
-  await region
-    .getByRole("button", { name: "Source history & actions", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/sources\?.*detail=record/);
-  await expect(
-    page.getByRole("dialog", { name: "Source evidence", exact: true }),
-  ).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/graph\?.*source=/);
+  await expect(region).toContainText("Lineage notes");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/sources/);
   await page
     .getByRole("button", { name: /Lineage notes/ })
     .first()
@@ -328,12 +342,12 @@ test("selecting a source shows versions, availability and what it supports with 
     region.getByText("Review: accepted", { exact: true }),
   ).toBeVisible();
   await expect(
-    region.getByText("Bounded graph neighbourhood", { exact: true }),
+    region.getByText("Current graph neighbourhood", { exact: true }),
   ).toBeVisible();
   await region
-    .getByRole("link", { name: "Show in Memory", exact: true })
+    .getByRole("link", { name: "Show in Explore", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/memory\?center=claim/);
+  await expect(page).toHaveURL(/\/explore\?view=memory&center=claim/);
   await expect(
     region.getByText("Review: accepted", { exact: true }),
   ).toBeVisible();
@@ -384,7 +398,7 @@ test("keyboard users can open a memory and focus returns to its row", async ({
   const fixture = await createFixture(page);
   await page.goto(`/brains/${fixture.brain}/memory`);
   const rowButton = page.getByRole("button", {
-    name: "Lineage service · port",
+    name: "Lineage service · port 8080",
     exact: true,
   });
   await rowButton.focus();

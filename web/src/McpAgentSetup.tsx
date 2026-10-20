@@ -313,7 +313,7 @@ export function McpAgentSetup({
                 <Link
                   to="/agents"
                   search={{ access: true }}
-                  className="text-brand-text underline-offset-[3px] hover:underline"
+                  className="link-inline"
                 >
                   Access tokens
                 </Link>

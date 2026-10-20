@@ -435,7 +435,7 @@ test("reduced motion suppresses observed-change packets", async ({ page }) => {
 test("ambient memories keep exact identity and clear every card on failure and expiry", async ({
   page,
 }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150_000);
   await signIn(page);
   const brain = await api(page, "/api/brains", {
     name: "Ambient display proof",
@@ -447,8 +447,11 @@ test("ambient memories keep exact identity and clear every card on failure and e
     retain_content: true,
     content: "This disposable service uses recorded source evidence.",
   });
-  const remember = (subject: string) =>
-    api(page, `${base}/claims`, {
+  // Ambient display reads the bounded investigation page, which admits an
+  // unreviewed contribution only after support; explicit browser review admits
+  // each memory immediately.
+  const remember = async (subject: string) => {
+    const authored = await api(page, `${base}/claims`, {
       content: {
         kind: "claim",
         subject,
@@ -477,6 +480,12 @@ test("ambient memories keep exact identity and clear every card on failure and e
         ],
       },
     });
+    return api(page, `${base}/claims/${authored.claim_id}/review`, {
+      base_revision: authored.id,
+      action: "accept",
+      reason: "Disposable ambient acceptance",
+    });
+  };
   await remember("Ambient first memory");
   await remember("Ambient second memory");
   let mode: "ok" | "error" | "expiry" | "hang" = "ok",
@@ -523,7 +532,7 @@ test("ambient memories keep exact identity and clear every card on failure and e
     "Ambient second memory",
   );
   await expect(page).toHaveTitle(`${brain.name} · Ambient display · Recollect`);
-  await expect(tv).toContainText("Review: proposed");
+  await expect(tv).toContainText("Review: accepted");
   await expect(tv).toContainText("Operational: declared");
   await expect(tv).toBeFocused();
   expect(
@@ -534,17 +543,17 @@ test("ambient memories keep exact identity and clear every card on failure and e
     animations: "disabled",
   });
   await remember("Ambient newly inserted memory");
-  await expect.poll(() => reads).toBeGreaterThan(1);
-  await expect(tv.locator(".tv-item-enter .tv-title")).toHaveText(
-    "Ambient second memory",
-  );
-  await expect(tv.locator(".tv-item-enter .tv-title")).toHaveText(
-    "Ambient first memory",
-    { timeout: 11000 },
-  );
+  // The cycle advances every 8 seconds and the display re-reads its bounded
+  // page on the 10-second list cadence, so the insertion arrives while the
+  // next existing memory is shown. Exact identity keeps it in place instead
+  // of shifting with list positions, and the new memory waits its turn.
+  const title = tv.locator(".tv-item-enter .tv-title");
+  await expect(title).toHaveText("Ambient first memory", { timeout: 11000 });
+  await expect.poll(() => reads, { timeout: 12_000 }).toBeGreaterThan(1);
+  await expect(title).toHaveText("Ambient first memory");
   mode = "error";
   await expect(tv).toContainText("Displayed content has been cleared.", {
-    timeout: 6000,
+    timeout: 12_000,
   });
   await expect(tv.locator(".tv-item")).toHaveCount(0);
   await expect(tv.getByText(/last updated/)).toHaveCount(0);
@@ -568,11 +577,12 @@ test("ambient memories keep exact identity and clear every card on failure and e
   ).toBe(false);
   mode = "ok";
   await page.unroute(`${base}/claims?offset=0`);
+  // Reduced motion applies from mount: the entering memory has no transform.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`/brains/${brain.id}/tv`);
   await expect(tv.locator(".tv-item-enter .tv-title")).toHaveText(
     "Ambient newly inserted memory",
   );
-  await page.emulateMedia({ reducedMotion: "reduce" });
   const motion = await tv
     .locator(".tv-item-enter")
     .evaluate((el) => getComputedStyle(el).transform);
@@ -602,7 +612,8 @@ test("ambient memories keep exact identity and clear every card on failure and e
       json: { message: "Fixture access withdrawn" },
     }),
   );
-  await expect(tv).toHaveCount(0, { timeout: 6000 });
+  // Access is re-read on the slow 30-second Brain cadence.
+  await expect(tv).toHaveCount(0, { timeout: 35_000 });
   expect(
     await page.locator("#root").evaluate((el) => (el as HTMLElement).inert),
   ).toBe(false);

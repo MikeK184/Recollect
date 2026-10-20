@@ -44,7 +44,7 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
         retain_content: true,
         content: `${name} uses port 8080.\nFUSION_INERT <script>window.fusionInjected=true</script>\n`,
       });
-      const claim = await post(`${base}/claims`, {
+      const authored = await post(`${base}/claims`, {
         content: {
           kind: "claim",
           subject: `${name} service`,
@@ -73,6 +73,15 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
           ],
         },
       });
+      // Unreviewed contributions need a supported assessment before the graph
+      // projection or Recall uses them; explicit browser review admits these.
+      const claim = (
+        await post(`${base}/claims/${authored.claim_id}/review`, {
+          base_revision: authored.id,
+          action: "accept",
+          reason: "Synthetic evidence checked by the fixture owner.",
+        })
+      ).claims[0].revision;
       rows.push({
         source: source.id,
         version: source.version.id,
@@ -121,12 +130,17 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
     exact: true,
   });
   await openDetails(panel, "Refine evidence search");
+  // Graph relationships are an explicitly chosen method, not the automatic default.
+  await panel
+    .getByRole("textbox", { name: "Retrieval strategy", exact: true })
+    .click();
+  await page.getByRole("option", { name: "Choose methods", exact: true }).click();
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
     .click();
   await panel.getByLabel("Graph relationships", { exact: true }).check();
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Amber service");
   let queries = 0;
   page.on("request", (request) => {
@@ -136,7 +150,7 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
     )
       queries++;
   });
-  const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  const submit = panel.getByRole("button", { name: "Find evidence", exact: true });
   await submit.click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(2);
   await expect(panel.getByTestId("recall-graph-witness")).toHaveCount(1);
@@ -146,6 +160,8 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
   await expect(panel.getByTestId("recall-graph-status")).toContainText(
     "1 anchors · 1 connected candidates",
   );
+  // Coverage is a secondary qualification behind its disclosure.
+  await openDetails(panel, "Coverage and recorded methods");
   await expect(
     panel.getByText(/Source coverage: 1 resolved groups/),
   ).toBeVisible();
@@ -252,7 +268,7 @@ test("desktop graph recall preserves witnesses, explicit queries and scope/expir
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
   expect(queries).toBe(5);
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Cobalt service");
   await submit.click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(2);

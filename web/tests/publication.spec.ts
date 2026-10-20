@@ -5,7 +5,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile, readFile, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
-import { openDetails } from "./desktop-helpers";
 import { profileBinary } from "./profile-binary";
 
 test("native committed publication resumes and browser preserves manifest history", async ({
@@ -159,7 +158,7 @@ test("native committed publication resumes and browser preserves manifest histor
     );
     await page.goto(`/brains/${brain}/sources`);
     await page
-      .getByRole("button", { name: "Manage views", exact: true })
+      .getByRole("button", { name: "Organize", exact: true })
       .click();
     for (const name of ["Production", "Development"]) {
       await dialog
@@ -176,18 +175,23 @@ test("native committed publication resumes and browser preserves manifest histor
     }
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    // Privacy is one form with one Edit/Save; repository file text is its
+    // own storage policy inside it.
     await page.goto(`/brains/${brain}/settings?tab=privacy`);
-    await openDetails(page, "Advanced retention and storage controls");
     await page
-      .getByRole("switch", {
-        name: "Allow explicitly selected repository file text",
-      })
+      .getByRole("button", { name: "Edit privacy settings", exact: true })
+      .click();
+    const repositoryText = page
+      .getByRole("radiogroup", { name: "Repository content capture" })
+      .getByRole("radio", { name: "Include file text", exact: true });
+    await repositoryText.check();
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
       .click();
     await expect(
-      page.getByRole("switch", {
-        name: "Allow explicitly selected repository file text",
-      }),
-    ).toBeChecked();
+      page.getByRole("button", { name: "Edit privacy settings", exact: true }),
+    ).toBeVisible();
+    await expect(repositoryText).toBeChecked();
     let output = "";
     let diagnostic = "";
     pairing = spawn(binary, ["pair", "Publication proof companion"], {
@@ -285,12 +289,12 @@ test("native committed publication resumes and browser preserves manifest histor
       dialog.getByText("File content unavailable", { exact: true }),
     ).toBeVisible();
     await dialog.getByRole("tab", { name: "Facts", exact: true }).click();
+    // Facts show their structured content first; the raw record is secondary.
+    const facts = dialog.getByRole("tabpanel", { name: "Facts", exact: true });
     await expect(
-      dialog
-        .locator("pre:visible")
-        .filter({ hasText: "committed_welcome" })
-        .first(),
+      facts.getByText("src.committed_welcome", { exact: true }),
     ).toBeVisible();
+    await expect(facts).not.toContainText("dirty_only_browser_marker");
     await dialog.getByRole("tab", { name: "Coverage", exact: true }).click();
     await expect(
       dialog.getByText(/Kubernetes YAML has file inventory/),
@@ -383,9 +387,10 @@ test("native committed publication resumes and browser preserves manifest histor
       ),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    // The manifest re-reads its current revision on the 10-second cadence.
     await expect(
       dialog.getByText("Concurrent saved selection", { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 12_000 });
     await dialog
       .getByRole("button", { name: "Edit current selection", exact: true })
       .click();

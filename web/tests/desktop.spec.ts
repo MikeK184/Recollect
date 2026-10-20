@@ -4,6 +4,23 @@ import { openDetails } from "./desktop-helpers";
 import AxeBuilder from "@axe-core/playwright";
 
 async function expectAccessible(page: Page) {
+  // Audit the settled page: entrance transitions fade content in, and a frame
+  // sampled mid-fade is not the contrast a person reads. Looping live-work
+  // animations never finish and paused ones may not, so the wait is bounded.
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.effect?.getComputedTiming().endTime !== Infinity,
+          )
+          .map((animation) => animation.finished.catch(() => undefined)),
+      ),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]),
+  );
   const audit = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
@@ -71,15 +88,16 @@ async function createBrains(page: Page) {
   });
 }
 
+// The sidebar's destinations: Dashboard, Ask, Graph and Explore, then Manage.
+// Memory, Sources and Repositories stay real routes inside Explore; Dashboard
+// exposes Activity.
 const destinations = [
+  ["Dashboard", "dashboard"],
   ["Ask", "ask"],
-  ["Memory", "memory"],
-  ["Sources", "sources"],
   ["Graph", "graph"],
-  ["Repositories", "repositories"],
+  ["Explore", "explore"],
   ["Agents", "agents"],
   ["Connections", "connections"],
-  ["Activity", "activity"],
   ["Settings", "settings"],
 ] as const;
 
@@ -92,7 +110,9 @@ test("desktop destinations are real routes with browser history and isolated fea
   await signIn(page);
   const fixture = await createBrains(page);
   await page.goto(`/brains/${fixture.first}`);
-  await expect(page).toHaveURL(new RegExp(`/brains/${fixture.first}/ask$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/brains/${fixture.first}/dashboard$`),
+  );
   const timings: {
     destination: string;
     elapsed_ms: number;
@@ -136,19 +156,69 @@ test("desktop destinations are real routes with browser history and isolated fea
   }
   await page.goBack();
   await expect(
-    page.getByRole("heading", { level: 1, name: "Activity", exact: true }),
+    page.getByRole("heading", { level: 1, name: "Connections", exact: true }),
   ).toBeVisible();
   await page.goForward();
   await expect(
     page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
   ).toBeVisible();
+  // The legacy Knowledge routes stay real, select Explore in the sidebar and
+  // switch between their own paths through the one view switcher.
+  await page.goto(`/brains/${fixture.first}/memory`);
+  const switcher = page.getByRole("group", {
+    name: "Knowledge views",
+    exact: true,
+  });
+  for (const [label, suffix] of [
+    ["Memory", "memory"],
+    ["Sources", "sources"],
+    ["Repositories", "repositories"],
+  ] as const) {
+    if (label !== "Memory")
+      await switcher.getByRole("link", { name: label, exact: true }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/brains/${fixture.first}/${suffix}$`),
+    );
+    await expect(
+      page.getByRole("heading", { level: 1, name: label, exact: true }),
+    ).toBeVisible();
+    await expect(
+      switcher.getByRole("link", { name: label, exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Brain navigation" })
+        .getByRole("link", { name: "Explore", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expectAccessible(page);
+  }
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Sources", exact: true }),
+  ).toBeVisible();
+  await page.goForward();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Repositories", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link", { name: "Dashboard", exact: true })
+    .click();
+  await page.getByRole("link", { name: "Activity details", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/brains/${fixture.first}/activity\\?tab=attention$`),
+  );
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Activity", exact: true }),
+  ).toBeVisible();
+  await expectAccessible(page);
   await page.goto(`/brains/${fixture.first}/settings?tab=privacy`);
   await expect(
-    page.getByRole("tab", { name: "Retention & privacy", exact: true }),
+    page.getByRole("tab", { name: "Privacy", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await page.reload();
   await expect(
-    page.getByRole("tab", { name: "Retention & privacy", exact: true }),
+    page.getByRole("tab", { name: "Privacy", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await page.goto(`/brains/${fixture.first}/settings?tab=unknown-tab`);
   await expect(
@@ -156,14 +226,26 @@ test("desktop destinations are real routes with browser history and isolated fea
   ).toHaveAttribute("aria-selected", "true");
 
   await page.goto(`/brains/${fixture.first}/unknown-section`);
-  await expect(page).toHaveURL(new RegExp(`/brains/${fixture.first}/ask$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/brains/${fixture.first}/dashboard$`),
+  );
 
-  for (const [path, title] of [
-    ["/", "Your Brains"],
-    ["/team", "Team"],
-    ["/devices", "Devices"],
-  ]) {
+  // `/devices` is a compatibility redirect into Agents Manage access.
+  for (const [path, title, landing] of [
+    ["/", "Your Brains", /\/$/],
+    ["/team", "Team", /\/team$/],
+    ["/devices", "Agents", /\/agents\?access=true$/],
+  ] as const) {
     await page.goto(path);
+    await expect(page).toHaveURL(landing);
+    if (path === "/devices") {
+      // Manage access opens as a modal sheet over the Agents page.
+      await expect(
+        page.getByRole("dialog", { name: "Access tokens", exact: true }),
+      ).toBeVisible();
+      await expectAccessible(page);
+      await page.keyboard.press("Escape");
+    }
     await expect(
       page.getByRole("heading", { level: 1, name: title, exact: true }),
     ).toBeVisible();
@@ -176,8 +258,7 @@ test("desktop destinations are real routes with browser history and isolated fea
     await expectAccessible(page);
   }
 
-  // The shared assurance band reads bounded operational metadata on every
-  // destination. Sources must not mount another feature's detailed consumers.
+  // Sources must not mount another feature's detailed consumers.
   const sourceRequests: string[] = [];
   const trackSources = (request: import("@playwright/test").Request) => {
     const url = new URL(request.url());
@@ -258,12 +339,14 @@ test("desktop assets, keyboard navigation and layout remain consistent at suppor
   );
   expect(logoResponse.headers()["content-type"]).toContain("image/svg+xml");
   expect(await logoResponse.text()).toContain("<svg");
+  // One shared Lucide size for every navigation destination (ADR 0025: 16px).
   const navIcons = page
     .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link")
     .locator("svg");
-  await expect(navIcons).toHaveCount(9);
+  await expect(navIcons).toHaveCount(destinations.length);
   for (const icon of await navIcons.all())
-    await expect(icon).toHaveAttribute("width", "18");
+    expect(await icon.evaluate((node) => node.getBoundingClientRect().width)).toBe(16);
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: width === 1280 ? 800 : 1080 });
     await page.evaluate(async () => {
@@ -305,13 +388,13 @@ test("desktop assets, keyboard navigation and layout remain consistent at suppor
   }
   await page.keyboard.press("Escape");
   await expect(filterButton).toBeFocused();
-  const memory = page
+  const explore = page
     .getByRole("navigation", { name: "Brain navigation" })
-    .getByRole("link", { name: "Memory", exact: true });
-  await memory.focus();
+    .getByRole("link", { name: "Explore", exact: true });
+  await explore.focus();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("heading", { name: "Memory", level: 1, exact: true }),
+    page.getByRole("heading", { name: "Explore", level: 1, exact: true }),
   ).toBeVisible();
   // Text resize is a repeatable reflow check. Native browser zoom is separately
   // inspected in CUA; this is not reported as an equivalent browser-zoom test.
@@ -363,10 +446,16 @@ test("an in-flight source read cannot populate another Brain after switching", a
   await page
     .getByLabel("Switch Brain", { exact: true })
     .selectOption(fixture.second);
-  await expect(page).toHaveURL(new RegExp(`/brains/${fixture.second}/ask$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/brains/${fixture.second}/dashboard$`),
+  );
   release();
   await page
     .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link", { name: "Explore", exact: true })
+    .click();
+  await page
+    .getByRole("group", { name: "Knowledge views", exact: true })
     .getByRole("link", { name: "Sources", exact: true })
     .click();
   await expect(
@@ -658,7 +747,7 @@ test("repeated local navigation and canonical recall observations record sample 
       content: "DesktopMeasurement declares port 8181.\n",
       retain_content: true,
     });
-    await send("claims", {
+    const claim = await send("claims", {
       content: {
         kind: "claim",
         subject: "DesktopMeasurement",
@@ -686,6 +775,13 @@ test("repeated local navigation and canonical recall observations record sample 
           },
         ],
       },
+    });
+    // Unreviewed contributions need support before Recall delivers them; an
+    // explicit browser review admits this synthetic claim immediately.
+    await send(`claims/${claim.claim_id}/review`, {
+      base_revision: claim.id,
+      action: "accept",
+      reason: "Measurement fixture accepts the synthetic declaration.",
     });
     const milliseconds: number[] = [];
     for (let sample = 0; sample < 20; sample++) {

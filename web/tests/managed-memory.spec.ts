@@ -67,7 +67,9 @@ test("new Brain has managed defaults, compact navigation and simple agent setup"
   await expect(
     page.getByRole("button", { name: "Edit model policy", exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByLabel("Daily token allowance")).toHaveCount(0);
+  // Processing limits sit in the main form (2026-10-07) but stay read-only
+  // until the shared Edit/Save/Cancel policy flow is opened.
+  await expect(page.getByLabel("Daily token allowance")).toBeDisabled();
   await page.screenshot({
     path: "../.cache/ui/managed-settings.png",
     fullPage: true,

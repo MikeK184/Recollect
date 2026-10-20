@@ -33,8 +33,11 @@ test("desktop owner diagnostics clear failed observations and deny ordinary memb
     (value) => new URL(value.url()).pathname === "/api/operations",
   );
   try {
+    // A live status region announces the pending read by its text content.
     await expect(
-      dialog.getByRole("status", { name: "Loading runtime diagnostics" }),
+      dialog
+        .getByRole("status")
+        .filter({ hasText: "Loading runtime diagnostics" }),
     ).toBeVisible();
   } finally {
     release();
@@ -85,8 +88,9 @@ test("desktop owner diagnostics clear failed observations and deny ordinary memb
   await page.keyboard.press("Escape");
 
   // Invite through the delivered product path; never mock account authority.
+  // Team is the installation owner's persistent bottom navigation item.
   await page
-    .getByRole("navigation", { name: "Workspace navigation" })
+    .getByRole("navigation", { name: "Installation navigation" })
     .getByRole("link", { name: "Team", exact: true })
     .click();
   await page.getByRole("button", { name: "Add teammate", exact: true }).click();

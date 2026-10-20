@@ -115,7 +115,8 @@ test("stable inspector preserves drafts and highlights exact inert metadata", as
     inspector.getByRole("heading", { name: "Tool access", exact: true }),
   ).toBeVisible();
   const after = await inspector.boundingBox();
-  expect(after!.width).toBe(before!.width);
+  // Same column width; the pane's entrance transform can leave sub-pixel noise.
+  expect(after!.width).toBeCloseTo(before!.width, 0);
   await inspector
     .getByLabel("Connection name", { exact: true })
     .fill("Cancelled name");
@@ -152,7 +153,10 @@ test("stable inspector preserves drafts and highlights exact inert metadata", as
     },
     "PUT",
   );
-  await expect(inspector).toContainText("Your draft is retained");
+  // The inspector notices the concurrent edit on its next 10-second detail read.
+  await expect(inspector).toContainText("Your draft is retained", {
+    timeout: 12_000,
+  });
   await expect(
     inspector.getByLabel("Description", { exact: true }),
   ).toHaveValue("Retained unsaved draft");
@@ -169,7 +173,10 @@ test("stable inspector preserves drafts and highlights exact inert metadata", as
   await inspector.getByRole("button", { name: "Cancel", exact: true }).click();
   await inspector.getByRole("tab", { name: "Tools", exact: true }).click();
   await inspector.getByText("Full description", { exact: true }).click();
-  await expect(inspector.locator(".rc-markdown strong")).toHaveText("approved");
+  // The compact summary stays in the DOM, hidden, while the full description is open.
+  await expect(inspector.locator(".rc-markdown strong:visible")).toHaveText(
+    "approved",
+  );
   for (const language of ["json", "toml", "yaml", "bash"]) {
     await expect(
       inspector
@@ -183,8 +190,9 @@ test("stable inspector preserves drafts and highlights exact inert metadata", as
     .locator("..")
     .getByRole("button", { name: "Copy code", exact: true })
     .click();
+  // JSON shows pretty-formatted by default and Copy uses that displayed form.
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    '{"region":"test"}\n',
+    '{\n  "region": "test"\n}',
   );
   await expect(
     inspector.locator('img[src="https://example.invalid/tracking.png"]'),

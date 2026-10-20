@@ -115,6 +115,31 @@ test("author procedures, compose handovers and preserve contribution inspection"
   await page.screenshot({ path: "../.cache/ui-procedure-1280.png" });
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 960 });
+  // Every handover contributor must be usable memory on its own; an explicit
+  // browser review admits the unchecked procedure proposal.
+  await page.evaluate(async (brain) => {
+    const me = await (await fetch("/api/auth/me")).json();
+    const listed = await (
+      await fetch(`/api/brains/${brain}/claims?mode=history&q=Inspect`)
+    ).json();
+    const current = listed.items[0].revision;
+    const response = await fetch(
+      `/api/brains/${brain}/claims/${current.claim_id}/review`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": me.csrf_token,
+        },
+        body: JSON.stringify({
+          base_revision: current.id,
+          action: "accept",
+          reason: "Fixture owner accepts the observed procedure.",
+        }),
+      },
+    );
+    if (!response.ok) throw new Error("Procedure review failed: " + response.status);
+  }, fixture.brain);
   await page.getByRole("button", { name: "Add memory", exact: true }).click();
   await page.getByRole("button", { name: "Structured entry", exact: true }).click();
   dialog = page.getByRole("dialog");
@@ -164,7 +189,9 @@ test("author procedures, compose handovers and preserve contribution inspection"
   ).toBeVisible();
   await page.screenshot({ path: "../.cache/ui-handover-desktop.png" });
   await page.keyboard.press("Escape");
-  await page.getByRole("tab", { name: "Handovers", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Handover tools & history", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Generate handover", exact: true })
     .click();

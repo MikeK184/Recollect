@@ -12,7 +12,11 @@ async function expectRights(
   use: boolean,
   manage: boolean,
   share: boolean,
+  username = process.env.RECOLLECT_OWNER_USERNAME!,
 ) {
+  // The signed-in account's own row says "you" when it cannot share; an
+  // account that shares appears among the effective members by username,
+  // with inherited powers marked as such.
   for (const [label, allowed] of [
     ["Use", use],
     ["Manage", manage],
@@ -20,8 +24,9 @@ async function expectRights(
   ] as const)
     await expect(
       card.getByRole("img", {
-        name: `${label} for you: ${allowed ? "Allowed" : "Denied"}`,
-        exact: true,
+        name: new RegExp(
+          `^${label} for (you|${username}): ${allowed ? "Allowed" : "Denied"}( \\(inherited\\))?$`,
+        ),
       }),
     ).toHaveClass(allowed ? /allowed/ : /denied/);
 }
@@ -256,12 +261,20 @@ test("desktop catalogue configures scoped profiles, explicit use and cached sche
   await card
     .getByRole("button", { name: "Edit Laboratory tools", exact: true })
     .click();
+  // Direct grants are edited on demand from the person's access-source chip.
   await card
+    .getByRole("button", {
+      name: `Access sources for ${process.env.RECOLLECT_OWNER_USERNAME}`,
+      exact: true,
+    })
+    .click();
+  await page
     .getByRole("button", {
       name: `Use for ${process.env.RECOLLECT_OWNER_USERNAME} direct: Denied`,
       exact: true,
     })
     .click();
+  await page.keyboard.press("Escape");
   await card.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(
     card.getByRole("button", { name: "Edit Laboratory tools", exact: true }),
@@ -435,7 +448,7 @@ test("delegated reader can manage or share independently and loses cached tools 
     exact: true,
   });
   const card = panel.getByTestId("mcp-profile");
-  await expectRights(card, false, true, false);
+  await expectRights(card, false, true, false, username);
   await expect(
     panel.getByRole("button", { name: "Add connection", exact: true }),
   ).not.toBeVisible();
@@ -449,6 +462,10 @@ test("delegated reader can manage or share independently and loses cached tools 
   await expect(
     card.getByRole("button", { name: "Add person", exact: true }),
   ).not.toBeVisible();
+  // The optional description field opens on demand while editing.
+  await dialog
+    .getByRole("button", { name: "Add description", exact: true })
+    .click();
   await dialog
     .getByLabel("Tool group description", { exact: true })
     .fill("Managed by a Brain reader");
@@ -468,24 +485,29 @@ test("delegated reader can manage or share independently and loses cached tools 
     { username, rights: { use_profile: false, manage: false, share: true } },
     "PUT",
   );
-  await expectRights(card, false, false, true);
+  await expectRights(card, false, false, true, username);
   await card
     .getByRole("button", { name: "Edit Shared tools", exact: true })
     .click();
   await expect(
     card.getByLabel("Tool group name", { exact: true }),
   ).not.toBeVisible();
+  // Direct grants are edited on demand from the person's access-source chip.
   await card
+    .getByRole("button", { name: `Access sources for ${username}`, exact: true })
+    .click();
+  await reader
     .getByRole("button", {
       name: `Use for ${username} direct: Denied`,
       exact: true,
     })
     .click();
+  await reader.keyboard.press("Escape");
   await card.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(
     card.getByRole("button", { name: "Edit Shared tools", exact: true }),
   ).toBeVisible();
-  await expectRights(card, true, false, true);
+  await expectRights(card, true, false, true, username);
   await card
     .getByRole("button", { name: "Tools & testing", exact: true })
     .click();
@@ -496,7 +518,8 @@ test("delegated reader can manage or share independently and loses cached tools 
   await expect(dialog).toContainText("Shared inspector · inspect");
   await command(page, `${f.base}/grants/${account}`, undefined, "DELETE");
   await expect(dialog).not.toBeVisible();
-  await expect(panel).not.toBeVisible();
+  // The reader's open page re-reads Brain access on the slow 30-second cadence.
+  await expect(panel).not.toBeVisible({ timeout: 35_000 });
   await expect(
     reader.getByText("Shared inspector · inspect", { exact: true }),
   ).not.toBeVisible();

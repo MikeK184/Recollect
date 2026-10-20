@@ -31,6 +31,7 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
   page,
   browser,
 }) => {
+  test.setTimeout(90_000);
   await ownerLogin(page);
   const username = `teammate-${randomUUID().slice(0, 8)}`;
   await page.goto("/team");
@@ -94,9 +95,10 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
     .getByRole("button", { name: "Remove grant", exact: true })
     .click();
   await expect(dialog.getByText("Effective access is now none.")).toBeVisible();
+  // The member's open page re-reads Brain access on the slow 30-second cadence.
   await expect(
     member.getByRole("heading", { name: "Settings", level: 1, exact: true }),
-  ).toHaveCount(0, { timeout: 10000 });
+  ).toHaveCount(0, { timeout: 35_000 });
   await expect(
     member.getByText("This resource is unavailable or you do not have access."),
   ).toBeVisible();

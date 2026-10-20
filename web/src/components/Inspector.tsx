@@ -14,7 +14,15 @@ import { X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { paneIn } from "../design/motion";
 import { useWideLayout } from "../lib/hooks";
-import { Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./ui/sheet";
+import { fromModal, modalOpen } from "../lib/focus";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "./ui/sheet";
 
 // The one shared record inspector (ADR 0025). From 1440px it docks at 400px
 // inside the main panel (a non-modal dialog beside the content, never over a
@@ -38,7 +46,8 @@ export function InspectorHost({ children }: { children: ReactNode }) {
   const host: Host = {
     node,
     owner,
-    claim: (id) => setOwners((list) => [...list.filter((entry) => entry !== id), id]),
+    claim: (id) =>
+      setOwners((list) => [...list.filter((entry) => entry !== id), id]),
     release: (id) => setOwners((list) => list.filter((entry) => entry !== id)),
   };
   return (
@@ -61,7 +70,8 @@ export function InspectorHost({ children }: { children: ReactNode }) {
 function useOpenerFocus(opened: boolean, returnFocus: boolean) {
   const opener = useRef<HTMLElement | null>(null);
   const was = useRef(false);
-  if (opened && !was.current) opener.current = document.activeElement as HTMLElement | null;
+  if (opened && !was.current)
+    opener.current = document.activeElement as HTMLElement | null;
   was.current = opened;
   useEffect(() => {
     if (opened || !returnFocus) return;
@@ -75,7 +85,8 @@ function useOpenerFocus(opened: boolean, returnFocus: boolean) {
   useEffect(
     () => () => {
       const target = opener.current;
-      if (returnFocus && target?.isConnected) target.focus({ preventScroll: true });
+      if (returnFocus && target?.isConnected)
+        target.focus({ preventScroll: true });
     },
     [returnFocus],
   );
@@ -124,7 +135,9 @@ export function DetailInspector({
   const fromModal = useRef(false);
   const wasOpened = useRef(false);
   if (opened && !wasOpened.current)
-    fromModal.current = !!(document.activeElement as HTMLElement | null)?.closest(
+    fromModal.current = !!(
+      document.activeElement as HTMLElement | null
+    )?.closest(
       '[data-slot="sheet-content"], [data-slot="dialog-content"], [role="alertdialog"]',
     );
   // The entrance plays when the inspector opens, not when a resize moves an
@@ -157,10 +170,16 @@ export function DetailInspector({
             {description ? (
               <SheetDescription>{description}</SheetDescription>
             ) : (
-              <SheetDescription className="sr-only">{title ?? ariaLabel ?? "Details"}</SheetDescription>
+              <SheetDescription className="sr-only">
+                {title ?? ariaLabel ?? "Details"}
+              </SheetDescription>
             )}
           </SheetHeader>
-          {actions && <div className="flex gap-1 border-b border-border px-4 py-2">{actions}</div>}
+          {actions && (
+            <div className="flex gap-1 border-b border-border px-4 py-2">
+              {actions}
+            </div>
+          )}
           <SheetBody>{children}</SheetBody>
         </SheetContent>
       </Sheet>
@@ -231,9 +250,18 @@ function DockedPanel({
       initial={entering ? "initial" : false}
       animate="animate"
       exit="exit"
-      className={cn("absolute inset-0 flex min-w-0 flex-col bg-card outline-none", className)}
+      className={cn(
+        "absolute inset-0 flex min-w-0 flex-col bg-card outline-none",
+        className,
+      )}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && closeOnEscape && !event.defaultPrevented) {
+        if (
+          event.key === "Escape" &&
+          !event.defaultPrevented &&
+          !fromModal(event.target) &&
+          !modalOpen() &&
+          closeOnEscape
+        ) {
           event.stopPropagation();
           onClose();
         }
@@ -241,7 +269,10 @@ function DockedPanel({
     >
       <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border pl-4 pr-2">
         <div className="min-w-0 flex-1">
-          <h2 id={titleId} className="m-0 truncate text-title font-semibold text-foreground">
+          <h2
+            id={titleId}
+            className="m-0 truncate text-title font-semibold text-foreground"
+          >
             {title ?? ariaLabel ?? "Details"}
           </h2>
         </div>
@@ -261,7 +292,9 @@ function DockedPanel({
           {description}
         </p>
       )}
-      <div className="min-h-0 flex-1 overflow-auto p-4 scrollbar-thin">{children}</div>
+      <div className="min-h-0 flex-1 overflow-auto p-4 scrollbar-thin">
+        {children}
+      </div>
     </motion.section>
   );
 }
@@ -277,7 +310,12 @@ export function InspectorSection({
   className?: string;
 }) {
   return (
-    <section className={cn("-mx-4 grid gap-2.5 border-b border-border px-4 py-4 first:pt-0 last:border-b-0", className)}>
+    <section
+      className={cn(
+        "-mx-4 grid gap-2.5 border-b border-border px-4 py-4 first:pt-0 last:border-b-0",
+        className,
+      )}
+    >
       {label && <h3 className="section-label m-0">{label}</h3>}
       {children}
     </section>
@@ -293,11 +331,18 @@ export function PropList({
   className?: string;
 }) {
   return (
-    <dl className={cn("m-0 grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2 text-label leading-5", className)}>
+    <dl
+      className={cn(
+        "m-0 grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-2 text-label leading-5",
+        className,
+      )}
+    >
       {items.map((item, index) => (
         <div key={index} className="contents">
           <dt className="text-muted-foreground">{item.term}</dt>
-          <dd className="m-0 flex min-w-0 items-center gap-1.5 text-foreground [overflow-wrap:anywhere]">{item.value}</dd>
+          <dd className="m-0 flex min-w-0 items-center gap-1.5 text-foreground [overflow-wrap:anywhere]">
+            {item.value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -305,9 +350,20 @@ export function PropList({
 }
 
 /** Serif quotation for remembered text. */
-export function Quote({ children, className }: { children: ReactNode; className?: string }) {
+export function Quote({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <blockquote className={cn("m-0 border-l-2 border-border-strong pl-3 font-serif text-[15px] leading-6 text-foreground", className)}>
+    <blockquote
+      className={cn(
+        "m-0 border-l-2 border-border-strong pl-3 font-serif text-[15px] leading-6 text-foreground",
+        className,
+      )}
+    >
       {children}
     </blockquote>
   );

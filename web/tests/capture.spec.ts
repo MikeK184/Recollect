@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("capture policy, companion delivery states and retained source erasure", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   page.setDefaultTimeout(12_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -187,7 +187,9 @@ test("capture policy, companion delivery states and retained source erasure", as
     path: "../.cache/guided-privacy-custom.png",
     animations: "disabled",
   });
-  await expect(dialog).toContainText(/changed elsewhere/i);
+  // Policy reads refresh on the slow 30-second cadence; the open editor then
+  // notices the concurrent change before any save.
+  await expect(dialog).toContainText(/changed elsewhere/i, { timeout: 35_000 });
   await expect(dialog.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByText("concurrent-policy-exclusion", { exact: true })).toHaveCount(0);
@@ -302,6 +304,10 @@ test("capture policy, companion delivery states and retained source erasure", as
   await expect(erase.getByText(/Content is now unavailable/)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("capture-source-content")).toHaveCount(0);
+  // The evidence sheet stays open on the erased state; close it as well.
+  await expect(dialog.getByText("Erased source", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
     panel.getByRole("button", { name: "Open evidence", exact: true }),
   ).toHaveCount(0);
@@ -338,9 +344,13 @@ test("capture policy, companion delivery states and retained source erasure", as
       await route.fulfill({ response, json: body });
     },
   );
+  // Capture diagnostics re-read devices on the 10-second list cadence.
   await expect(
     coverage.getByText("Offline or stopped", { exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 12_000 });
+  // The diagnostics sheet is modal; close it before capturing the panel.
+  await page.keyboard.press("Escape");
+  await expect(coverage).toHaveCount(0);
   await page.setViewportSize({ width: 1440, height: 960 });
   await panel.scrollIntoViewIfNeeded();
   await panel.screenshot({ path: "../.cache/capture-panel-desktop.png" });

@@ -46,7 +46,8 @@ test("Brain chooser, safe icon upload, retry without duplicate, replace and remo
   const card = page.getByTestId("brain-card").filter({hasText:name});
   await expect(card.locator("img")).toHaveJSProperty("naturalWidth", 256);
   await card.getByRole("link", { name:`Open ${name}`, exact:true }).click();
-  await expect(page).toHaveURL(new RegExp(`/brains/${brain.id}/ask`));
+  // A card opens the Brain directly, which resolves to its Dashboard.
+  await expect(page).toHaveURL(new RegExp(`/brains/${brain.id}/dashboard$`));
   await page.goto(`/brains/${brain.id}/settings`);
   await page.getByRole("button", {name:"Edit Brain",exact:true}).click();
   await dialog(page).getByLabel(/^Name/).fill(`${name} renamed`);

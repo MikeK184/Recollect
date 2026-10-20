@@ -69,33 +69,41 @@ async function setup(page: Page) {
       "PUT",
     );
   await grant(true);
-  await page.goto(`/brains/${brain.id}/connections?tab=profiles`);
+  // Tool runtime diagnostics open from the selected connection's Activity.
+  await page.goto(`/brains/${brain.id}/connections?tab=connections`);
   const panel = page.getByRole("region", {
     name: "MCP connections and tool groups",
     exact: true,
   });
-  await panel
-    .getByRole("button", { name: "Runtime diagnostics", exact: true })
-    .click();
+  const inspector = page.getByRole("complementary", {
+    name: "Connection details",
+  });
+  await inspector.getByRole("tab", { name: "Activity", exact: true }).click();
+  const activity = inspector.getByRole("button", {
+    name: "Open tool activity",
+    exact: true,
+  });
+  await activity.click();
   await expect(
-    page.getByText("Runner available", { exact: true }),
+    page
+      .getByRole("dialog", { name: "Tool runtime diagnostics", exact: true })
+      .getByText("Runner available", { exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(
-    panel.getByRole("button", { name: "Runtime diagnostics", exact: true }),
-  ).toBeFocused();
+  await expect(activity).toBeFocused();
   const run = async (name: string, args: string) => {
     for (let i = 0; i < 4 && (await page.getByRole("dialog").count()); i++) {
       await page.keyboard.press("Escape");
       await page.waitForTimeout(180);
     }
-    if (!page.url().includes(`/brains/${brain.id}/connections`))
+    // Cached tools and explicit runs live behind a tool group's Tools & testing.
+    if (!page.url().includes(`/brains/${brain.id}/connections?tab=profiles`))
       await page.goto(`/brains/${brain.id}/connections?tab=profiles`);
     await panel
-      .getByRole("button", { name: "Inspect cached tools", exact: true })
+      .getByRole("button", { name: "Tools & testing", exact: true })
       .click();
     const cached = page.getByRole("dialog", {
-      name: "Cached tools · Runnable tools",
+      name: "Tools · Runnable tools",
       exact: true,
     });
     await cached
@@ -143,7 +151,11 @@ test("desktop executes once after lost submission response and reconciles an unc
   await form
     .getByRole("button", { name: "Check submission", exact: true })
     .click();
-  await expect(dialog.getByText("Succeeded", { exact: true })).toBeVisible();
+  await expect(
+    dialog
+      .getByRole("region", { name: "Call summary" })
+      .getByText("Succeeded", { exact: true }),
+  ).toBeVisible();
   await expect(dialog).toContainText("Desktop retained result");
   const calls = (await command(page, `${f.base}/mcp/calls`)).calls;
   expect(calls).toHaveLength(1);
@@ -160,7 +172,11 @@ test("desktop executes once after lost submission response and reconciles an unc
   await dialog
     .getByRole("button", { name: "Look up connector receipt", exact: true })
     .click();
-  await expect(dialog.getByText("Succeeded", { exact: true })).toBeVisible();
+  await expect(
+    dialog
+      .getByRole("region", { name: "Call summary" })
+      .getByText("Succeeded", { exact: true }),
+  ).toBeVisible();
   await dialog
     .getByRole("button", { name: "Inspect original call", exact: true })
     .click();
@@ -230,38 +246,38 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const f = await setup(page);
+  // Capture policy is part of the one Privacy form (Edit/Save).
   await page.goto(`/brains/${f.brain.id}/settings?tab=capture`);
-  const advanced = page.locator("details").filter({
-    has: page.locator("summary", { hasText: "Advanced capture controls" }),
-  });
-  await advanced.locator("summary").click();
-  const capture = advanced.getByRole("region", {
-    name: "Session capture",
-    exact: true,
-  });
-  await capture
-    .getByRole("button", { name: "Capture policy", exact: true })
-    .click();
-  const policy = page.getByRole("dialog", {
-    name: "Session capture policy",
+  const policy = page.getByRole("form", {
+    name: "Privacy settings",
     exact: true,
   });
   await policy
-    .getByLabel("Enable automatic session capture", { exact: true })
-    .check();
-  await policy
-    .getByRole("switch", { name: /^Capture managed tool results/ })
-    .check();
-  await expect(policy).toContainText("shared with this Brain's readers");
-  await policy
-    .getByRole("button", { name: "Save capture policy", exact: true })
+    .getByRole("button", { name: "Edit privacy settings", exact: true })
     .click();
-  await expect(policy).not.toBeVisible();
+  await policy
+    .getByRole("switch", { name: "Enable automatic session capture" })
+    .check();
+  const managed = policy.getByRole("switch", {
+    name: /^Capture managed tool results/,
+  });
+  await managed.check();
+  // The editor must explain that enabling it publishes managed results as
+  // Brain evidence readable by the Brain's knowledge readers.
+  await expect.soft(policy).toContainText(/readers/i);
+  await policy
+    .getByRole("button", { name: "Save changes", exact: true })
+    .click();
   await expect(
-    capture.getByText("Managed tools enabled", { exact: true }),
+    policy.getByRole("button", { name: "Edit privacy settings", exact: true }),
   ).toBeVisible();
+  await expect(managed).toBeChecked();
   let dialog = await f.run("inspect", '{"text":"DesktopObservationEvidence"}');
-  await expect(dialog.getByText("Succeeded", { exact: true })).toBeVisible();
+  await expect(
+    dialog
+      .getByRole("region", { name: "Call summary" })
+      .getByText("Succeeded", { exact: true }),
+  ).toBeVisible();
   await dialog
     .getByRole("button", { name: "Inspect captured evidence", exact: true })
     .click();
@@ -298,16 +314,17 @@ test("managed capture consent publishes scoped evidence and exposes filtering an
   await expect(
     page.getByRole("dialog", { name: "Tool runtime diagnostics", exact: true }),
   ).toBeVisible();
-  await page.goto(`/brains/${f.brain.id}/agents?tab=sessions`);
+  // Captured events and capture diagnostics live in Activity.
+  await page.goto(`/brains/${f.brain.id}/activity?tab=capture`);
   const sessions = page.getByRole("region", {
-    name: "Session capture",
+    name: "Captured activity",
     exact: true,
   });
   await sessions
-    .getByRole("button", { name: "Capture coverage", exact: true })
+    .getByRole("button", { name: "Capture diagnostics", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Capture coverage", exact: true }),
+    page.getByRole("dialog", { name: "Capture diagnostics", exact: true }),
   ).toContainText("1 published");
   await page.keyboard.press("Escape");
   await expect(sessions).toContainText("Managed tool");
@@ -402,9 +419,21 @@ test("desktop cancellation, output expiry and Use revocation clear retained cont
   await expect(dialog).toContainText("Profile Use is required");
   await expect(dialog).not.toContainText("Visible only with Use");
   await page.keyboard.press("Escape");
+  // The modal runtime diagnostics sheet stays open over the panel; the tool
+  // group re-reads its rights on the 10-second catalogue cadence.
   await expect(
-    f.panel.getByRole("button", { name: "Inspect cached tools", exact: true }),
-  ).toBeDisabled();
+    page
+      .getByRole("region", {
+        name: "MCP connections and tool groups",
+        exact: true,
+        includeHidden: true,
+      })
+      .getByRole("button", {
+        name: "Tools & testing",
+        exact: true,
+        includeHidden: true,
+      }),
+  ).toBeDisabled({ timeout: 12_000 });
   const runtime = page.getByRole("dialog", {
     name: "Tool runtime diagnostics",
     exact: true,

@@ -15,7 +15,7 @@ type Exception = {
   blocking: boolean;
   title: string;
   detail: string;
-  section: "activity" | "settings" | "agents";
+  section: "activity" | "settings";
   search: BrainSearch;
 };
 
@@ -275,8 +275,8 @@ function useAssuranceReads(active: boolean) {
           device.gaps > 0
             ? `${device.gaps} gaps in its latest report. Offline coverage cannot be confirmed.`
             : "The latest capture report needs attention. Inspect coverage for the details.",
-        section: "agents",
-        search: { tab: "sessions", device: device.id },
+        section: "activity",
+        search: { tab: "capture", device: device.id },
       });
   return {
     brain,

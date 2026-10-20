@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 test("retention, explicit excerpts and erasure survive a lost response", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   page.setDefaultTimeout(10_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -112,11 +112,13 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     storageChanged = true;
     await route.fulfill({ response, json: body });
   });
+  // Policy reads refresh on the slow 30-second cadence; the open editor then
+  // notices the changed storage policy before any save.
   await expect(
     page.getByText(
       "Privacy settings changed elsewhere. Cancel and reopen to edit them.",
     ),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 35_000 });
   expect(storageChanged).toBe(true);
   await expect(
     page.getByRole("button", { name: "Save changes", exact: true }),
@@ -169,6 +171,10 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
   await page
     .getByRole("button", { name: /Synthetic raw browser source/ })
     .click();
+  // Below 1440px the inspector opens as a sheet. Resize before opening the
+  // nested dialog: the dock becoming a sheet underneath an open dialog is no
+  // supported transition.
+  await page.setViewportSize({ width: 1280, height: 800 });
   await openDetails(page, "More source actions");
   await page.getByRole("button", { name: "Erase source", exact: true }).click();
   dialog = page.getByRole("dialog", {
@@ -176,7 +182,6 @@ test("retention, explicit excerpts and erasure survive a lost response", async (
     exact: true,
   });
   await expect(dialog.getByText(/2 source versions/)).toBeVisible();
-  await page.setViewportSize({ width: 1280, height: 800 });
   await expect
     .poll(() =>
       page.evaluate(

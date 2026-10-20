@@ -403,12 +403,23 @@ test("name and URL form discovers without calling tools, invalidates edits and s
     await dialog
       .getByRole("textbox", { name: "MCP server URL", exact: true })
       .fill(`http://127.0.0.1:${address.port}/mcp`);
-    await dialog
-      .getByRole("button", { name: "Find tools", exact: true })
-      .click();
-    await expect(
-      dialog.getByText("1 tools found", { exact: true }),
-    ).toBeVisible({ timeout: 30000 });
+    // Inspection reads only the handshake and tool metadata, then the reviewed
+    // summary gates the explicit Review → Add steps.
+    const inspected = dialog.getByText(
+      "Metadata inspected. No tools have been called.",
+      { exact: true },
+    );
+    const inspect = dialog.getByRole("button", {
+      name: "Inspect tools",
+      exact: true,
+    });
+    const review = dialog.getByRole("button", {
+      name: "Review connection",
+      exact: true,
+    });
+    await inspect.click();
+    await expect(inspected).toBeVisible({ timeout: 30000 });
+    await expect(dialog.getByText("lookup", { exact: true })).toBeVisible();
     expect(calls).toBe(0);
     await page.route("**/api/mcp/definitions/inspect-http", (route) =>
       route.fulfill({
@@ -420,15 +431,9 @@ test("name and URL form discovers without calling tools, invalidates edits and s
         }),
       }),
     );
-    await dialog
-      .getByRole("button", { name: "Find tools", exact: true })
-      .click();
-    await expect(
-      dialog.getByRole("button", { name: "Add server", exact: true }),
-    ).toBeDisabled();
-    await expect(
-      dialog.getByText("1 tools found", { exact: true }),
-    ).toHaveCount(0);
+    await inspect.click();
+    await expect(review).toBeDisabled();
+    await expect(inspected).toHaveCount(0);
     await expect(
       dialog.getByText("Controlled discovery failure", { exact: true }),
     ).toBeVisible();
@@ -436,17 +441,12 @@ test("name and URL form discovers without calling tools, invalidates edits and s
     await dialog
       .getByRole("textbox", { name: "Server name", exact: true })
       .fill("Renamed HTTP");
-    await expect(
-      dialog.getByRole("button", { name: "Add server", exact: true }),
-    ).toBeDisabled();
+    await expect(review).toBeDisabled();
+    await inspect.click();
+    await expect(review).toBeEnabled();
+    await review.click();
     await dialog
-      .getByRole("button", { name: "Find tools", exact: true })
-      .click();
-    await expect(
-      dialog.getByRole("button", { name: "Add server", exact: true }),
-    ).toBeEnabled();
-    await dialog
-      .getByRole("button", { name: "Add server", exact: true })
+      .getByRole("button", { name: "Add connection", exact: true })
       .click();
     await expect(dialog).toHaveCount(0);
     const catalogue = await api(base + "/mcp");
@@ -457,10 +457,13 @@ test("name and URL form discovers without calling tools, invalidates edits and s
     ).toBe(true);
     expect(catalogue.profiles).toHaveLength(0);
     expect(calls).toBe(0);
+    // Testing is an explicit inspector action for the selected connection.
     const card = page
       .getByTestId("mcp-connection")
       .filter({ hasText: "Renamed HTTP" });
-    await card
+    await card.click();
+    await page
+      .getByRole("complementary", { name: "Connection details" })
       .getByRole("button", { name: "Test connection", exact: true })
       .click();
     const check = page.getByRole("dialog", {

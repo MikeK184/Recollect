@@ -645,7 +645,10 @@ test("a held old heartbeat cannot cancel an explicit child read, and later polls
   await expect(statusDrawer).toContainText(`Generation ${f.replacement.id}`);
   await expect(statusDrawer).toContainText("2 eligible entities");
   await expect(statusDrawer).toContainText(`generation ${replacementInput.id}`);
-  await expect(statusDrawer).not.toContainText(`Generation ${f.original.id}`);
+  // The status inventory re-reads on the 10-second graph status cadence.
+  await expect(statusDrawer).not.toContainText(`Generation ${f.original.id}`, {
+    timeout: 12_000,
+  });
   await page.keyboard.press("Escape");
   await expect(statusDrawer).not.toBeVisible();
   await inspect(page);

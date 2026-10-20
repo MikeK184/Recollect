@@ -111,6 +111,13 @@ export function McpConnectorSetup({
     save.reset();
   };
   const inspection = useMutation({
+    // A new read replaces the reviewed manifest, so a failed re-inspection
+    // never leaves an earlier result reviewable next to its error.
+    onMutate: () => {
+      setManifest(null);
+      setPhase("edit");
+      save.reset();
+    },
     mutationFn: async () => {
       if (!owner)
         throw new Error(

@@ -1,5 +1,8 @@
 import * as React from "react";
-import { AlertDialog as AlertPrimitive, Dialog as DialogPrimitive } from "radix-ui";
+import {
+  AlertDialog as AlertPrimitive,
+  Dialog as DialogPrimitive,
+} from "radix-ui";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useReturnFocus } from "../../lib/focus";
@@ -20,7 +23,12 @@ export function DialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return <DialogPrimitive.Overlay className={cn(overlayClass, className)} {...props} />;
+  return (
+    <DialogPrimitive.Overlay
+      className={cn(overlayClass, className)}
+      {...props}
+    />
+  );
 }
 
 const widths = {
@@ -78,7 +86,10 @@ export function DialogContent({
   );
 }
 
-export function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+export function DialogHeader({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
@@ -87,16 +98,25 @@ export function DialogHeader({ className, ...props }: React.ComponentProps<"div"
     />
   );
 }
-export function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+export function DialogBody({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-body"
-      className={cn("min-h-0 flex-1 overflow-auto px-5 pb-5 pt-4 scrollbar-thin", className)}
+      className={cn(
+        "min-h-0 flex-1 overflow-auto px-5 pb-5 pt-4 scrollbar-thin",
+        className,
+      )}
       {...props}
     />
   );
 }
-export function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+export function DialogFooter({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-footer"
@@ -172,16 +192,47 @@ export function Modal({
         showClose={withCloseButton}
         aria-label={ariaLabel}
         aria-describedby={description ? undefined : undefined}
-        onPointerDownOutside={(event) => !closeOnClickOutside && event.preventDefault()}
-        onEscapeKeyDown={(event) => !closeOnEscape && event.preventDefault()}
+        onPointerDownOutside={(event) =>
+          !closeOnClickOutside && event.preventDefault()
+        }
+        onEscapeKeyDown={(event) => {
+          if (closeOnEscape) return;
+          // Declined (a nested dialog is open): mark it so the dialog that
+          // holds focus closes itself instead (see onKeyDown).
+          event.preventDefault();
+          (
+            event as KeyboardEvent & { recollectDeclined?: boolean }
+          ).recollectDeclined = true;
+        }}
+        onKeyDown={(event) => {
+          // Escape always closes the innermost open dialog: if the topmost
+          // dismissable layer declined it, the dialog containing focus does.
+          if (event.key !== "Escape" || !closeOnEscape) return;
+          const native = event.nativeEvent as KeyboardEvent & {
+            recollectDeclined?: boolean;
+          };
+          if (native.defaultPrevented && !native.recollectDeclined) return;
+          if (
+            (event.target as Element).closest?.(
+              "[data-radix-popper-content-wrapper]",
+            )
+          )
+            return;
+          event.stopPropagation();
+          onClose();
+        }}
       >
         {title || description ? (
           <DialogHeader>
             {title ? <DialogTitle>{title}</DialogTitle> : null}
-            {description ? <DialogDescription>{description}</DialogDescription> : null}
+            {description ? (
+              <DialogDescription>{description}</DialogDescription>
+            ) : null}
           </DialogHeader>
         ) : (
-          <DialogPrimitive.Title className="sr-only">{ariaLabel ?? "Dialog"}</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">
+            {ariaLabel ?? "Dialog"}
+          </DialogPrimitive.Title>
         )}
         {!description && <DialogPrimitive.Description className="sr-only" />}
         <DialogBody className={bodyClassName}>{children}</DialogBody>
@@ -217,7 +268,10 @@ export function ConfirmDialog({
 }) {
   const focus = useReturnFocus();
   return (
-    <AlertPrimitive.Root open={opened} onOpenChange={(open) => !open && onClose()}>
+    <AlertPrimitive.Root
+      open={opened}
+      onOpenChange={(open) => !open && onClose()}
+    >
       <AlertPrimitive.Portal>
         <AlertPrimitive.Overlay className={overlayClass} />
         <AlertPrimitive.Content
@@ -228,8 +282,15 @@ export function ConfirmDialog({
           )}
         >
           <div className="flex flex-col gap-1 px-5 pt-5">
-            <AlertPrimitive.Title className="m-0 text-title font-semibold">{title}</AlertPrimitive.Title>
-            <AlertPrimitive.Description className={cn("m-0 text-body text-muted-foreground", !description && "sr-only")}>
+            <AlertPrimitive.Title className="m-0 text-title font-semibold">
+              {title}
+            </AlertPrimitive.Title>
+            <AlertPrimitive.Description
+              className={cn(
+                "m-0 text-body text-muted-foreground",
+                !description && "sr-only",
+              )}
+            >
               {description ?? title}
             </AlertPrimitive.Description>
           </div>

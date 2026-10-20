@@ -109,8 +109,8 @@ export function PrivacyForm({ brain, snapshot, refresh, acknowledge }: {
       )}
     </PolicyRow>
   );
-  const toggle = (title: string, label: string, checked: boolean, update: (value: boolean) => void) => (
-    <PolicyRow title={title}><Switch aria-label={label} checked={checked} disabled={readOnly}
+  const toggle = (title: string, label: string, checked: boolean, update: (value: boolean) => void, description?: string) => (
+    <PolicyRow title={title} description={description}><Switch aria-label={label} checked={checked} disabled={readOnly}
       className={cn(readOnly && "cursor-default opacity-100")}
       onChange={(event) => update(event.currentTarget.checked)} /></PolicyRow>
   );
@@ -174,7 +174,8 @@ export function PrivacyForm({ brain, snapshot, refresh, acknowledge }: {
           <Fragment key={kind}>{toggle(title, kind === "tool_result" ? "Capture tool result" : "Capture session events", value.capture.kinds.includes(kind), (checked) => updateCapture({
             kinds: checked ? [...value.capture.kinds, kind] : value.capture.kinds.filter((item) => item !== kind),
           }))}</Fragment>)}
-        {toggle("Managed tool results", "Capture managed tool results", value.capture.managed_tools ?? false, (managed_tools) => updateCapture({ managed_tools }))}
+        {toggle("Managed tool results", "Capture managed tool results", value.capture.managed_tools ?? false, (managed_tools) => updateCapture({ managed_tools }),
+          "Publishes sanitized, permitted results of managed tool calls as Brain evidence, readable by this Brain’s knowledge readers.")}
         <PolicyRow title="Maximum text per event">
           <div className="w-48">
             <NumberInput aria-label="Maximum text per event · KiB" min={1} max={64}

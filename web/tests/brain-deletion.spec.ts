@@ -225,8 +225,11 @@ test("delete brain: admin-only control, preview confirmation, distinct errors an
     name: "Brain access",
     exact: true,
   });
-  await access.getByLabel(/^Account username/).fill(username);
-  await access.getByRole("button", { name: "Save direct grant" }).click();
+  // Access is a member list; a direct grant is added through its own dialog.
+  await access.getByRole("button", { name: "Add member", exact: true }).click();
+  const grant = page.getByRole("dialog", { name: "Add member", exact: true });
+  await grant.getByLabel(/^Account username/).fill(username);
+  await grant.getByRole("button", { name: "Save direct grant" }).click();
   await expect(
     access.getByText("Effective access is now reader."),
   ).toBeVisible();

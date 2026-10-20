@@ -181,12 +181,11 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
   const [manage, setManage] = useState(false);
   const [importing, setImporting] = useState(false);
   const selected = route.source ?? null;
+  // Selecting a source shows what it currently supports, so a row never pins
+  // the version its list read had; the inspector follows the source's current
+  // version. Only an explicit version choice or deep link pins one.
   const setSelected = (source: Source | null) =>
-    patchRoute({
-      source: source?.id ?? null,
-      version: source?.version.id ?? null,
-      detail: null,
-    });
+    patchRoute({ source: source?.id ?? null, version: null, detail: null });
   const versionReference = useQuery({
     queryKey: ["source-reference", brain.id, route.version],
     enabled: !!route.version && !selected,
@@ -558,7 +557,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
           to="/brains/$brainId/settings"
           params={{ brainId: brain.id }}
           search={{ tab: "privacy" }}
-          className="text-brand-text underline-offset-[3px] hover:underline"
+          className="link-inline"
         >
           Settings
         </Link>
@@ -1724,7 +1723,7 @@ function SourceViewer({
                     direction: "incoming",
                     hops: 1,
                   }}
-                  className="inline-flex w-fit items-center gap-1 text-label font-medium text-brand-text underline-offset-[3px] hover:underline"
+                  className="link-inline inline-flex w-fit items-center gap-1 text-label font-medium"
                 >
                   Explore memory linked to this version
                   <ArrowRight aria-hidden="true" className="size-3.5" />

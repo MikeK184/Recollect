@@ -25,7 +25,7 @@ async function setup(page: Page, name: string) {
         },
         body: JSON.stringify(body),
       });
-      if (!r.ok) throw new Error(`Investigation fixture: ${r.status} ${url}`);
+      if (!r.ok) throw new Error(`Investigation fixture: ${r.status} ${url} ${JSON.stringify(body).slice(0, 80)} ${await r.text()}`);
       return r.json();
     };
     const brain = await post("/api/brains", { name });
@@ -78,9 +78,23 @@ async function setup(page: Page, name: string) {
         { kind: "source_version", id: version, line_from: null, line_to: null },
       ],
     });
-    const left = await post(`${base}/claims`, {
-      content: content("Investigation Boreal", "8080"),
-    });
+    // Unreviewed contributions need a supported assessment before Recall
+    // delivers them; explicit browser review is the human authority that
+    // admits fixture records. Acceptance is refused while an overlapping
+    // conflict exists, so the 8080 claim is accepted before the 9090 proposal.
+    const accept = async (revision: { id: string; claim_id: string }) =>
+      (
+        await post(`${base}/claims/${revision.claim_id}/review`, {
+          base_revision: revision.id,
+          action: "accept",
+          reason: "Fixture owner accepts the synthetic declaration.",
+        })
+      ).claims[0].revision;
+    const left = await accept(
+      await post(`${base}/claims`, {
+        content: content("Investigation Boreal", "8080"),
+      }),
+    );
     const right = await post(`${base}/claims`, {
       content: content("Investigation Boreal", "9090"),
     });
@@ -94,17 +108,21 @@ async function setup(page: Page, name: string) {
         reason: "Independent declared positive control.",
       })
     ).claims[0].revision;
-    const changing = await post(`${base}/claims`, {
-      content: content("History Orion", "6060"),
-    });
-    const unavailable = await post(`${base}/claims`, {
-      content: content(
-        "Missing supported memory",
-        "retained assertion",
-        missing.version.id,
-      ),
-    });
-    const procedure = await post(`${base}/claims`, {
+    const changing = await accept(
+      await post(`${base}/claims`, {
+        content: content("History Orion", "6060"),
+      }),
+    );
+    const unavailable = await accept(
+      await post(`${base}/claims`, {
+        content: content(
+          "Missing supported memory",
+          "retained assertion",
+          missing.version.id,
+        ),
+      }),
+    );
+    const procedure = await accept(await post(`${base}/claims`, {
       content: {
         ...content(
           "Investigation procedure",
@@ -119,8 +137,8 @@ async function setup(page: Page, name: string) {
           observations: [],
         },
       },
-    });
-    const handover = await post(`${base}/claims`, {
+    }));
+    const handover = await accept(await post(`${base}/claims`, {
       content: {
         ...content(
           "Investigation handover",
@@ -135,7 +153,7 @@ async function setup(page: Page, name: string) {
           contributions: [procedure.id],
         },
       },
-    });
+    }));
     return {
       brain: brain.id,
       base,
@@ -211,7 +229,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
     name: "Recall memory",
     exact: true,
   });
-  const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  const submit = panel.getByRole("button", { name: "Find evidence", exact: true });
   await openDetails(panel, "Refine evidence search");
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
@@ -234,7 +252,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
       r.url().endsWith(`${f.base}/recall`) && r.request().method() === "POST",
   );
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Investigation");
   await submit.click();
   const answer = await (await read).json();
@@ -393,7 +411,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
     .getByRole("option", { name: "Investigation", exact: true })
     .click();
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("History Orion");
   const frozenRead = page.waitForResponse(
     (r) =>
@@ -541,7 +559,7 @@ test("bounded comparison and late recall responses do not expand copied context 
     name: "Recall memory",
     exact: true,
   });
-  const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  const submit = panel.getByRole("button", { name: "Find evidence", exact: true });
   await openDetails(panel, "Refine evidence search");
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
@@ -556,7 +574,7 @@ test("bounded comparison and late recall responses do not expand copied context 
     await route.fulfill({ response });
   });
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Investigation Boreal");
   const response = page.waitForResponse(
     (r) =>
@@ -654,12 +672,12 @@ test("bounded comparison and late recall responses do not expand copied context 
     finished();
   });
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Investigation Cobalt");
   await submit.click();
   await ready;
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("History Orion");
   release();
   await complete;
@@ -691,7 +709,7 @@ test("desktop investigation clears nested stale evidence and text context withou
     name: "Recall memory",
     exact: true,
   });
-  const submit = panel.getByRole("button", { name: "Recall", exact: true });
+  const submit = panel.getByRole("button", { name: "Find evidence", exact: true });
   await openDetails(panel, "Refine evidence search");
   let recalls = 0;
   page.on("request", (r) => {
@@ -699,7 +717,7 @@ test("desktop investigation clears nested stale evidence and text context withou
       recalls++;
   });
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Missing supported memory");
   await submit.click();
   await panel.getByRole("tab", { name: /^Sources/ }).click();
@@ -714,12 +732,15 @@ test("desktop investigation clears nested stale evidence and text context withou
   );
   await page.keyboard.press("Escape");
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Investigation source");
   await submit.click();
-  await panel
-    .getByRole("button", { name: "Inspect evidence 1", exact: true })
-    .click();
+  // Accepted claims citing this source also match; inspect the source itself.
+  const sourceEvidence = panel
+    .getByTestId("recall-result")
+    .filter({ has: page.getByText("Investigation source", { exact: true }) })
+    .getByRole("button", { name: "Inspect evidence 1", exact: true });
+  await sourceEvidence.click();
   let dialog = page.getByRole("dialog", {
     name: "Supporting evidence",
     exact: true,
@@ -755,9 +776,7 @@ test("desktop investigation clears nested stale evidence and text context withou
     expiry ??= new Date(Date.now() + 1500).toISOString();
     await route.fulfill({ response, json: { ...data, expires_at: expiry } });
   });
-  await panel
-    .getByRole("button", { name: "Inspect evidence 1", exact: true })
-    .click();
+  await sourceEvidence.click();
   dialog = page.getByRole("dialog", {
     name: "Supporting evidence",
     exact: true,
@@ -770,7 +789,7 @@ test("desktop investigation clears nested stale evidence and text context withou
   await page.keyboard.press("Escape");
   await page.unroute(evidenceUrl);
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Investigation Boreal");
   await submit.click();
   await panel
@@ -807,7 +826,7 @@ test("desktop investigation clears nested stale evidence and text context withou
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
   expect(recalls).toBe(beforeErase);
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("Missing supported memory");
   await submit.click();
   await expect(panel.getByTestId("recall-result")).toHaveCount(1);
@@ -831,12 +850,17 @@ test("desktop investigation clears nested stale evidence and text context withou
   await expect(panel.getByTestId("recall-result")).toHaveCount(0);
   expect(recalls).toBe(beforeExpiry);
   await page.unroute(responseRoute);
+  // Individual channels are an explicitly chosen method, not the automatic default.
+  await panel
+    .getByRole("textbox", { name: "Retrieval strategy", exact: true })
+    .click();
+  await page.getByRole("option", { name: "Choose methods", exact: true }).click();
   await panel
     .getByRole("button", { name: "Scope, time and exact lookup" })
     .click();
   await panel.getByLabel("Text search", { exact: true }).uncheck();
   await panel
-    .getByLabel("Search memory", { exact: true })
+    .getByLabel("Search evidence", { exact: true })
     .fill("NoSuchSyntheticQuestion");
   await submit.click();
   await expect(

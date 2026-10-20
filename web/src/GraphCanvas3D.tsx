@@ -235,11 +235,14 @@ export default function GraphCanvas3D({
         if (position) Object.assign(node, position);
       }
     }
-    previous.current = next;
     return next;
     // Only topology changes create mutable inputs; inspection never reheats.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topology]);
+  // Strict Mode runs the memo twice and keeps the first result, so the memo
+  // must not record its own output: the second run would leave `previous` on
+  // nodes the simulation never moves (and `restored` false on a restore).
+  previous.current = model;
   // Every node shares one sphere; only materials are per node.
   const sphere = useMemo(() => new SphereGeometry(5, 10, 8), []);
   const nodeObjects = useMemo(
@@ -469,6 +472,50 @@ export default function GraphCanvas3D({
     };
   }, []);
 
+  const measured = size.width > 1 && size.height > 1;
+  // Install the forces in the commit that mounts the renderer. The dependency
+  // feeds the nodes and runs the warmup ticks in an update debounced by 1ms;
+  // forces installed a frame later raced it, and the default center force
+  // could move a fresh scene first (a single node then fitted from z 0, not
+  // its seeded z).
+  useLayoutEffect(() => {
+    const api = graph.current;
+    if (!measured || !api) return;
+    try {
+      api.d3Force("charge")?.strength(-65);
+      api
+        .d3Force("link")
+        ?.distance(48)
+        .strength((link: SpatialLink) => {
+          const source =
+            typeof link.source === "string" ? undefined : link.source;
+          const target =
+            typeof link.target === "string" ? undefined : link.target;
+          return source?.groupId &&
+            target?.groupId &&
+            source.groupId !== target.groupId
+            ? 0.008
+            : 0.25;
+        });
+      api.d3Force("center", null);
+      // The simulation hands the force the nodes it integrates.
+      let simulated: SpatialNode[] = [];
+      const topic = (alpha: number) => {
+        for (const node of simulated) {
+          node.vx = (node.vx ?? 0) + (node.anchor.x - node.x) * alpha * 0.15;
+          node.vy = (node.vy ?? 0) + (node.anchor.y - node.y) * alpha * 0.15;
+          node.vz = (node.vz ?? 0) - node.z * alpha * 0.15;
+        }
+      };
+      topic.initialize = (nodes: SpatialNode[]) => {
+        simulated = nodes;
+      };
+      api.d3Force("topic", topic);
+    } catch {
+      failure.current();
+    }
+  }, [measured]);
+
   useEffect(() => {
     let disposed = false;
     const frame = requestAnimationFrame(() => {
@@ -480,29 +527,6 @@ export default function GraphCanvas3D({
         // belongs to this mounted view, not a browser-global debug reference.
         const globalScene = window as Window & { scene?: unknown };
         if (globalScene.scene === api.scene()) delete globalScene.scene;
-        api.d3Force("charge")?.strength(-65);
-        api
-          .d3Force("link")
-          ?.distance(48)
-          .strength((link: SpatialLink) => {
-            const source =
-              typeof link.source === "string" ? undefined : link.source;
-            const target =
-              typeof link.target === "string" ? undefined : link.target;
-            return source?.groupId &&
-              target?.groupId &&
-              source.groupId !== target.groupId
-              ? 0.008
-              : 0.25;
-          });
-        api.d3Force("center", null);
-        api.d3Force("topic", (alpha: number) => {
-          for (const node of previous.current?.nodes ?? []) {
-            node.vx = (node.vx ?? 0) + (node.anchor.x - node.x) * alpha * 0.15;
-            node.vy = (node.vy ?? 0) + (node.anchor.y - node.y) * alpha * 0.15;
-            node.vz = (node.vz ?? 0) - node.z * alpha * 0.15;
-          }
-        });
         (api.controls() as { enableDamping?: boolean }).enableDamping = false;
         const remembered = session.current.value;
         if (remembered?.topology === currentTopology.current)
@@ -517,7 +541,7 @@ export default function GraphCanvas3D({
       disposed = true;
       cancelAnimationFrame(frame);
     };
-  }, [size.width > 1 && size.height > 1]);
+  }, [measured]);
 
   useEffect(() => {
     const api = graph.current;
@@ -833,7 +857,7 @@ export default function GraphCanvas3D({
           data-path-nodes={pathNodes.length}
           data-path-edges={pathEdges.length}
         >
-          {size.width > 1 && size.height > 1 && (
+          {measured && (
             <ForceGraph3D
               ref={graph}
               graphData={model}

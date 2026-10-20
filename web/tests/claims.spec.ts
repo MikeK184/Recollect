@@ -110,10 +110,13 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     .click();
   // A second editor must not overwrite the first editor's later knowledge revision.
   const other = await context.newPage();
-  await other.goto(`/brains/${fixture.brain}/memory`);
+  // An unchecked proposal is not yet usable memory; it stays inspectable in
+  // the list's historical view.
+  await other.goto(`/brains/${fixture.brain}/memory?mode=history`);
   await other
     .getByRole("button", {
-      name: "Vault production · authentication method",
+      // Row names carry the whole assertion: subject · predicate value.
+      name: "Vault production · authentication method JWT",
       exact: true,
     })
     .click();
@@ -222,13 +225,17 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     if (!response.ok)
       throw new Error(`Source update failed (${response.status})`);
   }, fixture);
+  // The open claim re-reads its support on the 10-second detail cadence.
   await expect(
     dialog.getByText("Freshness: needs verification", { exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 12_000 });
   await page.setViewportSize({ width: 1280, height: 800 });
-  await dialog
-    .getByRole("heading", { name: "Vault production", exact: true })
-    .scrollIntoViewIfNeeded();
+  // Below 1440px the inspector becomes a sheet and the record re-renders.
+  await expect(async () => {
+    await dialog
+      .getByRole("heading", { name: "Vault production", exact: true })
+      .scrollIntoViewIfNeeded({ timeout: 2000 });
+  }).toPass();
   await page.screenshot({
     path: "../.cache/ui/claim-1280.png",
     animations: "disabled",
@@ -240,6 +247,32 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
   ).toBe(true);
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1280, height: 900 });
+  // The default list shows usable memory only. An explicit browser review
+  // admits the revised claim; its changed evidence still keeps it out of the
+  // strict accepted view below.
+  await page.evaluate(async (brain) => {
+    const me = await (await fetch("/api/auth/me")).json();
+    const listed = await (
+      await fetch(`/api/brains/${brain}/claims?mode=history&q=Vault`)
+    ).json();
+    const current = listed.items[0].revision;
+    const response = await fetch(
+      `/api/brains/${brain}/claims/${current.claim_id}/review`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": me.csrf_token,
+        },
+        body: JSON.stringify({
+          base_revision: current.id,
+          action: "accept",
+          reason: "Fixture owner accepts the revised claim.",
+        }),
+      },
+    );
+    if (!response.ok) throw new Error(`Review failed (${response.status})`);
+  }, fixture.brain);
   await page.getByRole("button", { name: /^Filters/ }).click();
   await page
     .getByLabel("Fact time (UTC)", { exact: true })
@@ -261,7 +294,7 @@ test("author claims, inspect exact evidence and preserve fact and knowledge hist
     .click();
   await expect(
     page.getByRole("button", {
-      name: "Vault production · authentication method",
+      name: "Vault production · authentication method OIDC",
       exact: true,
     }),
   ).toBeVisible();

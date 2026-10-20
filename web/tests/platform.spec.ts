@@ -29,7 +29,8 @@ test("owner manages a Brain, recovers a request error and signs out on desktop a
   await expect(
     page.getByRole("heading", { name: "Room for your first idea" }),
   ).toBeVisible();
-  await expect(page.getByText("All services connected")).toBeVisible();
+  // Installation health names what the readiness check proved.
+  await expect(page.getByText("Core stores reachable")).toBeVisible();
   await page.screenshot({ path: "../.cache/ui/empty.png", fullPage: true });
   await page.getByRole("button", { name: "Create Brain", exact: true }).click();
   const form = page.getByRole("dialog");

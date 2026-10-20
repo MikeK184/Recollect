@@ -161,7 +161,7 @@ function PrivateRunnerFields({ form, props }: SectionProps) {
         <Link
           to="/brains/$brainId/agents"
           params={{ brainId: props.brain.id }}
-          className="text-brand-text underline-offset-[3px] hover:underline"
+          className="link-inline"
         >
           this Brain&apos;s Agents list
         </Link>

@@ -128,10 +128,9 @@ uses synthetic providers and does not upgrade a user's current host or deploymen
 
 The desktop Light and Ink redesign ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md))
 is delivered locally in the [desktop epic](desktop-visual-experience.md): the
-Tailwind-aware design check shipped and every destination is migrated; the
-migration slice stays in progress until the intermittent 3D fresh-camera
-regression is fixed. It is presentation only and independent of the priorities
-above.
+Tailwind-aware design check and the migration of every destination shipped; it
+is not merged or installed yet. It is presentation only and independent of the
+priorities above.
 
 Priorities order the remaining work; they do not turn a partial implementation
 into a shipped slice. Current local reliability receipts replace the older

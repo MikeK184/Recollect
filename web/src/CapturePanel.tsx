@@ -898,6 +898,30 @@ export function CapturePanel({
       ),
     refetchInterval: pollNormal,
   });
+  // A device filter shows that device's own capture report, so a reported gap
+  // stays visible where its exception leads. The device list has no device
+  // filter, so this pages through it until the device is found.
+  const device = useQuery({
+    queryKey: ["capture-device", brain.id, deviceId],
+    enabled: section === "sessions" && !!deviceId,
+    retry: false,
+    gcTime: 0,
+    queryFn: async ({ signal }) => {
+      for (let at = 0; ; ) {
+        const page = result(
+          await client.GET("/api/brains/{brain}/capture/devices", {
+            signal,
+            params: { path, query: { offset: at } },
+          }),
+        );
+        const found = page.items.find((item) => item.device_id === deviceId);
+        if (found) return found;
+        at += page.items.length;
+        if (!page.items.length || at >= page.total) return null;
+      }
+    },
+    refetchInterval: pollNormal,
+  });
   useEffect(() => {
     setOffset(0);
     setViewing(null);
@@ -947,6 +971,23 @@ export function CapturePanel({
         />
       </div>
     );
+  const report = section === "sessions" && deviceId && (
+    <>
+      <Failure error={device.error} />
+      {device.isPending ? (
+        <SkeletonRows rows={1} label="Loading this device’s capture report…" />
+      ) : (
+        !device.isError &&
+        (device.data ? (
+          <CaptureDevice item={device.data} />
+        ) : (
+          <p className="m-0 text-body text-muted-foreground">
+            This device has no capture binding on this Brain.
+          </p>
+        ))
+      )}
+    </>
+  );
   const body = (
     <>
       <Failure error={policy.error ?? events.error} />
@@ -1039,6 +1080,7 @@ export function CapturePanel({
             </h3>
             {controls}
           </div>
+          {report}
           {body}
         </>
       ) : (
@@ -1052,6 +1094,11 @@ export function CapturePanel({
             )}
             <div className="ml-auto">{controls}</div>
           </CardBar>
+          {report && (
+            <div className="grid gap-3 border-b border-border p-4">
+              {report}
+            </div>
+          )}
           {(policy.error ||
             events.error ||
             section === "settings" ||

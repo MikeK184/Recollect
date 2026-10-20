@@ -7,6 +7,8 @@ import { Field, controlClass, useFieldControl } from "./field";
 // Select and MultiSelect: an input-based combobox with a listbox popover.
 // The control stays an <input>, so getByLabel()/getByRole("textbox") and
 // toHaveValue(label) keep working; options are role="option" in a listbox.
+// The textbox role does not allow aria-expanded: aria-controls (set while
+// open) and aria-activedescendant carry the popup state instead.
 
 export type SelectItem = { value: string; label: string; disabled?: boolean };
 export type SelectGroup = { group: string; items: (string | SelectItem)[] };
@@ -368,7 +370,6 @@ function SelectControl({
             type="text"
             autoComplete="off"
             aria-haspopup="listbox"
-            aria-expanded={combo.open}
             aria-controls={combo.open ? listId : undefined}
             aria-activedescendant={
               combo.open && combo.active ? `${listId}-${combo.active}` : undefined
@@ -632,7 +633,6 @@ function MultiSelectControl({
             type="text"
             autoComplete="off"
             aria-haspopup="listbox"
-            aria-expanded={combo.open}
             aria-controls={combo.open ? listId : undefined}
             aria-activedescendant={
               combo.open && combo.active ? `${listId}-${combo.active}` : undefined

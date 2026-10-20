@@ -1,3 +1,4 @@
+import { fromModal, modalOpen } from "../../lib/focus";
 import {
   lazy,
   Suspense,
@@ -747,12 +748,17 @@ function MemoryLineage({
       </Alert>
     );
   const view = query.data.selected;
+  // Unavailable or erased content still keeps its history and remaining
+  // actions reachable, so the record action shows here too.
   if (!view)
     return (
-      <Alert variant="warning" role="status">
-        This memory’s content is unavailable. Its remaining history stays
-        reachable from the Memory list; no substitute revision is shown.
-      </Alert>
+      <div className="grid gap-3">
+        <Alert variant="warning" role="status">
+          This memory’s content is unavailable. Its remaining history stays
+          reachable from the Memory list; no substitute revision is shown.
+        </Alert>
+        {recordAction && <div className="-ml-2.5">{recordAction}</div>}
+      </div>
     );
   return (
     <ClaimLineageView
@@ -1324,11 +1330,14 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
           onKeyDown={(event) => {
             // In the docked inspector this region sits outside the panel's own
             // key handling; Escape closes it unless a nested dialog owns it.
+            // Whether a nested dialog owns Escape is read from the DOM at the
+            // keypress, so an Escape right after one closes is not lost.
             if (
               event.key !== "Escape" ||
               event.defaultPrevented ||
-              nestedOpen ||
-              !opened
+              !opened ||
+              fromModal(event.target) ||
+              modalOpen()
             )
               return;
             event.stopPropagation();
@@ -1360,14 +1369,23 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
                           variant="ghost"
                           size="sm"
                           onClick={() =>
-                            void navigate({
-                              to: "/brains/$brainId/memory",
-                              params: { brainId: brain.id },
-                              search: {
-                                ...selectionSearch(selection, "memory", search),
-                                detail: "record",
-                              },
-                            })
+                            // Over a Memory list the record opens in place,
+                            // keeping the list's route and filters (such as
+                            // its mode) as the return location.
+                            view === "memory"
+                              ? patch({ claim: selection.id, detail: "record" })
+                              : void navigate({
+                                  to: "/brains/$brainId/memory",
+                                  params: { brainId: brain.id },
+                                  search: {
+                                    ...selectionSearch(
+                                      selection,
+                                      "memory",
+                                      search,
+                                    ),
+                                    detail: "record",
+                                  },
+                                })
                           }
                         >
                           <History aria-hidden="true" />
@@ -1417,7 +1435,6 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
         opened={opened}
         onClose={close}
         title="Knowledge lineage"
-        closeOnEscape={!nestedOpen}
         returnFocus={false}
       >
         <div ref={mount} className="flex min-h-full flex-col" />

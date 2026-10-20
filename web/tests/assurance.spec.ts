@@ -67,25 +67,48 @@ async function fixture(page: Page) {
   return { brain, base, responses, writes, errors };
 }
 
-test("standing pulse labels its window and Brain total, with an exception-first Activity default", async ({
+test("standing pulse labels its window and Brain total, with an exception-first Activity drill-down", async ({
   page,
 }) => {
   const f = await fixture(page);
-  await page.goto(`/brains/${f.brain.id}/activity`);
+  // A healthy Brain shows no band: "nothing needs you" is the absence of the
+  // strip. The exception-first drill-down still states that no action is needed.
+  await page.goto(`/brains/${f.brain.id}/activity?tab=attention`);
   const band = page.getByRole("region", { name: "Brain assurance" });
   await expect(
-    band.getByText("Nothing needs you", { exact: true }),
-  ).toBeVisible();
-  await expect(band).toContainText("7 learned · 3 revised · 1 retired");
-  await expect(band).not.toContainText("1007");
-  await expect(band).toContainText("42 captured events Brain total");
-  await expect(
-    page.getByRole("tab", { name: "Overview", exact: true }),
+    page.getByRole("tab", { name: "Needs attention", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(
     page.getByRole("heading", { name: "No action required", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/They are not lifetime totals/)).toBeVisible();
+  await expect(band).toHaveCount(0);
+  const settled = Promise.all(
+    ["automation", "learning", "processing", "jobs", "capture/events"].map(
+      (name) =>
+        page.waitForResponse(
+          (response) => new URL(response.url()).pathname === `${f.base}/${name}`,
+        ),
+    ),
+  );
+  await page.goto(`/brains/${f.brain.id}/dashboard`);
+  await settled;
+  await expect(band).toHaveCount(0);
+  // Whenever the band does stand without a blocker, it labels the learning
+  // window and the Brain-wide capture total rather than a lifetime sum.
+  (
+    f.responses.automation as {
+      models: { current: { policy: { autonomous_memory: boolean } } };
+    }
+  ).models.current.policy.autonomous_memory = false;
+  await page.goto(`/brains/${f.brain.id}/activity?tab=attention`);
+  await expect(band).toContainText("Autonomous memory is not enabled");
+  await expect(band).toContainText(
+    "Latest completed learning run · 7 learned · 3 revised · 1 retired",
+  );
+  await expect(band).not.toContainText("1007");
+  await expect(band).toContainText("42 captured events Brain total");
+  await expect(band).not.toHaveClass(/assurance-attention/);
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate(async () => {
@@ -104,7 +127,12 @@ test("standing pulse labels its window and Brain total, with an exception-first 
       path: `../.cache/desktop-continuation-20261001/assurance-quiet-${width}.png`,
     });
   }
-  await page.getByRole("tab", { name: "Timeline", exact: true }).click();
+  await expect(
+    band.getByRole("link", { name: "View activity", exact: false }),
+  ).toHaveAttribute("href", /activity\?tab=attention$/);
+  await page
+    .getByRole("tab", { name: "Administrative timeline", exact: true })
+    .click();
   await expect(
     page.getByText("Recent authorized audit events.", { exact: false }),
   ).toBeVisible();
@@ -172,17 +200,19 @@ test("exceptions open their canonical job, tool, erasure and capture detail", as
     total: 1,
     offset: 0,
   };
-  await page.goto(`/brains/${f.brain.id}/activity`);
-  await expect(
-    page.getByRole("region", { name: "Brain assurance" }),
-  ).toContainText("A tool outcome is uncertain");
-  await expect(
-    page.getByRole("region", { name: "Brain assurance" }),
-  ).not.toContainText("7 learned");
-  await expect(
-    page.getByRole("region", { name: "Brain assurance" }),
-  ).not.toContainText("42 captured");
+  await page.goto(`/brains/${f.brain.id}/dashboard`);
+  const band = page.getByRole("region", { name: "Brain assurance" });
+  await expect(band).toContainText("A tool outcome is uncertain");
+  await expect(band).not.toContainText("7 learned");
+  await expect(band).not.toContainText("42 captured");
   await expect(page.getByText("DO_NOT_SHOW_PRIVATE_OUTPUT")).toHaveCount(0);
+  // Two current blockers: the band links to the exception-first drill-down.
+  await band.getByRole("link", { name: "View activity", exact: false }).click();
+  await expect(page).toHaveURL(/activity\?tab=attention$/);
+  const attention = page.getByRole("tab", {
+    name: "Needs attention",
+    exact: true,
+  });
   await page.getByRole("link", { name: /Processing did not finish/ }).click();
   await expect(page.getByTestId("selected-job")).toContainText(
     "Process source text",
@@ -190,7 +220,7 @@ test("exceptions open their canonical job, tool, erasure and capture detail", as
   await expect(
     page.getByTestId("selected-job").getByRole("button", { name: "Retry job" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "View activity", exact: false }).click();
+  await attention.click();
   await page.getByRole("link", { name: /A tool outcome is uncertain/ }).click();
   await expect(
     page.getByRole("dialog", { name: "Tool call", exact: true }),
@@ -203,19 +233,21 @@ test("exceptions open their canonical job, tool, erasure and capture detail", as
   ).toBeVisible();
   await expect(page.getByText("DO_NOT_SHOW_PRIVATE_OUTPUT")).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await page.getByRole("link", { name: "View activity", exact: false }).click();
+  await attention.click();
   await page
     .getByRole("link", { name: /Data cleanup needs attention/ })
     .click();
   await expect(page.getByTestId("selected-erasure")).toContainText(
     "journal pending",
   );
-  await page.getByRole("link", { name: "View activity", exact: false }).click();
+  await attention.click();
   await page
     .getByRole("link", { name: /A device reported a capture gap/ })
     .click();
+  // The exception's destination must show the reported gap itself, not only
+  // that device's captured events.
   await expect(
-    page.getByRole("dialog", { name: "Capture coverage", exact: true }),
+    page.getByText("2 gaps reported across this device", { exact: false }),
   ).toBeVisible();
   expect(f.writes).toEqual([]);
   expect(f.errors).toEqual([]);
@@ -239,14 +271,17 @@ test("historical failures and pending work stay quiet while current blockers nam
       { device_id: randomUUID(), report: { device_gap_count: 2, denied: 0 } },
     ],
   };
-  await page.goto(`/brains/${f.brain.id}/activity`);
+  await page.goto(`/brains/${f.brain.id}/activity?tab=attention`);
   const band = page.getByRole("region", { name: "Brain assurance" });
-  await expect(band).toContainText("Nothing needs you");
-  await expect(band).not.toHaveClass(/assurance-attention/);
   const history = page.getByRole("region", {
     name: "Activity history and pending work",
   });
   await expect(history.getByRole("link")).toHaveCount(4);
+  // History alone is no current blocker: no band, and no action is required.
+  await expect(
+    page.getByRole("heading", { name: "No action required", exact: true }),
+  ).toBeVisible();
+  await expect(band).toHaveCount(0);
   await expect(history).toContainText("Processing did not finish");
   await expect(history).toContainText("Data cleanup is pending");
   await page.screenshot({
@@ -291,6 +326,7 @@ test("historical failures and pending work stay quiet while current blockers nam
 test("partial read failure never claims healthy and role loss clears admin-only activity", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const f = await fixture(page);
   f.responses["mcp/calls"] = {
     calls: [{ id: randomUUID(), state: "unknown", resolutions: [] }],
@@ -305,7 +341,7 @@ test("partial read failure never claims healthy and role loss clears admin-only 
       },
     }),
   );
-  await page.goto(`/brains/${f.brain.id}/activity`);
+  await page.goto(`/brains/${f.brain.id}/activity?tab=attention`);
   await expect(
     page.getByText("Some activity could not be checked", { exact: true }),
   ).toBeVisible();
@@ -319,10 +355,11 @@ test("partial read failure never claims healthy and role loss clears admin-only 
   await page.route(`**${f.base}`, (route) =>
     route.fulfill({ json: { ...f.brain, role: "reader" } }),
   );
-  // Wait for the existing authorization poll. No page reload clears the cache for us.
+  // Wait for the existing authorization poll (the slow 30-second Brain read).
+  // No page reload clears the cache for us.
   await expect(
     page.getByRole("link", { name: /A tool outcome is uncertain/ }),
-  ).toHaveCount(0, { timeout: 12_000 });
+  ).toHaveCount(0, { timeout: 35_000 });
   page.on("request", (request) => {
     if (
       ["mcp/calls", "erasures", "capture/devices", "audit"].some((path) =>
@@ -357,12 +394,13 @@ test("switching Brains discards a late pulse response", async ({ page }) => {
     await gate;
     await route.fulfill({ json: f.responses.learning }).catch(() => {});
   });
-  await page.goto(`/brains/${f.brain.id}/activity`);
+  await page.goto(`/brains/${f.brain.id}/activity?tab=attention`);
   await entered;
   await expect(
     page.getByRole("region", { name: "Brain assurance" }),
   ).toContainText("Checking recent activity");
-  await page.getByRole("link", { name: "All Brains", exact: true }).click();
+  // The link's accessible name also carries the Brain count.
+  await page.getByRole("link", { name: /^All Brains\b/ }).click();
   release();
   await expect(
     page.getByRole("region", { name: "Brain assurance" }),

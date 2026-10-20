@@ -887,9 +887,10 @@ test("scope changes, late responses, epoch errors and failed refresh clear seman
   await expect(page.getByTestId("graph-canvas")).toHaveCount(0);
   f.state.error = true;
   f.state.epoch += 1;
+  // The epoch heartbeat re-reads graph status on the 10-second cadence.
   await expect(
     page.getByText("Organization refresh failed", { exact: false }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 12_000 });
   await expect(page.getByTestId("organization-topic")).toHaveCount(0);
   await expect(page.getByTestId("organization-entity")).toHaveCount(0);
   await expect(
@@ -1228,16 +1229,18 @@ test("organization epoch heartbeat replaces another writer's topic and alias cha
   await expect(inspector).toContainText("Production deployment");
   f.state.name = "Identity renamed by another writer";
   f.state.organizationEpoch = 2;
+  // The epoch heartbeat re-reads graph status on the 10-second cadence.
   await expect(
     page.getByRole("heading", {
       name: "Identity renamed by another writer",
       exact: true,
     }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 12_000 });
   await expect(page.getByLabel("Loaded topic memberships")).toContainText(
     "Identity renamed by another writer",
   );
-  await expect(inspector).not.toContainText("Production deployment");
+  // The stale selection is cleared whether its inspector closes or remains.
+  await expect(inspector.getByText("Production deployment")).toHaveCount(0);
   expect(f.state.epoch).toBe(1);
   expect(f.state.writes).toHaveLength(0);
   await page.getByRole("button", { name: "All topics", exact: true }).click();
@@ -1252,7 +1255,7 @@ test("organization epoch heartbeat replaces another writer's topic and alias cha
   const version = randomUUID();
   f.state.aliasStates[0] = { disposition: "accepted", change: version };
   f.state.organizationEpoch = 3;
-  await expect(candidate).toContainText("accepted");
+  await expect(candidate).toContainText("accepted", { timeout: 12_000 });
   await expect(candidate).toContainText(version);
   expect(f.state.epoch).toBe(1);
   expect(f.state.aliasWrites).toHaveLength(0);

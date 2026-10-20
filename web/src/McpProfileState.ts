@@ -96,6 +96,13 @@ export function useProfileState({
       ? catalogue.can_configure
       : !!profile?.rights.manage && !!current?.rights.manage;
   const canShare = !!profile?.rights.share && !!current?.rights.share;
+  // The tools dialog opens from the catalogue entry, so a fresher detail read
+  // alone must not enable it: the dialog would close again at once.
+  const canUse =
+    !!profile?.rights.use_profile &&
+    !!profile.enabled &&
+    !!current?.rights.use_profile &&
+    current.enabled;
   const stale =
     editing &&
     !!baseline.current.base_revision &&
@@ -275,6 +282,7 @@ export function useProfileState({
     profile,
     canManage,
     canShare,
+    canUse,
     stale,
     stage,
     effective,

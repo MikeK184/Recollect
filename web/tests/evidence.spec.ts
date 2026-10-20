@@ -31,15 +31,20 @@ test("import evidence, preserve history and share one source across collection v
     .getByRole("button", { name: "Create Brain", exact: true })
     .click();
   await expect(page.getByLabel("Switch Brain", { exact: true })).toBeVisible();
+  // Sources is a browsing scope inside Explore, not a peer sidebar destination.
   await page
     .getByRole("navigation", { name: "Brain navigation" })
+    .getByRole("link", { name: "Explore", exact: true })
+    .click();
+  await page
+    .getByRole("group", { name: "Knowledge views", exact: true })
     .getByRole("link", { name: "Sources", exact: true })
     .click();
   const brain = new URL(page.url()).pathname.split("/")[2];
   await expect(
     page.getByText("Start with your evidence", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Manage views", exact: true }).click();
+  await page.getByRole("button", { name: "Organize", exact: true }).click();
   for (const [kind, name] of [
     ["Collection", "Runbooks"],
     ["Collection", "Shared notes"],
@@ -97,23 +102,29 @@ test("import evidence, preserve history and share one source across collection v
     .getByRole("button", { name: "Import source", exact: true })
     .click();
   await expect(dialog).toHaveCount(0);
+  // Sources use the one docked inspector for content, versions and canonical
+  // actions; there is no second source record view.
+  const inspector = page.getByRole("complementary", {
+    name: "Lineage inspector",
+    exact: true,
+  });
   await page.getByRole("button", { name: /Production Vault/ }).click();
-  await page
-    .getByRole("button", { name: "Source history & actions", exact: true })
-    .click();
-  await expect(dialog.getByTestId("source-content")).toHaveText(original);
+  await expect(inspector.getByTestId("source-content")).toHaveText(original);
   expect(await page.evaluate(() => "evidenceExecuted" in window)).toBe(false);
   await promisify(execFile)(profileBinary("recollect-server"), [
     "worker-once",
     "capture",
   ]);
-  await expect(dialog.getByText("Processed", { exact: true })).toBeVisible();
+  // The inspector re-reads its source on the 10-second detail cadence.
+  await expect(
+    inspector.getByText("Processed", { exact: true }).first(),
+  ).toBeVisible({ timeout: 15_000 });
   await page.screenshot({
     path: "../.cache/ui/source-evidence.png",
     fullPage: false,
     animations: "disabled",
   });
-  await dialog
+  await inspector
     .getByRole("button", { name: "Edit source", exact: true })
     .click();
   await dialog.getByLabel(/^Source text/).fill(replacement);
@@ -126,47 +137,49 @@ test("import evidence, preserve history and share one source across collection v
   await dialog
     .getByRole("button", { name: "Save new version", exact: true })
     .click();
-  await expect(dialog).toHaveCount(0);
+  // The docked inspector is itself a non-modal dialog; only the editor closes.
+  await expect(
+    page.getByRole("dialog", { name: "Edit source · new version" }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: /Production Vault/ }).click();
-  await page
-    .getByRole("button", { name: "Source history & actions", exact: true })
-    .click();
-  await expect(dialog.getByTestId("source-content")).toHaveText(replacement);
-  await openDetails(dialog, "Version history");
-  await dialog
+  await expect(inspector.getByTestId("source-content")).toHaveText(replacement);
+  await openDetails(inspector, "Version history");
+  await inspector
     .getByRole("textbox", { name: "Evidence version", exact: true })
     .click();
   await page.getByRole("option", { name: /Earlier/ }).click();
-  await expect(dialog.getByTestId("source-content")).toHaveText(original);
+  await expect(inspector.getByTestId("source-content")).toHaveText(original);
   await expect(
-    dialog.getByText(
+    inspector.getByText(
       "You are viewing an earlier source version. Current knowledge may refer to newer evidence.",
     ),
   ).toBeVisible();
   await expect(
-    dialog.getByRole("button", { name: "Edit source", exact: true }),
+    inspector.getByRole("button", { name: "Edit source", exact: true }),
   ).toBeDisabled();
-  await openDetails(dialog, "Version history");
-  await dialog
+  await openDetails(inspector, "Version history");
+  await inspector
     .getByRole("textbox", { name: "Evidence version", exact: true })
     .click();
   await page.getByRole("option", { name: /Current/ }).click();
-  await dialog
+  await inspector
     .getByRole("button", { name: "Organize source", exact: true })
     .click();
-  await dialog
-    .getByRole("textbox", { name: "Source views", exact: true })
-    .click();
+  const views = inspector.getByRole("textbox", {
+    name: "Source views",
+    exact: true,
+  });
+  await views.click();
   await page.getByRole("option", { name: "Shared notes", exact: true }).click();
-  await page.keyboard.press("Escape");
-  await dialog
+  // Close only the option list; Escape outside it would close the inspector.
+  if (await page.getByRole("listbox").isVisible()) await views.press("Escape");
+  await inspector
     .getByRole("button", { name: "Save associations", exact: true })
     .click();
   await expect(
-    dialog.getByRole("button", { name: "Save associations", exact: true }),
+    inspector.getByRole("button", { name: "Save associations", exact: true }),
   ).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Manage views", exact: true }).click();
+  await page.getByRole("button", { name: "Organize", exact: true }).click();
   await dialog.getByRole("textbox", { name: "View kind", exact: true }).click();
   await page.getByRole("option", { name: "Collection", exact: true }).click();
   const runbooks = dialog
@@ -193,18 +206,27 @@ test("import evidence, preserve history and share one source across collection v
   ]);
   await expect(
     page.locator(".source-row").getByText("Processed", { exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "../.cache/ui/collections.png",
     fullPage: false,
     animations: "disabled",
   });
+  // Privacy is one form with one Edit/Save; document retention is its own
+  // storage policy inside it.
   await page.goto(`/brains/${brain}/settings?tab=privacy`);
+  await page
+    .getByRole("button", { name: "Edit privacy settings", exact: true })
+    .click();
   const captureSwitch = page.getByRole("switch", {
     name: /^Allow document content retention/,
   });
   await captureSwitch.click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit privacy settings", exact: true }),
+  ).toBeVisible();
   await expect(captureSwitch).not.toBeChecked();
   await page.goto(`/brains/${brain}/sources`);
   await page.getByRole("button", { name: "Add source", exact: true }).click();
@@ -220,17 +242,14 @@ test("import evidence, preserve history and share one source across collection v
   await dialog
     .getByRole("button", { name: "Import source", exact: true })
     .click();
-  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Import source" })).toHaveCount(0);
   await page
     .getByRole("button", { name: /Controlled external reference/ })
     .click();
-  await page
-    .getByRole("button", { name: "Source history & actions", exact: true })
-    .click();
   await expect(
-    dialog.getByText("Reference without retained text", { exact: true }),
+    inspector.getByText("Reference without retained text", { exact: true }),
   ).toBeVisible();
-  await expect(dialog.getByTestId("source-content")).toHaveCount(0);
+  await expect(inspector.getByTestId("source-content")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(

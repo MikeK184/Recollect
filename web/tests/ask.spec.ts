@@ -46,7 +46,9 @@ async function setup(page: Page, enabled = true) {
     content:
       "AmberDesktop uses port 8080.\nBROWSER_EXACT_ANSWER_EVIDENCE\n<script>window.answerEvidenceExecuted=true</script>\n",
   });
-  await command(page, `${base}/claims`, {
+  // An unreviewed contribution needs a supported assessment before Recall may
+  // deliver it; an explicit browser review is the human authority that admits it.
+  const claim = await command(page, `${base}/claims`, {
     content: {
       kind: "claim",
       subject: "AmberDesktop",
@@ -69,6 +71,11 @@ async function setup(page: Page, enabled = true) {
         },
       ],
     },
+  });
+  await command(page, `${base}/claims/${claim.claim_id}/review`, {
+    base_revision: claim.id,
+    action: "accept",
+    reason: "Browser fixture accepts the synthetic declaration.",
   });
   const settings = await command(page, `${base}/models/policy`);
   if (enabled)
@@ -192,7 +199,7 @@ test("disabled answering offers useful canonical search without enabling transmi
     page.getByRole("button", { name: "Ask Brain", exact: true }),
   ).toBeInViewport();
   await expect(
-    page.getByRole("region", { name: "Autonomous memory setup" }),
+    page.getByRole("region", { name: "AI permissions summary" }),
   ).toBeVisible();
   await page
     .getByLabel("Ask a question about this Brain", { exact: true })
@@ -317,7 +324,7 @@ test("temporary answers render literal questions, exact citations, independent f
 test("failed answer validity reads, evidence epochs, policy revocation and expiry hide protected conversation payload", async ({
   page,
 }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(100_000);
   const f = await setup(page);
   const proof = await transport(page, f.base);
   await page.goto(`/brains/${f.brain}/ask`);
@@ -376,9 +383,11 @@ test("failed answer validity reads, evidence epochs, policy revocation and expir
   await expect(
     page.getByText("BROWSER_TEMPORARY_ANSWER", { exact: false }),
   ).toHaveCount(0, { timeout: 8000 });
+  // Answer validity polls fast and has already hidden the payload; the policy
+  // read itself refreshes on the slow cadence before Ask explains the change.
   await expect(
-    page.getByRole("region", { name: "Autonomous memory setup" }),
-  ).toBeVisible();
+    page.getByRole("region", { name: "AI permissions summary" }),
+  ).toBeVisible({ timeout: 35_000 });
   const disabled = await command(page, `${f.base}/models/policy`);
   await command(
     page,
@@ -474,7 +483,7 @@ test("switching Brains cancels a pending answer and ignores its late payload", a
   release();
   await page.goto(`/brains/${second.id}/ask`);
   await expect(
-    page.getByRole("region", { name: "Autonomous memory setup" }),
+    page.getByRole("region", { name: "AI permissions summary" }),
   ).toBeVisible();
   await expect(
     page.getByText("BROWSER_TEMPORARY_ANSWER", { exact: false }),

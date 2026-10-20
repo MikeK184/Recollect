@@ -21,6 +21,7 @@ export function McpProfileConnections({
     save,
     compatible,
     profile,
+    canUse,
   } = state;
   return (
     <section aria-label="MCP connections" className="min-w-0 px-4 py-3">
@@ -128,9 +129,7 @@ export function McpProfileConnections({
           variant="ghost"
           size="sm"
           className="-ml-2.5 mt-2"
-          disabled={
-            !profile?.rights.use_profile || !profile.enabled || brain.archived
-          }
+          disabled={!canUse || brain.archived}
           onClick={() => profile && tools(profile.id)}
           aria-label="Tools & testing"
         >

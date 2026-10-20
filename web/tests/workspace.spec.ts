@@ -128,7 +128,7 @@ test("paired workspace refresh and task/subagent history preserve operation scop
     await page
       .getByRole("button", { name: "Approve device", exact: true })
       .click();
-    await expect(page.getByText("Your companion is connected.")).toBeVisible({
+    await expect(page.getByText("Pairing complete. Credential enabled.")).toBeVisible({
       timeout: 20_000,
     });
     expect(await paired, pairingError).toBe(0);

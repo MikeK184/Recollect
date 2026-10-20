@@ -43,7 +43,7 @@ test("opaque pairing codes survive numeric and exponent-shaped URL parsing", asy
 test("browser approves a native companion, persists its OS credential and revokes it", async ({
   page,
 }) => {
-  test.setTimeout(75_000);
+  test.setTimeout(90_000);
   const binary = profileBinary("recollect-agent");
   const env = {
     PATH: process.env.PATH,
@@ -90,7 +90,7 @@ test("browser approves a native companion, persists its OS credential and revoke
     await browser.goto(link!);
     await expect(
       browser.getByRole("heading", {
-        name: /^(Welcome back|Approve a companion)$/,
+        name: /^(Welcome back|Approve this host)$/,
       }),
     ).toBeVisible();
     if (
@@ -107,7 +107,7 @@ test("browser approves a native companion, persists its OS credential and revoke
         .click();
     }
     await expect(
-      browser.getByRole("heading", { name: "Approve a companion" }),
+      browser.getByRole("heading", { name: "Approve this host" }),
     ).toBeVisible();
     await expect(
       browser.getByText(new URL(link!).searchParams.get("code")!, {
@@ -122,7 +122,7 @@ test("browser approves a native companion, persists its OS credential and revoke
     await browser
       .getByRole("button", { name: "Approve device", exact: true })
       .click();
-    await expect(browser.getByText("Your companion is connected.")).toBeVisible(
+    await expect(browser.getByText("Pairing complete. Credential enabled.")).toBeVisible(
       { timeout: 20_000 },
     );
     expect(await finished, errors).toBe(0);
@@ -182,9 +182,11 @@ test("browser approves a native companion, persists its OS credential and revoke
     const replacement = await pair("Replacement laptop", page);
     const activeUnpair = await run(["unpair"]);
     expect(activeUnpair.ok, activeUnpair.stderr).toBe(true);
+    // A native unpair happens outside this page: the device list notices it on
+    // its next 10-second read and reveals the record in history.
     await expect(
       replacement.getByText("Revoked", { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
     expect((await run(["whoami"])).stderr).toContain("No paired device");
   } finally {
     if (companion && companion.exitCode === null) companion.kill("SIGTERM");

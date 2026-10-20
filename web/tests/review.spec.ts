@@ -79,16 +79,31 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
       `${base}/claims`,
       proposal("Review service", "original value"),
     );
-    for (const value of ["first alternative", "second alternative"])
-      await send(`${base}/claims`, proposal("Conflicting service", value));
-    for (const value of ["early value", "later value"])
-      await send(`${base}/claims`, proposal("Conditional service", value));
+    // Unreviewed proposals are not usable memory and do not conflict with each
+    // other. An accepted value conflicts with a later overlapping proposal,
+    // and acceptance is refused once such a conflict exists, so each first
+    // value is accepted before its competing proposal is recorded.
+    const accepted = async (subject: string, value: string) => {
+      const claim = await send(`${base}/claims`, proposal(subject, value));
+      await send(`${base}/claims/${claim.claim_id}/review`, {
+        base_revision: claim.id,
+        action: "accept",
+        reason: "Fixture owner accepts the first recorded value.",
+      });
+    };
+    await accepted("Conflicting service", "first alternative");
+    await send(`${base}/claims`, proposal("Conflicting service", "second alternative"));
+    await accepted("Conditional service", "early value");
+    await send(`${base}/claims`, proposal("Conditional service", "later value"));
     return { brain: brain.id, single: single.claim_id };
   });
-  await page.goto(`/brains/${fixture.brain}/memory`);
+  // Unchecked proposals are not yet usable memory; the list's historical view
+  // keeps them inspectable for the reviewer.
+  await page.goto(`/brains/${fixture.brain}/memory?mode=history`);
   await page
     .getByRole("button", {
-      name: "Review service · configuration",
+      // Row names carry the whole assertion: subject · predicate value.
+      name: "Review service · configuration original value",
       exact: true,
     })
     .click();
@@ -116,12 +131,13 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
   await expect(
     dialog.getByText("Review failed", { exact: true }),
   ).toBeVisible();
+  // The open review re-reads the claim on the 10-second detail cadence.
   await expect(
     dialog.getByText(
       "This claim changed while review was open. Retry an interrupted request, or return to the claim to inspect its latest revision.",
       { exact: true },
     ),
-  ).toBeVisible({ timeout: 7000 });
+  ).toBeVisible({ timeout: 12_000 });
   await dialog
     .getByRole("button", { name: "Confirm review", exact: true })
     .click();
@@ -174,10 +190,12 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
   await expect(dialog.getByTestId("claim-value")).toHaveText("corrected value");
   await page.keyboard.press("Escape");
 
+  // Opening a record from the inspector does not keep the list's historical
+  // view, so return to it before choosing the next proposal.
+  await page.goto(`/brains/${fixture.brain}/memory?mode=history`);
   await page
     .getByRole("button", {
-      name: "Conflicting service · configuration",
-      exact: true,
+      name: /^Conflicting service · configuration /,
     })
     .first()
     .click();
@@ -217,10 +235,10 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
     .click();
   await page.keyboard.press("Escape");
 
+  await page.goto(`/brains/${fixture.brain}/memory?mode=history`);
   await page
     .getByRole("button", {
-      name: "Conditional service · configuration",
-      exact: true,
+      name: /^Conditional service · configuration /,
     })
     .first()
     .click();
@@ -283,7 +301,7 @@ test("review, correct, resolve conflicts and surface stale reviewer decisions", 
 
   await page
     .getByRole("button", {
-      name: "Review service · configuration",
+      name: "Review service · configuration corrected value",
       exact: true,
     })
     .click();
