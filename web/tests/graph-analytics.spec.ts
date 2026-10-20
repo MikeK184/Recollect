@@ -5,7 +5,7 @@ const expect = baseExpect.configure({ timeout: 20_000 });
 test("native analytical reports, evidence, invalidation, errors at 1280 pixels layout", async ({
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   page.setDefaultTimeout(12_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -124,6 +124,33 @@ test("native analytical reports, evidence, invalidation, errors at 1280 pixels l
     );
   };
   await expect.poll(currentKnowledgeReady).toBe(true);
+  // Canonical field metadata publishes in phases after the knowledge graph,
+  // and each changed phase is analytical input that invalidates queued
+  // reports. Queue the analysis once the field refresh has settled.
+  const fieldsSettled = async () => {
+    const response = await page.request.post(
+      `/api/brains/${fixture.brain}/organization/fields/view`,
+      {
+        headers: { "x-csrf-token": fixture.csrf },
+        data: {
+          scope: {
+            kind: "knowledge",
+            selection: {
+              repository_ids: [],
+              area_ids: [],
+              environment_id: null,
+            },
+          },
+          entity_id: null,
+          cursor: null,
+        },
+      },
+    );
+    return response.ok()
+      ? (await response.json()).coverage.refresh_state
+      : `http ${response.status()}`;
+  };
+  await expect.poll(fieldsSettled, { timeout: 60_000 }).toBe("ready");
   await openGraphDrawer(page, "Graph insights", "Insights");
   const analytics = panel.getByTestId("graph-analytics");
   const queue = analytics.getByRole("button", {
@@ -219,6 +246,8 @@ test("native analytical reports, evidence, invalidation, errors at 1280 pixels l
   // A replacement ready generation invalidates reports on the old generation.
   // Wait for the automatic correction rebuild before explicitly recomputing.
   await expect.poll(currentKnowledgeReady, { timeout: 20_000 }).toBe(true);
+  // The rejected claim's field input is withdrawn by the same phased refresh.
+  await expect.poll(fieldsSettled, { timeout: 60_000 }).toBe("ready");
   await queue.click();
   await expect(
     analytics

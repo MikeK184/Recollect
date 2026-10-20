@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { GraphExplorer } from "./GraphExplorer";
+import {
+  graphRetryDelay,
+  retryGraphRead,
+} from "./features/graph/useGraphExploration";
 import { LoadingState } from "./components/AsyncState";
 import {
   Accordion,
@@ -91,7 +95,8 @@ export function RecallGraphDialog({
       item.revision_id,
       scope,
     ],
-    retry: false,
+    retry: retryGraphRead,
+    retryDelay: graphRetryDelay,
     gcTime: 0,
     staleTime: Infinity,
     refetchOnWindowFocus: false,

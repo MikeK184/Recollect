@@ -246,6 +246,12 @@ async fn publish(state: &AppState, job: &ClaimedJob) -> Result<()> {
             "canonical_typed_references",
         )
         .await?;
+    }
+    // Only changed typed references are analytical input. A refresh that a
+    // no-op statement on a watched table queued completes without changes and
+    // must leave current reports valid (graph-analytics: job progress does not
+    // advance the analytics epoch).
+    if modified {
         sqlx::query("UPDATE brains SET analytics_epoch=analytics_epoch+1 WHERE id=$1")
             .bind(job.brain_id)
             .execute(&mut *tx)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { client, result, type Brain } from "../../api";
+import { client, RequestError, result, type Brain } from "../../api";
 import type { components } from "../../api-schema";
 import type { GraphChoice } from "../../GraphCanvas";
 import type { SceneGenerations } from "../../graph-generation-status";
@@ -9,6 +9,14 @@ import type {
   ExplorerPath,
   ExplorerView,
 } from "./graphExplorerShared";
+
+// A graph read answers 503 when its inputs changed during preparation (or the
+// database is briefly busy) and asks to be read again. Retry that read a few
+// times instead of leaving the canvas empty; other failures surface at once.
+export const retryGraphRead = (failures: number, error: Error) =>
+  failures < 3 && error instanceof RequestError && error.status === 503;
+export const graphRetryDelay = (attempt: number) =>
+  Math.min(500 * 2 ** attempt, 2000);
 
 export type GraphExplorerProps = {
   brain: Brain;
@@ -107,7 +115,8 @@ export function useGraphExploration({
       view.generation.id,
       request,
     ],
-    retry: false,
+    retry: retryGraphRead,
+    retryDelay: graphRetryDelay,
     gcTime: 0,
     staleTime: Infinity,
     refetchOnWindowFocus: false,

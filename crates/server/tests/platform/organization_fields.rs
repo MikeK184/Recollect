@@ -448,6 +448,61 @@ async fn canonical_fields_repository_manifest_and_original_pointer_order() {
     h.finish().await;
 }
 
+async fn analytics_epoch(h: &Harness, brain: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT analytics_epoch FROM brains WHERE id=$1")
+        .bind(brain)
+        .fetch_one(&h.admin)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+#[ignore = "Requires owned PostgreSQL/Neo4j; deterministic field metadata makes zero model calls"]
+async fn canonical_fields_unchanged_refresh_keeps_analytics_epoch() {
+    let (h, owner, brain, base, prod, _) = setup().await;
+    let s = source(&h, &owner, &base, "Production source", &prod).await;
+    let mut proposal = review::proposal(&s["version"]["id"], "billing-api", "PostgreSQL");
+    proposal["content"]["selection"]["environment_id"] = prod["id"].clone();
+    let c = ok(&h, "POST", &format!("{base}/claims"), &owner, proposal).await;
+    ok(&h,"POST",&format!("{base}/claims/{}/review",c["claim_id"].as_str().unwrap()),&owner,json!({"base_revision":c["id"],"action":"accept","reason":"Synthetic original evidence reviewed.","revalidation_basis":null,"content":null})).await;
+    drain(&h).await;
+    let inputs: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM knowledge_field_inputs WHERE brain_id=$1")
+            .bind(brain)
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    assert!(inputs > 0, "The fixture publishes canonical field inputs");
+    // A statement on a watched table that changes no field input still queues
+    // a refresh; completing it must not invalidate analytical reports. The
+    // statement's own conservative invalidation is outside this check.
+    sqlx::query("UPDATE sources SET updated_at=updated_at WHERE brain_id=$1")
+        .bind(brain)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    let before = analytics_epoch(&h, brain).await;
+    let queued: bool = sqlx::query_scalar(
+        "SELECT revision>handled_revision FROM knowledge_field_outbox WHERE brain_id=$1",
+    )
+    .bind(brain)
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert!(queued, "The no-op statement queues a field refresh");
+    drain(&h).await;
+    assert_eq!(
+        analytics_epoch(&h, brain).await,
+        before,
+        "An unchanged field refresh keeps the analytics epoch"
+    );
+    // A real canonical change still invalidates reports.
+    source(&h, &owner, &base, "Second production source", &prod).await;
+    drain(&h).await;
+    assert!(analytics_epoch(&h, brain).await > before);
+    h.finish().await;
+}
+
 #[tokio::test]
 #[ignore = "Requires owned PostgreSQL/Neo4j; queued actor revocation must fail closed"]
 async fn canonical_fields_queued_writer_loss_cannot_publish() {

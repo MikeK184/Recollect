@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { openDetails } from "./desktop-helpers";
 import { test, expect as baseExpect, type Page } from "@playwright/test";
 const expect = baseExpect.configure({ timeout: 20_000 });
@@ -78,23 +79,12 @@ async function setup(page: Page, name: string) {
         { kind: "source_version", id: version, line_from: null, line_to: null },
       ],
     });
-    // Unreviewed contributions need a supported assessment before Recall
-    // delivers them; explicit browser review is the human authority that
-    // admits fixture records. Acceptance is refused while an overlapping
-    // conflict exists, so the 8080 claim is accepted before the 9090 proposal.
-    const accept = async (revision: { id: string; claim_id: string }) =>
-      (
-        await post(`${base}/claims/${revision.claim_id}/review`, {
-          base_revision: revision.id,
-          action: "accept",
-          reason: "Fixture owner accepts the synthetic declaration.",
-        })
-      ).claims[0].revision;
-    const left = await accept(
-      await post(`${base}/claims`, {
-        content: content("Investigation Boreal", "8080"),
-      }),
-    );
+    // Cobalt is the human-accepted positive control. The other records with
+    // retained evidence stay unreviewed proposals, which Recall delivers once
+    // they carry a supported assessment (recorded after processing).
+    const left = await post(`${base}/claims`, {
+      content: content("Investigation Boreal", "8080"),
+    });
     const right = await post(`${base}/claims`, {
       content: content("Investigation Boreal", "9090"),
     });
@@ -108,21 +98,26 @@ async function setup(page: Page, name: string) {
         reason: "Independent declared positive control.",
       })
     ).claims[0].revision;
-    const changing = await accept(
-      await post(`${base}/claims`, {
-        content: content("History Orion", "6060"),
-      }),
-    );
-    const unavailable = await accept(
-      await post(`${base}/claims`, {
-        content: content(
-          "Missing supported memory",
-          "retained assertion",
-          missing.version.id,
-        ),
-      }),
-    );
-    const procedure = await accept(await post(`${base}/claims`, {
+    const changing = await post(`${base}/claims`, {
+      content: content("History Orion", "6060"),
+    });
+    // A reference-only source has no text to verify, so this record enters
+    // Recall through explicit human acceptance instead of a verdict.
+    const unavailableProposal = await post(`${base}/claims`, {
+      content: content(
+        "Missing supported memory",
+        "retained assertion",
+        missing.version.id,
+      ),
+    });
+    const unavailable = (
+      await post(`${base}/claims/${unavailableProposal.claim_id}/review`, {
+        base_revision: unavailableProposal.id,
+        action: "accept",
+        reason: "Fixture owner accepts the reference-only declaration.",
+      })
+    ).claims[0].revision;
+    const procedure = await post(`${base}/claims`, {
       content: {
         ...content(
           "Investigation procedure",
@@ -137,23 +132,23 @@ async function setup(page: Page, name: string) {
           observations: [],
         },
       },
-    }));
-    const handover = await accept(await post(`${base}/claims`, {
-      content: {
-        ...content(
-          "Investigation handover",
-          "An untested procedure is recorded.",
-        ),
-        kind: "handover",
-        predicate: "handover",
-        handover: {
-          completed: ["Recorded the procedure."],
-          next_steps: ["Verify conditions before any execution."],
-          risks: ["No operational proof."],
-          contributions: [procedure.id],
-        },
+    });
+    // The handover is composed after the procedure carries its verdict:
+    // only eligible records can be handover contributions.
+    const handover = {
+      ...content(
+        "Investigation handover",
+        "An untested procedure is recorded.",
+      ),
+      kind: "handover",
+      predicate: "handover",
+      handover: {
+        completed: ["Recorded the procedure."],
+        next_steps: ["Verify conditions before any execution."],
+        risks: ["No operational proof."],
+        contributions: [procedure.id],
       },
-    }));
+    };
     return {
       brain: brain.id,
       base,
@@ -183,8 +178,77 @@ async function setup(page: Page, name: string) {
         ).version.processing,
     )
     .toBe("ready");
+  await supported(
+    page,
+    fixture,
+    [fixture.left, fixture.right, fixture.changing, fixture.procedure].map(
+      (r) => r.id,
+    ),
+  );
+  const handover: { id: string; claim_id: string } = await post(
+    page,
+    `${fixture.base}/claims`,
+    { content: fixture.handover },
+  );
+  await supported(page, fixture, [handover.id]);
   await page.goto(`/brains/${fixture.brain}/ask?tab=search`);
-  return fixture;
+  return { ...fixture, handover };
+}
+
+// Model-backed source verification is a paid, opt-in run. Like the Rust review
+// fixtures, record the supported verdicts that admit unreviewed proposals to
+// Recall directly in this run's own disposable database.
+async function supported(
+  page: Page,
+  f: { brain: string; base: string },
+  revisions: string[],
+) {
+  const database = new URL(process.env.DATABASE_URL!).pathname.slice(1);
+  expect(database).toMatch(/^recollect_ui_[0-9a-f]{32}$/);
+  for (const id of [f.brain, ...revisions])
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+  const sql = (statement: string) =>
+    execFileSync(
+      "../scripts/docker.sh",
+      [
+        "compose",
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-U",
+        "recollect_admin",
+        "-d",
+        database,
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-Atqc",
+        statement,
+      ],
+      { encoding: "utf8" },
+    ).trim();
+  const heads = sql(
+    `SELECT count(*) FROM model_policy_heads WHERE brain_id='${f.brain}'`,
+  );
+  if (heads === "0") {
+    const settings = await (
+      await page.request.get(`${f.base}/models/policy`)
+    ).json();
+    await post(
+      page,
+      `${f.base}/models/policy`,
+      {
+        base_change: settings.current.change_id,
+        policy: settings.current.policy,
+      },
+      "PUT",
+    );
+  }
+  sql(
+    `INSERT INTO memory_support_assessments(id,brain_id,revision_id,policy_id,verifier_version,actor_id,state,disposition,reason,finished_at)
+     SELECT gen_random_uuid(),p.brain_id,r.id,p.policy_id,'source-support-3',(SELECT id FROM accounts WHERE installation_owner),'succeeded','supported','Synthetic fixture verdict.',clock_timestamp()
+     FROM model_policy_heads p CROSS JOIN unnest('{${revisions.join(",")}}'::uuid[]) r(id) WHERE p.brain_id='${f.brain}'`,
+  );
 }
 
 async function post(page: Page, url: string, body: unknown, method = "POST") {
@@ -218,12 +282,18 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
   page.on("pageerror", (e) => errors.push(e.message));
   const f = await setup(page, "Desktop investigation proof");
   await post(page, `${f.base}/graph/rebuild`, { kind: "knowledge" });
+  // The recalled graph is invalidated when the memory epoch moves after the
+  // answer, so recall only once a ready knowledge graph matches it.
   await expect
-    .poll(async () =>
-      (
-        await (await page.request.get(`${f.base}/graph`)).json()
-      ).generations.some((g: { state: string }) => g.state === "ready"),
-    )
+    .poll(async () => {
+      const status = await (await page.request.get(`${f.base}/graph`)).json();
+      return status.generations.some(
+        (g: { kind: string; state: string; input_epoch: number }) =>
+          g.kind === "knowledge" &&
+          g.state === "ready" &&
+          g.input_epoch === status.memory_epoch,
+      );
+    })
     .toBe(true);
   const panel = page.getByRole("region", {
     name: "Recall memory",
@@ -366,7 +436,7 @@ test("desktop investigation preserves comparison, history, sources and scoped gr
     .getByRole("button", { name: "Show shortest path on canvas", exact: true })
     .click();
   await expect(dialog.getByTestId("exploration-counts")).toHaveText(
-    "2 displayed entities · 1 directed relationships",
+    "2 loaded nodes · 1 directed relationships",
   );
   await dialog.getByTestId("graph-canvas").scrollIntoViewIfNeeded();
   await dialog.screenshot({
