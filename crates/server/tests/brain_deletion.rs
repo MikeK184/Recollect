@@ -277,6 +277,66 @@ fn seed_script_path() -> std::path::PathBuf {
         .join("brain_deletion_seed.sql")
 }
 
+/// Seeds one generated, realistically shaped Brain (see the fixture header)
+/// with `sources` sources and `claims` claims. Every fifth source also gains an
+/// excerpt source, so the Brain holds `sources * 6 / 5` sources in all.
+async fn seed_scale(
+    admin: &PgPool,
+    owner: Uuid,
+    brain: Uuid,
+    name: &str,
+    sources: u32,
+    claims: u32,
+) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("brain_deletion_scale_seed.sql");
+    let sql = std::fs::read_to_string(path)
+        .unwrap()
+        .replace("__BRAIN__", &format!("'{brain}'"))
+        .replace("__OWNER__", &format!("'{owner}'"))
+        .replace("__NAME__", &format!("'{name}'"))
+        .replace("__SOURCES__", &sources.to_string())
+        .replace("__CLAIMS__", &claims.to_string());
+    assert!(!sql.contains("__"), "unreplaced scale seed token remains");
+    let mut tx = admin.begin().await.unwrap();
+    sqlx::raw_sql(&sql).execute(&mut *tx).await.unwrap();
+    tx.commit().await.unwrap();
+    sqlx::query("ANALYZE").execute(admin).await.unwrap();
+}
+
+/// The Brain closure and its reference for one Brain, read in one snapshot.
+/// The reference is the retained iterated per-target union, the slow path 074
+/// replaced, so only this comparison lifts the statement timeout. It carries
+/// 076's one documented exception: `artifacts` also holds every evidence
+/// artifact intent of the Brain, which no member target's closure names. The
+/// plain iterated document comes last.
+async fn closures(env: &Env, owner: Uuid, brain: Uuid) -> (Value, Value, i64, i64, Value) {
+    let mut tx = env.admin.begin().await.unwrap();
+    sqlx::query("SET LOCAL statement_timeout=0")
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    sqlx::query("SELECT set_config('recollect.actor',$1,true)")
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    let row: (Value, Value, i64, i64, Value) = sqlx::query_as(
+        "SELECT n,o,recollect_brain_hash(n),recollect_brain_hash(o),i FROM
+         (SELECT n,i,i||jsonb_build_object('artifacts',recollect_brain_set(i->'artifacts'||coalesce(
+            (SELECT jsonb_agg(artifact_id) FROM evidence_artifact_intents WHERE brain_id=$1),'[]'))) o
+          FROM (SELECT recollect_brain_closure($1) n,recollect_iterated_brain_closure($1) i OFFSET 0) x) y",
+    )
+    .bind(brain)
+    .fetch_one(&mut *tx)
+    .await
+    .unwrap();
+    tx.rollback().await.unwrap();
+    row
+}
+
 /// Row counts for one Brain across every relation in the 029 dependent list.
 async fn inventory(pool: &PgPool, brain: Uuid) -> BTreeMap<String, i64> {
     let rels: Vec<String> =
@@ -844,5 +904,267 @@ async fn brain_deletion_catalog_invariant() {
             "listed relation {name} lost its brain_id column"
         );
     }
+    env.finish().await;
+}
+
+/// Migration 074 computes the Brain-wide closure once per Brain instead of
+/// once per member target. The document, and therefore the preview counter,
+/// the journal manifest and the tombstone fingerprint, must equal the iterated
+/// union it replaced on the rich fixture, the control Brain, a generated Brain
+/// and a Brain without member targets. A later per-target closure layer that
+/// the set-based closure does not mirror fails here. Migration 076's evidence
+/// artifact intents are the one documented exception: the rich and the empty
+/// Brain hold intents, and their closures differ from the plain union exactly
+/// by those artifact identities.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run with DATABASE_ADMIN_URL and DATABASE_URL"]
+async fn brain_closure_matches_iterated_reference() {
+    let (env, owner) = Env::new().await;
+    let f = Fixture::new();
+    seed(&env.admin, owner, &f).await;
+    let scale = Uuid::new_v4();
+    seed_scale(&env.admin, owner, scale, "Scale", 40, 80).await;
+    let empty = Uuid::new_v4();
+    sqlx::query("INSERT INTO brains (id,owner_id,name) VALUES ($1,$2,'Empty')")
+        .bind(empty)
+        .bind(owner)
+        .execute(&env.admin)
+        .await
+        .unwrap();
+    // A pending and an already swept upload in the rich Brain, and a Brain
+    // whose only upload never committed.
+    let intents = [
+        (f.a, Uuid::new_v4(), false),
+        (f.a, Uuid::new_v4(), true),
+        (empty, Uuid::new_v4(), false),
+    ];
+    for (brain, artifact, swept) in intents {
+        sqlx::query(
+            "INSERT INTO evidence_artifact_intents(artifact_id,brain_id,removed_at)
+             VALUES($1,$2,CASE WHEN $3 THEN now() END)",
+        )
+        .bind(artifact)
+        .bind(brain)
+        .bind(swept)
+        .execute(&env.admin)
+        .await
+        .unwrap();
+    }
+    for (label, brain) in [
+        ("rich", f.a),
+        ("control", f.b),
+        ("scale", scale),
+        ("empty", empty),
+    ] {
+        let (new, old, new_hash, old_hash, iterated) = closures(&env, owner, brain).await;
+        let named: Vec<String> = intents
+            .iter()
+            .filter(|(b, ..)| *b == brain)
+            .map(|(_, artifact, _)| artifact.to_string())
+            .collect();
+        let artifacts = |doc: &Value| -> Vec<String> {
+            doc["artifacts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap().to_owned())
+                .collect()
+        };
+        let mut added = artifacts(&new);
+        added.retain(|a| !artifacts(&iterated).contains(a));
+        added.sort();
+        let mut expected = named.clone();
+        expected.sort();
+        assert_eq!(added, expected, "{label} closure adds other artifacts");
+        let mut beyond_artifacts = new.clone();
+        beyond_artifacts["artifacts"] = iterated["artifacts"].clone();
+        assert_eq!(
+            beyond_artifacts, iterated,
+            "{label} closure differs from the iterated union beyond artifacts"
+        );
+        assert_eq!(
+            new == iterated,
+            named.is_empty(),
+            "{label} closure must differ from the plain union exactly when it holds intents"
+        );
+        let differing: Vec<&String> = old
+            .as_object()
+            .unwrap()
+            .keys()
+            .chain(new.as_object().unwrap().keys())
+            .filter(|k| old.get(k.as_str()) != new.get(k.as_str()))
+            .collect();
+        assert!(
+            differing.is_empty(),
+            "{label} closure differs at {differing:?}"
+        );
+        assert_eq!(new, old, "{label} closure document differs");
+        assert_eq!(new_hash, old_hash, "{label} closure fingerprint differs");
+    }
+    // The generated Brain reaches every class the closure names, so equality
+    // there is not equality of empty arrays.
+    let (scale_doc, ..) = closures(&env, owner, scale).await;
+    for key in [
+        "source_versions",
+        "claim_revisions",
+        "rules",
+        "decisions",
+        "jobs",
+        "model_input_sources",
+        "model_input_claim_revisions",
+        "capture_event_fences",
+        "learning_support_stages",
+        "memory_support_assessments",
+        "knowledge_mapping_inputs",
+        "semantic_entries",
+        "knowledge_alias_candidates",
+        "knowledge_alias_changes",
+        "retrieval_feedback_contexts",
+        "knowledge_field_inputs",
+        "knowledge_mapping_stages",
+        "knowledge_source_inputs",
+        "knowledge_shadow_candidates",
+        "knowledge_shadow_reports",
+        "knowledge_topic_intent_sources",
+        "knowledge_topic_intent_mappings",
+    ] {
+        assert!(
+            !scale_doc[key].as_array().unwrap().is_empty(),
+            "generated Brain leaves {key} empty"
+        );
+    }
+    env.finish().await;
+}
+
+/// A generated Brain of 2,500 captured sources (3,000 with excerpts) and 5,000
+/// claims (7,500 revisions) previews and deletes through the exposed SQL under
+/// the pool's default 10 s statement timeout, closes completely and leaves the
+/// tombstone counter equal to the preview counter.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run with DATABASE_ADMIN_URL and DATABASE_URL"]
+async fn brain_deletion_scale_under_pool_timeout() {
+    let (env, owner) = Env::new().await;
+    let brain = Uuid::new_v4();
+    seed_scale(&env.admin, owner, brain, "Scale", 2500, 5000).await;
+    let started = std::time::Instant::now();
+    let mut tx = db::actor_tx(&env.app, owner).await.ok().unwrap();
+    let preview: Option<Value> = sqlx::query_scalar("SELECT recollect_brain_preview($1)")
+        .bind(brain)
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    drop(tx);
+    let preview_time = started.elapsed();
+    let preview = preview.expect("owner preview must be visible");
+    assert_eq!(preview["counts"]["sources"], 3000);
+    assert_eq!(preview["counts"]["claims"], 5000);
+    assert_eq!(preview["counts"]["claim_revisions"], 7500);
+    let closure = preview["closure"].as_i64().unwrap();
+
+    let started = std::time::Instant::now();
+    let rid = Uuid::new_v4();
+    let mut tx = db::actor_tx(&env.app, owner).await.ok().unwrap();
+    let deleted: Option<Uuid> = sqlx::query_scalar("SELECT recollect_brain_delete($1,$2,$3,$4)")
+        .bind(brain)
+        .bind(closure)
+        .bind("Scale")
+        .bind(rid)
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    // The removal marker covers only the apply chain of that request.
+    let marker: String =
+        sqlx::query_scalar("SELECT coalesce(current_setting('recollect.removing_brain',true),'')")
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap();
+    assert_eq!(
+        marker, "",
+        "the removal marker must not outlive the apply chain"
+    );
+    tx.commit().await.unwrap();
+    let delete_time = started.elapsed();
+    eprintln!("scale preview {preview_time:?}, delete {delete_time:?}");
+    assert_eq!(deleted, Some(rid));
+    let after = inventory(&env.admin, brain).await;
+    assert!(
+        after.values().all(|&n| n == 0),
+        "scale Brain not fully closed: {after:?}"
+    );
+    let stored: i64 = sqlx::query_scalar("SELECT closure FROM brain_deletions WHERE id=$1")
+        .bind(rid)
+        .fetch_one(&env.admin)
+        .await
+        .unwrap();
+    assert_eq!(
+        stored, closure,
+        "tombstone counter must equal the preview counter"
+    );
+    env.finish().await;
+}
+
+/// Migration 075 lets derived-state row triggers skip rows of a Brain that the
+/// same transaction removes. The gate opens only when the transaction-local
+/// marker names a Brain-wide erase request of that very Brain, which only
+/// recollect_brain_delete and journal replay write. A caller setting the
+/// marker to an unknown request, a per-record request or another Brain's
+/// deletion keeps every trigger.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run with DATABASE_ADMIN_URL and DATABASE_URL"]
+async fn brain_removal_gate_requires_that_brains_deletion_request() {
+    let (env, owner) = Env::new().await;
+    let f = Fixture::new();
+    seed(&env.admin, owner, &f).await;
+    let gate = |marker: String, brain: Uuid| {
+        let app = env.app.clone();
+        async move {
+            let mut tx = db::actor_tx(&app, owner).await.ok().unwrap();
+            sqlx::query("SELECT set_config('recollect.removing_brain',$1,true)")
+                .bind(marker)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            let open: bool = sqlx::query_scalar("SELECT recollect_brain_removing($1)")
+                .bind(brain)
+                .fetch_one(&mut *tx)
+                .await
+                .unwrap();
+            open
+        }
+    };
+    assert!(!gate(String::new(), f.a).await, "no marker");
+    assert!(
+        !gate(Uuid::new_v4().to_string(), f.a).await,
+        "unknown request"
+    );
+    assert!(
+        !gate(f.seed_req.to_string(), f.a).await,
+        "a per-record request never opens the gate"
+    );
+
+    // Delete the control Brain for real; its request opens the gate for that
+    // Brain only.
+    let mut tx = db::actor_tx(&env.app, owner).await.ok().unwrap();
+    let counter: Option<i64> = sqlx::query_scalar("SELECT recollect_brain_counter($1)")
+        .bind(f.b)
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    let rid = Uuid::new_v4();
+    let deleted: Option<Uuid> = sqlx::query_scalar("SELECT recollect_brain_delete($1,$2,$3,$4)")
+        .bind(f.b)
+        .bind(counter.unwrap())
+        .bind("Beta")
+        .bind(rid)
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(deleted, Some(rid));
+    assert!(
+        !gate(rid.to_string(), f.a).await,
+        "another Brain's deletion must not open the gate"
+    );
+    assert!(gate(rid.to_string(), f.b).await);
     env.finish().await;
 }

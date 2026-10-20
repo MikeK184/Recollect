@@ -74,6 +74,48 @@ description, subject, value, title, URI, path, excerpt or reason. A recreated
 Brain with an identical name receives a new identity and cannot inherit the
 tombstone's history or grants.
 
+### Closure computation
+
+The Brain-wide closure document is the exact union of the per-class erasure
+closures of every member target: each source, claim, repository snapshot and
+manifest of the Brain. It is computed once per Brain by applying each per-class
+rule, in the same order, to the Brain-wide identity sets, rather than once per
+target. The document, and so the preview counter, the journal manifest and the
+tombstone fingerprint, is identical to the iterated union with one exception:
+the artifact set also names every evidence artifact intent of the Brain. The
+database keeps that iterated reference callable only by the migration owner, and
+an equivalence test compares both documents on the rich fixture, a generated
+Brain and an empty Brain. A migration that extends the per-target closure
+extends the Brain-wide closure in the same change.
+
+An evidence artifact intent records an upload's opaque artifact identity
+before its bytes are written, so a failed canonical commit leaves a file that
+no source version names. No member target's closure reaches it, and the intent
+rows are removed with the Brain, so the Brain closure adds every intent's
+artifact, pending or already swept, to its artifact set. The counter therefore
+changes when an upload starts or settles into a source, and a `DELETE` after
+such an upload requires a fresh preview. A Brain without intent rows keeps the
+iterated union's document exactly. Excerpt artifact intents need no exception:
+each names a committed parent version that the closure already holds.
+
+The apply chain of a Brain-wide request runs every per-class statement
+unchanged: redaction, the artifact cleanup queue, publication fences, receipt
+invalidation and the journal. Row triggers that only maintain derived state of
+the Brain being removed skip its rows, because the same transaction then
+deletes every row they would write. These are the semantic, learning, handover,
+support and memory-epoch triggers. The skip applies only while a
+transaction-local marker names that Brain's own Brain-wide erase request in the
+journal, which only the deletion and journal replay write. A caller that sets
+the marker itself changes nothing.
+
+Preview and `DELETE` run with a 300 s statement timeout instead of the pool's
+10 s default, and lock waits keep a 10 s bound. `DELETE` grows with Brain
+size; a Brain of 3,000 sources and 5,000 claims previews in about 0.3 s and
+deletes in about 6 s. The bound keeps a rare, confirmed administrator erasure
+from failing at an interactive read limit, while a runaway still releases the
+Brain lock and a busy Brain still fails fast. Clients must allow a long
+`DELETE` to finish.
+
 ### Read and recall denial
 
 After commit and before physical cleanup finishes, the Brain is absent from
@@ -90,10 +132,13 @@ retain no payload.
 Database and filesystem removal remain separate transactions. Artifact files,
 prepared publication bundles, semantic vectors, Neo4j per-Brain generations and
 analytics scratch are removed by recorded Brain-scoped paths and identities,
-never by caller-supplied paths. The existing cleanup queue carries pending,
-complete and error states, is retryable, and resurrects no database content.
-File absence counts as success; inaccessible storage stays visible pending work
-and is reported as pending rather than complete.
+never by caller-supplied paths. Artifact files include uploads whose source
+version never committed: the journal manifest names their recorded intents, so
+the deletion queues and removes them like committed artifacts, and a restore
+replay removes them from an older artifact copy. The existing cleanup queue
+carries pending, complete and error states, is retryable, and resurrects no
+database content. File absence counts as success; inaccessible storage stays
+visible pending work and is reported as pending rather than complete.
 
 Central completion is separate from offline companion acknowledgement. A paired
 device that has not checked in may still hold prepared bundles or inbox events
@@ -162,6 +207,20 @@ a 60-bit fingerprint beyond JavaScript's exact-integer range.
 - Tombstone and audit rows contain no controlled content, verified against a
   fixture whose source title, claim value and file path must not appear in any
   retained row, journal entry, receipt or log.
+- The set-based closure equals the iterated per-target union, document and
+  fingerprint, on the rich fixture, the control Brain, a generated Brain and an
+  empty Brain, after adding exactly the Brain's evidence artifact intents to
+  the artifact set; it differs from the plain union only there, and only for a
+  Brain holding intents. A generated Brain of 3,000 sources and 5,000 claims
+  previews and deletes completely under the default 10 s pool timeout and
+  through the API. The removal marker opens the trigger skip only for that
+  Brain's own deletion request.
+- Deleting a Brain with committed content and a Brain whose only upload never
+  committed queues every evidence and excerpt artifact intent's file in the
+  cleanup queue, counts it in the preview, and removes it on the next cleanup
+  pass. An already swept intent is named and counts as removed. An upload that
+  starts after the preview makes `DELETE` fail as a changed preview. Another
+  Brain's pending upload and its file are untouched.
 - Focused Rust integration and RLS tests, generated client, web typecheck,
   affected browser specs, `./scripts/validate.sh` and `git diff --check`.
 

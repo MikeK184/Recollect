@@ -314,6 +314,18 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "073_agent_usage_latest_capture",
         include_str!("../migrations/073_agent_usage_latest_capture.sql"),
     ),
+    (
+        "074_set_based_brain_closure",
+        include_str!("../migrations/074_set_based_brain_closure.sql"),
+    ),
+    (
+        "075_brain_removal_trigger_gate",
+        include_str!("../migrations/075_brain_removal_trigger_gate.sql"),
+    ),
+    (
+        "076_brain_closure_evidence_intents",
+        include_str!("../migrations/076_brain_closure_evidence_intents.sql"),
+    ),
 ];
 
 pub fn compatible(applied: &[String], complete: bool) -> anyhow::Result<()> {
