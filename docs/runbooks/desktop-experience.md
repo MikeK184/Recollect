@@ -223,10 +223,9 @@ The [font manifest](../../web/public/fonts/manifest.json) pins bytes/checksums a
 upstream revision. The [SVG identity guide](../../web/public/brand/README.md)
 describes the mark, monochrome variant and portable wordmark. Do not replace them
 with generated screenshot icons or introduce a runtime external-font request.
-The application loads Mona Sans, JetBrains Mono and Newsreader. Manrope and DM
-Mono stay in `web/public/` only because the public documentation site
-(`site/scripts/prepare.mjs`), which keeps its own system until the user decides
-otherwise, copies them from there; remove them only together with that copy.
+The application loads Mona Sans, JetBrains Mono and Newsreader. The public
+documentation site (`site/scripts/prepare.mjs`) copies the same three families
+and notices from `web/public/`, so keep them there for both.
 
 ## Verification
 

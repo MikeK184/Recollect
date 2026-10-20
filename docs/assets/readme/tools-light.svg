@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="344" viewBox="0 0 960 344" role="img" aria-label="Governed MCP tools: OpenCode requests a tool, Recollect checks the Use grant, environment and approved tool, then dispatches the call to a private runner inside your network and returns the result.">
+<title>Governed MCP tools: OpenCode requests a tool, Recollect checks the Use grant, environment and approved tool, then dispatches the call to a private runner inside your network and returns the result.</title>
+<style>
+  text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif; fill: #0e1928; }
+  .mono { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; }
+  .muted { fill: #5b6470; }
+  .second { fill: #384352; }
+  .label { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: 0.08em; fill: #5b6470; }
+  .card { fill: #ffffff; stroke: #c6cbd1; stroke-width: 1; }
+  .edge { fill: none; stroke: #c6cbd1; stroke-width: 1.6; }
+  .flow { fill: none; stroke: #207a5d; stroke-width: 1.6; stroke-dasharray: 4 6; animation: flow 0.8s linear infinite; }
+  .hl { fill: none; stroke: #207a5d; stroke-width: 1.6; filter: url(#glow); }
+  .soft { fill: #def7ec; }
+  @keyframes flow { to { stroke-dashoffset: -10; } }
+  @media (prefers-reduced-motion: reduce) { .pk, .flow { display: none; } }
+  
+</style>
+<defs>
+  <filter id="glow" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#207a5d" flood-opacity="0.22"/></filter>
+  <filter id="pk" x="-200%" y="-200%" width="500%" height="500%"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#207a5d" flood-opacity="0.8"/></filter>
+</defs>
+<rect x="0.5" y="0.5" width="959" height="343" rx="20" fill="#f5f7f9" stroke="#e0e3e7"/>
+
+  <rect x="24" y="64" width="262" height="196" rx="14" fill="#0a1018" stroke="#232933"/>
+  <path d="M24 78 a14 14 0 0 1 14 -14 h234 a14 14 0 0 1 14 14 v18 h-262 z" fill="#121922"/>
+  <text class="mono" x="40" y="86" font-size="12" style="fill:#e2e5e8">opencode</text><text class="mono" x="270" y="86" font-size="12" text-anchor="end" style="fill:#9299a2">mcp.call</text>
+  <text class="mono" x="40" y="126" font-size="12.5" style="fill:#9299a2">tool</text><text class="mono" x="104" y="126" font-size="12.5" style="fill:#e2e5e8">filesystem.read_file</text><text class="mono" x="40" y="152" font-size="12.5" style="fill:#9299a2">caller</text><text class="mono" x="104" y="152" font-size="12.5" style="fill:#e2e5e8">alex · OpenCode</text><text class="mono" x="40" y="178" font-size="12.5" style="fill:#9299a2">env</text><text class="mono" x="104" y="178" font-size="12.5" style="fill:#e2e5e8">Development</text>
+  <text class="mono" x="40" y="230" font-size="12.5" style="fill:#9299a2">result</text>
+  <text class="mono" x="104" y="230" font-size="12.5" style="fill:#9299a2">waiting…<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.61;0.615;0.97;1" dur="10s" repeatCount="indefinite"/></text>
+  <text class="mono" x="104" y="230" font-size="12.5" style="fill:#95cf96" opacity="0">3 files · captured<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.61;0.615;0.97;1" dur="10s" repeatCount="indefinite"/></text>
+  <rect class="hl" x="24" y="64" width="262" height="196" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0;1;1;0;0" keyTimes="0;0.01;0.028;0.112;0.13;0.54;0.558;0.642;0.66;1" dur="10s" repeatCount="indefinite"/></rect>
+  <path class="edge" d="M286 162 L330 162"/><path class="flow" d="M286 162 L330 162" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0;1;1;0;0" keyTimes="0;0.02;0.038;0.112;0.13;0.52;0.538;0.602;0.62;1" dur="10s" repeatCount="indefinite"/></path>
+  <rect class="card" x="330" y="50" width="282" height="224" rx="14"/>
+  <text class="label" x="348" y="78">RECOLLECT CHECKS</text>
+  <line x1="348" x2="594" y1="96" y2="96" stroke="#e0e3e7"/><text x="348" y="120" font-size="14.5" font-weight="600">Use grant</text><text class="muted" x="348" y="139" font-size="12.5">Alex · Office files group</text><g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.15;0.168;0.952;0.97;1" dur="10s" repeatCount="indefinite"/><g transform="translate(570 113) scale(0.8333333333333334)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g><line x1="348" x2="594" y1="154" y2="154" stroke="#e0e3e7"/><text x="348" y="178" font-size="14.5" font-weight="600">Environment</text><text class="muted" x="348" y="197" font-size="12.5">Development</text><g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2;0.218;0.952;0.97;1" dur="10s" repeatCount="indefinite"/><g transform="translate(570 171) scale(0.8333333333333334)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g><line x1="348" x2="594" y1="212" y2="212" stroke="#e0e3e7"/><text x="348" y="236" font-size="14.5" font-weight="600">Approved tool</text><text class="muted" x="348" y="255" font-size="12.5">read_file · pinned schema</text><g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.25;0.268;0.952;0.97;1" dur="10s" repeatCount="indefinite"/><g transform="translate(570 229) scale(0.8333333333333334)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g>
+  <rect class="hl" x="330" y="50" width="282" height="224" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.12;0.138;0.272;0.29;1" dur="10s" repeatCount="indefinite"/></rect>
+  <path class="edge" d="M612 162 C651 162 651 70 690 70"/><path class="edge" d="M612 162 C651 162 651 162 690 162"/><path class="edge" d="M612 162 C651 162 651 254 690 254"/><path class="flow" d="M612 162 C651 162 651 254 690 254" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.29;0.308;0.582;0.6;1" dur="10s" repeatCount="indefinite"/></path>
+  <rect class="card" x="690" y="34" width="246" height="72" rx="14"/><rect x="706" y="52" width="36" height="36" rx="9" fill="#eef0f3"/><g transform="translate(715 61) scale(0.75)" fill="none" stroke="#5b6470" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></g><text x="754" y="66" font-size="15.5" font-weight="600">Recollect service</text><text class="mono muted" x="754" y="86" font-size="12">Context7 · Exa</text><rect class="card" x="690" y="126" width="246" height="72" rx="14"/><rect x="706" y="144" width="36" height="36" rx="9" fill="#eef0f3"/><g transform="translate(715 153) scale(0.75)" fill="none" stroke="#5b6470" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></g><text x="754" y="158" font-size="15.5" font-weight="600">Caller’s device</text><text class="mono muted" x="754" y="178" font-size="12">local stdio</text><rect class="card" x="690" y="218" width="246" height="72" rx="14"/><rect x="706" y="236" width="36" height="36" rx="9" fill="#eef0f3"/><g transform="translate(715 245) scale(0.75)" fill="none" stroke="#5b6470" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></g><text x="754" y="250" font-size="15.5" font-weight="600">Private runner</text><text class="mono muted" x="754" y="270" font-size="12">office-ubuntu · outbound</text><rect class="hl" x="690" y="218" width="246" height="72" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.38;0.398;0.522;0.54;1" dur="10s" repeatCount="indefinite"/></rect>
+  <rect x="682" y="210" width="262" height="120" rx="18" fill="none" stroke="#c6cbd1" stroke-dasharray="3 5"/>
+  <text class="label" x="813" y="322" text-anchor="middle" font-size="10.5">YOUR NETWORK</text>
+  <circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M286 162 L330 162" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.03;0.12;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.03;0.04;0.11;0.12;1" dur="10s" repeatCount="indefinite"/>
+  </circle><circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M612 162 C651 162 651 254 690 254" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.3;0.4;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.3;0.31;0.39;0.4;1" dur="10s" repeatCount="indefinite"/>
+  </circle><circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M612 162 C651 162 651 254 690 254" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="1;1;0;0" keyTimes="0;0.45;0.53;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.45;0.46;0.52;0.53;1" dur="10s" repeatCount="indefinite"/>
+  </circle><circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M286 162 L330 162" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="1;1;0;0" keyTimes="0;0.54;0.61;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.54;0.55;0.6;0.61;1" dur="10s" repeatCount="indefinite"/>
+  </circle>
+</svg>

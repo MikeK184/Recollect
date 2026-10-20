@@ -105,11 +105,25 @@ Implementation is sequenced in the
 - Brand constants (`brand-ink`, `brand-jade`, `brand-sage`, `brand-amber`,
   `brand-paper`) belong to the logo and its app-icon tile only. The original
   SVG mark is kept.
-- The public documentation site is outside this decision. Its
-  [contract](../contracts/public-product-and-docs-site.md) keeps the cream, ink
-  and sage system until the user decides whether `site/` adopts these themes.
+- The public documentation site adopts these themes (amendment below). Its
+  [contract](../contracts/public-product-and-docs-site.md) carries the testable
+  site behavior.
 - Acceptance of the design is not evidence of delivery. Delivery needs real
   browser proof in both themes at the review sizes in the desktop contract.
+
+## Amendment 2026-10-20: public site and README
+
+The user asked for the documentation site and the README to take this style,
+with more modern and fluid motion. The VitePress site in `site/` imports
+`web/src/design/tokens.css` directly, maps its theme variables onto these roles,
+offers the same Light and Ink choice (system default, remembered, applied before
+first paint) and self-hosts Mona Sans, JetBrains Mono and Newsreader from
+`web/public/`. Manrope and DM Mono, kept only for the site, are removed with
+their notices and manifest entries. Explanatory diagrams on the site animate an
+illustrated sequence only while visible, with a pause control and a reduced-motion
+end state, which applies the design system's "no looping motion on idle
+screens" rule to marketing explainers. The README's animated SVGs are generated
+from the same tokens. The cream, ink and sage site palette is retired.
 
 ## Supersession
 

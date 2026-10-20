@@ -1,6 +1,6 @@
 # Repository Governance
 
-Status: complete
+Status: active
 
 ## Purpose
 
@@ -11,13 +11,15 @@ repository-local developer configuration and public documentation site.
 
 - [ADR 0001](../../adr/0001-repository-governance.md)
 - [Repository governance contract](../../contracts/repository-governance.md)
+- [Public product and documentation site contract](../../contracts/public-product-and-docs-site.md)
+- [ADR 0025](../../adr/0025-two-theme-desktop-redesign.md) (2026-10-20 amendment: public site and README)
 
 ## Dependencies and Boundaries
 
 Accepted ADRs/contracts govern behavior; epics and packs track delivery.
 Repository-local tooling and docs share the independent Rust product boundary.
 Reference checkouts stay ignored and unchanged. Apache-2.0, the Git remote and
-the GitHub Pages website are established; commit/push, app deployment and a new
+the GitHub Pages website at `recollecthub.com` are established; commit/push, app deployment and a new
 release policy are not implied by documentation maintenance. Developer tooling
 has its own epic and cannot silently register new global integrations.
 
@@ -32,11 +34,13 @@ has its own epic and cannot silently register new global integrations.
 | `repository-readme-concept-imagery` | shipped | contract-backed | inline: user-requested replacement of README visuals using the accepted palette/concepts and existing behavior; no runtime or interface change | Generated product imagery matching the approved compact Recollect cards replaces the rejected README artwork |
 | `repository-readme-branded-workflows` | shipped | contract-backed | inline: image/documentation refinement using the existing original logo and accepted MCP scope/placement behavior; no runtime or interface change | Original identity on approved layouts and a closer Tool access illustration clarify environment scope and service dispatch |
 | `repository-readme-product-positioning` | shipped | contract-backed | inline: user-requested README copy refinement grounded in existing memory, environment, permission and runner contracts; no runtime or interface change | Lead with shared engineering memory, governed MCP tools and private execution as one self-hosted workflow |
+| `repository-readme-site-v2` | in-progress | adr-backed, contract-backed | inline: user-requested README, product page and docs site on the version 2 Light and Ink system with dynamic skills and MCP tools, served from the `recollecthub.com` root; site build and check, Light/Ink desktop and phone review with diagram playback, `./scripts/validate.sh`, then HTTPS loads of the page, stylesheet and a guide after deployment | New README with generated Light/Ink animated SVGs, new product page with visibility-gated story diagrams, token-driven docs theme, root base path and Open Graph image; Manrope/DM Mono and the v3 PNG illustrations removed; live publication pending a push to `main` |
 
 ## Current status
 
 The governance lifecycle, repository-local developer setup, license and public
-documentation site are delivered. The bootstrap, documentation-cleanup and
+documentation site are delivered. The `repository-readme-site-v2` refresh is
+built and checked locally; it ships once `recollecthub.com` serves it. The bootstrap, documentation-cleanup and
 public-site packs were collapsed on 2026-10-19; the site contract and
 [development tooling runbook](../../runbooks/development-tooling.md) carry the
 current behavior. Release/version automation remains undecided.

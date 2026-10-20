@@ -5,7 +5,7 @@ for implementation state and priorities, and [runbooks](runbooks/README.md) for
 operating the product. This guide governs documentation and implementation work.
 
 For product setup and operator guides, use the
-[public documentation website](https://mikek184.github.io/Recollect/docs/).
+[public documentation website](https://recollecthub.com/docs/).
 Its [site contract](contracts/public-product-and-docs-site.md) and
 [maintenance guide](../site/README.md) govern publication. Repository records
 below remain canonical for development authority and lifecycle.

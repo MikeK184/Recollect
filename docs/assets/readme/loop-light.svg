@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="224" viewBox="0 0 960 224" role="img" aria-label="The memory loop: capture, learn, recall and act on every prompt, each step keeping its evidence.">
+<title>The memory loop: capture, learn, recall and act on every prompt, each step keeping its evidence.</title>
+<style>
+  text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif; fill: #0e1928; }
+  .mono { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; }
+  .muted { fill: #5b6470; }
+  .second { fill: #384352; }
+  .label { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: 0.08em; fill: #5b6470; }
+  .card { fill: #ffffff; stroke: #c6cbd1; stroke-width: 1; }
+  .edge { fill: none; stroke: #c6cbd1; stroke-width: 1.6; }
+  .flow { fill: none; stroke: #207a5d; stroke-width: 1.6; stroke-dasharray: 4 6; animation: flow 0.8s linear infinite; }
+  .hl { fill: none; stroke: #207a5d; stroke-width: 1.6; filter: url(#glow); }
+  .soft { fill: #def7ec; }
+  @keyframes flow { to { stroke-dashoffset: -10; } }
+  @media (prefers-reduced-motion: reduce) { .pk, .flow { display: none; } }
+  
+</style>
+<defs>
+  <filter id="glow" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#207a5d" flood-opacity="0.22"/></filter>
+  <filter id="pk" x="-200%" y="-200%" width="500%" height="500%"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#207a5d" flood-opacity="0.8"/></filter>
+</defs>
+<rect x="0.5" y="0.5" width="959" height="223" rx="20" fill="#f5f7f9" stroke="#e0e3e7"/>
+<g><rect class="card" x="24" y="24" width="212" height="176" rx="14"/>
+      <text class="label" x="42" y="52">CAPTURE</text>
+      <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.23;0.248;0.942;0.96;1" dur="10s" repeatCount="indefinite"/><g transform="translate(202 38) scale(0.75)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g>
+      <text x="42" y="82" font-size="15.5" font-weight="600">Keep the evidence</text>
+      <text class="second" x="42" y="106" font-size="13.5">Permitted prompts, tool</text><text class="second" x="42" y="125" font-size="13.5">calls and imports enter</text><text class="second" x="42" y="144" font-size="13.5">a durable queue.</text>
+      <rect x="42" y="164" width="124.39999999999999" height="22" rx="11" fill="#eef0f3"/>
+      <text class="mono muted" x="51" y="179" font-size="11.5">capture policy</text>
+      <rect class="hl" x="24" y="24" width="212" height="176" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.03;0.048;0.232;0.25;1" dur="10s" repeatCount="indefinite"/></rect></g><path class="edge" d="M238 112 L254 112"/><path class="flow" d="M238 112 L254 112" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.21;0.228;0.292;0.31;1" dur="10s" repeatCount="indefinite"/></path><circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M238 112 L254 112" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.22;0.29;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.22;0.23;0.28;0.29;1" dur="10s" repeatCount="indefinite"/>
+  </circle><g><rect class="card" x="256" y="24" width="212" height="176" rx="14"/>
+      <text class="label" x="274" y="52">LEARN</text>
+      <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.45;0.468;0.942;0.96;1" dur="10s" repeatCount="indefinite"/><g transform="translate(434 38) scale(0.75)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g>
+      <text x="274" y="82" font-size="15.5" font-weight="600">Learn what holds</text>
+      <text class="second" x="274" y="106" font-size="13.5">Claims and decisions</text><text class="second" x="274" y="125" font-size="13.5">pass a support check and</text><text class="second" x="274" y="144" font-size="13.5">keep their sources.</text>
+      <rect x="274" y="164" width="132" height="22" rx="11" fill="#eef0f3"/>
+      <text class="mono muted" x="283" y="179" font-size="11.5">support-checked</text>
+      <rect class="hl" x="256" y="24" width="212" height="176" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.25;0.268;0.452;0.47;1" dur="10s" repeatCount="indefinite"/></rect></g><path class="edge" d="M470 112 L486 112"/><path class="flow" d="M470 112 L486 112" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.43;0.448;0.512;0.53;1" dur="10s" repeatCount="indefinite"/></path><circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M470 112 L486 112" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.44;0.51;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.44;0.45;0.5;0.51;1" dur="10s" repeatCount="indefinite"/>
+  </circle><g><rect class="card" x="488" y="24" width="212" height="176" rx="14"/>
+      <text class="label" x="506" y="52">RECALL</text>
+      <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.67;0.688;0.942;0.96;1" dur="10s" repeatCount="indefinite"/><g transform="translate(666 38) scale(0.75)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g>
+      <text x="506" y="82" font-size="15.5" font-weight="600">Recall with citations</text>
+      <text class="second" x="506" y="106" font-size="13.5">Exact, keyword, semantic</text><text class="second" x="506" y="125" font-size="13.5">and graph recall before</text><text class="second" x="506" y="144" font-size="13.5">every prompt.</text>
+      <rect x="506" y="164" width="139.6" height="22" rx="11" fill="#eef0f3"/>
+      <text class="mono muted" x="515" y="179" font-size="11.5">8 KiB per prompt</text>
+      <rect class="hl" x="488" y="24" width="212" height="176" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.47;0.488;0.672;0.69;1" dur="10s" repeatCount="indefinite"/></rect></g><path class="edge" d="M702 112 L718 112"/><path class="flow" d="M702 112 L718 112" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.65;0.668;0.732;0.75;1" dur="10s" repeatCount="indefinite"/></path><circle class="pk" r="5" fill="#207a5d" filter="url(#pk)" opacity="0">
+    <animateMotion path="M702 112 L718 112" dur="10s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.66;0.73;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.66;0.67;0.72;0.73;1" dur="10s" repeatCount="indefinite"/>
+  </circle><g><rect class="card" x="720" y="24" width="212" height="176" rx="14"/>
+      <text class="label" x="738" y="52">ACT</text>
+      <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.89;0.908;0.942;0.96;1" dur="10s" repeatCount="indefinite"/><g transform="translate(898 38) scale(0.75)" fill="none" stroke="#207a5d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></g></g>
+      <text x="738" y="82" font-size="15.5" font-weight="600">Act with the right tools</text>
+      <text class="second" x="738" y="106" font-size="13.5">Skills load on demand;</text><text class="second" x="738" y="125" font-size="13.5">approved MCP calls run</text><text class="second" x="738" y="144" font-size="13.5">where you placed them.</text>
+      <rect x="738" y="164" width="124.39999999999999" height="22" rx="11" fill="#eef0f3"/>
+      <text class="mono muted" x="747" y="179" font-size="11.5">governed tools</text>
+      <rect class="hl" x="720" y="24" width="212" height="176" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.69;0.708;0.892;0.91;1" dur="10s" repeatCount="indefinite"/></rect></g>
+</svg>

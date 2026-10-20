@@ -1,45 +1,53 @@
 ---
 title: Documentation
-description: Install Recollect, connect a coding agent, build shared knowledge and govern MCP tools and private runners.
+description: Install Recollect, connect Codex, Claude Code or OpenCode, publish shared skills, and govern MCP tools and private runners.
 ---
 
-# Build a Brain your agents can work with.
+# Give every coding agent the same memory.
 
-Recollect brings shared engineering memory, governed MCP tools and private
-execution together. Start with your own installation, connect your coding host,
-and let approved capture and recall carry context into the next session.
+Recollect is a self-hosted Brain for your coding agents. It captures what each
+session learns, gives the next session cited context before its first prompt,
+keeps your team's skills in sync across hosts, and decides which MCP tools an
+agent may run, and where. These guides take you from a local install to a
+shared, governed setup.
 
 ## Start in three steps
 
 1. **[Install Recollect](./installation.md).** Start the complete local stack
-   with Docker Compose, then open the desktop UI.
+   with Docker Compose, then sign in to the desktop app.
 2. **[Connect your agent](./agent-memory-tools.md).** Install the plugin for
-   Codex, Claude Code or OpenCode, connect to a Brain, and launch your host normally.
-3. **[Add tools when you need them](./mcp-catalogue.md).** Create approved
-   connections and tool groups, then give callers explicit Use permissions.
+   Codex, Claude Code or OpenCode, connect it to a Brain, and launch your host
+   normally. Cited context arrives before each prompt.
+3. **Add what your team needs.** [Publish shared skills](./managed-skills.md),
+   [create tool groups](./mcp-catalogue.md) and give people explicit Use
+   permissions, or [pair a private runner](./mcp-vault-and-private-runners.md).
 
 ## Choose your next step
 
 | I want to… | Guide |
 | --- | --- |
-| Set up automatic capture and recall | [Install the plugin](./plugin.md) |
-| Work across repositories and environments | [Workspace scope](./workspace-scope.md) |
+| Set up automatic capture and recall | [Install the plugin](./plugin.md) and [session capture](./session-capture.md) |
 | Decide what can be sent to AI | [AI policy and learning](./provider-learning.md) |
+| Work across repositories and environments | [Workspace scope](./workspace-scope.md) |
+| Publish skills and instructions to every host | [Shared skills and instructions](./managed-skills.md) |
 | Control who can run which MCP tools | [Connections and tool groups](./mcp-catalogue.md) |
 | Reach a filesystem or service inside a private network | [Private runners](./mcp-vault-and-private-runners.md) |
-| Understand a tool call or recover its outcome | [Tool runtime](./mcp-runtime.md) |
+| Understand a tool call or recover its outcome | [Tool calls and outcomes](./mcp-runtime.md) |
+| Let agents on different machines coordinate | [Peer coordination](./plugin.md#peer-coordination) |
 | Explore code and knowledge relationships | [Graph exploration](./graph-exploration.md) |
 | Manage retention, deletion and recovery | [Privacy](./retention-and-erasure.md) and [backup](./recovery.md) |
 
 ## The pieces, together
 
-A **Brain** holds shared knowledge and its access rules. **Environments** select
-the work context. **Connections** define approved MCP targets and their execution
-location. **Tool groups** give people or groups independent Use, Manage and Share
-permissions. **Private runners** execute assigned calls from paired devices.
+A **Brain** holds shared knowledge, skills and access rules. **Environments**
+select the work context. **Skills** are Markdown guidance that every connected
+host installs natively and loads on demand. **Connections** define approved MCP
+targets and where they run. **Tool groups** give people or groups independent
+Use, Manage and Share permissions. **Private runners** execute assigned calls
+from paired devices inside your network.
 
-Knowledge access and tool access are separate. Selecting an environment or
-registering a runner does not grant permission to execute tools.
+Knowledge access and tool access are separate. Selecting an environment,
+publishing a skill or registering a runner never grants permission to run tools.
 
 ::: info Project status
 Recollect is an early project for individuals and trusted internal teams.

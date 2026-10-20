@@ -54,17 +54,16 @@ await mkdir(path.join(site, 'public/brand'));
 for (const name of ['recollect-logo.svg', 'recollect-symbol.svg']) {
   await cp(path.join(root, 'web/public/brand', name), path.join(site, 'public/brand', name));
 }
+// The version 2 families shared with the desktop app (ADR 0025), with their notices.
 await mkdir(path.join(site, 'public/fonts'));
-for (const name of ['newsreader-variable.ttf', 'manrope-variable.ttf', 'dm-mono-regular.ttf']) {
+for (const name of ['mona-sans-variable.ttf', 'jetbrains-mono-variable.ttf', 'newsreader-variable.ttf']) {
   await cp(path.join(root, 'web/public/fonts', name), path.join(site, 'public/fonts', name));
 }
 await mkdir(path.join(site, 'public/licenses'));
-for (const name of ['newsreader-OFL.txt', 'manrope-OFL.txt', 'dmmono-OFL.txt']) {
+for (const name of ['monasans-OFL.txt', 'jetbrainsmono-OFL.txt', 'newsreader-OFL.txt']) {
   await cp(path.join(root, 'web/public/licenses', name), path.join(site, 'public/licenses', name));
 }
 await mkdir(path.join(site, 'public/visuals'));
-for (const name of ['agent-workflow', 'environment-access', 'private-runner']) {
-  await cp(path.join(root, 'docs/assets', `recollect-${name}-v3.png`), path.join(site, 'public/visuals', `recollect-${name}-v3.png`));
-}
+await cp(path.join(root, 'docs/assets/recollect-og.png'), path.join(site, 'public/visuals/recollect-og.png'));
 await writeFile(path.join(site, 'public/.nojekyll'), '');
 console.log(`Prepared ${pages.length} canonical guides and 2 website pages.`);

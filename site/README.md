@@ -1,7 +1,10 @@
 # Recollect public website
 
-The product landing page and searchable operator guides are built with stable
-VitePress. Original logo, fonts and illustrations come from the existing product.
+The product page and searchable operator guides at **https://recollecthub.com**
+are built with stable VitePress. The site follows the version 2 Light and Ink
+design system ([ADR 0025](../docs/adr/0025-two-theme-desktop-redesign.md) and its
+2026-10-20 amendment); the [site contract](../docs/contracts/public-product-and-docs-site.md)
+governs what it publishes.
 
 ```sh
 cd site
@@ -11,26 +14,40 @@ npm run check
 npm run preview
 ```
 
-Open the printed preview URL with `/Recollect/` appended. `npm run dev` rebuilds
-the source content before starting a development server.
+Open the printed preview URL. `npm run dev` rebuilds the source content before
+starting a development server. The preview server reads the build output once at
+startup, so restart it after rebuilding.
 
-`catalog.mjs` is the public guide allowlist. `scripts/prepare.mjs` copies canonical
-Markdown into ignored `content/`, preserving code fences and converting links:
-published guides link to each other; other tracked records link to GitHub;
-unpublished local artifacts are named as local files. Edit the original guides,
-not generated content. Product-only copy lives in `pages/` and the theme component.
-Changes to canonical guides require regeneration/restart in development.
+## How it is assembled
 
-The workflow builds and checks pull requests; only `main` can deploy the static
-artifact. Pages must use **GitHub Actions** as its publishing source. There are
-no custom credentials or application services in the deployment. Font licenses
-are included in the artifact. Use Node.js 24 or newer for the website toolchain.
+- `catalog.mjs` is the public guide allowlist. `scripts/prepare.mjs` copies the
+  canonical Markdown into ignored `content/`, preserving code fences and converting
+  links: published guides link to each other, other tracked records link to
+  GitHub and unpublished local artifacts are named as local files. Edit the
+  original guides, not generated content; restart development after changing them.
+- `prepare.mjs` also copies the brand marks, Mona Sans, JetBrains Mono and
+  Newsreader with their OFL notices from `web/public/`, and the Open Graph image
+  from `docs/assets/recollect-og.png`.
+- The theme imports `web/src/design/tokens.css`, so colours change only there.
+  `.vitepress/theme/style.css` maps VitePress onto those roles and styles the
+  guides; `home.css` styles the product page and its diagrams. A head script and
+  `theme/index.ts` keep `data-theme` in step with the Light and Ink switch.
+- Product copy lives in `pages/` and `theme/ProductHome.vue`. The animated
+  diagrams are framework-free (`theme/diagrams/`): `stories.ts` holds each
+  diagram's markup and illustrated steps, and `player.ts` plays them only while
+  visible, with a pause control and a reduced-motion end state.
 
-Default URLs:
+## Publication
 
-- Product: https://mikek184.github.io/Recollect/
-- Documentation: https://mikek184.github.io/Recollect/docs/
+The workflow builds and checks pull requests; only `main` deploys the static
+artifact, and Pages must use **GitHub Actions** as its publishing source. The
+custom domain `recollecthub.com` is configured in the repository's Pages
+settings, so the build targets the domain root (`SITE_BASE` defaults to `/`;
+set it, for example to `/Recollect/`, only to preview under a project path).
+There are no custom credentials or application services in the deployment.
+Font licenses are included in the artifact. Use Node.js 24 or newer.
 
-For a later custom domain, configure GitHub Pages and DNS, set `SITE_BASE=/` for
-the build, and update the canonical/sitemap host in `.vitepress/config.mts`.
-No custom domain is configured by this change.
+The README's animated SVGs are separate from this build. Regenerate them after
+changing tokens or their copy with `node scripts/render-readme-art.mjs` from the
+repository root. To refresh the Open Graph image, render the product hero at
+1200 × 630 from a running preview and save it as `docs/assets/recollect-og.png`.

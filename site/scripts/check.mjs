@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { pages } from '../catalog.mjs';
 
 const output = fileURLToPath(new URL('../.vitepress/dist/', import.meta.url));
-const base = process.env.SITE_BASE || '/Recollect/';
+const base = process.env.SITE_BASE || '/';
 const origin = 'https://site.invalid';
 async function walk(directory) {
   const files = [];
@@ -48,7 +48,7 @@ for (const [file, content] of html) {
     references++;
   }
 }
-for (const required of ['brand/recollect-logo.svg', 'brand/recollect-symbol.svg', 'fonts/newsreader-variable.ttf', 'licenses/newsreader-OFL.txt', ...['agent-workflow', 'environment-access', 'private-runner'].map(name => `visuals/recollect-${name}-v3.png`)]) {
+for (const required of ['brand/recollect-logo.svg', 'brand/recollect-symbol.svg', 'visuals/recollect-og.png', ...['mona-sans-variable', 'jetbrains-mono-variable', 'newsreader-variable'].map(name => `fonts/${name}.ttf`), ...['monasans', 'jetbrainsmono', 'newsreader'].map(name => `licenses/${name}-OFL.txt`)]) {
   await stat(path.join(output, required));
 }
 if (files.some(file => /(?:^|\/)(?:\.env|runtime|credentials|node_modules)(?:\/|$)/.test(path.relative(output, file)))) throw new Error('Unexpected private/runtime artifact');

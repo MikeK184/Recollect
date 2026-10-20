@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="340" viewBox="0 0 960 340" role="img" aria-label="Dynamic skills: a skill published once in the Brain syncs as a native skill into Claude Code, Codex and OpenCode, which reload it.">
+<title>Dynamic skills: a skill published once in the Brain syncs as a native skill into Claude Code, Codex and OpenCode, which reload it.</title>
+<style>
+  text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif; fill: #eff2f6; }
+  .mono { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; }
+  .muted { fill: #989fa8; }
+  .second { fill: #c5cbd2; }
+  .label { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: 0.08em; fill: #989fa8; }
+  .card { fill: #0e141d; stroke: #373e48; stroke-width: 1; }
+  .edge { fill: none; stroke: #373e48; stroke-width: 1.6; }
+  .flow { fill: none; stroke: #66d6ad; stroke-width: 1.6; stroke-dasharray: 4 6; animation: flow 0.8s linear infinite; }
+  .hl { fill: none; stroke: #66d6ad; stroke-width: 1.6; filter: url(#glow); }
+  .soft { fill: #0c3326; }
+  @keyframes flow { to { stroke-dashoffset: -10; } }
+  @media (prefers-reduced-motion: reduce) { .pk, .flow { display: none; } }
+  
+</style>
+<defs>
+  <filter id="glow" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#66d6ad" flood-opacity="0.35"/></filter>
+  <filter id="pk" x="-200%" y="-200%" width="500%" height="500%"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#66d6ad" flood-opacity="0.8"/></filter>
+</defs>
+<rect x="0.5" y="0.5" width="959" height="339" rx="20" fill="#070c14" stroke="#232933"/>
+
+  <rect class="card" x="24" y="34" width="332" height="256" rx="14"/>
+  <rect x="40" y="50" width="36" height="36" rx="9" fill="#1c222b"/><g transform="translate(49 59) scale(0.75)" fill="none" stroke="#989fa8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></g><text x="88" y="66" font-size="15.5" font-weight="600">vault-inspection</text><text class="muted" x="88" y="85" font-size="12.5">Agents → Skills · Brain-wide</text>
+  <rect x="296" y="56" width="44" height="24" rx="12" fill="#1c222b"/>
+  <text class="mono" x="318" y="72" font-size="12" text-anchor="middle">r3<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.1111;0.1167;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+  <text class="mono" x="318" y="72" font-size="12" text-anchor="middle" opacity="0">r4<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.1111;0.1167;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+  <rect x="40" y="102" width="300" height="140" rx="10" fill="#1c222b"/>
+  <text class="mono" x="54" y="126" font-size="12" style="fill:#636a72">---</text><text class="mono" x="54" y="145" font-size="12" style="fill:#c5cbd2">name: vault-inspection</text><text class="mono" x="54" y="164" font-size="12" style="fill:#c5cbd2">description: Inspect Vault with</text><text class="mono" x="54" y="183" font-size="12" style="fill:#c5cbd2">  attributable evidence.</text><text class="mono" x="54" y="202" font-size="12" style="fill:#636a72">---</text><text class="mono" x="54" y="221" font-size="12" style="fill:#c5cbd2">Read repository instructions first.</text>
+  <text class="muted" x="40" y="271" font-size="12.5">Markdown and text only · no scripts</text>
+  <rect x="260" y="254" width="80" height="26" rx="8" fill="#eff2f6"/><text x="300" y="271.5" font-size="12.5" font-weight="500" text-anchor="middle" style="fill:#0a1018">Publish</text>
+  <rect class="hl" x="24" y="34" width="332" height="256" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.0222;0.0422;0.1689;0.1889;1" dur="9s" repeatCount="indefinite"/></rect>
+  <path class="edge" d="M356 162 C398 162 398 70 440 70"/><path class="flow" d="M356 162 C398 162 398 70 440 70" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2;0.22;0.3356;0.3556;1" dur="9s" repeatCount="indefinite"/></path><path class="edge" d="M356 162 C398 162 398 162 440 162"/><path class="flow" d="M356 162 C398 162 398 162 440 162" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2;0.22;0.3356;0.3556;1" dur="9s" repeatCount="indefinite"/></path><path class="edge" d="M356 162 C398 162 398 254 440 254"/><path class="flow" d="M356 162 C398 162 398 254 440 254" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2;0.22;0.3356;0.3556;1" dur="9s" repeatCount="indefinite"/></path>
+  <rect class="card" x="440" y="34" width="496" height="72" rx="14"/><rect x="456" y="52" width="36" height="36" rx="9" fill="#1c222b"/><g transform="translate(465 61) scale(0.75)" fill="none" stroke="#989fa8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></g>
+      <text x="504" y="66" font-size="15.5" font-weight="600">Claude Code</text><text class="mono muted" x="504" y="86" font-size="12.5">.claude/skills/vault-inspection</text>
+      <rect x="826" y="48" width="94" height="24" rx="12" fill="#1c222b"/><rect class="soft" x="826" y="48" width="94" height="24" rx="12" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.3222;0.3422;0.9467;0.9667;1" dur="9s" repeatCount="indefinite"/></rect>
+      <text class="mono second" x="873" y="64" font-size="12" text-anchor="middle">r3<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.3222;0.3278;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+      <text class="mono" x="873" y="64" font-size="12" text-anchor="middle" style="fill:#77dbb5" opacity="0">r4 loaded<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3222;0.3278;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+      <text class="mono" x="920" y="92" font-size="11" text-anchor="end" style="fill:#636a72">reload_skills</text>
+      <rect class="hl" x="440" y="34" width="496" height="72" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0;1;1;0;0" keyTimes="0;0.2111;0.2311;0.3356;0.3556;0.5111;0.5311;0.8244;0.8444;1" dur="9s" repeatCount="indefinite"/></rect><rect class="card" x="440" y="126" width="496" height="72" rx="14"/><rect x="456" y="144" width="36" height="36" rx="9" fill="#1c222b"/><g transform="translate(465 153) scale(0.75)" fill="none" stroke="#989fa8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></g>
+      <text x="504" y="158" font-size="15.5" font-weight="600">Codex</text><text class="mono muted" x="504" y="178" font-size="12.5">.agents/skills/vault-inspection</text>
+      <rect x="826" y="140" width="94" height="24" rx="12" fill="#1c222b"/><rect class="soft" x="826" y="140" width="94" height="24" rx="12" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.3389;0.3589;0.9467;0.9667;1" dur="9s" repeatCount="indefinite"/></rect>
+      <text class="mono second" x="873" y="156" font-size="12" text-anchor="middle">r3<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.3389;0.3444;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+      <text class="mono" x="873" y="156" font-size="12" text-anchor="middle" style="fill:#77dbb5" opacity="0">r4 loaded<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3389;0.3444;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+      <text class="mono" x="920" y="184" font-size="11" text-anchor="end" style="fill:#636a72">file watch</text>
+      <rect class="hl" x="440" y="126" width="496" height="72" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2278;0.2478;0.3522;0.3722;1" dur="9s" repeatCount="indefinite"/></rect><rect class="card" x="440" y="218" width="496" height="72" rx="14"/><rect x="456" y="236" width="36" height="36" rx="9" fill="#1c222b"/><g transform="translate(465 245) scale(0.75)" fill="none" stroke="#989fa8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></g>
+      <text x="504" y="250" font-size="15.5" font-weight="600">OpenCode</text><text class="mono muted" x="504" y="270" font-size="12.5">.opencode/skills/vault-inspection</text>
+      <rect x="826" y="232" width="94" height="24" rx="12" fill="#1c222b"/><rect class="soft" x="826" y="232" width="94" height="24" rx="12" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.3556;0.3756;0.9467;0.9667;1" dur="9s" repeatCount="indefinite"/></rect>
+      <text class="mono second" x="873" y="248" font-size="12" text-anchor="middle">r3<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.3556;0.3611;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+      <text class="mono" x="873" y="248" font-size="12" text-anchor="middle" style="fill:#77dbb5" opacity="0">r4 loaded<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.3556;0.3611;0.9667;1" dur="9s" repeatCount="indefinite"/></text>
+      <text class="mono" x="920" y="276" font-size="11" text-anchor="end" style="fill:#636a72">ctx.skill.reload()</text>
+      <rect class="hl" x="440" y="218" width="496" height="72" rx="14" opacity="0"><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2444;0.2644;0.3689;0.3889;1" dur="9s" repeatCount="indefinite"/></rect>
+  <circle class="pk" r="5" fill="#66d6ad" filter="url(#pk)" opacity="0">
+    <animateMotion path="M356 162 C398 162 398 70 440 70" dur="9s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.2111;0.3222;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2111;0.2211;0.3122;0.3222;1" dur="9s" repeatCount="indefinite"/>
+  </circle><circle class="pk" r="5" fill="#66d6ad" filter="url(#pk)" opacity="0">
+    <animateMotion path="M356 162 C398 162 398 162 440 162" dur="9s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.2278;0.3389;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2278;0.2378;0.3289;0.3389;1" dur="9s" repeatCount="indefinite"/>
+  </circle><circle class="pk" r="5" fill="#66d6ad" filter="url(#pk)" opacity="0">
+    <animateMotion path="M356 162 C398 162 398 254 440 254" dur="9s" repeatCount="indefinite" calcMode="spline" keyPoints="0;0;1;1" keyTimes="0;0.2444;0.3556;1" keySplines="0 0 1 1;0.33 0 0.2 1;0 0 1 1"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.2444;0.2544;0.3456;0.3556;1" dur="9s" repeatCount="indefinite"/>
+  </circle>
+  <text class="mono muted" x="440" y="318" font-size="12">skills.list → metadata · skills.fetch → the body, on demand</text>
+</svg>
