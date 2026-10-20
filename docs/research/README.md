@@ -31,9 +31,6 @@ single status and priority entry point.
   rationale and acceptance-test design behind ADR 0020 and the organization
   contract, which govern; kept because they do not repeat that evidence. Carries
   no delivery status.
-- [Remaining product improvement proposal](memory-product-improvement-plan-2026-10-08.md):
-  outstanding quality, temporal, scale and reliability ideas, with implemented
-  first-batch work distinguished from proposed follow-ups.
 - [Frozen organization fixtures](automatic-knowledge-mapping-fixtures-2026-10-09.json):
   development/held-out extraction annotations; do not change them to improve a score.
 - [Frozen memory-product holdout](memory-product-holdout-manifest-2026-10-08.json):
@@ -43,7 +40,13 @@ single status and priority entry point.
   [automatic-memory proof](../mappings/memory-source-support-staging-2026-10-07.md).
 
 Completed UI proposals, the delivered automatic-memory design and the earlier
-claude-mem comparison were removed as duplicate current guidance. Their chosen
+claude-mem comparison were removed as duplicate current guidance. On 2026-10-20
+the remaining 2026-10-08 improvement proposal moved into the
+[memory quality and proof epic](../roadmap/epics/memory-quality-and-proof.md) as planned
+slices; its full text is at [commit a2338a8](https://github.com/MikeK184/Recollect/blob/a2338a80c824f00214ee33e37596e5a92a2cc409/docs/research/memory-product-improvement-plan-2026-10-08.md).
+Its evaluation rules (frozen holdout, no held-out tuning, separate arms) continue
+through the [frozen memory-product holdout](memory-product-holdout-manifest-2026-10-08.json)
+and the accepted [LongMemEval protocol](../contracts/operations-longmemeval-protocol.md). Their chosen
 behavior is in contracts, runbooks and delivery packs; original studies remain
 in the [fixed Git snapshot](https://github.com/MikeK184/Recollect/tree/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs/research).
 

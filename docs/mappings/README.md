@@ -20,7 +20,6 @@ connectivity, pricing or performance guarantees.
 | [Automatic memory baseline](memory-source-support-staging-2026-10-07.md) | Source-support, digests, project brief and exact-family reconciliation; synthetic model evaluation limits |
 | [Plugin workflow and remaining host limits](plugin-workflow-repair-2026-10-07.md) | Supported source workflow, bounded learning recovery and separate rebuilt-binary acceptance |
 | [Management and direct-token acceptance](desktop-browser-management-2026-10-05.md) | Implemented browser/HTTP behavior and unfinished native-host launch proof |
-| [Accepted management visual baseline](desktop-management-vision-fidelity-2026-10-05.md) | Corrected implementation replacing the rejected concepts; functional/visual scope distinguished |
 | [Integrated desktop baseline](desktop-final-acceptance-2026-10-01.md) | Deployment inventory, acceptance counts and the macOS native-bridge proof; later checkpoint controls current runtime claims |
 | [Ubuntu private-runner baseline](private-runner-ubuntu-proof-2026-10-06.md) | Dated connected-host execution, denials and recovery evidence |
 | [Integrated product baseline](integrated-evaluations-2026-09-26.md) | Original quality/workload/failure controls; does not establish current graph or model quality |
@@ -45,3 +44,6 @@ On 2026-10-19 the long graph, checkpoint, first-batch and desktop-acceptance
 ledgers were reduced to receipts and failure tables; their full text is at
 [commit a0aea9d](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/mappings).
 Every frozen input hash, owner cost approval and failure result was kept.
+On 2026-10-20 the pre-redesign management visual baseline was removed: the shipped
+Light and Ink redesign replaced that presentation and its behavior is in the
+contracts. Its text is at [commit a2338a8](https://github.com/MikeK184/Recollect/blob/a2338a80c824f00214ee33e37596e5a92a2cc409/docs/mappings/desktop-management-vision-fidelity-2026-10-05.md).

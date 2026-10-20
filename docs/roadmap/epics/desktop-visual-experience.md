@@ -1,12 +1,11 @@
 # Desktop Visual Experience: Animated Modern Desktop UI
 
-Status: active
+Status: complete
 
 ## Purpose
 
-Make the desktop product feel alive and modern in the visual language the user
-clarified on 2026-10-03: the original light cream/ink/sage theme with per-category
-accents, fluid purposeful motion, terminal-style agent output surfaces, an
+Make the desktop product feel alive and modern: per-category accents (first in
+the 2026-10-03 cream/ink/sage theme, now in the Light and Ink system), fluid purposeful motion, terminal-style agent output surfaces, an
 animated live pipeline view of capture → learning → memory/graph flow, and an
 ambient fullscreen memory display. Every existing function, route, data feed and
 permission is preserved. The approved control-panel revision adds a bounded
@@ -16,8 +15,9 @@ On 2026-10-19 the user approved a 2026 redesign
 ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md)): Light and Ink themes
 on OKLCH tokens, Tailwind CSS v4 and shadcn/ui in place of Mantine, Mona Sans,
 JetBrains Mono and Newsreader, an inset shell with a docked inspector and a ⌘K
-command palette. The cream/ink/sage interface described in the shipped slices
-below remains the delivered state until the redesign slices ship.
+command palette. The redesign shipped on 2026-10-20 and replaces the
+cream/ink/sage presentation described in the earlier shipped slices; their
+behavior, data and permissions remain.
 
 ## Governing Sources
 
@@ -101,9 +101,9 @@ subsequent actionable management correction is also accepted and archived.
 ## Current status
 
 The Light and Ink redesign ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md))
-is delivered locally: `desktop-tailwind-design-check` and
-`desktop-two-theme-redesign` shipped (see their rows); it is not merged and the
-normal installation still runs the previous build. The light desktop, Ask/chat, pipeline, memory TV and current management layouts are delivered. Grouped 3D, exact generation tracking, shared 2D fallback and source-linked topic/entity navigation are locally delivered and independently validated. Production automatic organization quality remains with graph intelligence; the normal installation has not been updated. Optional small-screen polish, SSE and other product experiments are not missing acceptance for these completed desktop slices.
+shipped: `desktop-tailwind-design-check` and `desktop-two-theme-redesign` are
+merged on `main` (`9b3c696`, `c7f6938`, 2026-10-20), and every slice of this epic
+is shipped. No normal-installation update is recorded. Ask/chat, pipeline, memory TV, management, grouped 3D, exact generation tracking, shared 2D fallback and source-linked topic/entity navigation are delivered. Production automatic organization quality remains with graph intelligence, deferred by the owner on 2026-10-20. Optional small-screen polish, SSE and other product experiments are not missing acceptance for these completed desktop slices.
 
 See the [current roadmap](index.md) for priorities and the
 [active packs](../execution/active/README.md) for exact remaining acceptance.

@@ -1,9 +1,9 @@
 # Automatic entities, reversible aliases and overlapping topics
 
-Status: in-progress
+Status: blocked
 Owning epic: `docs/roadmap/epics/graph-intelligence.md`
 Work type: product
-Implementation: resumed 2026-10-18 by the user's complete graph implementation request
+Implementation: resumed 2026-10-18 by the user's complete graph implementation request; deferred by the owner on 2026-10-20
 
 ## Summary
 
@@ -53,9 +53,15 @@ they are evidence of their own checkpoints, not current completion.
   qualified navigation, privacy/restore closure and acceptance reporting.
 - Out of scope: Unproved mandatory Graphify/Graphiti adapters, paid cloud
   summaries, paid benchmark execution without separate approval, commits and pushes.
-- Blockers: Actual extractor, grouping and canonical semantics qualification
-  fails; blind label usefulness and final integrated closeout remain open.
-  Independent implementation and deterministic/native proof can continue.
+- Blockers: Deferred by the owner on 2026-10-20: automatic semantic
+  organization is off the critical path while memory quality, agent identity and
+  receipts are proven in the [improvement sequence](../../epics/index.md#improvement-sequence).
+  Actual extractor, grouping and canonical semantics qualification also fails;
+  blind label usefulness and final integrated closeout remain open. Next action
+  when resumed: repair source anchors/endpoints and historical/retirement
+  behavior, then freeze a new candidate before an untouched evaluation. No
+  producer or recipe may be activated before the descendant mapping-input
+  privacy fences and combined acceptance pass.
 
 ## Decisions
 
@@ -143,8 +149,9 @@ Decisions that govern the remaining work (the full design notes are in the
   communities and matched overrides, deterministic field origins, retained
   unpublished output, qualified typed navigation and grouped 3D. Native plumbing,
   normal-data clone, paging, privacy/recovery and browser proofs are recorded in
-  the implementation mapping. These are uncommitted local checks; no qualified
-  real producer or community recipe is selected in the normal installation.
+  the implementation mapping. These local checks are committed on `main`
+  (`a2338a8`, 2026-10-20); no qualified real producer or community recipe is
+  selected, and no normal-installation update is recorded.
 - Not shipped: Independent real extractor quality for each actual prompt/schema,
   passing frozen grouping/vector/label qualification, current canonical
   mutation/support quality and full closeout. The separate zero-call feedback

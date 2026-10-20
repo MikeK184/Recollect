@@ -1,10 +1,9 @@
 # Product status and implementation roadmap
 
-Reviewed: 2026-10-18 against repository checkpoint `f2673d7` and the current
-source. On 2026-10-18 implementation of the complete graph, automatic
-organization, grouped 3D and bounded feedback-ranking work resumed; the
-documentation cleanup of the same date is preserved. Runtime and benchmark
-numbers below are dated observations until replacement proof is recorded.
+Reviewed: 2026-10-20 against `main` at `a2338a8`, which matches `origin/main`.
+No version is released, and no normal-installation update after the 2026-10-09
+migration-047 proof is recorded. Runtime and benchmark numbers below are dated
+observations until replacement proof is recorded.
 
 ## Epic Overview
 
@@ -14,12 +13,48 @@ numbers below are dated observations until replacement proof is recorded.
 | [developer-tooling.md](developer-tooling.md) | complete | Repository-local Rust Analyzer MCP, Graft and documentation skills |
 | [product-platform.md](product-platform.md) | complete | Accounts, Brain access, durable work, installation identity, canonical Brain deletion and one typed Brain admission |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Versioned sources, collections, workspace scope, capture and repository publication |
-| [memory-lifecycle.md](memory-lifecycle.md) | active | Existing automatic learning/digests/correction delivered; derived mapping privacy remains an active dependency |
+| [memory-lifecycle.md](memory-lifecycle.md) | active | Automatic learning, digests and correction delivered; derived mapping privacy fences remain a dependency of the deferred organization pack |
 | [hybrid-retrieval.md](hybrid-retrieval.md) | complete | Delivered recall baseline, set-based read path (lexical index windows, one candidate pass per transaction, set gating), labelled large-scope semantic ranking up to 50,000 entries, and locally validated attributed-feedback offline comparison; production ranking fixed |
-| [graph-intelligence.md](graph-intelligence.md) | active | Locally passing graph reliability and lease repair; failed semantic qualification and final integrated acceptance remain open |
-| [mcp-coordination.md](mcp-coordination.md) | active | Shared/native skills and cross-machine coordination locally delivered; direct-token and normal installed-host acceptance remain separate |
-| [operational-readiness.md](operational-readiness.md) | active | Normal graph reliability and a comparable memory-quality rerun |
-| [desktop-visual-experience.md](desktop-visual-experience.md) | active | Light and Ink redesign on Tailwind CSS and shadcn/ui ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md)) delivered locally and uncommitted, in progress until an intermittent 3D fresh-camera regression is fixed; grouped 3D, source navigation and exact generation invalidation are delivered |
+| [graph-intelligence.md](graph-intelligence.md) | active | Graph read reliability closeout in progress; automatic semantic organization deferred by the owner on 2026-10-20 (pack blocked) |
+| [mcp-coordination.md](mcp-coordination.md) | active | Shared/native skills and cross-machine coordination delivered; direct-token and normal installed-host acceptance remain separate |
+| [operational-readiness.md](operational-readiness.md) | active | Normal-installation update, graph reliability and a comparable memory-quality rerun |
+| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Light and Ink redesign on Tailwind CSS and shadcn/ui ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md)) shipped on 2026-10-20 with grouped 3D, source navigation and exact generation invalidation |
+| [memory-quality-and-proof.md](memory-quality-and-proof.md) | planned | Part 1: engineering-task evaluation, Atlas self-score, independent support and derivation closure, writer latency, typed time, scale and cost |
+| [claim-truth-and-freshness.md](claim-truth-and-freshness.md) | planned | Part 2: revision carry-forward, freshness policy, answer-time verification, knowledge changelog, background audit and trust-aware ranking |
+| [agent-identity-and-authority.md](agent-identity-and-authority.md) | planned | Part 3: agent principals, scoped short-lived credentials, configuration proposals, workload identity exchange and runner identities |
+| [verified-agent-work.md](verified-agent-work.md) | planned | Part 4: receipts, claim verification, capture API, verification requests, point-of-action recall, failed attempts, prospective commitments and positioning |
+| [skills-provenance-and-sync.md](skills-provenance-and-sync.md) | planned | Part 5, alongside the others: skill source provenance, upstream updates, drift report and targeting |
+
+## Current direction
+
+On 2026-10-20 the owner set the product focus: self-hosted, harness-agnostic
+memory, skills and governed tools for engineering teams, differentiated by
+verified agent work. Every agent's work should leave a receipt linking its claims
+to environment-aware, correctable evidence, so headless agents (for example
+cluster jobs) can later work through Recollect. The improvement work is split
+into five planned epics, ordered below; each holds its slices, open decisions and
+what it waits for.
+
+Deferred by the owner on 2026-10-20: automatic semantic organization and further
+graph or 3D work, MCP OAuth and gateway breadth (upstream OAuth, rate limits,
+tool search, more providers), and new A2A work beyond the delivered coordination
+adapter. Nothing is published to the Agent Memory Atlas upstream for now. A
+hosted multi-tenant offering may follow later; the
+[vision](../../foundation/vision.md) still excludes it.
+
+## Improvement sequence
+
+| Order | Epic | Why in this position | Starts when |
+| --- | --- | --- | --- |
+| 1 | [Memory quality and proof](memory-quality-and-proof.md) | Everything later is measured with its evaluation, and its self-score is the honest proof | Alongside the open installation-update and quality-rerun work in the operations pack |
+| 2 | [Claim truth and freshness](claim-truth-and-freshness.md) | Keeps memory true for the revision and environment in use; needs no agent identity | The evaluation baseline exists |
+| 3 | [Agent identity and authority](agent-identity-and-authority.md) | Receipts and headless agents need narrow agent identities | The identity ADR is accepted; may swap with part 2 |
+| 4 | [Verified agent work](verified-agent-work.md) | The headline capability, built on parts 2 and 3 | Carry-forward, freshness, principals and scoped credentials exist |
+| 5 | [Skills provenance and sync](skills-provenance-and-sync.md) | Independent; runs alongside the others | Provenance, updates and drift any time after part 1 starts; targeting after agent principals |
+
+Most planned slices need an ADR or contract amendment before code, and the
+authorization, external-integration and paid-evaluation slices need a pack; each
+epic names which.
 
 ## Implemented baseline
 
@@ -28,141 +63,61 @@ Neo4j/GDS projections and React desktop. Delivered behavior includes versioned
 source evidence, manual collections/areas/environments, automatic capture and
 learning, support verification, settled-session digests, scoped project briefs,
 exact-family cross-session reconciliation, cited Ask/recall, repository graphs,
-optional review/correction, erasure/recovery and governed MCP/private execution.
-Automatic learning already exists. Automatic semantic organization is the
-unfinished addition below.
-
-Checkpoint `f2673d7` contains the earlier provider, source-window/history, graph,
-audit and backup-backed update repairs. The October 18 work remains local and
-uncommitted. Its implementation and test results below do not establish an
-updated normal installation. The latest retained installation proof is migration
-047 from October 9; see the
-[dated checkpoint](../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md).
+optional review/correction, erasure/recovery, governed MCP/private execution,
+Brain-managed native skills and cross-machine agent coordination. All of it is
+committed on `main`; the latest retained installation proof remains the
+[2026-10-09 checkpoint](../../mappings/automatic-knowledge-mapping-progress-2026-10-09.md).
 
 ## Graph delivery status
 
-These are evidence states, not new lifecycle statuses. The full graph request
-remains unfinished; the two graph packs stay in progress.
-
-| Capability | What is done | What remains |
+| Capability | State | What remains |
 | --- | --- | --- |
-| Graph reliability | Off-lock preparation and short checked publication are implemented. Local mixed 10k proof passes 602/602 reads, zero errors, p95 0.460 s; both normal-data clone series pass 40/40 below two seconds. | Final integrated closeout and a verified normal-installation update; the newer tests did not update that installation. |
-| Semantic worker lease admission | Fix is applied to the main checkout. Six native cancellation/reclaim/healthy regressions pass in 5.47 s; stale work creates zero requests or publications. | Rollout is not performed. Cancellation API, Linux runtime and cancellation after network admission were not established by these fixtures. |
-| Mapping, entities and aliases | Durable producer-bound worker, exact source spans, scoped IDs, retained stages and reversible human alias decisions are implemented and locally tested. | Real producer qualification fails; no qualified production extractor is selected. |
-| Topics, overrides and navigation | Native GDS topics, overlapping memberships, stable IDs, manual overlays for edited topics, qualified APIs and browser navigation are implemented and locally tested. | The automatic grouping recipe fails quality/coverage; current blind label usefulness and complete organization acceptance remain open. |
-| Correction, privacy and recovery | Focused correction/erase/scope, older-backup replay and manual-overlay tests pass. | Final integrated acceptance over the complete delivered feature set; focused proof is not universal recovery assurance. |
-| Grouped 3D | [Renderer slice](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) is locally delivered with 2D fallback, selection/evidence, generation clearing, keyboard, visual and bounded hardware proof. | Normal-installation rollout; renderer completion does not qualify automatic topic semantics or universal GPU performance. |
-| Feedback for ranking | [Bounded feedback slice](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) is locally delivered: attributed votes, privacy controls and a frozen zero-call experiment. | Real usefulness is unproved. Online reinforcement training and production ranking activation are not implemented by this slice; production RRF remains fixed. |
+| Graph reliability | Off-lock preparation and checked publication implemented. Local mixed 10k proof passes 602/602 reads, zero errors, p95 0.460 s; both normal-data clone series pass 40/40 below two seconds. | Final integrated closeout and a verified normal-installation update |
+| Semantic worker lease admission | Six native cancellation/reclaim/healthy regressions pass in 5.47 s; stale work creates zero requests or publications. | Rollout; cancellation API, Linux runtime and cancellation after network admission are not established |
+| Automatic organization | Worker, exact spans, scoped entities, reversible aliases, native topics, overlays and navigation implemented and locally tested. The latest frozen 105-call campaign fails: fact mentions 51.67% precision / 8.73% recall and reconciliation 40.63% / 3.66% against 95% / 80%; hybrid topic pair F1 26.36%; canonical behavior 4/6. | Deferred by the owner on 2026-10-20; next action and activation gates are in the [organization pack](../execution/active/graph-automatic-knowledge-mapping.md) |
+| Grouped 3D and feedback ranking | Grouped 3D renderer and a bounded attributed-feedback experiment delivered locally. | Normal-installation rollout; real feedback usefulness unproved and production RRF fixed |
 
-The latest frozen real qualification completed all 105 calls within its separate
-USD 2.20 grant, with no retries. It preserves 92 source observations, 460 mode
-rows, three underlying empty sources and 21 unknown topic pairs per producer.
+No producer or recipe is activated. Frozen hashes, cost approvals, cohort
+denominators and every failure are in the
+[evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md).
 
-| Latest quality gate | Result | State |
+## Other delivered work
+
+| Capability | Delivered | Limit |
 | --- | --- | --- |
-| Source-facts-4 mentions | Precision 51.67%; recall 8.73% | Failed 95% / 80% target |
-| Source-reconciliation-4 mentions | Precision 40.63%; recall 3.66% | Failed 95% / 80% target |
-| Native hybrid topics | Pair F1 26.36%; assignment 27/46 or 26/46 by producer | Failed qualification; vector and metadata baselines retained |
-| Canonical behavior | 4/6 controls pass; strict action/citation agreement 3/6 | Historical retirement, required retirement and one exact citation remain wrong |
-
-No producer or recipe is activated. Independent scalar, budget and source
-reviews, exact cohort denominators, prior failed recipes and cleanup limits are
-in the [evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md#completed-frozen-46-source-qualification).
-
-### Next graph work
-
-1. Repair quote/occurrence selection and endpoint evidence, preserving exact
-   span/scope gates. Freeze a new candidate before an untouched evaluation;
-   tuning on these failed held-out cases requires a new held-out boundary.
-2. Correct historical/negation reconciliation and the exact citation mismatch;
-   pass canonical behavior and support/publication checks separately from NER.
-3. Requalify grouping against all five frozen baselines, assignment coverage and
-   the independent label rubric. Preserve empty, failed and unknown outcomes.
-4. Complete the organization and concurrency packs' integrated acceptance, then
-   verify any normal-installation update under its owned update/recovery rules.
-
-These are remaining implementation and acceptance tasks, not authorization for
-another paid campaign. Completed cost grants do not cover new calls. No commit,
-push, release or deployment has been performed for this work.
-
-## Other locally delivered work
-
-[Attributed feedback](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) is locally
-delivered with exact scoped votes, current qualification/privacy and a frozen
-zero-call 20-query comparison. Two deliberately mistaken votes cause bad
-promotions. Recorded-eligibility toy gains do not establish real helpfulness;
-production RRF remains fixed and organization quality remains open.
-
-[Brain-managed skills and instructions](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-managed-skills.md)
-are locally delivered with administrator publication, environment applicability,
-advisory MCP profile links, progressive fetch, plugin metadata/local copies and
-Agents management. Focused proof uses disposable databases, real MCP and mocked
-browser routes; it does not deploy the feature or update installed host packages.
-See the [dated evidence](../../mappings/managed-skills-host-consumption-2026-10-18.md).
-
-[Cross-machine agent coordination](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-agent-coordination.md)
-is locally delivered: authenticated session context, explainable goal/planned-file
-overlap, durable peer discussion, SSE/pull, MCP, native hooks/CLI and a narrow A2A
-1.0 message adapter. The [macOS/Ubuntu proof](../../mappings/agent-coordination-proof-2026-10-18.md)
-passed 15 checks with zero model requests. This does not establish production
-deployment or installed-host model consumption.
-
-[Native managed skills](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md) now have
-owned workspace registration, automatic synchronization, shared cross-host scope
-leases and tested temporary/retained cleanup. Actual isolated Codex 0.162.1,
-Claude Code 2.1.302 and OpenCode 2.0.22 processes proved native v1/v2 body/reference
-activation and removal behavior. The [proof](../../mappings/native-skill-reload-host-proof-2026-10-18.md)
-uses synthetic providers and does not upgrade a user's current host or deployment.
+| [Brain-managed skills](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-managed-skills.md) | Administrator publication, environment applicability, advisory MCP profile links, progressive fetch, plugin local copies and Agents management ([evidence](../../mappings/managed-skills-host-consumption-2026-10-18.md)) | Disposable databases and mocked browser routes; not deployed |
+| [Native skill reload](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-native-skill-reload.md) | Owned workspace registration, synchronization and cross-host scope leases; isolated Codex 0.162.1, Claude Code 2.1.302 and OpenCode 2.0.22 activation and removal ([proof](../../mappings/native-skill-reload-host-proof-2026-10-18.md)) | Synthetic providers; no user host upgraded |
+| [Agent coordination](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/mcp-agent-coordination.md) | Session context, goal/planned-file overlap, durable peer discussion, SSE/pull, MCP, native hooks/CLI and a narrow A2A 1.0 adapter; 15 macOS/Ubuntu checks with zero model requests ([proof](../../mappings/agent-coordination-proof-2026-10-18.md)) | No production deployment or installed-host model consumption |
+| [Attributed feedback](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md) | Exact scoped votes, privacy controls and a frozen zero-call 20-query comparison | Two deliberately mistaken votes cause bad promotions; real helpfulness unproved |
 
 ## Remaining authorized work
 
 | Priority | Deliverable | Current gap and completion gate | Owner |
 | --- | --- | --- | --- |
-| 1 | Reliable graph reads during background work | Local mixed 10k and normal-data clone performance gates pass. Final integrated closeout and a verified normal-installation update remain; see the delivery summary above. | [Concurrency pack](../execution/active/graph-concurrent-preparation.md), [operations pack](../execution/active/operations-memory-quality-first-batch.md) |
-| 1 | Privacy closure for derived excerpts | Focused ancestry, suppression, manual-overlay and actual older-backup replay controls pass. Complete combined feature acceptance; do not treat isolated controls as full product closeout. | [Organization pack](../execution/active/graph-automatic-knowledge-mapping.md), memory lifecycle |
-| 2 | Automatic source-linked entities and reversible aliases | Worker and alias commands are locally implemented. Current4 extraction and canonical semantics fail; repair anchors/endpoints and historical/retirement behavior before new qualification or production profile selection. | [Organization pack](../execution/active/graph-automatic-knowledge-mapping.md) |
-| 2 | Automatic overlapping topics and useful graph entry | Grouping, overlays, APIs and 3D plumbing exist. The frozen 46-source hybrid fails quality/coverage; current blind label usefulness is unmeasured. Requalify the recipe and close integrated navigation acceptance. | [Organization pack](../execution/active/graph-automatic-knowledge-mapping.md) |
-| 2 | Incremental organization and recovery | Native invalidation, source edits, erasure, alias/override changes and older-backup replay have focused proof. Retain those results and complete final combined idempotency/privacy/recovery acceptance. | [Organization contract](../../contracts/automatic-knowledge-organization.md), [organization pack](../execution/active/graph-automatic-knowledge-mapping.md) |
-| 3 | Demonstrated memory-quality improvement | Reuse frozen questions and separate retrieval, answering and full-learning effects. The latest completed LongMemEval baseline is 20/50 (40%); subsequent repairs have no comparable scored rerun. | [Operations pack](../execution/active/operations-memory-quality-first-batch.md), [benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md) |
-| 3 | Finish direct-token and installed-host acceptance | Browser config and HTTP proof exist; fresh OpenCode/Claude launch and the rebuilt plugin's native acceptance remain separate. The recorded OpenCode service timeout needs a fresh verification. | [Direct-token pack](../execution/active/mcp-copy-ready-agent-config.md), [plugin evidence](../../mappings/plugin-workflow-repair-2026-10-07.md) |
-
-The desktop Light and Ink redesign ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md))
-is delivered locally in the [desktop epic](desktop-visual-experience.md): the
-Tailwind-aware design check and the migration of every destination shipped; it
-is not merged or installed yet. It is presentation only and independent of the
-priorities above.
+| 1 | Normal-installation update and comparable memory-quality rerun | The migration-047 installation passed only 35/40 normal reads; the latest official LongMemEval result is 20/50 (40%) and later repairs have no comparable scored run. Update the installation under its owned update/recovery rules, then rerun frozen questions with retrieval, answering and full-learning effects separated. | [Operations pack](../execution/active/operations-memory-quality-first-batch.md), [benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md) |
+| 1 | Reliable graph reads during background work | Local mixed 10k and normal-data clone gates pass; final integrated closeout and a verified installation update remain. | [Concurrency pack](../execution/active/graph-concurrent-preparation.md) |
+| 2 | Direct-token and installed-host acceptance | Browser config and HTTP proof exist; fresh OpenCode/Claude launch and the rebuilt plugin's native acceptance remain, and the recorded OpenCode service timeout needs fresh verification. | [Direct-token pack](../execution/active/mcp-copy-ready-agent-config.md), [plugin evidence](../../mappings/plugin-workflow-repair-2026-10-07.md) |
+| 3 | Improvement epics | Planned in five parts; see the [improvement sequence](#improvement-sequence). Part 1's engineering-task evaluation comes first. | [Memory quality and proof](memory-quality-and-proof.md) and its successors |
 
 Priorities order the remaining work; they do not turn a partial implementation
-into a shipped slice. Current local reliability receipts replace the older
-capture-only and failing normal-read results without removing their history.
-They do not establish deployment or real extractor/topic quality. Exact methods
-and limits are in the [evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md).
-Unfinished product packs remain in [active](../execution/active/README.md).
-The [grouped 3D renderer](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/desktop-grouped-3d-graph.md) and
-[bounded feedback experiment](https://github.com/MikeK184/Recollect/blob/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive/retrieval-attributed-feedback.md)
-are locally delivered; neither closeout qualifies the failed semantic producer
-or establishes deployment.
+into a shipped slice. Completed cost grants do not cover new paid calls.
 
-## Proposed follow-ups requiring a scoped decision
+## Deferred
 
-The [remaining improvement proposal](../../research/memory-product-improvement-plan-2026-10-08.md)
-retains typed event-time handling, supported semantic relationship views, scoped
-ANN/ranking experiments, background fairness/observability and cost/reliability
-improvements. They need specific contracts and evaluation before implementation.
-Graphify must demonstrate additional coverage over Enola on identical inputs;
-Graphiti and a local extractor service are optional adapter decisions. No graph
-engine replacement has been selected.
-
-Small-screen polish, general desktop SSE, learned retrieval gates/decay, advanced reranking,
-automatic executable skills, OAuth/marketplace publishing and a release policy
-remain deferred. Do not present those as missing implementations of accepted
-current behavior. Use current contracts for their exact boundaries.
+Beyond the owner's 2026-10-20 deferrals above: small-screen polish, general
+desktop SSE, learned retrieval gates/decay, advanced reranking, automatic
+executable skills, marketplace publishing and a release policy. Graphify must
+show additional coverage over Enola on identical inputs, and Graphiti or a local
+extractor service remains an optional adapter decision; no graph engine
+replacement is selected. Do not present deferrals as missing implementations of
+accepted current behavior; current contracts state their exact boundaries.
 
 ## Delivery records and evidence
 
 Each epic's slice map is the current delivery record (acceptance and validation
 inline). Shipped packs were removed from the tree on 2026-10-19 and remain in
 [Git history](https://github.com/MikeK184/Recollect/tree/873156174f421da0574952a5e533fb6a6133fab0/docs/roadmap/execution/archive).
+Unfinished risky work is in the [active packs](../execution/active/README.md).
 [Mappings](../../mappings/README.md) retain current baseline and open-issue
 evidence. Superseded studies and concepts are available at the fixed
 [pre-cleanup checkpoint](https://github.com/MikeK184/Recollect/tree/18a8ba7ee8399f143b6e22d16c71c81b2a608ae0/docs).

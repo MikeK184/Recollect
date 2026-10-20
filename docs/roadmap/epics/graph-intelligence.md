@@ -58,7 +58,7 @@ scope, with queued work and explicit resource limits.
 | `graph-exploration` | shipped | contract-backed | archived | Delivered bounded native reachability and accessible desktop Cytoscape exploration with actual scope, limits, retention, browser and real-Brain runtime proof |
 | `graph-desktop-workspace` | shipped | adr-backed, contract-backed | archived | Canvas-first bounded graph workspace with accessible inspector, paths, explicit insights and exact scope |
 | `graph-concurrent-preparation` | in-progress | contract-backed | pack | Off-lock preparation and checked publication implemented; mixed 10k and normal-data clone gates pass locally, with normal-installation update and final closeout outstanding |
-| `graph-automatic-knowledge-mapping` | in-progress | adr-backed, contract-backed | pack | Worker, aliases, topics, overlays, navigation and privacy are locally implemented; actual extractor, grouping and canonical quality fail and no producer/recipe is selected |
+| `graph-automatic-knowledge-mapping` | blocked | adr-backed, contract-backed | pack | Deferred by the owner on 2026-10-20. Worker, aliases, topics, overlays, navigation and privacy are implemented and committed; actual extractor, grouping and canonical quality fail and no producer/recipe is selected |
 
 The native qualification setup also corrects the existing selector's exact
 automatic-support-excerpt lineage within `graph-automatic-knowledge-mapping`.
@@ -81,10 +81,12 @@ authority. The active pack records the exact gates and focused proof boundary.
 
 ## Current status
 
-The complete October 18 graph request is partially delivered locally. The
-normal installation has not been updated and both product packs remain in
-progress. Keep Neo4j/GDS for computation; the locally delivered grouped 3D
-renderer belongs to the desktop epic.
+The complete October 18 graph request is partially delivered and committed on
+`main`. No normal-installation update is recorded. `graph-concurrent-preparation`
+remains in progress; `graph-automatic-knowledge-mapping` is blocked because the
+owner deferred automatic semantic organization and further graph work on
+2026-10-20. Keep Neo4j/GDS for computation; the grouped 3D renderer belongs to
+the desktop epic.
 
 - Implemented and locally validated: short graph/maintenance publication,
   producer-bound mapping, reversible human alias decisions, weighted topics,
@@ -109,7 +111,8 @@ are the concise current entry point. The
 [evidence receipts](../../mappings/graph-organization-implementation-2026-10-18.md)
 retain frozen input hashes, cost approvals, all 92 observations/460 mode rows
 and 21 unknown topic pairs per producer, and the failures. Full acceptance stays with the
-[active packs](../execution/active/README.md); version/commit are N/A/uncommitted.
+[active packs](../execution/active/README.md). The code is committed on `main`
+(`a2338a8`, 2026-10-20); no version is released and no installation update is recorded.
 
 ## Delivery evidence
 

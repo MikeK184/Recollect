@@ -128,7 +128,7 @@ proves the exact fields and unchanged fences before the separately frozen run.
 
 ## Current status
 
-Automatic learning, source-support verification, settled-session digests, exact-family cross-session reconciliation, review and erasure/recovery are implemented. This epic remains active as a dependency of organization privacy and incremental correction: ancestor model-input fences do not yet cover every descendant mapping input. The graph organization pack owns that unfinished integration; automatic learning itself is not a missing feature.
+Automatic learning, source-support verification, settled-session digests, exact-family cross-session reconciliation, review and erasure/recovery are implemented. This epic remains active as a dependency of organization privacy and incremental correction: ancestor model-input fences do not yet cover every descendant mapping input. The graph organization pack owns that unfinished integration and was deferred by the owner on 2026-10-20; no organization producer is active, and the fences must close before one is. Automatic learning itself is not a missing feature.
 
 See the [current roadmap](index.md) for priorities and the
 [active packs](../execution/active/README.md) for exact remaining acceptance.

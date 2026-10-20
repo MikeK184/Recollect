@@ -38,7 +38,7 @@ algorithms remain useful design references. Compare Graphify with Enola on repos
 choosing another adapter. Graphiti is a later candidate for temporal relationships
 and entity resolution, rather than the first dependency to introduce.
 
-This refines the [broader improvement proposal](memory-product-improvement-plan-2026-10-08.md#product-behavior-we-should-aim-for).
+This refines the [broader improvement proposal](https://github.com/MikeK184/Recollect/blob/a2338a80c824f00214ee33e37596e5a92a2cc409/docs/research/memory-product-improvement-plan-2026-10-08.md#product-behavior-we-should-aim-for).
 It does not replace accepted contracts or claim a benchmark improvement. The
 [first-batch proof](../mappings/memory-quality-first-batch-proof-2026-10-08.md)
 still records incomplete graph performance acceptance and no new comparable
