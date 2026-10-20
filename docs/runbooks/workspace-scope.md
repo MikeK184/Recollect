@@ -140,5 +140,5 @@ cargo run -p recollect-agent --example workspace_probe -- \
 This test path always marks the refresh partial. It neither replaces normal
 selector discovery nor establishes that the supplied list includes every checkout.
 Revoke/remove the probe's own credential with `recollect-agent unpair` when done.
-The [test-Brain smoke mapping](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/mappings/workspace-smoke-2026-09-14.md) records
+The removed workspace smoke mapping recorded
 actual native/browser results and the retained local test Brain.

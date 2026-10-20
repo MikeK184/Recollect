@@ -90,7 +90,7 @@ MCP clients is implied.
 | `mcp-copy-ready-agent-config` | in-progress | contract-backed | pack | Browser direct-token native config and visible account token management, preserving plugin OS storage |
 | `mcp-approved-connector-icons` | shipped | contract-backed | archived | Explicit discovery preserves safe optional connector icons with bounded local cache/fallback |
 | `mcp-plugin-session-memory` | shipped | adr-backed, contract-backed | archived | Complete native plugin capture/automatic recall with bundled runtime, OpenCode adapter and optional runner flag |
-| `mcp-direct-auth-repair` | shipped | contract-backed | archived | test-Brain credential handoff repaired through Keychain; installed Codex 0.157.1 workspace read and deployed concrete setup instructions verified |
+| `mcp-direct-auth-repair` | shipped | contract-backed | archived | Test-Brain credential handoff repaired through Keychain; installed Codex 0.157.1 workspace read and deployed concrete setup instructions verified |
 | `mcp-direct-connections` | shipped | contract-backed | archived | Direct HTTP host setup and token, anonymous name/URL form; real Context7 metadata/protocol proof with useful documentation quota-blocked |
 | `mcp-catalogue-and-profiles` | shipped | contract-backed | archived | Operator-approved cached definitions, Brain/environment connections, independent profile use/manage/share and desktop catalogue with real RLS/browser proof |
 | `mcp-runtime-and-credentials` | shipped | adr-backed, contract-backed | archived | Actual central/paired stdio and HTTP calls, isolated credentials, fenced recovery without effect replay, desktop/native workflow and verified local schema 022 upgrade |

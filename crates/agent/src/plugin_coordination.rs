@@ -600,7 +600,7 @@ mod tests {
             device_name: "paul-ubuntu".into(),
             host_kind: "claude_code".into(),
             label: "peer".into(),
-            goal: "Fix synthetic test-Brain config".into(),
+            goal: "Fix synthetic infra config".into(),
             topics: vec![],
             intents: vec![],
             environment_id: None,

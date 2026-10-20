@@ -37,7 +37,7 @@ path lookup or private credential-file lookup was needed.
 ### Capture, roster and host identity
 
 A fresh ordinary native Codex session delivered a retained prompt and reply into
-test-Brain at 08:00 UTC. Lifecycle events were accepted without retaining their text.
+the test Brain at 08:00 UTC. Lifecycle events were accepted without retaining their text.
 This establishes automatic Codex capture independently of model-issued memory
 calls. OpenCode connectivity was verified; its automatic prompt/reply delivery
 was not rerun for this workspace.
@@ -47,7 +47,7 @@ preferred a reused credential's stale OpenCode label. Successful authorized
 Brain device requests now record payload-free usage metadata. Actually reported
 hosts and accepted capture hosts take precedence over setup hints. Shared
 credentials can show several observed hosts, without inventing absent historical
-telemetry. test-Brain's Brain roster shows actual Codex use; the account roster can
+telemetry. The test Brain's roster shows actual Codex use; the account roster can
 also show OpenCode use of the same credential in another Brain.
 
 ### Learning failures and budgets
@@ -61,7 +61,7 @@ Source storage, automatic session capture and model learning are separate stages
 a failed learning run does not erase its source or earlier successful memory.
 
 New policies default to 4,096 output tokens. Existing policies change only through
-the authorized save command; test-Brain was saved at 4,096 through the real UI. Generated
+the authorized save command; the test Brain was saved at 4,096 through the real UI. Generated
 invalid candidates are classified as result-shape failures and cannot publish.
 Known incomplete/malformed completed results receive at most two separately
 accounted replacements, after five/thirty minutes, with current source/policy
@@ -72,7 +72,7 @@ primary source and provenance. An oversized primary input has a distinct
 `model_input_too_large` error. The owned fixture proved optional inputs are omitted
 without truncating evidence and learning can complete within the approved budget.
 
-At the live observation, test-Brain had approximately 94,630 of its 100,000 daily tokens
+At the live observation, the test Brain had approximately 94,630 of its 100,000 daily tokens
 accounted for. The remaining allowance could not admit a full conservative learning
 reservation. The cap was preserved. Budget rejection makes no provider call;
 automatic learning may resume after the next UTC reset within the same two-retry

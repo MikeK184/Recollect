@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicit local test-Brain Ubuntu demo proof; leaves the named runner inspectable.
+"""Explicit local Ubuntu demo proof; leaves the named runner inspectable.
 
 Requires the owned image, private TLS/env files and existing authorized demo
 caller credential. Credentials are never printed or copied into evidence.

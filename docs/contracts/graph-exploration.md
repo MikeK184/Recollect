@@ -111,7 +111,7 @@ qualification. Reuse established correction, scope, authorization and retention
 fixtures where they cover the common selector; add focused proof for the new
 endpoint and its final gates. Browser proof covers the real renderer, node and
 edge inspection, path highlighting, keyboard controls, clearing stale results,
-errors and desktop layout. Verify a retained local test-Brain graph without new model
+errors and desktop layout. Verify a retained local test graph without new model
 calls or repository reads. Run the required repository validator.
 
 ## Explicit Deferrals

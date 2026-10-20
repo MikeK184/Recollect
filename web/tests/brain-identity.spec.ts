@@ -85,14 +85,14 @@ test("Brain chooser, safe icon upload, retry without duplicate, replace and remo
 test("grouped personal Agents omits unused connections but keeps access and pairing reachable", async ({page}) => {
   await login(page);
   const now = new Date().toISOString();
-  const shared = { device_id:randomUUID(),name:"My Codex",host_kind:"codex",integration:"plugin",claimed:true,active:true,created_at:now,expires_at:now,last_used_at:now,brains:[{brain_id:randomUUID(),name:"test-Brain",last_used_at:now},{brain_id:randomUUID(),name:"Recollect",last_used_at:now}] };
+  const shared = { device_id:randomUUID(),name:"My Codex",host_kind:"codex",integration:"plugin",claimed:true,active:true,created_at:now,expires_at:now,last_used_at:now,brains:[{brain_id:randomUUID(),name:"Operations",last_used_at:now},{brain_id:randomUUID(),name:"Recollect",last_used_at:now}] };
   let failed = false;
   await page.route("**/api/agents", route => failed ? route.fulfill({status:503,json:{message:"Roster unavailable fixture"}}) : route.fulfill({json:{groups:[{user_name:"owner",agents:[shared,{...shared,device_id:randomUUID(),name:"Unused host",brains:[]}]}],hidden_count:3}}));
   await page.goto("/agents");
   await expect(page.getByTestId("agent-brain-group")).toHaveCount(2);
   await expect(page.getByRole("button",{name:"Inspect My Codex",exact:true})).toHaveCount(2);
   await expect(page.getByText("Unused host",{exact:true})).toHaveCount(0);
-  await page.getByLabel("Search agents or Brains").fill("test-Brain");
+  await page.getByLabel("Search agents or Brains").fill("Operations");
   await expect(page.getByTestId("agent-brain-group")).toHaveCount(1);
   await page.getByRole("button",{name:"Inspect My Codex",exact:true}).click();
   await expect(page.getByRole("dialog",{name:"Agent record"})).toBeVisible();

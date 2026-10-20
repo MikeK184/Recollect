@@ -36,7 +36,7 @@ recovery and reconciliation controls. Stopping a runner never revokes Vault toke
 The [owned Ubuntu filesystem demo](../../infra/private-runner-demo/README.md)
 proves an independent reader's agent MCP call, three approved read tools,
 outside-root/no-Use/Manage/Share/write denials and offline queue/recovery on the
-local test-Brain installation. A coding host requests tools through Recollect;
+local test installation. A coding host requests tools through Recollect;
 the private runner starts/calls the approved provider on its own machine and
 returns the result through Recollect. The coding host need not reach that
 provider directly. Registration, caller permissions and actual connectivity

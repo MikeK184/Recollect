@@ -59,7 +59,7 @@ coverage and private-workspace metadata boundaries. The accepted
 record local delivery, intent-ledger recovery, exact scope/class preservation,
 expiry/erasure and older-backup proof. No customer checkout is modified.
 
-Inline slice (no pack), 2026-09-14: the user authorized test-Brain as real test input.
+Inline slice (no pack), 2026-09-14: the user authorized a real repository as test input.
 Expose the existing bounded Git observation helper to an opt-in native integration
 probe. This adds validation tooling under the shipped workspace contract, with
 no new wire behavior, schema or Brain-selection rule. The probe uses an explicit
@@ -71,7 +71,7 @@ it does not place a selector in the customer workspace.
 | `evidence-typescript-admission` | shipped | contract-backed | inline: distinguish fenced TypeScript type annotations from literal credential assignments | Preserve unchanged history admission while retaining configured-secret, token, URL and literal-value exclusions |
 | `evidence-collections` | shipped | contract-backed | archived | Delivered immutable text/reference sources, durable artifacts, shared collection/area/environment views, provenance, processing and browser proof |
 | `evidence-workspace-scope` | shipped | contract-backed | archived | Delivered nearest/nested discovery, private checkout catalogue, shared repository identities and independent immutable task/subagent operation scope with CLI/browser proof |
-| `evidence-repository-publication` | shipped | adr-backed, contract-backed | archived | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real test-Brain proof |
+| `evidence-repository-publication` | shipped | adr-backed, contract-backed | archived | Delivered exact committed extraction, resumable native publication, immutable evidence, contributor history, environment manifests and browser/real-repository proof |
 | `evidence-session-capture` | shipped | contract-backed | archived | Delivered actual Codex/Claude hooks, native setup/launch and durable delivery, original-scope learning, browser coverage/source controls and local/central retention with replay proof |
 | `evidence-desktop-workflows` | shipped | adr-backed, contract-backed | archived | Sources, repositories/manifests and agent/session/private scope views with literal title search before pagination |
 

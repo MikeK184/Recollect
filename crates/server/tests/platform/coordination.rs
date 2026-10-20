@@ -44,7 +44,7 @@ async fn coordination_authority_replay_negotiation_and_a2a() {
             "POST",
             "/api/brains",
             Some(&owner),
-            json!({"name":"Synthetic test-Brain"}),
+            json!({"name":"Synthetic coordination"}),
         )
         .await
         .1["id"]
@@ -71,7 +71,7 @@ async fn coordination_authority_replay_negotiation_and_a2a() {
         .await
         .unwrap();
     let repo = Uuid::new_v4();
-    sqlx::query("INSERT INTO repositories(id,brain_id,canonical_origin,created_by) VALUES($1,$2,'example.test/synthetic/team',$3)").bind(repo).bind(brain.parse::<Uuid>().unwrap()).bind(actor).execute(&h.admin).await.unwrap();
+    sqlx::query("INSERT INTO repositories(id,brain_id,canonical_origin,created_by) VALUES($1,$2,'example.test/synthetic/infra',$3)").bind(repo).bind(brain.parse::<Uuid>().unwrap()).bind(actor).execute(&h.admin).await.unwrap();
     let mt = task(&h, &base, &mike_token, repo, None).await;
     let pt = task(&h, &base, &paul_token, repo, None).await;
     let mid = Uuid::new_v4();

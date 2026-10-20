@@ -1,7 +1,7 @@
 # Owned Ubuntu private-runner demo
 
 This explicitly selected local lab adds one runner, read-only filesystem
-connection and tool group to **Test Brain**. The existing authorized `demo`
+connection and tool group to the existing local test Brain. The existing authorized `demo`
 reader calls the Brain's real agent MCP interface; Ubuntu owns a separate
 paired identity. See [dated proof](../../docs/mappings/private-runner-ubuntu-proof-2026-10-06.md).
 
@@ -31,7 +31,7 @@ are dropped, and no ports are published. The TLS relay is confined to Ubuntu
 loopback and forwards to the existing Mac local API; a real office deployment
 uses its actual reachable HTTPS Recollect URL.
 
-Inspect **Test Brain → Connections → Private Runners** or its new filesystem
+Inspect that Brain's **Connections → Private Runners** or its new filesystem
 connection. Stop/start the retained demo without touching other services:
 
 ```sh
