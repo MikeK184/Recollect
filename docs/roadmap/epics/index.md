@@ -10,7 +10,7 @@ numbers below are dated observations until replacement proof is recorded.
 
 | Epic | Status | Current focus |
 | --- | --- | --- |
-| [repository-governance.md](repository-governance.md) | active | README and `recollecthub.com` product/docs site on the Light and Ink system, built locally; live publication pending |
+| [repository-governance.md](repository-governance.md) | complete | Current documentation, governance and the `recollecthub.com` product/docs site on the Light and Ink system delivered |
 | [developer-tooling.md](developer-tooling.md) | complete | Repository-local Rust Analyzer MCP, Graft and documentation skills |
 | [product-platform.md](product-platform.md) | complete | Accounts, Brain access, durable work, installation identity, canonical Brain deletion and one typed Brain admission |
 | [evidence-and-workspaces.md](evidence-and-workspaces.md) | complete | Versioned sources, collections, workspace scope, capture and repository publication |
