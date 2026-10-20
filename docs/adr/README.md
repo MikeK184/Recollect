@@ -38,3 +38,4 @@ pending foundation documents as accepted authority.
 - [0023: Brain-scoped agent-to-agent coordination](0023-agent-to-agent-coordination.md)
 - [0024: Local password hashing and strict credential-file reads](0024-local-password-hashing.md)
 - [0025: Two-theme desktop redesign on Tailwind and shadcn/ui](0025-two-theme-desktop-redesign.md)
+- [0026: Agent identity and authority](0026-agent-identity-and-authority.md) (proposed; frames the owner's decision and governs nothing until accepted)
