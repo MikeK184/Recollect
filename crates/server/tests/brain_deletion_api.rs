@@ -1133,3 +1133,205 @@ async fn brain_deletion_api_large_brain_previews_and_deletes() {
     );
     h.finish().await;
 }
+
+/// Evidence artifact intents (migration 067) name files whose canonical source
+/// version never committed. Brain deletion removes the intent rows with the
+/// Brain, so the evidence sweep can no longer find those files afterwards; the
+/// deletion journal must name them for physical cleanup instead (migration
+/// 076). Covers a Brain with committed content, a Brain whose only upload
+/// failed, an intent whose file an earlier sweep already removed, an upload
+/// that starts after the preview, an untouched control Brain, and a 039
+/// excerpt intent, which the closure already names through its parent version.
+#[tokio::test]
+#[ignore = "Requires repository-owned PostgreSQL; run ./scripts/test-platform.sh"]
+async fn brain_deletion_api_removes_pending_evidence_artifacts() {
+    use recollect_server::artifacts;
+    let h = Harness::new().await;
+    let owner_account: Uuid =
+        sqlx::query_scalar("SELECT id FROM accounts WHERE installation_owner")
+            .fetch_one(&h.admin)
+            .await
+            .unwrap();
+    let owner = h.login().await;
+    let f = Fixture::new();
+    seed(&h.admin, owner_account, &f).await;
+    let (status, gamma) = h
+        .call("POST", "/api/brains", Some(&owner), json!({"name":"Gamma"}))
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let g: Uuid = gamma["id"].as_str().unwrap().parse().unwrap();
+
+    let root = h.state.config.artifact_dir.clone();
+    let pending_a = Uuid::new_v4();
+    let forgotten_a = Uuid::new_v4();
+    let pending_g = Uuid::new_v4();
+    let control_b = Uuid::new_v4();
+    let excerpt_a = Uuid::new_v4();
+    for (brain, artifact, swept) in [
+        (f.a, pending_a, false),
+        (f.a, forgotten_a, true),
+        (g, pending_g, false),
+        (f.b, control_b, false),
+    ] {
+        // Past the sweep's grace period, as a failed upload would be.
+        sqlx::query(
+            "INSERT INTO evidence_artifact_intents(artifact_id,brain_id,created_at,removed_at)
+             VALUES($1,$2,now()-interval '1 hour',CASE WHEN $3 THEN now() END)",
+        )
+        .bind(artifact)
+        .bind(brain)
+        .bind(swept)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+        if !swept {
+            artifacts::write(&root, brain, artifact, "uncommitted evidence")
+                .await
+                .unwrap();
+        }
+    }
+    sqlx::query(
+        "INSERT INTO excerpt_artifact_intents(artifact_id,brain_id,run_id,parent_version_id,created_at)
+         VALUES($1,$2,$3,$4,now()-interval '1 hour')",
+    )
+    .bind(excerpt_a)
+    .bind(f.a)
+    .bind(Uuid::new_v4())
+    .bind(f.v1)
+    .execute(&h.admin)
+    .await
+    .unwrap();
+    artifacts::write(&root, f.a, excerpt_a, "uncommitted excerpt")
+        .await
+        .unwrap();
+
+    // The counter covers the intents: an upload that starts after the preview
+    // requires a fresh one.
+    let (_, stale) = h
+        .call(
+            "POST",
+            &format!("/api/brains/{g}/deletions/preview"),
+            Some(&owner),
+            Value::Null,
+        )
+        .await;
+    let late_g = Uuid::new_v4();
+    sqlx::query("INSERT INTO evidence_artifact_intents(artifact_id,brain_id) VALUES($1,$2)")
+        .bind(late_g)
+        .bind(g)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    artifacts::write(&root, g, late_g, "upload in flight")
+        .await
+        .unwrap();
+    let (status, body) = h
+        .call(
+            "DELETE",
+            &format!("/api/brains/{g}"),
+            Some(&owner),
+            json!({"closure":stale["closure"],"confirmation":"Gamma"}),
+        )
+        .await;
+    assert_eq!(
+        (status, body["code"].as_str()),
+        (StatusCode::CONFLICT, Some("brain_deletion_preview_changed"))
+    );
+
+    let mut requests = Vec::new();
+    for (brain, name, named) in [
+        (f.a, "Alpha", vec![pending_a, forgotten_a, excerpt_a]),
+        (g, "Gamma", vec![pending_g, late_g]),
+    ] {
+        let (status, preview) = h
+            .call(
+                "POST",
+                &format!("/api/brains/{brain}/deletions/preview"),
+                Some(&owner),
+                Value::Null,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, deleted) = h
+            .call(
+                "DELETE",
+                &format!("/api/brains/{brain}"),
+                Some(&owner),
+                json!({"closure":preview["closure"],"confirmation":name}),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{name}: {deleted}");
+        let rid: Uuid = deleted["request"]["id"].as_str().unwrap().parse().unwrap();
+        let queued: Vec<Uuid> =
+            sqlx::query_scalar("SELECT artifact_id FROM privacy_artifacts WHERE request_id=$1")
+                .bind(rid)
+                .fetch_all(&h.admin)
+                .await
+                .unwrap();
+        for artifact in &named {
+            assert!(
+                queued.contains(artifact),
+                "{name}: evidence intent {artifact} is not queued for physical cleanup"
+            );
+        }
+        assert_eq!(
+            preview["counts"]["artifacts"].as_u64(),
+            Some(queued.len() as u64),
+            "{name}: preview artifact count differs from the queued files"
+        );
+        // The intents went with the Brain: only the journal still names the files.
+        assert_eq!(count(&h.admin, "evidence_artifact_intents", brain).await, 0);
+        assert_eq!(count(&h.admin, "excerpt_artifact_intents", brain).await, 0);
+        requests.push((brain, rid));
+    }
+
+    // The fixture's dormant request only anchors fence rows; it is not an
+    // erasure the journal worker can export.
+    sqlx::query("UPDATE privacy_requests SET state='complete' WHERE id=$1")
+        .bind(f.seed_req)
+        .execute(&h.admin)
+        .await
+        .unwrap();
+    recollect_server::privacy_journal::maintain(&h.state)
+        .await
+        .unwrap();
+    for (brain, artifact) in [
+        (f.a, pending_a),
+        (f.a, excerpt_a),
+        (g, pending_g),
+        (g, late_g),
+    ] {
+        assert!(
+            !artifacts::path(&root, brain, artifact).exists(),
+            "evidence artifact {artifact} survived Brain deletion cleanup"
+        );
+    }
+    let unremoved: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM privacy_artifacts WHERE artifact_id=ANY($1) AND removed_at IS NULL",
+    )
+    .bind(vec![pending_a, forgotten_a, excerpt_a, pending_g, late_g])
+    .fetch_one(&h.admin)
+    .await
+    .unwrap();
+    assert_eq!(unremoved, 0);
+    // Graph and analytics cleanup need Neo4j, which this test does not
+    // require; no artifact removal may be what keeps a request open.
+    for (brain, rid) in &requests {
+        let failure: Option<String> =
+            sqlx::query_scalar("SELECT error_code FROM privacy_requests WHERE id=$1")
+                .bind(rid)
+                .fetch_one(&h.admin)
+                .await
+                .unwrap();
+        assert_ne!(
+            failure.as_deref(),
+            Some("artifact_unavailable"),
+            "{brain}: artifact cleanup failed"
+        );
+    }
+    // The control Brain's pending upload and its file are untouched.
+    assert!(artifacts::path(&root, f.b, control_b).exists());
+    assert_eq!(count(&h.admin, "evidence_artifact_intents", f.b).await, 1);
+
+    h.finish().await;
+}

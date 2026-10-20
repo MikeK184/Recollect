@@ -306,10 +306,13 @@ async fn seed_scale(
     sqlx::query("ANALYZE").execute(admin).await.unwrap();
 }
 
-/// The 074 closure and the retained iterated per-target reference for one
-/// Brain, read in one snapshot. The reference is the slow path this change
-/// replaced, so only this comparison lifts the statement timeout.
-async fn closures(env: &Env, owner: Uuid, brain: Uuid) -> (Value, Value, i64, i64) {
+/// The Brain closure and its reference for one Brain, read in one snapshot.
+/// The reference is the retained iterated per-target union, the slow path 074
+/// replaced, so only this comparison lifts the statement timeout. It carries
+/// 076's one documented exception: `artifacts` also holds every evidence
+/// artifact intent of the Brain, which no member target's closure names. The
+/// plain iterated document comes last.
+async fn closures(env: &Env, owner: Uuid, brain: Uuid) -> (Value, Value, i64, i64, Value) {
     let mut tx = env.admin.begin().await.unwrap();
     sqlx::query("SET LOCAL statement_timeout=0")
         .execute(&mut *tx)
@@ -320,9 +323,11 @@ async fn closures(env: &Env, owner: Uuid, brain: Uuid) -> (Value, Value, i64, i6
         .execute(&mut *tx)
         .await
         .unwrap();
-    let row: (Value, Value, i64, i64) = sqlx::query_as(
-        "SELECT n,o,recollect_brain_hash(n),recollect_brain_hash(o) FROM
-         (SELECT recollect_brain_closure($1) n,recollect_iterated_brain_closure($1) o OFFSET 0) x",
+    let row: (Value, Value, i64, i64, Value) = sqlx::query_as(
+        "SELECT n,o,recollect_brain_hash(n),recollect_brain_hash(o),i FROM
+         (SELECT n,i,i||jsonb_build_object('artifacts',recollect_brain_set(i->'artifacts'||coalesce(
+            (SELECT jsonb_agg(artifact_id) FROM evidence_artifact_intents WHERE brain_id=$1),'[]'))) o
+          FROM (SELECT recollect_brain_closure($1) n,recollect_iterated_brain_closure($1) i OFFSET 0) x) y",
     )
     .bind(brain)
     .fetch_one(&mut *tx)
@@ -907,7 +912,10 @@ async fn brain_deletion_catalog_invariant() {
 /// the journal manifest and the tombstone fingerprint, must equal the iterated
 /// union it replaced on the rich fixture, the control Brain, a generated Brain
 /// and a Brain without member targets. A later per-target closure layer that
-/// the set-based closure does not mirror fails here.
+/// the set-based closure does not mirror fails here. Migration 076's evidence
+/// artifact intents are the one documented exception: the rich and the empty
+/// Brain hold intents, and their closures differ from the plain union exactly
+/// by those artifact identities.
 #[tokio::test]
 #[ignore = "Requires repository-owned PostgreSQL; run with DATABASE_ADMIN_URL and DATABASE_URL"]
 async fn brain_closure_matches_iterated_reference() {
@@ -923,13 +931,62 @@ async fn brain_closure_matches_iterated_reference() {
         .execute(&env.admin)
         .await
         .unwrap();
+    // A pending and an already swept upload in the rich Brain, and a Brain
+    // whose only upload never committed.
+    let intents = [
+        (f.a, Uuid::new_v4(), false),
+        (f.a, Uuid::new_v4(), true),
+        (empty, Uuid::new_v4(), false),
+    ];
+    for (brain, artifact, swept) in intents {
+        sqlx::query(
+            "INSERT INTO evidence_artifact_intents(artifact_id,brain_id,removed_at)
+             VALUES($1,$2,CASE WHEN $3 THEN now() END)",
+        )
+        .bind(artifact)
+        .bind(brain)
+        .bind(swept)
+        .execute(&env.admin)
+        .await
+        .unwrap();
+    }
     for (label, brain) in [
         ("rich", f.a),
         ("control", f.b),
         ("scale", scale),
         ("empty", empty),
     ] {
-        let (new, old, new_hash, old_hash) = closures(&env, owner, brain).await;
+        let (new, old, new_hash, old_hash, iterated) = closures(&env, owner, brain).await;
+        let named: Vec<String> = intents
+            .iter()
+            .filter(|(b, ..)| *b == brain)
+            .map(|(_, artifact, _)| artifact.to_string())
+            .collect();
+        let artifacts = |doc: &Value| -> Vec<String> {
+            doc["artifacts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap().to_owned())
+                .collect()
+        };
+        let mut added = artifacts(&new);
+        added.retain(|a| !artifacts(&iterated).contains(a));
+        added.sort();
+        let mut expected = named.clone();
+        expected.sort();
+        assert_eq!(added, expected, "{label} closure adds other artifacts");
+        let mut beyond_artifacts = new.clone();
+        beyond_artifacts["artifacts"] = iterated["artifacts"].clone();
+        assert_eq!(
+            beyond_artifacts, iterated,
+            "{label} closure differs from the iterated union beyond artifacts"
+        );
+        assert_eq!(
+            new == iterated,
+            named.is_empty(),
+            "{label} closure must differ from the plain union exactly when it holds intents"
+        );
         let differing: Vec<&String> = old
             .as_object()
             .unwrap()
