@@ -1,16 +1,11 @@
 import type { ReactNode } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Text,
-  Title,
-} from "@mantine/core";
-import { FolderTree, Pin } from "lucide-react";
+import { motion } from "motion/react";
+import { ChevronRight, FolderTree, Pin } from "lucide-react";
 import { EmptyState } from "../../components/AsyncState";
-import { iconSize } from "../../design/tokens";
+import { SectionHeader } from "../../components/PageHeader";
+import { Badge, Button, Card, StatusBadge } from "../../components/ui";
+import { listItem } from "../../design/motion";
+import { stateTone } from "./GraphStatusDrawer";
 import {
   count,
   label,
@@ -18,6 +13,8 @@ import {
   type OrganizationMaps,
   type View,
 } from "./organizationModel";
+
+const cardGrid = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
 
 export function OrganizationCoverage({
   view,
@@ -27,67 +24,72 @@ export function OrganizationCoverage({
   lower: boolean;
 }) {
   return (
-    <>
-      <Card withBorder p="sm" className="organization-coverage">
-        <Group justify="space-between">
-          <Text size="sm">
-            {count(view.coverage.qualified_sources, lower)} eligible sources ·{" "}
-            {count(view.coverage.mapped_sources, lower)} mapped ·{" "}
-            {count(view.coverage.unassigned_sources, lower)} unassigned in this
-            read
-          </Text>
-          <Badge
-            variant="light"
-            color={view.state === "partial" ? "yellow" : "gray"}
-          >
-            {label(view.state)}
-          </Badge>
-        </Group>
-        {lower && (
-          <Text size="xs" c="dimmed" mt={4}>
-            Counts are lower bounds for this bounded read. Narrow the scope or
-            read the next page for more eligible sources.
-          </Text>
-        )}
-      </Card>
-      {view.producer_status && (
-        <Group gap="xs" aria-label="Entity producer readiness">
-          <Group gap="xs">
-            <Badge variant="light">{label(view.producer_status)}</Badge>
-            <Text size="xs">
-              {view.producer_status === "ready"
-                ? "A qualified compatible entity producer is selected. Extraction follows this Brain’s model policy."
-                : "Entity extraction awaits a qualified compatible producer."}
-            </Text>
-          </Group>
-        </Group>
+    <Card className="organization-coverage grid gap-3 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="mono m-0 text-label text-foreground">
+          {count(view.coverage.qualified_sources, lower)} eligible sources ·{" "}
+          {count(view.coverage.mapped_sources, lower)} mapped ·{" "}
+          {count(view.coverage.unassigned_sources, lower)} unassigned in this
+          read
+        </p>
+        <StatusBadge state={view.state === "partial" ? "attention" : "neutral"}>
+          {label(view.state)}
+        </StatusBadge>
+      </div>
+      {lower && (
+        <p className="m-0 text-caption text-muted-foreground">
+          Counts are lower bounds for this bounded read. Narrow the scope or
+          read the next page for more eligible sources.
+        </p>
       )}
-      {view.community_status && (
-        <Group gap="xs" aria-label="Native community readiness">
-          <Group gap="xs">
-            <Badge variant="light">{label(view.community_status.state)}</Badge>
-            <Text size="xs">
-              {view.community_status.state === "ready"
-                ? "Qualified native communities are current; only eligible memberships appear."
-                : view.community_status.state === "unconfigured"
-                  ? "Native communities await a qualified recipe. Entity facets and canonical references remain separate."
-                  : `Native communities are ${label(view.community_status.state)}. Entity facets and canonical references remain separate.`}
-            </Text>
-            {view.community_status.vector_features && (
-              <Text size="xs" c="dimmed">
-                Retained semantic features:{" "}
-                {label(view.community_status.vector_features)}.
-              </Text>
-            )}
-          </Group>
-        </Group>
+      {(view.producer_status || view.community_status) && (
+        <div className="grid gap-2 border-t border-border pt-3">
+          {view.producer_status && (
+            <div
+              className="flex flex-wrap items-center gap-2"
+              aria-label="Entity producer readiness"
+            >
+              <StatusBadge state={stateTone(view.producer_status)}>
+                {label(view.producer_status)}
+              </StatusBadge>
+              <p className="m-0 text-label text-foreground-secondary">
+                {view.producer_status === "ready"
+                  ? "A qualified compatible entity producer is selected. Extraction follows this Brain’s model policy."
+                  : "Entity extraction awaits a qualified compatible producer."}
+              </p>
+            </div>
+          )}
+          {view.community_status && (
+            <div
+              className="flex flex-wrap items-center gap-2"
+              aria-label="Native community readiness"
+            >
+              <StatusBadge state={stateTone(view.community_status.state)}>
+                {label(view.community_status.state)}
+              </StatusBadge>
+              <p className="m-0 text-label text-foreground-secondary">
+                {view.community_status.state === "ready"
+                  ? "Qualified native communities are current; only eligible memberships appear."
+                  : view.community_status.state === "unconfigured"
+                    ? "Native communities await a qualified recipe. Entity facets and canonical references remain separate."
+                    : `Native communities are ${label(view.community_status.state)}. Entity facets and canonical references remain separate.`}
+              </p>
+              {view.community_status.vector_features && (
+                <p className="m-0 text-caption text-muted-foreground">
+                  Retained semantic features:{" "}
+                  {label(view.community_status.vector_features)}.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
       {view.coverage.unassigned_sources > 0 && (
-        <Text size="sm" c="dimmed">
+        <p className="m-0 text-label text-muted-foreground">
           Unassigned sources remain available as source evidence.
-        </Text>
+        </p>
       )}
-    </>
+    </Card>
   );
 }
 
@@ -117,26 +119,28 @@ export function OrganizationEmpty({
   )
     return null;
   return (
-    <EmptyState
-      icon={FolderTree}
-      title={
-        center
-          ? "No eligible support in this scope"
-          : "No published topics yet"
-      }
-      description={
-        view.producer_status && view.producer_status !== "ready"
-          ? "Entity extraction awaits a qualified compatible producer. Canonical field references and native source communities keep their own readiness and evidence."
-          : "Eligible sources without usable mappings stay unassigned. Add or process source evidence, then refresh organization."
-      }
-      action={
-        center ? (
-          <Button variant="light" onClick={() => onExpand(null)}>
-            All topics
-          </Button>
-        ) : undefined
-      }
-    />
+    <Card className="p-0">
+      <EmptyState
+        icon={FolderTree}
+        title={
+          center
+            ? "No eligible support in this scope"
+            : "No published topics yet"
+        }
+        description={
+          view.producer_status && view.producer_status !== "ready"
+            ? "Entity extraction awaits a qualified compatible producer. Canonical field references and native source communities keep their own readiness and evidence."
+            : "Eligible sources without usable mappings stay unassigned. Add or process source evidence, then refresh organization."
+        }
+        action={
+          center ? (
+            <Button variant="secondary" onClick={() => onExpand(null)}>
+              All topics
+            </Button>
+          ) : undefined
+        }
+      />
+    </Card>
   );
 }
 
@@ -159,70 +163,81 @@ export function OrganizationTopics({
 }) {
   const { sourceMemberships, representativeSources } = maps;
   return (
-    <section aria-label="Topic overview">
-      <Group justify="space-between" mb="sm">
-        <Title order={3}>
-          {center?.kind === "topic" ? "Expanded topic" : "Topics"}
-        </Title>
-        <Text size="xs" c="dimmed">
-          Counts apply to this read
-        </Text>
-      </Group>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
-        {view.topics.map((topic) => (
-          <Card
+    <section aria-label="Topic overview" className="grid gap-3">
+      <SectionHeader
+        title={center?.kind === "topic" ? "Expanded topic" : "Topics"}
+        actions={
+          <span className="text-caption text-muted-foreground">
+            Counts apply to this read
+          </span>
+        }
+      />
+      <div className={cardGrid}>
+        {view.topics.map((topic, index) => (
+          <motion.div
             key={topic.id}
-            withBorder
-            p="md"
-            className="organization-card"
-            data-testid="organization-topic"
-            data-topic-id={topic.id}
+            variants={listItem}
+            custom={index}
+            initial="initial"
+            animate="animate"
+            className="min-w-0"
           >
-            <Group justify="space-between" mb="xs">
-              <FolderTree size={iconSize.action} />
-              {topic.topic_kind === "manual_overlay" ? (
-                <Badge variant="outline">Manual group</Badge>
-              ) : (
-                [...sourceMemberships, ...representativeSources].some(
-                  (member) => member.topic_id === topic.id,
-                ) && <Badge variant="outline">Source group</Badge>
-              )}
-              {topic.pinned && (
-                <Badge variant="light" leftSection={<Pin size={12} />}>
-                  Pinned
-                </Badge>
-              )}
-            </Group>
-            <Title order={4}>{topic.label}</Title>
-            <Text size="sm" c="dimmed" mt="xs">
-              {count(topic.source_count, lower)}{" "}
-              {topic.source_count === 1 && !lower ? "source" : "sources"} ·{" "}
-              {count(topic.entity_count, lower)}{" "}
-              {topic.entity_count === 1 && !lower ? "entity" : "entities"}
-            </Text>
-            <Group mt="md">
-              <Button
-                size="xs"
-                variant="light"
-                onClick={() => onExpand({ kind: "topic", id: topic.id })}
-                aria-label={`Expand topic ${topic.label}`}
-              >
-                Explore topic
-              </Button>
-              {writable && topic.change_id && (
+            <Card
+              className="organization-card grid h-full content-start gap-2 [overflow-wrap:anywhere]"
+              data-testid="organization-topic"
+              data-topic-id={topic.id}
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                <FolderTree
+                  className="mr-auto size-5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                {topic.topic_kind === "manual_overlay" ? (
+                  <Badge variant="outline">Manual group</Badge>
+                ) : (
+                  [...sourceMemberships, ...representativeSources].some(
+                    (member) => member.topic_id === topic.id,
+                  ) && <Badge variant="outline">Source group</Badge>
+                )}
+                {topic.pinned && (
+                  <Badge>
+                    <Pin aria-hidden="true" />
+                    Pinned
+                  </Badge>
+                )}
+              </div>
+              <h3 className="m-0 text-title font-semibold">{topic.label}</h3>
+              <p className="mono m-0 text-caption text-muted-foreground">
+                {count(topic.source_count, lower)}{" "}
+                {topic.source_count === 1 && !lower ? "source" : "sources"} ·{" "}
+                {count(topic.entity_count, lower)}{" "}
+                {topic.entity_count === 1 && !lower ? "entity" : "entities"}
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 <Button
-                  size="xs"
-                  variant="subtle"
-                  onClick={() => onOrganize(topic.id)}
-                  aria-label={`Organize topic ${topic.label}`}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onExpand({ kind: "topic", id: topic.id })}
+                  aria-label={`Expand topic ${topic.label}`}
                 >
-                  Organize
+                  Explore topic
+                  <ChevronRight aria-hidden="true" />
                 </Button>
-              )}
-            </Group>
-          </Card>
+                {writable && topic.change_id && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onOrganize(topic.id)}
+                    aria-label={`Organize topic ${topic.label}`}
+                  >
+                    Organize
+                  </Button>
+                )}
+              </div>
+            </Card>
+          </motion.div>
         ))}
-      </SimpleGrid>
+      </div>
     </section>
   );
 }
@@ -239,39 +254,45 @@ export function OrganizationEntities({
   onExpand: (next: Center | null) => void;
 }) {
   return (
-    <section aria-label="Entity overview">
-      <Title order={3} mb="sm">
-        {center?.kind === "entity" ? "Expanded entity" : "Entities"}
-      </Title>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
-        {view.entities.map((entity) => (
-          <Card
+    <section aria-label="Entity overview" className="grid gap-3">
+      <SectionHeader
+        title={center?.kind === "entity" ? "Expanded entity" : "Entities"}
+      />
+      <div className={cardGrid}>
+        {view.entities.map((entity, index) => (
+          <motion.div
             key={entity.id}
-            withBorder
-            p="sm"
-            className="organization-card"
-            data-testid="organization-entity"
+            variants={listItem}
+            custom={index}
+            initial="initial"
+            animate="animate"
+            className="min-w-0"
           >
-            <Group justify="space-between">
-              <Text fw={600}>{entity.label}</Text>
-              <Badge variant="light">{label(entity.kind)}</Badge>
-            </Group>
-            <Text size="xs" c="dimmed" mt="xs">
-              {count(entity.source_count, lower)} supporting sources in this
-              read
-            </Text>
-            <Button
-              mt="sm"
-              size="compact-xs"
-              variant="subtle"
-              onClick={() => onExpand({ kind: "entity", id: entity.id })}
-              aria-label={`Expand entity ${entity.label}`}
+            <Card
+              className="organization-card grid h-full content-start gap-2 p-3 [overflow-wrap:anywhere]"
+              data-testid="organization-entity"
             >
-              Explore entity
-            </Button>
-          </Card>
+              <div className="flex items-start justify-between gap-2">
+                <p className="m-0 text-body font-semibold">{entity.label}</p>
+                <Badge>{label(entity.kind)}</Badge>
+              </div>
+              <p className="mono m-0 text-caption text-muted-foreground">
+                {count(entity.source_count, lower)} supporting sources in this
+                read
+              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="justify-self-start"
+                onClick={() => onExpand({ kind: "entity", id: entity.id })}
+                aria-label={`Expand entity ${entity.label}`}
+              >
+                Explore entity
+              </Button>
+            </Card>
+          </motion.div>
         ))}
-      </SimpleGrid>
+      </div>
     </section>
   );
 }
@@ -291,21 +312,23 @@ export function OrganizationContext({
 }) {
   const { contextTopics, contextEntities } = maps;
   return (
-    <details className="organization-context">
-      <summary>
+    <details className="organization-context group grid gap-3">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-body font-medium text-foreground [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          aria-hidden="true"
+          className="size-4 text-muted-foreground transition-transform duration-fast group-open:rotate-90"
+        />
         Additional source context · {contextTopics.length} topics ·{" "}
         {contextEntities.length} entities
       </summary>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} mt="sm" spacing="sm">
+      <div className={`${cardGrid} mt-3`}>
         {[...contextTopics, ...contextEntities].map((card) => (
           <Card
-            withBorder
             key={card.id}
-            p="sm"
-            className="organization-card"
+            className="organization-card grid content-start gap-2 p-3 [overflow-wrap:anywhere]"
           >
-            <Group justify="space-between">
-              <Text fw={600}>{card.label}</Text>
+            <div className="flex items-start justify-between gap-2">
+              <p className="m-0 text-body font-semibold">{card.label}</p>
               <Badge variant="outline">
                 {card.topic_kind === "manual_overlay"
                   ? "Manual group"
@@ -313,14 +336,14 @@ export function OrganizationContext({
                     ? "Topic context"
                     : label(card.kind)}
               </Badge>
-            </Group>
-            <Text size="xs" c="dimmed" mt="xs">
+            </div>
+            <p className="mono m-0 text-caption text-muted-foreground">
               {count(card.source_count, lower)} supporting sources in this read
-            </Text>
-            <Group mt="sm">
+            </p>
+            <div className="flex flex-wrap gap-1.5">
               <Button
-                size="xs"
-                variant="subtle"
+                size="sm"
+                variant="ghost"
                 onClick={() =>
                   onExpand({
                     kind: card.kind === "topic" ? "topic" : "entity",
@@ -332,17 +355,17 @@ export function OrganizationContext({
               </Button>
               {card.kind === "topic" && writable && card.change_id && (
                 <Button
-                  size="xs"
-                  variant="subtle"
+                  size="sm"
+                  variant="ghost"
                   onClick={() => onOrganize(card.id)}
                 >
                   Organize context topic
                 </Button>
               )}
-            </Group>
+            </div>
           </Card>
         ))}
-      </SimpleGrid>
+      </div>
     </details>
   );
 }

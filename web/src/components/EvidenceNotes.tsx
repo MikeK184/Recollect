@@ -1,5 +1,6 @@
-import { Info } from "lucide-react";
-import "./evidence-notes.css";
+import { ChevronRight, Info } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { cn } from "../lib/utils";
 
 const reasons: Record<string, string> = {
   content_excluded:
@@ -81,10 +82,12 @@ export function EvidenceNotes({
   notes,
   partial = false,
   important = [],
+  className,
 }: {
   notes: readonly string[];
   partial?: boolean;
   important?: readonly string[];
+  className?: string;
 }) {
   const importantNotes = important.filter(Boolean).map(evidenceReason);
   const unique = [
@@ -119,20 +122,39 @@ export function EvidenceNotes({
     );
   const other = unique.slice(1).filter((note) => !material.includes(note));
   return (
-    <aside className="evidence-notes" role="note" aria-label="Evidence notes">
-      <div className="evidence-notes-heading">
-        <Info size={15} />
-        <strong>Evidence notes</strong>
-        {partial && <span>Partial coverage</span>}
+    <aside
+      className={cn(
+        "grid gap-1.5 rounded-lg bg-muted px-3.5 py-3 text-label text-foreground-secondary",
+        className,
+      )}
+      role="note"
+      aria-label="Evidence notes"
+    >
+      <div className="flex items-center gap-2 text-caption font-medium text-foreground">
+        <Info className="size-3.5 text-muted-foreground" aria-hidden="true" />
+        <strong className="font-medium">Evidence notes</strong>
+        {partial && (
+          <Badge variant="warning" className="ml-auto">
+            Partial coverage
+          </Badge>
+        )}
       </div>
-      <p>{lead}</p>
+      <p className="m-0">{lead}</p>
       {material.map((note) => (
-        <p key={note}>{note}</p>
+        <p key={note} className="m-0">
+          {note}
+        </p>
       ))}
       {!!other.length && (
-        <details>
-          <summary>Details ({other.length})</summary>
-          <ul>
+        <details className="group/notes">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-caption font-medium text-brand-text [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              className="size-3.5 transition-transform duration-fast group-open/notes:rotate-90"
+              aria-hidden="true"
+            />
+            Details ({other.length})
+          </summary>
+          <ul className="m-0 mt-1.5 grid gap-1 pl-5">
             {other.map((note) => (
               <li key={note}>{note}</li>
             ))}

@@ -1,9 +1,14 @@
-import { Alert, Button, Group, Stack, Text } from "@mantine/core";
+import { Check, Copy } from "lucide-react";
 import type { components } from "./api-schema";
 import type { Brain } from "./api";
 import { EvidenceNotes } from "./components/EvidenceNotes";
+import { Alert, Button } from "./components/ui";
 import type { useEvidenceList } from "./catalogueQueries";
-import { RecallResults, RecallSelectionSummary } from "./RecallResults";
+import {
+  RecallDetails,
+  RecallResults,
+  RecallSelectionSummary,
+} from "./RecallResults";
 import { label } from "./recallFilters";
 
 type Request = components["schemas"]["RecallRequest"];
@@ -15,19 +20,18 @@ type Groups = NonNullable<ReturnType<typeof useEvidenceList>["data"]>;
 
 function RecallCoverageDetails({ answer }: { answer: Answer }) {
   return (
-    <details className="evidence-result-details">
-      <summary>Coverage and recorded methods</summary>
+    <RecallDetails summary="Coverage and recorded methods">
       {answer.semantic && (
-        <Text size="xs" c="dimmed">
+        <p className="m-0">
           Semantic coverage: {answer.semantic.scoped_entries.toLocaleString()}{" "}
           scoped representations ·{" "}
           {answer.semantic.profile?.model ?? "No index available"}.{" "}
           {answer.semantic.model_request_id
             ? "One query embedding request recorded."
             : "No query model call."}
-        </Text>
+        </p>
       )}
-      <Text size="xs" c="dimmed">
+      <p className="m-0">
         Source coverage: {answer.context_selection.distinct_source_groups}{" "}
         resolved groups
         {answer.context_selection.unknown_lineage_items > 0
@@ -38,16 +42,16 @@ function RecallCoverageDetails({ answer }: { answer: Answer }) {
           ? " Coverage preference enabled."
           : " Rank-only selection."}{" "}
         Source groups do not establish independent corroboration.
-      </Text>
+      </p>
       {answer.graph && (
-        <Text size="sm" data-testid="recall-graph-status">
+        <p className="m-0 text-label text-foreground" data-testid="recall-graph-status">
           Graph: {label(answer.graph.state)} · {answer.graph.anchors.length}{" "}
           anchors · {answer.graph.candidates} connected candidates
           {answer.graph.view.coverage.partial ? " · partial graph coverage" : ""}
           .
-        </Text>
+        </p>
       )}
-    </details>
+    </RecallDetails>
   );
 }
 
@@ -81,40 +85,32 @@ export function RecallAnswer({
   onGraph: (item: Item) => void;
 }) {
   return (
-    <Stack aria-label="Recall results">
-      <details className="evidence-result-details">
-        <summary>Scope and retrieval details</summary>
-        <RecallSelectionSummary
-          answer={answer}
-          request={request}
-          brainName={brain.name}
-          catalogue={catalogue}
-          collectionName={
-            groups?.groups.find((g) => g.id === request.collection_id)?.name
-          }
-        />
-      </details>
-      <Group justify="space-between">
-        <Text size="sm">
-          {answer.context.items.length} result
-          {answer.context.items.length === 1 ? "" : "s"} ·{" "}
-          {Array.from(
-            new Set(answer.context.items.flatMap((item) => item.channels)),
-          )
-            .map((channel) =>
-              channel === "lexical"
-                ? "text"
-                : channel === "semantic"
-                  ? "meaning"
-                  : channel === "graph"
-                    ? "relationships"
-                    : channel,
+    <div role="group" aria-label="Recall results" className="grid gap-4 animate-enter">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="m-0 text-body text-foreground">
+          <span className="mono">{answer.context.items.length}</span> result
+          {answer.context.items.length === 1 ? "" : "s"}
+          <span className="text-muted-foreground">
+            {" · "}
+            {Array.from(
+              new Set(answer.context.items.flatMap((item) => item.channels)),
             )
-            .join(" + ") || "No matches"}
-        </Text>
+              .map((channel) =>
+                channel === "lexical"
+                  ? "text"
+                  : channel === "semantic"
+                    ? "meaning"
+                    : channel === "graph"
+                      ? "relationships"
+                      : channel,
+              )
+              .join(" + ") || "No matches"}
+          </span>
+        </p>
         <Button
-          variant="subtle"
-          size="xs"
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
           onClick={() => {
             setCopyError(false);
             void Promise.resolve()
@@ -128,21 +124,40 @@ export function RecallAnswer({
               });
           }}
         >
+          {copied ? (
+            <Check aria-hidden="true" className="text-brand-text" />
+          ) : (
+            <Copy aria-hidden="true" />
+          )}
           {copied ? "Context copied" : "Copy attributed context"}
         </Button>
-      </Group>
+      </div>
       {copyError && (
-        <Alert color="red">
+        <Alert variant="destructive">
           Context could not be copied. Check clipboard access and try again.
         </Alert>
       )}
+      <div className="grid gap-2">
+        <RecallDetails summary="Scope and retrieval details">
+          <RecallSelectionSummary
+            answer={answer}
+            request={request}
+            brainName={brain.name}
+            catalogue={catalogue}
+            collectionName={
+              groups?.groups.find((g) => g.id === request.collection_id)?.name
+            }
+          />
+        </RecallDetails>
+        <RecallCoverageDetails answer={answer} />
+      </div>
       <EvidenceNotes
         notes={answer.coverage.reasons}
         partial={answer.coverage.partial}
       />
-      <RecallCoverageDetails answer={answer} />
       {!answer.context.items.length && (
         <Alert
+          role="status"
           title={
             answer.status === "no_match"
               ? "No matching evidence"
@@ -163,6 +178,6 @@ export function RecallAnswer({
         onEvidence={onEvidence}
         onGraph={onGraph}
       />
-    </Stack>
+    </div>
   );
 }

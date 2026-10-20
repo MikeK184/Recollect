@@ -3,16 +3,15 @@ import {
   Alert,
   Button,
   Checkbox,
-  Group,
+  Input,
   JsonInput,
-  Select,
-  Stack,
-  PasswordInput,
+  PasswordField,
   SegmentedControl,
-  Text,
-  TextInput,
-} from "@mantine/core";
+  Select,
+  TextField,
+} from "./components/ui";
 import { CodeBlock } from "./components/CodeBlock";
+import { Disclosure, SectionLabel } from "./features/connections/ui";
 import {
   placementText,
   type ConnectionState,
@@ -27,7 +26,7 @@ function InlineRunnerFields({ form }: { form: ConnectionState }) {
   return (
     <>
       {input.placement === "local" && (
-        <TextInput
+        <TextField
           label="Runner reference"
           required
           maxLength={200}
@@ -49,7 +48,7 @@ function InlineRunnerFields({ form }: { form: ConnectionState }) {
         />
       )}
       {privateRunners.error && input.placement === "private" && (
-        <Alert color="red">{privateRunners.error.message}</Alert>
+        <Alert variant="destructive">{privateRunners.error.message}</Alert>
       )}
     </>
   );
@@ -60,7 +59,7 @@ function InlineTargetFields({ form, props }: SectionProps) {
   return (
     <>
       {!props.nameMount && (
-        <TextInput
+        <TextField
           label="Connection name"
           required
           maxLength={120}
@@ -68,7 +67,7 @@ function InlineTargetFields({ form, props }: SectionProps) {
           onChange={(e) => patch({ name: e.currentTarget.value })}
         />
       )}
-      <TextInput
+      <TextField
         label={
           definition.data?.summary.transport === "stdio"
             ? "Target label"
@@ -76,6 +75,7 @@ function InlineTargetFields({ form, props }: SectionProps) {
         }
         required
         maxLength={2048}
+        inputClassName="mono text-label"
         value={input.target}
         onChange={(e) => patch({ target: e.currentTarget.value })}
       />
@@ -119,6 +119,8 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
         input.placement === "central" &&
         !!definition.data?.credential_aliases.length && (
           <SegmentedControl
+            label="Authentication"
+            fullWidth
             value={authMode}
             onChange={(value) => {
               setAuthMode(value);
@@ -133,7 +135,7 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
       {authMode === "secret" && (
         <>
           {!secrets.length && (
-            <TextInput
+            <TextField
               label={
                 definition.data?.summary.transport === "stdio"
                   ? "Environment variable"
@@ -144,6 +146,7 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
                   ? "MCP_TOKEN"
                   : "Authorization"
               }
+              inputClassName="mono text-label"
               onChange={(e) =>
                 setSecrets([
                   {
@@ -164,13 +167,14 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
             />
           )}
           {secrets.map((secret, index) => (
-            <Group key={index} grow align="start">
-              <TextInput
+            <div key={index} className="grid grid-cols-2 items-start gap-2">
+              <TextField
                 label={
                   secret.kind === "header"
                     ? "Header name"
                     : "Environment variable"
                 }
+                inputClassName="mono text-label"
                 value={secret.destination}
                 onChange={(e) => {
                   const destination = e.currentTarget.value;
@@ -181,7 +185,7 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
                   );
                 }}
               />
-              <PasswordInput
+              <PasswordField
                 label="Secret value"
                 value={secret.value}
                 onChange={(e) => {
@@ -191,11 +195,11 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
                   );
                 }}
               />
-            </Group>
+            </div>
           ))}
-          <Text size="xs" c="dimmed">
+          <p className="m-0 text-caption text-muted-foreground">
             Saved separately in the installation-local credential file.
-          </Text>
+          </p>
         </>
       )}
     </>
@@ -205,72 +209,68 @@ function InlineSecretFields({ form }: { form: ConnectionState }) {
 function InlineMoreConfiguration({ form, props }: SectionProps) {
   const { input, patch, definition, settings, setSettings, save } = form;
   return (
-    <details className="inspector-more-configuration">
-      <summary>More configuration</summary>
-      <Stack mt="sm" gap="sm">
-        <TextInput
-          label="Description"
-          maxLength={2000}
-          value={input.description}
-          onChange={(e) => patch({ description: e.currentTarget.value })}
-        />
-        <Select
-          label="Approved connector"
-          required
-          value={input.definition_key || null}
-          data={props.catalogue.definitions.map((d) => ({
-            value: d.key,
-            label: d.name,
-            disabled: !d.enabled,
-          }))}
-          onChange={(value) =>
-            patch({
-              definition_key: value ?? "",
-              credential_alias: null,
-            })
-          }
-        />
-        <Select
-          label="Credential alias"
-          clearable
-          placeholder="None selected"
-          value={input.credential_alias}
-          data={definition.data?.credential_aliases ?? []}
-          onChange={(value) => patch({ credential_alias: value })}
-        />
-        <InlineSecretFields form={form} />
-        <JsonInput
-          label="Non-secret settings"
-          value={settings}
-          onChange={(value) => {
-            setSettings(value);
-            save.reset();
-          }}
-          validationError="Enter valid JSON"
-          formatOnBlur
-          autosize
-          minRows={3}
-        />
-        {definition.data && (
-          <details>
-            <summary>Approved settings schema</summary>
-            <CodeBlock
-              language="json"
-              code={JSON.stringify(
-                definition.data.configuration_schema,
-                null,
-                2,
-              )}
-            />
-          </details>
-        )}
-        <Checkbox
-          label="Connection enabled"
-          checked={input.enabled}
-          onChange={(e) => patch({ enabled: e.currentTarget.checked })}
-        />
-      </Stack>
-    </details>
+    <Disclosure summary="More configuration" bodyClassName="gap-3">
+      <TextField
+        label="Description"
+        maxLength={2000}
+        value={input.description}
+        onChange={(e) => patch({ description: e.currentTarget.value })}
+      />
+      <Select
+        label="Approved connector"
+        required
+        value={input.definition_key || null}
+        data={props.catalogue.definitions.map((d) => ({
+          value: d.key,
+          label: d.name,
+          disabled: !d.enabled,
+        }))}
+        onChange={(value) =>
+          patch({
+            definition_key: value ?? "",
+            credential_alias: null,
+          })
+        }
+      />
+      <Select
+        label="Credential alias"
+        clearable
+        placeholder="None selected"
+        value={input.credential_alias}
+        data={definition.data?.credential_aliases ?? []}
+        onChange={(value) => patch({ credential_alias: value })}
+      />
+      <InlineSecretFields form={form} />
+      <JsonInput
+        label="Non-secret settings"
+        value={settings}
+        onChange={(value) => {
+          setSettings(value);
+          save.reset();
+        }}
+        validationError="Enter valid JSON"
+        formatOnBlur
+        autosize
+        minRows={3}
+      />
+      {definition.data && (
+        <Disclosure summary="Approved settings schema">
+          <CodeBlock
+            language="json"
+            code={JSON.stringify(
+              definition.data.configuration_schema,
+              null,
+              2,
+            )}
+          />
+        </Disclosure>
+      )}
+      <Checkbox
+        label="Connection enabled"
+        checked={input.enabled}
+        onChange={(e) => patch({ enabled: e.currentTarget.checked })}
+      />
+    </Disclosure>
   );
 }
 
@@ -285,20 +285,25 @@ function InlineStatusAlerts({
   return (
     <>
       {definition.error && (
-        <Alert color="red">{definition.error.message}</Alert>
+        <Alert variant="destructive">{definition.error.message}</Alert>
       )}
-      {stepError && <Alert color="red">{stepError}</Alert>}
+      {stepError && <Alert variant="destructive">{stepError}</Alert>}
       {staleDraft && !created && (
-        <Alert color="yellow" title="Connection changed">
+        <Alert
+          variant="warning"
+          title="Connection changed"
+          actions={
+            <Button size="sm" variant="secondary" onClick={reload}>
+              Reload settings
+            </Button>
+          }
+        >
           Your draft is retained. Reload replaces it with current settings.
-          <Button variant="subtle" size="xs" onClick={reload}>
-            Reload settings
-          </Button>
         </Alert>
       )}
       {save.error && (
         <Alert
-          color="red"
+          variant="destructive"
           title={
             created
               ? "Connection saved · credentials not saved"
@@ -315,8 +320,12 @@ function InlineStatusAlerts({
 function InlineFooter({ form, props }: SectionProps) {
   const { save, staleDraft, created, validateStep } = form;
   return (
-    <Group justify="end" className="connection-setup-footer">
-      <Button variant="default" disabled={save.isPending} onClick={props.close}>
+    <div className="flex justify-end gap-2 border-t border-border pt-3">
+      <Button
+        variant="secondary"
+        disabled={save.isPending}
+        onClick={props.close}
+      >
         Cancel
       </Button>
       <Button
@@ -330,7 +339,7 @@ function InlineFooter({ form, props }: SectionProps) {
       >
         {created ? "Retry credentials" : "Save connection"}
       </Button>
-    </Group>
+    </div>
   );
 }
 
@@ -342,7 +351,7 @@ export function InlineConnectionForm({
   const { input, patch, save, setStepError, validateStep } = form;
   return (
     <form
-      className="connection-inline-editor"
+      className="animate-enter"
       onSubmit={(e) => {
         e.preventDefault();
         const invalid = [0, 1, 2, 3].map(validateStep).find(Boolean);
@@ -353,13 +362,13 @@ export function InlineConnectionForm({
         save.mutate();
       }}
     >
-      <fieldset disabled={save.isPending} className="mcp-inline-fields">
+      <fieldset disabled={save.isPending} className="m-0 min-w-0 border-0 p-0">
         {props.nameMount &&
           createPortal(
-            <TextInput
+            <Input
               aria-label="Connection name"
               required
-              className="mcp-inline-title"
+              className="font-medium"
               maxLength={120}
               disabled={save.isPending}
               value={input.name}
@@ -367,15 +376,13 @@ export function InlineConnectionForm({
             />,
             props.nameMount,
           )}
-        <Stack gap="sm">
-          <h3 className="management-title inspector-section-title">
-            Configuration
-          </h3>
+        <div className="grid gap-3">
+          <SectionLabel>Configuration</SectionLabel>
           <InlineTargetFields form={form} props={props} />
           <InlineMoreConfiguration form={form} props={props} />
           <InlineStatusAlerts form={form} reload={reload} />
           <InlineFooter form={form} props={props} />
-        </Stack>
+        </div>
       </fieldset>
     </form>
   );

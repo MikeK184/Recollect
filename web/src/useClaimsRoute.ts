@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useDebouncedValue } from "@mantine/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
+import { useDebouncedValue } from "./lib/hooks";
 import { useBrainSearch } from "./app/useBrainSearch";
 import { useStableRows } from "./components/useStableRows";
 import { useWorkspaceCatalogue } from "./catalogueQueries";
@@ -14,6 +14,8 @@ export type ClaimsPanelProps = {
   onKindChange?: (value: string | null) => void;
   selectedId?: string | null;
   onSelectedIdChange?: (value: string | null) => void;
+  /** Opens the secondary handover tools from the list footer. */
+  onOpenHandovers?: () => void;
 };
 
 // The memory list's route-backed filters, search, paging, catalogue and claims

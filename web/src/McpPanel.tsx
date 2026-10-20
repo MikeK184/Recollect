@@ -1,11 +1,8 @@
 import type { ServerDraft } from "./features/connections/mcpConfig";
 import { McpConnectorSetup } from "./McpConnectorSetup";
 import { useEffect, useState } from "react";
-import { Alert, Button, Stack } from "@mantine/core";
 import { SkeletonRows } from "./components/Skeleton";
-import "./features/feature-views.css";
-import "./features/guided-controls.css";
-import "./features/connections/connections-inspection.css";
+import { Alert, Button } from "./components/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "./app/context";
 import { type Brain } from "./api";
@@ -50,6 +47,8 @@ export function McpPanel({
   initialProfile,
   onManageRunners,
   onInspectorChange,
+  actionsMount,
+  region = true,
 }: {
   brain: Brain;
   actor: string;
@@ -60,6 +59,13 @@ export function McpPanel({
   initialProfile?: string;
   onManageRunners?: () => void;
   onInspectorChange?: (open: boolean) => void;
+  /**
+   * The page header's action slot. `undefined` keeps the primary action in
+   * the toolbar; `null` means the slot is still mounting.
+   */
+  actionsMount?: HTMLElement | null;
+  /** False when the page already provides the named region around this. */
+  region?: boolean;
 }) {
   const cache = useQueryClient();
   const account = useWorkspace();
@@ -74,6 +80,9 @@ export function McpPanel({
   } = useInspectorSelection(brain.id, initialConnection);
   const [connectionSearch, setConnectionSearch] = useState("");
   const [importedDraft, setImportedDraft] = useState<ServerDraft | undefined>();
+  const [presetDefinition, setPresetDefinition] = useState<
+    string | undefined
+  >();
   const [connection, setConnection] = useState<string | null>(null);
   const [connectionNameMount, setConnectionNameMount] =
     useState<HTMLDivElement | null>(null);
@@ -130,6 +139,7 @@ export function McpPanel({
   const clear = (message: string) => {
     setConnection(null);
     setImportedDraft(undefined);
+    setPresetDefinition(undefined);
     setPower(null);
     setProfile(null);
     setDiscover(null);
@@ -207,192 +217,223 @@ export function McpPanel({
   };
   return (
     <section
-      className={`feature-view mcp-management-view${section === "profiles" ? " mcp-tool-access-view" : ""}`}
-      aria-label="MCP connections and tool groups"
+      className="grid min-w-0 gap-4"
+      aria-label={region ? "MCP connections and tool groups" : undefined}
     >
-      <Stack gap="md">
-        {connectorSetup &&
-          data?.can_configure &&
-          !brain.archived &&
-          !workspace.error && (
-            <McpConnectorSetup
+      {connectorSetup &&
+        data?.can_configure &&
+        !brain.archived &&
+        !workspace.error && (
+          <McpConnectorSetup
+            brain={brain}
+            close={() => setConnectorSetup(false)}
+            approvedConnectors={data.definitions.filter((d) => d.enabled)}
+            reuse={(draft) => {
+              setImportedDraft(draft);
+              setConnectorSetup(false);
+              setConnection("new");
+            }}
+            saved={(connected) => {
+              setConnectorSetup(false);
+              setNotice(
+                connected
+                  ? "MCP server added. Include it in a tool group to make it available to your agents."
+                  : "Connector registered. Add a connection to choose its target and execution location.",
+              );
+              refresh();
+            }}
+          />
+        )}
+      {notice && (
+        <Alert
+          variant="info"
+          role="status"
+          title="Catalogue updated"
+          className="animate-enter"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setNotice(null)}
+            >
+              Dismiss
+            </Button>
+          }
+        >
+          {notice}
+        </Alert>
+      )}
+      {(catalogue.error || workspace.error) && (
+        <Alert
+          variant="destructive"
+          title="Catalogue unavailable"
+          actions={
+            <Button size="sm" variant="secondary" onClick={refresh}>
+              Reload catalogue
+            </Button>
+          }
+        >
+          {(catalogue.error || workspace.error)?.message}
+        </Alert>
+      )}
+      {catalogue.isPending && (
+        <div className="rounded-lg border border-border bg-card px-4 py-2">
+          <SkeletonRows label="Loading catalogue…" rows={4} />
+        </div>
+      )}
+      {data && !workspace.error && (
+        <>
+          {section !== "activity" && (
+            <McpToolbar
+              section={section}
+              canConfigure={data.can_configure}
+              archived={brain.archived}
+              owner={account.user.installation_owner}
+              connection={connection}
+              connectionSearch={connectionSearch}
+              setConnectionSearch={setConnectionSearch}
+              environments={environments}
+              environment={environment}
+              setEnvironment={setEnvironment}
+              setDiscover={setDiscover}
+              setConnectorSetup={setConnectorSetup}
+              setProfile={setProfile}
+              actionsMount={actionsMount}
+            />
+          )}
+          {brain.archived && (
+            <Alert role="status">
+              This Brain is archived. Configuration and tool use are paused.
+            </Alert>
+          )}
+          {section === "connections" && (
+            <ConnectionsSection
               brain={brain}
-              close={() => setConnectorSetup(false)}
-              approvedConnectors={data.definitions.filter((d) => d.enabled)}
-              reuse={(draft) => {
-                setImportedDraft(draft);
-                setConnectorSetup(false);
-                setConnection("new");
+              data={data}
+              inspected={inspected}
+              matchingConnections={matchingConnections}
+              initialConnection={initialConnection}
+              connectionSearch={connectionSearch}
+              environment={environment}
+              setupSaved={setupSaved}
+              setSetupSaved={setSetupSaved}
+              controls={{
+                connection,
+                setConnection,
+                setImportedDraft,
+                setPower,
+                setTesting,
+                setDiagnostics,
+                setInspectedId,
+                setInspectorDismissed,
+                inspectorTab,
+                setInspectorTab,
               }}
-              saved={(connected) => {
-                setConnectorSetup(false);
-                setNotice(
-                  connected
-                    ? "MCP server added. Include it in a tool group to make it available to your agents."
-                    : "Connector registered. Add a connection to choose its target and execution location.",
-                );
-                refresh();
+              runtime={runtime}
+              detailError={detailError}
+              visibleDetail={visibleDetail}
+              visibleDefinition={visibleDefinition}
+              approvedTools={approvedTools}
+              environments={environments}
+              environmentName={environmentName}
+              connectionNameMount={connectionNameMount}
+              setConnectionNameMount={setConnectionNameMount}
+              onSectionChange={onSectionChange}
+              onManageRunners={onManageRunners}
+              onAddConnector={
+                data.can_configure &&
+                !brain.archived &&
+                !connection &&
+                !workspace.error
+                  ? (key) => {
+                      setImportedDraft(undefined);
+                      setPresetDefinition(key);
+                      setConnection("new");
+                    }
+                  : undefined
+              }
+              refresh={refresh}
+              clear={clear}
+            />
+          )}
+          {section === "profiles" && (
+            <ProfilesSection
+              brain={brain}
+              actor={actor}
+              data={data}
+              initialProfile={initialProfile}
+              profile={profile}
+              setProfile={setProfile}
+              environments={environments}
+              environment={environment}
+              refresh={refresh}
+              openTools={(id) => {
+                setDiscoverConnection(null);
+                setDiscover(id);
               }}
             />
           )}
-        {notice && (
-          <Alert
-            title="Catalogue updated"
-            withCloseButton
-            onClose={() => setNotice(null)}
-          >
-            {notice}
-          </Alert>
-        )}
-        {(catalogue.error || workspace.error) && (
-          <Alert color="red" title="Catalogue unavailable">
-            {(catalogue.error || workspace.error)?.message}
-            <Button size="xs" variant="light" onClick={refresh}>
-              Reload catalogue
-            </Button>
-          </Alert>
-        )}
-        {catalogue.isPending && (
-          <SkeletonRows label="Loading catalogue…" rows={4} />
-        )}
-        {data && !workspace.error && (
-          <>
-            {section !== "activity" && (
-              <McpToolbar
-                section={section}
-                canConfigure={data.can_configure}
-                archived={brain.archived}
-                connection={connection}
-                connectionSearch={connectionSearch}
-                setConnectionSearch={setConnectionSearch}
-                environments={environments}
-                environment={environment}
-                setEnvironment={setEnvironment}
-                setDiscover={setDiscover}
-                setConnectorSetup={setConnectorSetup}
-                setProfile={setProfile}
-              />
-            )}
-            {brain.archived && (
-              <Alert color="gray">
-                This Brain is archived. Configuration and tool use are paused.
-              </Alert>
-            )}
-            {section === "connections" && (
-              <ConnectionsSection
-                brain={brain}
-                data={data}
-                inspected={inspected}
-                matchingConnections={matchingConnections}
-                initialConnection={initialConnection}
-                connectionSearch={connectionSearch}
-                environment={environment}
-                setupSaved={setupSaved}
-                setSetupSaved={setSetupSaved}
-                controls={{
-                  connection,
-                  setConnection,
-                  setImportedDraft,
-                  setPower,
-                  setTesting,
-                  setDiagnostics,
-                  setInspectedId,
-                  setInspectorDismissed,
-                  inspectorTab,
-                  setInspectorTab,
-                }}
-                runtime={runtime}
-                detailError={detailError}
-                visibleDetail={visibleDetail}
-                visibleDefinition={visibleDefinition}
-                approvedTools={approvedTools}
-                environments={environments}
-                environmentName={environmentName}
-                connectionNameMount={connectionNameMount}
-                setConnectionNameMount={setConnectionNameMount}
-                onSectionChange={onSectionChange}
-                onManageRunners={onManageRunners}
-                refresh={refresh}
-                clear={clear}
-              />
-            )}
-            {section === "profiles" && (
-              <ProfilesSection
-                brain={brain}
-                actor={actor}
-                data={data}
-                initialProfile={initialProfile}
-                profile={profile}
-                setProfile={setProfile}
-                environments={environments}
-                environment={environment}
-                refresh={refresh}
-                openTools={(id) => {
-                  setDiscoverConnection(null);
-                  setDiscover(id);
-                }}
-              />
-            )}
-            {section === "runners" && (
-              <McpPrivateRunners
-                brain={brain}
-                canConfigure={data.can_configure}
-              />
-            )}
-            {section === "activity" && (
-              <McpRuntimeView
-                brain={brain}
-                actor={actor}
-                catalogue={data}
-                selected={selectedCall}
-                select={setSelectedCall}
-                session={session}
-                released={released}
-              />
-            )}
-            <DiagnosticsDrawer
-              open={diagnostics && section !== "activity"}
-              selectedCall={selectedCall}
-              setSelectedCall={setSelectedCall}
-              setDiagnostics={setDiagnostics}
+          {section === "runners" && (
+            <McpPrivateRunners
+              brain={brain}
+              canConfigure={data.can_configure}
+            />
+          )}
+          {section === "activity" && (
+            <McpRuntimeView
               brain={brain}
               actor={actor}
               catalogue={data}
+              selected={selectedCall}
+              select={setSelectedCall}
               session={session}
               released={released}
             />
-          </>
-        )}
+          )}
+          <DiagnosticsDrawer
+            open={diagnostics && section !== "activity"}
+            selectedCall={selectedCall}
+            setSelectedCall={setSelectedCall}
+            setDiagnostics={setDiagnostics}
+            brain={brain}
+            actor={actor}
+            catalogue={data}
+            session={session}
+            released={released}
+          />
+        </>
+      )}
 
-        <McpDialogStack
-          brain={brain}
-          data={data}
-          workspaceFailed={!!workspace.error}
-          owner={account.user.installation_owner}
-          environments={environments}
-          testing={testing}
-          setTesting={setTesting}
-          power={power}
-          setPower={setPower}
-          connection={connection}
-          setConnection={setConnection}
-          importedDraft={importedDraft}
-          setImportedDraft={setImportedDraft}
-          discover={discover}
-          setDiscover={setDiscover}
-          discoverConnection={discoverConnection}
-          setDiscoverConnection={setDiscoverConnection}
-          run={run}
-          setRun={setRun}
-          session={session}
-          setSetupSaved={setSetupSaved}
-          setSelectedCall={setSelectedCall}
-          setDiagnostics={setDiagnostics}
-          onManageRunners={onManageRunners}
-          refresh={refresh}
-          clear={clear}
-        />
-      </Stack>
+      <McpDialogStack
+        brain={brain}
+        data={data}
+        workspaceFailed={!!workspace.error}
+        owner={account.user.installation_owner}
+        environments={environments}
+        testing={testing}
+        setTesting={setTesting}
+        power={power}
+        setPower={setPower}
+        connection={connection}
+        setConnection={setConnection}
+        importedDraft={importedDraft}
+        setImportedDraft={setImportedDraft}
+        presetDefinition={presetDefinition}
+        setPresetDefinition={setPresetDefinition}
+        discover={discover}
+        setDiscover={setDiscover}
+        discoverConnection={discoverConnection}
+        setDiscoverConnection={setDiscoverConnection}
+        run={run}
+        setRun={setRun}
+        session={session}
+        setSetupSaved={setSetupSaved}
+        setSelectedCall={setSelectedCall}
+        setDiagnostics={setDiagnostics}
+        onManageRunners={onManageRunners}
+        refresh={refresh}
+        clear={clear}
+      />
     </section>
   );
 }

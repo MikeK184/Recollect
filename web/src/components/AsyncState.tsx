@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { Alert, Button, Text, Title } from "@mantine/core";
 import { CircleAlert, Inbox, type LucideIcon } from "lucide-react";
+import { Alert } from "./ui/alert";
+import { Button } from "./ui/button";
+import { Tile } from "./ui/card";
 import { SkeletonRows } from "./Skeleton";
 
 export function EmptyState({
@@ -8,25 +10,30 @@ export function EmptyState({
   title,
   description,
   action,
+  className,
 }: {
   icon?: LucideIcon;
   title: string;
-  description: string;
+  description: ReactNode;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="empty-state rc-enter">
-      <span className="empty-icon">
-        <Icon size={28} />
-      </span>
-      <Title order={2}>{title}</Title>
-      <Text c="dimmed" maw={440} ta="center">
+    <div
+      className={`grid animate-enter justify-items-center gap-2 px-6 py-12 text-center ${className ?? ""}`}
+    >
+      <Tile size="lg" className="mb-2">
+        <Icon aria-hidden="true" />
+      </Tile>
+      <h2 className="m-0 text-title font-semibold text-foreground">{title}</h2>
+      <p className="m-0 max-w-[360px] text-body text-muted-foreground">
         {description}
-      </Text>
-      {action}
+      </p>
+      {action && <div className="mt-3 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }
+
 export function ErrorState({
   error,
   retry,
@@ -36,27 +43,29 @@ export function ErrorState({
 }) {
   if (!error) return null;
   return (
-    <div className="rc-enter">
-      <Alert
-        color="red"
-        title="Something needs attention"
-        icon={<CircleAlert size={18} />}
-      >
-        <Text size="sm">{error.message}</Text>
-        {retry && (
-          <Button variant="subtle" color="red" size="xs" mt="sm" onClick={retry}>
+    <Alert
+      variant="destructive"
+      title="Something needs attention"
+      icon={<CircleAlert aria-hidden="true" />}
+      className="animate-enter"
+      actions={
+        retry && (
+          <Button variant="destructive-ghost" size="sm" onClick={retry}>
             Try again
           </Button>
-        )}
-      </Alert>
-    </div>
+        )
+      }
+    >
+      {error.message}
+    </Alert>
   );
 }
+
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="loading-state rc-enter" role="status">
+    <div className="grid animate-enter gap-3" role="status">
       <SkeletonRows label={label} />
-      <Text c="dimmed">{label}</Text>
+      <p className="m-0 text-label text-muted-foreground">{label}</p>
     </div>
   );
 }

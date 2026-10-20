@@ -6,7 +6,8 @@ Status: accepted
 
 Implement the accepted Rust/React/PostgreSQL/Neo4j product in this repository.
 Use a Cargo workspace with protocol, server and agent crates. Axum serves a
-same-origin Vite/React/Mantine application; SQLx owns relational persistence and
+same-origin Vite/React/Mantine application (Tailwind CSS and shadcn/ui replace
+Mantine under [ADR 0025](0025-two-theme-desktop-redesign.md)); SQLx owns relational persistence and
 Reqwest talks to Neo4j's Query API. PostgreSQL is authoritative; graph data is a
 rebuildable projection. Repository-owned Compose services persist in a project-labelled PostgreSQL volume
 and ignored `.data/` graph/artifact directories.

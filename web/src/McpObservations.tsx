@@ -1,18 +1,10 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Loader,
-  Stack,
-  Text,
-} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { useFocusReturn } from "@mantine/hooks";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { CapturedSource } from "./CapturePanel";
+import { Alert, Badge, Button, Spinner } from "./components/ui";
+import { useFocusReturn } from "./lib/hooks";
 import { useContentDeadline } from "./useContentDeadline";
 import { usePollInterval } from "./usePollInterval";
 type Observation = components["schemas"]["McpObservation"];
@@ -26,33 +18,46 @@ function ObservationRow({
   inspect: () => void;
 }) {
   const expired = useContentDeadline(o.expires_at);
+  const state = expired && o.state !== "removed" ? "expired" : o.state;
   return (
-    <Stack gap={3}>
-      <Group>
-        <Text size="sm">
+    <div className="grid gap-1 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-label text-foreground">
           {label(o.stage)} · {label(o.outcome)}
-        </Text>
-        <Badge>{expired && o.state !== "removed" ? "expired" : o.state}</Badge>
-      </Group>
-      <Text size="xs" c="dimmed">
-        Observed {new Date(o.captured_at).toLocaleString()} · {o.attempts}{" "}
-        publication attempts
-      </Text>
-      {!expired && o.error_code && <Text size="sm">{label(o.error_code)}</Text>}
+        </span>
+        <Badge variant={state === "published" ? "brand" : "default"}>
+          {state}
+        </Badge>
+      </div>
+      <p className="m-0 text-caption text-muted-foreground">
+        Observed{" "}
+        <span className="mono">{new Date(o.captured_at).toLocaleString()}</span>{" "}
+        · <span className="mono">{o.attempts}</span> publication attempts
+      </p>
+      {!expired && o.error_code && (
+        <p className="m-0 text-label text-foreground-secondary">
+          {label(o.error_code)}
+        </p>
+      )}
       {!expired && !!o.coverage.length && (
-        <Text size="xs" c="dimmed">
+        <p className="m-0 text-caption text-muted-foreground">
           Coverage: {o.coverage.map(label).join(" · ")}
-        </Text>
+        </p>
       )}
       {!expired &&
         o.state === "published" &&
         o.source_id &&
         o.source_version_id && (
-          <Button variant="light" size="xs" onClick={inspect}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="justify-self-start"
+            onClick={inspect}
+          >
             Inspect captured evidence
           </Button>
         )}
-    </Stack>
+    </div>
   );
 }
 export function McpObservations({
@@ -98,18 +103,26 @@ export function McpObservations({
       "This call's captured evidence was erased. Late results cannot restore it.",
   };
   return (
-    <Stack gap="xs" aria-label="Managed observations">
-      <Text fw={600}>Captured observations</Text>
-      <Text size="sm" c="dimmed">
+    <div className="grid gap-2.5" aria-label="Managed observations">
+      <h3 className="section-label m-0">Captured observations</h3>
+      <p className="m-0 text-label text-muted-foreground">
         {messages[disposition] ?? label(disposition)}
-      </Text>
-      {query.isPending && <Loader size="sm" />}
+      </p>
+      {query.isPending && <Spinner label="Loading observations" />}
       {query.error && (
-        <Alert color="red">
+        <Alert
+          variant="destructive"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void query.refetch()}
+            >
+              Refresh observations
+            </Button>
+          }
+        >
           {query.error.message}
-          <Button variant="subtle" onClick={() => void query.refetch()}>
-            Refresh observations
-          </Button>
         </Alert>
       )}
       {!query.error &&
@@ -121,29 +134,33 @@ export function McpObservations({
           />
         ))}
       {!query.error && query.data?.total === 0 && (
-        <Text size="sm">No published observation yet.</Text>
+        <p className="m-0 text-label text-foreground-secondary">
+          No published observation yet.
+        </p>
       )}
       {query.data && query.data.total > 20 && (
-        <Group>
+        <div className="flex items-center gap-2">
           <Button
-            variant="subtle"
+            variant="ghost"
+            size="sm"
             disabled={!offset}
             onClick={() => setOffset(offset - 20)}
           >
             Previous observations
           </Button>
-          <Text size="xs">
+          <span className="mono text-caption text-muted-foreground">
             {offset + 1}–{Math.min(offset + 20, query.data.total)} of{" "}
             {query.data.total}
-          </Text>
+          </span>
           <Button
-            variant="subtle"
+            variant="ghost"
+            size="sm"
             disabled={offset + 20 >= query.data.total}
             onClick={() => setOffset(offset + 20)}
           >
             Next observations
           </Button>
-        </Group>
+        </div>
       )}
       {viewing && !query.error && (
         <CapturedSource
@@ -153,6 +170,6 @@ export function McpObservations({
           close={() => setViewing(null)}
         />
       )}
-    </Stack>
+    </div>
   );
 }

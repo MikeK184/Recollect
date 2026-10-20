@@ -1,12 +1,14 @@
-import type { CSSProperties } from "react";
+import { cn } from "../lib/utils";
 
-// Pulsing status dot for processing/live indicators. Color carries tone only;
-// any state meaning must stay in an adjacent icon or label (non-color rule).
+// Status dot for live and processing indicators. Colour carries tone only; any
+// state meaning stays in an adjacent icon or label (non-colour rule). `live`
+// pings once per ambient cycle and only while work is actually happening.
 const tones = {
-  accent: "var(--rc-accent)",
-  idle: "var(--rc-field)",
-  danger: "var(--rc-danger)",
-  muted: "var(--rc-muted)",
+  accent: "text-brand",
+  idle: "text-faint-foreground",
+  warning: "text-warning",
+  danger: "text-destructive",
+  muted: "text-muted-foreground",
 } as const;
 
 export function StatusDot({
@@ -14,18 +16,24 @@ export function StatusDot({
   live = false,
   size = 8,
   label,
-  style,
+  className,
 }: {
   tone?: keyof typeof tones;
   live?: boolean;
   size?: number;
   label?: string;
-  style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <span
-      className={`rc-pulse-dot${live ? " live" : ""}`}
-      style={{ width: size, height: size, color: tones[tone], ...style }}
+      className={cn(
+        "relative inline-block shrink-0 rounded-full bg-current",
+        tones[tone],
+        live &&
+          "after:absolute after:inset-0 after:animate-ping after:rounded-[inherit] after:bg-current after:content-['']",
+        className,
+      )}
+      style={{ width: size, height: size }}
       role={label ? "status" : undefined}
       aria-hidden={label ? undefined : true}
     >

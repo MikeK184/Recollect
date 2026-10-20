@@ -9,7 +9,18 @@ export function HostIcon({
 }) {
   if (host === "codex" || host === "openai")
     return (
-      <span className="host-brand-mark" style={{width:size,height:size}} aria-hidden="true"><img src="/assets/providers/openai-blossom.svg" width={size*1.5} height={size*1.5} alt=""/></span>
+      <span
+        className="grid shrink-0 place-items-center overflow-hidden dark:invert"
+        style={{ width: size, height: size }}
+        aria-hidden="true"
+      >
+        <img
+          src="/assets/providers/openai-blossom.svg"
+          width={size * 1.5}
+          height={size * 1.5}
+          alt=""
+        />
+      </span>
     );
   const Icon =
     host === "claude" || host === "claude_code"
@@ -17,5 +28,5 @@ export function HostIcon({
       : host === "opencode"
         ? Terminal
         : Bot;
-  return <Icon size={size} strokeWidth={1.6} aria-hidden="true" />;
+  return <Icon size={size} strokeWidth={1.75} aria-hidden="true" />;
 }

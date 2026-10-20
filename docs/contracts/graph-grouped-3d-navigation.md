@@ -41,7 +41,9 @@ Move expensive static layout to a worker before increasing display bounds.
 Keep keyboard-operable finder/lists, selected-node/edge inspector and textual
 paths. Scope/Brain changes, failed refresh, expiry, correction, role loss and
 generation invalidation clear graph, selection and groups together. A late result
-cannot replace the newer view. The cream/ink/sage palette remains authoritative.
+cannot replace the newer view. Colours come from the current Light and Ink design
+tokens ([ADR 0025](../adr/0025-two-theme-desktop-redesign.md)), which replaced the
+cream/ink/sage palette on 2026-10-19; both renderers must read correctly in both themes.
 
 ## Acceptance
 

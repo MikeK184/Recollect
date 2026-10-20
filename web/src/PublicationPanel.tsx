@@ -1,45 +1,72 @@
 import { Link } from "@tanstack/react-router";
-import { iconSize } from "./design/tokens";
-import { useState } from "react";
-import "./features/feature-views.css";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { EraseAction } from "./RetentionPanel";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronRight,
+  FileCode2,
+  FolderGit2,
+  GitCommitHorizontal,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
+import { client, result, type Brain } from "./api";
+import type { components } from "./api-schema";
+import { useIdempotency } from "./useIdempotency";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue } from "./catalogueQueries";
+import { CodeBlock } from "./components/CodeBlock";
+import { SectionHeader } from "./components/PageHeader";
+import { PropList } from "./components/Inspector";
+import { Skeleton } from "./components/Skeleton";
+import { StatusDot } from "./components/StatusDot";
+import { staggerStyle } from "./components/Motion";
+import { Toolbar, useOpener } from "./features/repositories/Toolbar";
 import {
   Alert,
   Badge,
   Button,
   Card,
   Code,
-  Divider,
-  Group,
-  Loader,
   Modal,
   Select,
-  Stack,
+  Separator,
+  StatusBadge,
   Tabs,
-  Text,
-  Textarea,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileCode2, GitCommitHorizontal, Plus } from "lucide-react";
-import { client, result, type Brain } from "./api";
-import type { components } from "./api-schema";
-import { useIdempotency } from "./useIdempotency";
-import { usePollInterval } from "./usePollInterval";
-import { useWorkspaceCatalogue } from "./catalogueQueries";
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TextareaField,
+  TextField,
+  Tile,
+} from "./components/ui";
+import { cn } from "./lib/utils";
 type Repository = components["schemas"]["Repository"];
 type Manifest = components["schemas"]["ManifestRevision"];
 type Entry = components["schemas"]["ManifestEntry"];
 type Catalogue = components["schemas"]["WorkspaceCatalogue"];
 function Failure({ error }: { error: Error | null }) {
   return error ? (
-    <Alert color="red" title="Request failed">
+    <Alert variant="destructive" title="Request failed">
       {error.message}
     </Alert>
   ) : null;
 }
 const time = (value: string) => new Date(value).toLocaleString();
+const words = (value: string) => value.replaceAll("_", " ");
+const sentence = (value: string) => {
+  const text = words(value);
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+/** Revision meanings use the same names as the manifest form's choices. */
+const meanings: Record<string, string> = {
+  committed: "Committed code",
+  desired: "Desired configuration",
+  observed_deployed: "Recorded deployment observation",
+};
+const meaning = (kind: string) => meanings[kind] ?? words(kind);
 function Pages({
   offset,
   total,
@@ -53,30 +80,120 @@ function Pages({
 }) {
   if (total <= size) return null;
   return (
-    <Group justify="space-between">
+    <div className="flex items-center gap-2">
       <Button
-        variant="subtle"
+        variant="secondary"
+        size="sm"
         disabled={!offset}
         onClick={() => onChange(Math.max(0, offset - size))}
       >
         Previous page
       </Button>
-      <Text size="xs">
+      <span className="mono mx-auto text-caption text-muted-foreground">
         {offset + 1}–{Math.min(offset + size, total)} of {total}
-      </Text>
+      </span>
       <Button
-        variant="subtle"
+        variant="secondary"
+        size="sm"
         disabled={offset + size >= total}
         onClick={() => onChange(offset + size)}
       >
         Next page
       </Button>
-    </Group>
+    </div>
+  );
+}
+/** Recorded processing state, its raw word kept beside the icon. */
+function Processing({ value }: { value: string }) {
+  if (value === "running")
+    return (
+      <Badge variant="brand">
+        <StatusDot tone="accent" live size={6} />
+        {value}
+      </Badge>
+    );
+  return (
+    <StatusBadge
+      state={
+        value === "ready"
+          ? "positive"
+          : value === "failed"
+            ? "negative"
+            : "neutral"
+      }
+    >
+      {value}
+    </StatusBadge>
+  );
+}
+/** Ids present on the first non-empty render: only these stagger in, so a
+ * refetch or a later page never replays the entrance. */
+function useFirstLoad(ids: readonly string[] | undefined) {
+  const first = useRef<Set<string> | null>(null);
+  if (!first.current && ids?.length) first.current = new Set(ids);
+  return (id: string, index: number) =>
+    first.current?.has(id)
+      ? { className: "animate-enter", style: staggerStyle(index) }
+      : {};
+}
+function Loading({ label }: { label: string }) {
+  return (
+    <div className="grid gap-2" role="status">
+      <Skeleton height={14} width="40%" />
+      <Skeleton height={56} className="rounded-md" />
+      <span className="sr-only">{label}</span>
+    </div>
   );
 }
 function JsonView({ value }: { value: unknown }) {
-  return <pre className="source-content">{JSON.stringify(value, null, 2)}</pre>;
+  return <CodeBlock code={JSON.stringify(value, null, 2)} language="json" />;
 }
+// Highlighting follows the file's extension only; JSON stays unformatted so
+// the committed bytes are shown exactly.
+const languages: Record<string, string> = {
+  rs: "rust",
+  ts: "typescript",
+  tsx: "typescript",
+  mts: "typescript",
+  js: "javascript",
+  jsx: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  py: "python",
+  go: "go",
+  java: "java",
+  kt: "kotlin",
+  rb: "ruby",
+  php: "php",
+  c: "c",
+  h: "c",
+  cc: "cpp",
+  cpp: "cpp",
+  hpp: "cpp",
+  cs: "csharp",
+  swift: "swift",
+  sh: "bash",
+  bash: "bash",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  ini: "ini",
+  md: "markdown",
+  css: "css",
+  scss: "scss",
+  sql: "sql",
+  xml: "xml",
+  html: "xml",
+  graphql: "graphql",
+  lua: "lua",
+};
+const languageOf = (path: string) => {
+  const name = path.split("/").at(-1) ?? "";
+  if (name === "Makefile") return "makefile";
+  if (name === "Dockerfile") return "dockerfile";
+  const extension = name.includes(".") ? name.split(".").at(-1) : undefined;
+  return extension ? languages[extension.toLowerCase()] : undefined;
+};
 function FactRecord({ value }: { value: unknown }) {
   const fact =
     value && typeof value === "object" && !Array.isArray(value)
@@ -84,44 +201,77 @@ function FactRecord({ value }: { value: unknown }) {
       : null;
   const relations = Array.isArray(fact?.relations) ? fact.relations : [];
   return (
-    <Stack gap="xs">
-      <Group justify="space-between">
-        <Text size="sm" fw={600}>
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <p className="m-0 min-w-0 text-body font-medium text-foreground [overflow-wrap:anywhere]">
           {typeof fact?.name === "string" ? fact.name : "Structured fact"}
-        </Text>
+        </p>
         {typeof fact?.kind === "string" && (
-          <Badge variant="light" color="gray">
-            {fact.kind}
-          </Badge>
+          <Badge variant="outline">{fact.kind}</Badge>
         )}
-      </Group>
+      </div>
       {typeof fact?.file === "string" && (
-        <Text size="xs" c="dimmed">
+        <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
           {fact.file}
           {typeof fact.line === "number" ? `:${fact.line}` : ""}
-        </Text>
+        </p>
       )}
-      {relations.map((relation, index) => {
-        const r =
-          relation && typeof relation === "object"
-            ? (relation as Record<string, unknown>)
-            : {};
-        return (
-          <Text key={index} size="xs">
-            {typeof r.kind === "string" ? r.kind : "Relationship"} →{" "}
-            {typeof r.target === "string"
-              ? r.target
-              : typeof r.target_id === "string"
-                ? r.target_id
-                : "Target not recorded"}
-          </Text>
-        );
-      })}
-      <details className="record-identity">
-        <summary>Raw record</summary>
+      {relations.length > 0 && (
+        <ul className="m-0 grid list-none gap-1 p-0">
+          {relations.map((relation, index) => {
+            const r =
+              relation && typeof relation === "object"
+                ? (relation as Record<string, unknown>)
+                : {};
+            return (
+              <li
+                key={index}
+                className="flex items-center gap-1.5 text-caption text-foreground-secondary"
+              >
+                <span>
+                  {typeof r.kind === "string" ? r.kind : "Relationship"}
+                </span>
+                <ArrowRight
+                  aria-label="to"
+                  className="size-3 shrink-0 text-muted-foreground"
+                />
+                <span className="mono min-w-0 [overflow-wrap:anywhere]">
+                  {typeof r.target === "string"
+                    ? r.target
+                    : typeof r.target_id === "string"
+                      ? r.target_id
+                      : "Target not recorded"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <Disclosure label="Raw record">
         <JsonView value={value} />
-      </details>
-    </Stack>
+      </Disclosure>
+    </div>
+  );
+}
+/** A quiet, keyboard-reachable disclosure for secondary detail. */
+function Disclosure({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group/disclosure">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-label font-medium text-foreground-secondary hover:text-foreground [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          aria-hidden="true"
+          className="size-3.5 transition-transform duration-fast group-open/disclosure:rotate-90"
+        />
+        {label}
+      </summary>
+      <div className="pt-2">{children}</div>
+    </details>
   );
 }
 export function RepositoryDialog({
@@ -152,6 +302,7 @@ export function RepositoryDialog({
       ),
     refetchInterval: pollNormal,
   });
+  const enter = useFirstLoad(snapshots.data?.items.map((s) => s.id));
   if (selected)
     return (
       <SnapshotDialog
@@ -161,61 +312,94 @@ export function RepositoryDialog({
       />
     );
   return (
-    <Modal opened onClose={onClose} size="xl" title="Committed snapshots">
-      <Stack className="publication-panel">
-        <Text fw={600}>{repository.canonical_origin}</Text>
-        <Text size="sm" c="dimmed">
-          Published committed evidence remains available when its contributor is
-          offline. File text is retained only when explicitly selected under the
-          Brain policy.
-        </Text>
+    <Modal
+      opened
+      onClose={onClose}
+      size="xl"
+      title="Committed snapshots"
+      footer={
+        <Button variant="secondary" onClick={() => void snapshots.refetch()}>
+          <RefreshCw aria-hidden="true" />
+          Refresh snapshots
+        </Button>
+      }
+    >
+      <div className="grid gap-4">
+        <div className="flex items-start gap-3">
+          <Tile>
+            <FolderGit2 aria-hidden="true" />
+          </Tile>
+          <div className="grid min-w-0 gap-1">
+            <p className="mono m-0 text-label font-medium text-foreground [overflow-wrap:anywhere]">
+              {repository.canonical_origin}
+            </p>
+            <p className="m-0 text-label text-muted-foreground">
+              Published committed evidence remains available when its
+              contributor is offline. File text is retained only when explicitly
+              selected under the Brain policy.
+            </p>
+          </div>
+        </div>
         <Failure error={snapshots.error} />
-        {snapshots.isPending && <Loader size="sm" />}
+        {snapshots.isPending && <Loading label="Loading snapshots…" />}
         {snapshots.data?.items.length === 0 && (
-          <Alert title="No snapshots published">
+          <Alert title="No snapshots published" role="status">
             Use a connected host with a task scoped to this repository. Publish
             an exact locally available commit from your checkout.
           </Alert>
         )}
         {!snapshots.error &&
-          snapshots.data?.items.map((s) => (
-            <Card withBorder key={s.id}>
-              <Stack gap="xs">
-                <Group justify="space-between">
+          snapshots.data?.items.map((s, index) => {
+            const entrance = enter(s.id, index);
+            return (
+              <Card
+                key={s.id}
+                className={cn("grid gap-3", entrance.className)}
+                style={entrance.style}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <GitCommitHorizontal
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-muted-foreground"
+                    />
+                    <Code className="truncate">{s.revision}</Code>
+                  </span>
+                  <Processing value={s.processing} />
+                </div>
+                <p className="mono m-0 text-caption text-foreground-secondary">
+                  {s.fact_count} facts · {s.file_count} files ·{" "}
+                  {s.retained_file_count} retained
+                </p>
+                <p className="mono m-0 text-caption text-muted-foreground">
+                  {time(s.created_at)} · {s.adapter} {s.adapter_build}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
                   <Button
-                    variant="subtle"
-                    px={0}
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setSelected(s.id)}
                   >
                     Inspect snapshot
                   </Button>
-                  <Badge color={s.processing === "ready" ? "teal" : "orange"}>
-                    {s.processing}
-                  </Badge>
-                </Group>
-                <Code className="revision-code">{s.revision}</Code>
-                <Link
-                  to="/brains/$brainId/memory"
-                  params={{ brainId: brain.id }}
-                  search={{ repository: s.repository_id }}
-                >
-                  Memory in this repository
-                </Link>
-                <Text size="xs" c="dimmed">
+                  <Link
+                    to="/brains/$brainId/memory"
+                    params={{ brainId: brain.id }}
+                    search={{ repository: s.repository_id }}
+                    className="inline-flex items-center gap-1 text-label font-medium text-brand-text underline-offset-[3px] hover:underline"
+                  >
+                    Memory in this repository
+                    <ArrowRight aria-hidden="true" className="size-3.5" />
+                  </Link>
+                </div>
+                <p className="m-0 text-caption text-muted-foreground">
                   Shows current memories whose scope includes this repository.
                   Inspect their exact support before attributing them to this
                   snapshot.
-                </Text>
-                <Text size="sm">
-                  {s.fact_count} facts · {s.file_count} files ·{" "}
-                  {s.retained_file_count} retained
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {time(s.created_at)} · {s.adapter} {s.adapter_build}
-                </Text>
-              </Stack>
-            </Card>
-          ))}
+                </p>
+              </Card>
+            );
+          })}
         {snapshots.data && (
           <Pages
             offset={offset}
@@ -223,10 +407,7 @@ export function RepositoryDialog({
             onChange={setOffset}
           />
         )}
-        <Button variant="default" onClick={() => void snapshots.refetch()}>
-          Refresh snapshots
-        </Button>
-      </Stack>
+      </div>
     </Modal>
   );
 }
@@ -241,7 +422,7 @@ export function SnapshotDialog({
 }) {
   const pollFast = usePollInterval("fast");
   const pollNormal = usePollInterval("normal");
-  const [tab, setTab] = useState<string | null>("files");
+  const [tab, setTab] = useState<string>("files");
   const [fileOffset, setFileOffset] = useState(0);
   const [factOffset, setFactOffset] = useState(0);
   const [contributorOffset, setContributorOffset] = useState(0);
@@ -324,114 +505,164 @@ export function SnapshotDialog({
     },
   });
   const s = details.error ? undefined : details.data?.snapshot;
+  const segments = content.data?.file.path.split("/").filter(Boolean) ?? [];
   return (
     <Modal
       opened
       onClose={onClose}
-      size="min(76rem, 92vw)"
+      size="full"
       title="Committed snapshot"
+      className="h-[min(880px,calc(100vh-64px))]"
     >
-      <Stack className="publication-panel">
+      <div className="grid gap-4">
         <Failure error={details.error} />
-        {details.isPending && <Loader />}
+        {details.isPending && <Loading label="Loading snapshot…" />}
         {s && (
           <>
-            <Group justify="space-between">
-              <Badge color={s.processing === "ready" ? "teal" : "orange"}>
-                {s.processing}
-              </Badge>
-              <Text size="xs">Published {time(s.created_at)}</Text>
-            </Group>
-            <Code className="revision-code">{s.revision}</Code>
-            <EraseAction
-              brain={brain.id}
-              permitted={brain.role === "admin"}
-              target={{ kind: "snapshot", id }}
-              name={"Snapshot " + s.revision}
-            />
-            <Text size="sm">
-              {s.fact_count} structural facts · {s.file_count} files ·{" "}
-              {s.retained_file_count} retained texts
-            </Text>
-            <details className="record-identity">
-              <summary>Extraction details</summary>
-              <Text size="xs" c="dimmed">
-                Snapshot {id} · {s.adapter} {s.adapter_build} · extractor{" "}
-                {s.extractor_version}
-              </Text>
-            </details>
-            {brain.role !== "reader" && !brain.archived && (
-              <Button
-                variant="light"
-                loading={process.isPending}
-                disabled={
-                  s.processing === "queued" || s.processing === "running"
-                }
-                onClick={() => process.mutate()}
-              >
-                Reprocess retained artifacts
-              </Button>
-            )}
+            <div className="grid gap-3 rounded-lg border border-border bg-muted/50 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Processing value={s.processing} />
+                <Code className="min-w-0 truncate">{s.revision}</Code>
+                <span className="mono ml-auto shrink-0 whitespace-nowrap text-caption text-muted-foreground">
+                  Published {time(s.created_at)}
+                </span>
+              </div>
+              <p className="mono m-0 text-caption text-foreground-secondary">
+                {s.fact_count} structural facts · {s.file_count} files ·{" "}
+                {s.retained_file_count} retained texts
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {brain.role !== "reader" && !brain.archived && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={process.isPending}
+                    disabled={
+                      s.processing === "queued" || s.processing === "running"
+                    }
+                    onClick={() => process.mutate()}
+                  >
+                    <RefreshCw aria-hidden="true" />
+                    Reprocess retained artifacts
+                  </Button>
+                )}
+                <EraseAction
+                  brain={brain.id}
+                  permitted={brain.role === "admin"}
+                  target={{ kind: "snapshot", id }}
+                  name={"Snapshot " + s.revision}
+                />
+              </div>
+              <Disclosure label="Extraction details">
+                <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+                  Snapshot {id} · {s.adapter} {s.adapter_build} · extractor{" "}
+                  {s.extractor_version}
+                </p>
+              </Disclosure>
+            </div>
             <Failure error={process.error} />
             <Tabs
               value={tab}
-              onChange={(v) => {
+              onValueChange={(v) => {
                 setTab(v);
                 setSelectedFile(null);
               }}
+              className="gap-4"
             >
-              <Tabs.List>
-                <Tabs.Tab value="files">Files</Tabs.Tab>
-                <Tabs.Tab value="facts">Facts</Tabs.Tab>
-                <Tabs.Tab value="coverage">Coverage</Tabs.Tab>
-                <Tabs.Tab value="contributors">Contributors</Tabs.Tab>
-                <Select
-                  aria-label="Snapshot artifacts"
-                  placeholder="Artifacts"
-                  clearable
-                  value={tab === "insights" || tab === "receipt" ? tab : null}
-                  onChange={(value) => setTab(value ?? "files")}
-                  data={[
-                    { value: "insights", label: "Insights" },
-                    { value: "receipt", label: "Receipt" },
-                  ]}
-                  ml="auto"
-                  w={150}
-                />
-              </Tabs.List>
-              <Tabs.Panel value="files" pt="md">
-                <Stack>
+              <div className="flex items-end gap-3 border-b border-border">
+                <TabsList className="min-w-0 flex-1 border-b-0">
+                  <TabsTrigger value="files">Files</TabsTrigger>
+                  <TabsTrigger value="facts">Facts</TabsTrigger>
+                  <TabsTrigger value="coverage">Coverage</TabsTrigger>
+                  <TabsTrigger value="contributors">Contributors</TabsTrigger>
+                </TabsList>
+                <div className="w-[160px] shrink-0 pb-1.5">
+                  <Select
+                    size="sm"
+                    aria-label="Snapshot artifacts"
+                    placeholder="Artifacts"
+                    clearable
+                    value={tab === "insights" || tab === "receipt" ? tab : null}
+                    onChange={(value) => {
+                      setTab(value ?? "files");
+                      setSelectedFile(null);
+                    }}
+                    data={[
+                      { value: "insights", label: "Insights" },
+                      { value: "receipt", label: "Receipt" },
+                    ]}
+                  />
+                </div>
+              </div>
+              <TabsContent value="files">
+                <div className="grid gap-3">
                   <Failure error={files.error} />
-                  {files.isPending && <Loader size="sm" />}
+                  {files.isPending && <Loading label="Loading files…" />}
                   {selectedFile ? (
                     <>
-                      <Button
-                        variant="subtle"
-                        onClick={() => setSelectedFile(null)}
-                      >
-                        Back to files
-                      </Button>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedFile(null)}
+                        >
+                          <ArrowLeft aria-hidden="true" />
+                          Back to files
+                        </Button>
+                        {segments.length > 0 && (
+                          <nav
+                            aria-label="File path"
+                            className="mono flex min-w-0 flex-wrap items-center gap-1 text-caption text-muted-foreground"
+                          >
+                            {segments.map((segment, index) => (
+                              <span
+                                key={index}
+                                className="flex items-center gap-1"
+                              >
+                                {index > 0 && (
+                                  <ChevronRight
+                                    aria-hidden="true"
+                                    className="size-3"
+                                  />
+                                )}
+                                <span
+                                  aria-current={
+                                    index === segments.length - 1
+                                      ? "page"
+                                      : undefined
+                                  }
+                                  className={cn(
+                                    index === segments.length - 1 &&
+                                      "font-medium text-foreground",
+                                  )}
+                                >
+                                  {segment}
+                                </span>
+                              </span>
+                            ))}
+                          </nav>
+                        )}
+                      </div>
                       <Failure error={content.error} />
-                      {content.isPending && <Loader size="sm" />}
+                      {content.isPending && <Loading label="Opening file…" />}
                       {!content.error && content.data && (
                         <>
-                          <Text fw={600}>{content.data.file.path}</Text>
                           {content.data.content !== null &&
                           content.data.content !== undefined ? (
-                            <pre className="source-content">
-                              {content.data.content}
-                            </pre>
+                            <CodeBlock
+                              code={content.data.content}
+                              language={languageOf(content.data.file.path)}
+                              copyLabel="Copy file text"
+                            />
                           ) : (
                             <Alert
-                              color="yellow"
+                              variant="warning"
+                              role="status"
                               title="File content unavailable"
                             >
-                              {content.data.file.availability.replaceAll(
-                                "_",
-                                " ",
-                              )}
-                              . The committed file reference is preserved;
-                              Recollect does not fetch it from a contributor.
+                              {sentence(content.data.file.availability)}. The
+                              committed file reference is preserved; Recollect
+                              does not fetch it from a contributor.
                             </Alert>
                           )}
                         </>
@@ -440,28 +671,41 @@ export function SnapshotDialog({
                   ) : (
                     <>
                       {!files.error && files.data?.items.length === 0 && (
-                        <Text>No files in this snapshot.</Text>
+                        <p className="m-0 text-body text-muted-foreground">
+                          No files in this snapshot.
+                        </p>
                       )}
-                      {!files.error &&
-                        files.data?.items.map((f) => (
-                          <button
-                            className="source-row"
-                            key={f.id}
-                            onClick={() => setSelectedFile(f.id)}
-                          >
-                            <FileCode2 size={iconSize.navigation} />
-                            <span className="source-row-body">
-                              <Text size="sm" fw={500}>
-                                {f.path}
-                              </Text>
-                              <Text size="xs" c="dimmed">
-                                {f.status.replaceAll("_", " ")} ·{" "}
-                                {f.extraction.replaceAll("_", " ")} ·{" "}
-                                {f.availability.replaceAll("_", " ")}
-                              </Text>
-                            </span>
-                          </button>
-                        ))}
+                      {!files.error && !!files.data?.items.length && (
+                        <ul className="m-0 grid list-none divide-y divide-border overflow-hidden rounded-lg border border-border bg-card p-0">
+                          {files.data.items.map((f) => (
+                            <li key={f.id}>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                                onClick={() => setSelectedFile(f.id)}
+                              >
+                                <FileCode2
+                                  aria-hidden="true"
+                                  className="size-4 shrink-0 text-muted-foreground"
+                                />
+                                <span className="grid min-w-0 flex-1 gap-0.5">
+                                  <span className="mono truncate text-label font-medium text-foreground">
+                                    {f.path}
+                                  </span>
+                                  <span className="text-caption text-muted-foreground">
+                                    {words(f.status)} · {words(f.extraction)} ·{" "}
+                                    {words(f.availability)}
+                                  </span>
+                                </span>
+                                <ChevronRight
+                                  aria-hidden="true"
+                                  className="size-4 shrink-0 text-faint-foreground"
+                                />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {!files.error && files.data && (
                         <Pages
                           offset={fileOffset}
@@ -472,26 +716,28 @@ export function SnapshotDialog({
                       )}
                     </>
                   )}
-                </Stack>
-              </Tabs.Panel>
-              <Tabs.Panel value="facts" pt="md">
-                <Stack>
+                </div>
+              </TabsContent>
+              <TabsContent value="facts">
+                <div className="grid gap-3">
                   <Failure error={facts.error} />
-                  {facts.isPending && <Loader size="sm" />}
+                  {facts.isPending && <Loading label="Loading facts…" />}
                   {!facts.error &&
                     facts.data &&
                     facts.data.processing !== "ready" && (
-                      <Alert color="yellow">
+                      <Alert variant="warning" role="status">
                         Fact processing is {facts.data.processing}. Retained
                         extraction artifacts remain available separately.
                       </Alert>
                     )}
                   {!facts.error && facts.data?.items.length === 0 && (
-                    <Text>No materialized facts available.</Text>
+                    <p className="m-0 text-body text-muted-foreground">
+                      No materialized facts available.
+                    </p>
                   )}
                   {!facts.error &&
                     facts.data?.items.map((f) => (
-                      <Card withBorder key={f.id}>
+                      <Card key={f.id}>
                         <FactRecord value={f.record} />
                       </Card>
                     ))}
@@ -503,47 +749,87 @@ export function SnapshotDialog({
                       onChange={setFactOffset}
                     />
                   )}
-                </Stack>
-              </Tabs.Panel>
-              <Tabs.Panel value="coverage" pt="md">
-                <Stack>
-                  <Alert title="Extraction limits">
+                </div>
+              </TabsContent>
+              <TabsContent value="coverage">
+                <div className="grid gap-3">
+                  <Alert variant="info" role="note" title="Extraction limits">
                     Static code and configuration facts are evidence. Kubernetes
                     YAML has file inventory and optional text, with no supported
                     semantic extraction in this adapter. Unresolved targets
                     remain unresolved.
                   </Alert>
+                  <h3 className="section-label m-0 mt-1">Coverage</h3>
                   <JsonView value={s.coverage} />
-                  <Text fw={500}>Extraction settings</Text>
+                  <h3 className="section-label m-0 mt-1">
+                    Extraction settings
+                  </h3>
                   <JsonView value={s.settings} />
-                </Stack>
-              </Tabs.Panel>
-              <Tabs.Panel value="contributors" pt="md">
-                <Stack>
+                </div>
+              </TabsContent>
+              <TabsContent value="contributors">
+                <div className="grid gap-3">
                   {details.data?.contributors.map((c) => (
-                    <Card key={c.id} withBorder>
-                      <Stack gap="xs">
-                        <Text size="sm" fw={600}>
+                    <Card key={c.id} className="grid gap-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="m-0 text-body font-medium text-foreground">
                           {c.actor_name || "Recorded contributor"}
-                        </Text>
-                        <Text size="xs">Device {c.device_id}</Text>
-                        <Text size="sm">
-                          {c.dirty
-                            ? "Working copy was dirty; committed bytes were published."
-                            : "Working copy reported clean."}
-                        </Text>
-                        <Text size="xs">
-                          Branch {c.branch || "detached"} · captured{" "}
-                          {time(c.captured_at)}
-                        </Text>
-                        <Text size="xs">
-                          Operation {c.operation_id} · scope {c.scope.id}
-                        </Text>
-                        <Text size="xs">
-                          Environment:{" "}
-                          {c.scope.environment?.name || "All in this Brain"}
-                        </Text>
-                      </Stack>
+                        </p>
+                      </div>
+                      <p className="m-0 text-body text-foreground-secondary">
+                        {c.dirty
+                          ? "Working copy was dirty; committed bytes were published."
+                          : "Working copy reported clean."}
+                      </p>
+                      <PropList
+                        items={[
+                          {
+                            term: "Branch",
+                            value: (
+                              <span className="mono">
+                                {c.branch || "detached"}
+                              </span>
+                            ),
+                          },
+                          {
+                            term: "Captured",
+                            value: (
+                              <span className="mono">
+                                {time(c.captured_at)}
+                              </span>
+                            ),
+                          },
+                          {
+                            term: "Environment",
+                            value:
+                              c.scope.environment?.name || "All in this Brain",
+                          },
+                          {
+                            term: "Device",
+                            value: (
+                              <span className="mono text-caption">
+                                {c.device_id}
+                              </span>
+                            ),
+                          },
+                          {
+                            term: "Operation",
+                            value: (
+                              <span className="mono text-caption">
+                                {c.operation_id}
+                              </span>
+                            ),
+                          },
+                          {
+                            term: "Scope",
+                            value: (
+                              <span className="mono text-caption">
+                                {c.scope.id}
+                              </span>
+                            ),
+                          },
+                        ]}
+                      />
                     </Card>
                   ))}
                   {details.data && (
@@ -553,13 +839,15 @@ export function SnapshotDialog({
                       onChange={setContributorOffset}
                     />
                   )}
-                </Stack>
-              </Tabs.Panel>
+                </div>
+              </TabsContent>
               {(["insights", "receipt"] as const).map((kind) => (
-                <Tabs.Panel key={kind} value={kind} pt="md">
-                  <Stack>
+                <TabsContent key={kind} value={kind}>
+                  <div className="grid gap-3">
                     <Failure error={artifact.error} />
-                    {artifact.isPending && <Loader size="sm" />}
+                    {artifact.isPending && (
+                      <Loading label="Loading artifact…" />
+                    )}
                     {!artifact.error &&
                     artifact.data?.content !== null &&
                     artifact.data?.content !== undefined ? (
@@ -567,18 +855,18 @@ export function SnapshotDialog({
                     ) : (
                       !artifact.error &&
                       artifact.data && (
-                        <Alert color="yellow">
+                        <Alert variant="warning" role="status">
                           Artifact {artifact.data.availability}.
                         </Alert>
                       )
                     )}
-                  </Stack>
-                </Tabs.Panel>
+                  </div>
+                </TabsContent>
               ))}
             </Tabs>
           </>
         )}
-      </Stack>
+      </div>
     </Modal>
   );
 }
@@ -586,9 +874,12 @@ export function SnapshotDialog({
 export function PublicationPanel({
   brain,
   section = "environments",
+  toolbar,
 }: {
   brain: Brain;
   section?: "repositories" | "environments";
+  /** The page's switch row for the filter and actions; inline if absent. */
+  toolbar?: HTMLElement | null;
 }) {
   const pollNormal = usePollInterval("normal");
   const cache = useQueryClient();
@@ -596,7 +887,9 @@ export function PublicationPanel({
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const catalogue = useWorkspaceCatalogue(brain.id, undefined, { poll: "normal" });
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, {
+    poll: "normal",
+  });
   const manifests = useQuery({
     queryKey: ["revision-manifests", brain.id, environment, offset],
     queryFn: async () =>
@@ -616,102 +909,143 @@ export function PublicationPanel({
     });
     void cache.invalidateQueries({ queryKey: ["revision-manifest", brain.id] });
   };
+  const enter = useFirstLoad(manifests.data?.items.map((m) => m.manifest_id));
+  const opener = useOpener();
+  const environmentName = (id: string) =>
+    catalogue.data?.environments.find((e) => e.id === id)?.name || id;
   return (
-    <section className="feature-view publication-panel">
-      <Stack>
-        <Group justify="space-between">
-          <Group gap="sm">
-            <GitCommitHorizontal size={iconSize.action} />
-            <Title order={3}>Environment revisions</Title>
-          </Group>
-          {brain.role !== "reader" && !brain.archived && (
-            <Button
-              leftSection={<Plus size={iconSize.small} />}
-              disabled={
-                !catalogue.data?.environments.length ||
-                !catalogue.data?.repositories.length
-              }
-              onClick={() => setCreating(true)}
-            >
-              New manifest
-            </Button>
-          )}
-        </Group>
-        <Text size="sm" c="dimmed">
-          Choose exact repository revisions for an environment. Committed code,
-          desired configuration and recorded deployment observations keep
-          separate provenance.
-        </Text>
-        <Failure error={catalogue.error} />
-        <Select
-          clearable
-          label="Filter by environment"
-          placeholder="All environments"
-          data={
-            catalogue.data?.environments.map((e) => ({
-              value: e.id,
-              label: e.name,
-            })) ?? []
-          }
-          value={environment}
-          onChange={(v) => {
-            setEnvironment(v);
-            setOffset(0);
-          }}
-        />
-        <Failure error={manifests.error} />
-        {manifests.isPending && <Loader size="sm" />}
-        {manifests.data?.items.length === 0 && (
-          <Text size="sm" c="dimmed">
-            No revision manifests yet. Add an environment and register a
-            repository to create an explicit selection.
-          </Text>
-        )}
-        {!manifests.error &&
-          !catalogue.error &&
-          manifests.data?.items.map((m) => (
-            <button
-              key={m.manifest_id}
-              className="source-row"
-              onClick={() => setSelected(m.manifest_id)}
-            >
-              <GitCommitHorizontal size={iconSize.navigation} />
-              <span className="source-row-body">
-                <Text fw={500}>{m.name}</Text>
-                <Text size="sm">
-                  {catalogue.data?.environments.find(
-                    (e) => e.id === m.environment_id,
-                  )?.name || m.environment_id}{" "}
-                  ·{" "}
-                  {m.kind === "observed_deployed"
-                    ? "Recorded deployment observation"
-                    : m.kind}{" "}
-                  · {m.entries.length} repositories
-                </Text>
-                <Text size="xs" c="dimmed">
-                  Recorded {time(m.created_at)}
-                </Text>
-              </span>
-            </button>
-          ))}
-        {manifests.data && (
-          <Pages
-            offset={offset}
-            total={manifests.data.total}
-            onChange={setOffset}
+    <section className="flex flex-col gap-4">
+      <Toolbar target={toolbar}>
+        <div className="min-w-0 flex-[0_1_240px]">
+          <Select
+            clearable
+            aria-label="Filter by environment"
+            placeholder="All environments"
+            data={
+              catalogue.data?.environments.map((e) => ({
+                value: e.id,
+                label: e.name,
+              })) ?? []
+            }
+            value={environment}
+            onChange={(v) => {
+              setEnvironment(v);
+              setOffset(0);
+            }}
           />
-        )}
-        {manifests.error && (
-          <Button variant="subtle" onClick={() => void manifests.refetch()}>
-            Retry manifests
+        </div>
+        <span
+          className="mono ml-auto shrink-0 whitespace-nowrap text-caption text-muted-foreground"
+          aria-live="polite"
+        >
+          {manifests.data
+            ? `${manifests.data.total} manifest${manifests.data.total === 1 ? "" : "s"}`
+            : ""}
+        </span>
+        {brain.role !== "reader" && !brain.archived && (
+          <Button
+            disabled={
+              !catalogue.data?.environments.length ||
+              !catalogue.data?.repositories.length
+            }
+            onClick={() => {
+              opener.remember();
+              setCreating(true);
+            }}
+          >
+            <Plus aria-hidden="true" />
+            New manifest
           </Button>
         )}
-      </Stack>
+      </Toolbar>
+      <SectionHeader
+        title="Environment revisions"
+        description="Choose exact repository revisions for an environment. Committed code, desired configuration and recorded deployment observations keep separate provenance."
+      />
+      <Failure error={catalogue.error} />
+      <Failure error={manifests.error} />
+      {manifests.error && (
+        <div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void manifests.refetch()}
+          >
+            Retry manifests
+          </Button>
+        </div>
+      )}
+      {manifests.isPending && <Loading label="Loading manifests…" />}
+      {manifests.data?.items.length === 0 && (
+        <div className="grid justify-items-center gap-2 rounded-lg border border-dashed border-border px-6 py-10 text-center">
+          <Tile size="lg">
+            <GitCommitHorizontal aria-hidden="true" />
+          </Tile>
+          <p className="m-0 max-w-[420px] text-body text-muted-foreground">
+            No revision manifests yet. Add an environment and register a
+            repository to create an explicit selection.
+          </p>
+        </div>
+      )}
+      {!manifests.error &&
+        !catalogue.error &&
+        !!manifests.data?.items.length && (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
+            {manifests.data.items.map((m, index) => (
+              <div key={m.manifest_id} {...enter(m.manifest_id, index)}>
+                <button
+                  type="button"
+                  className="grid h-full w-full content-start gap-3 rounded-lg border border-border bg-card p-4 text-left transition-[border-color,box-shadow,transform] duration-fast ease-standard hover:-translate-y-px hover:border-border-strong hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  onClick={() => {
+                    opener.remember();
+                    setSelected(m.manifest_id);
+                  }}
+                >
+                  <span className="flex items-start gap-3">
+                    <Tile>
+                      <GitCommitHorizontal aria-hidden="true" />
+                    </Tile>
+                    <span className="grid min-w-0 gap-0.5">
+                      <span className="text-title font-semibold text-foreground [overflow-wrap:anywhere]">
+                        {m.name}
+                      </span>
+                      <span className="text-label text-muted-foreground">
+                        {meaning(m.kind)}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap gap-1.5">
+                    <Badge variant="outline">
+                      {environmentName(m.environment_id)}
+                    </Badge>
+                    <Badge>
+                      {m.entries.length} repositor
+                      {m.entries.length === 1 ? "y" : "ies"}
+                    </Badge>
+                  </span>
+                  <span className="mono border-t border-border pt-3 text-caption text-muted-foreground">
+                    Recorded {time(m.created_at)}
+                  </span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      {manifests.data && (
+        <Pages
+          offset={offset}
+          total={manifests.data.total}
+          onChange={setOffset}
+        />
+      )}
       {creating && catalogue.data && (
         <ManifestForm
           brain={brain}
           catalogue={catalogue.data}
-          onClose={() => setCreating(false)}
+          onClose={() => {
+            setCreating(false);
+            opener.restore();
+          }}
           onSaved={(m) => {
             setCreating(false);
             setSelected(m.manifest_id);
@@ -724,7 +1058,10 @@ export function PublicationPanel({
           brain={brain}
           id={selected}
           catalogue={catalogue.data}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null);
+            opener.restore();
+          }}
           onSaved={refresh}
         />
       )}
@@ -790,36 +1127,48 @@ function ManifestDialog({
     : (historical ?? detail.data?.current);
   return (
     <Modal opened onClose={onClose} size="xl" title="Revision manifest">
-      <Stack className="publication-panel">
+      <div className="grid gap-4">
         <Failure error={detail.error} />
-        {detail.isPending && <Loader />}
+        {detail.isPending && <Loading label="Loading manifest…" />}
         {selected && (
           <>
-            <Group justify="space-between">
-              <Title order={4}>{selected.name}</Title>
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="m-0 min-w-0 flex-1 text-section font-semibold text-foreground [overflow-wrap:anywhere]">
+                {selected.name}
+              </h3>
+              <Badge variant={historical ? "warning" : "default"}>
+                {historical ? "Historical revision" : "Current revision"}
+              </Badge>
               <EraseAction
                 brain={brain.id}
                 permitted={brain.role === "admin"}
                 target={{ kind: "manifest", id: selected.manifest_id }}
                 name={selected.name}
               />
-              <Badge>
-                {historical ? "Historical revision" : "Current revision"}
-              </Badge>
-            </Group>
-            <Text>
-              {catalogue.environments.find(
-                (e) => e.id === selected.environment_id,
-              )?.name || selected.environment_id}
-            </Text>
-            <Text size="sm">
-              {selected.kind === "observed_deployed"
-                ? "Recorded deployment observation"
-                : selected.kind}{" "}
-              · {time(selected.created_at)}
-            </Text>
+            </div>
+            <PropList
+              items={[
+                {
+                  term: "Environment",
+                  value:
+                    catalogue.environments.find(
+                      (e) => e.id === selected.environment_id,
+                    )?.name || selected.environment_id,
+                },
+                {
+                  term: "Meaning",
+                  value: meaning(selected.kind),
+                },
+                {
+                  term: "Recorded",
+                  value: (
+                    <span className="mono">{time(selected.created_at)}</span>
+                  ),
+                },
+              ]}
+            />
             {selected.kind === "observed_deployed" && (
-              <Alert color="blue" title="Recorded observation">
+              <Alert variant="info" role="status" title="Recorded observation">
                 Observed{" "}
                 {selected.observed_at ? time(selected.observed_at) : "unknown"}.
                 Reference: {selected.observation_reference}. This is
@@ -827,68 +1176,100 @@ function ManifestDialog({
                 verified deployment.
               </Alert>
             )}
-            <Text size="sm">{selected.notes}</Text>
-            {selected.entries.map((e) => (
-              <Card withBorder key={e.repository_id}>
-                <Stack gap="xs">
-                  <Text fw={500} size="sm">
+            {selected.notes && (
+              <p className="m-0 text-body text-foreground-secondary">
+                {selected.notes}
+              </p>
+            )}
+            <div className="grid gap-2">
+              <h4 className="section-label m-0">
+                Repositories
+                <span className="mono ml-1.5">{selected.entries.length}</span>
+              </h4>
+              {selected.entries.map((e) => (
+                <Card key={e.repository_id} className="grid gap-2.5 p-3">
+                  <p className="mono m-0 text-label font-medium text-foreground [overflow-wrap:anywhere]">
                     {catalogue.repositories.find(
                       (r) => r.id === e.repository_id,
                     )?.canonical_origin || e.repository_id}
-                  </Text>
-                  <Code className="revision-code">{e.revision}</Code>
+                  </p>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <GitCommitHorizontal
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-muted-foreground"
+                    />
+                    <Code className="truncate">{e.revision}</Code>
+                  </span>
+                  <p className="m-0 text-caption text-muted-foreground">
+                    Config paths:{" "}
+                    <span className="mono">
+                      {(e.config_paths ?? []).join(", ") || "None specified"}
+                    </span>
+                  </p>
                   {e.snapshot_id ? (
-                    <Button
-                      variant="light"
-                      onClick={() => setSnapshot(e.snapshot_id!)}
-                    >
-                      Inspect selected snapshot
-                    </Button>
+                    <div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSnapshot(e.snapshot_id!)}
+                      >
+                        Inspect selected snapshot
+                      </Button>
+                    </div>
                   ) : (
-                    <Text size="sm" c="dimmed">
+                    <p className="m-0 text-caption text-muted-foreground">
                       Snapshot unavailable — this revision is recorded without
                       retained extraction.
-                    </Text>
+                    </p>
                   )}
-                  <Text size="xs">
-                    Config paths:{" "}
-                    {(e.config_paths ?? []).join(", ") || "None specified"}
-                  </Text>
-                </Stack>
-              </Card>
-            ))}
-            <Text size="xs">
+                </Card>
+              ))}
+            </div>
+            <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
               Recorded by {selected.actor_id} · revision {selected.id}
-            </Text>
+            </p>
             {brain.role !== "reader" && !brain.archived && detail.data && (
-              <Button onClick={() => setEdit(detail.data!.current)}>
-                Edit current selection
-              </Button>
+              <div>
+                <Button onClick={() => setEdit(detail.data!.current)}>
+                  Edit current selection
+                </Button>
+              </div>
             )}
-            <Divider />
-            <Text fw={600}>Revision history</Text>
-            <Button variant="subtle" onClick={() => setHistorical(null)}>
-              Show current revision
-            </Button>
-            {detail.data?.history.map((m) => (
-              <Button
-                variant={historical?.id === m.id ? "light" : "subtle"}
-                key={m.id}
-                onClick={() => setHistorical(m)}
-              >
-                {time(m.created_at)} · {m.kind.replaceAll("_", " ")}
-              </Button>
-            ))}
-            {detail.data && (
-              <Pages
-                offset={offset}
-                total={detail.data.total}
-                onChange={setOffset}
-              />
-            )}
+            <Separator />
+            <div className="grid gap-2">
+              <h4 className="section-label m-0">Revision history</h4>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  variant={historical ? "ghost" : "secondary"}
+                  size="sm"
+                  onClick={() => setHistorical(null)}
+                >
+                  Show current revision
+                </Button>
+                {detail.data?.history.map((m) => (
+                  <Button
+                    variant={historical?.id === m.id ? "secondary" : "ghost"}
+                    size="sm"
+                    key={m.id}
+                    aria-pressed={historical?.id === m.id}
+                    onClick={() => setHistorical(m)}
+                  >
+                    <span className="mono">{time(m.created_at)}</span> ·{" "}
+                    {meaning(m.kind)}
+                  </Button>
+                ))}
+              </div>
+              {detail.data && (
+                <Pages
+                  offset={offset}
+                  total={detail.data.total}
+                  onChange={setOffset}
+                />
+              )}
+            </div>
           </>
         )}
-      </Stack>
+      </div>
     </Modal>
   );
 }
@@ -905,6 +1286,7 @@ function ManifestForm({
   onClose: () => void;
   onSaved: (m: Manifest) => void;
 }) {
+  const formId = useId();
   const [name, setName] = useState(current?.name ?? "");
   const [environment, setEnvironment] = useState<string | null>(
     current?.environment_id ?? null,
@@ -985,22 +1367,39 @@ function ManifestForm({
       onClose={onClose}
       size="xl"
       title={current ? "Edit revision selection" : "New revision manifest"}
+      footer={
+        <>
+          <Button variant="secondary" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            disabled={!valid}
+            loading={save.isPending}
+          >
+            Save manifest revision
+          </Button>
+        </>
+      }
     >
       <form
+        id={formId}
+        className="grid gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <Stack className="publication-panel">
-          <TextInput
-            label="Manifest name"
-            required
-            maxLength={120}
-            value={name}
-            onChange={(e) => setName(e.currentTarget.value)}
-            disabled={!!current}
-          />
+        <TextField
+          label="Manifest name"
+          required
+          maxLength={120}
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+          disabled={!!current}
+        />
+        <div className="grid grid-cols-2 items-start gap-4">
           <Select
             label="Environment"
             required
@@ -1026,43 +1425,42 @@ function ManifestForm({
               },
             ]}
           />
-          {kind === "observed_deployed" && (
-            <>
-              <TextInput
-                label="Observation time (ISO date and timezone)"
-                placeholder="2026-09-14T12:00:00Z"
-                required
-                value={observed}
-                onChange={(e) => setObserved(e.currentTarget.value)}
-              />
-              <TextInput
-                label="Supporting observation reference"
-                required
-                value={reference}
-                onChange={(e) => setReference(e.currentTarget.value)}
-                maxLength={2000}
-              />
-            </>
-          )}
-          {entries.map((entry, index) => (
-            <EntryForm
-              key={index}
-              brain={brain}
-              catalogue={catalogue}
-              entry={entry}
-              index={index}
-              onChange={(value) =>
-                setEntries((v) =>
-                  v.map((old, i) => (i === index ? value : old)),
-                )
-              }
-              onRemove={() =>
-                setEntries((v) => v.filter((_, i) => i !== index))
-              }
+        </div>
+        {kind === "observed_deployed" && (
+          <div className="grid grid-cols-2 items-start gap-4">
+            <TextField
+              label="Observation time (ISO date and timezone)"
+              placeholder="2026-09-14T12:00:00Z"
+              required
+              inputClassName="mono"
+              value={observed}
+              onChange={(e) => setObserved(e.currentTarget.value)}
             />
-          ))}
+            <TextField
+              label="Supporting observation reference"
+              required
+              value={reference}
+              onChange={(e) => setReference(e.currentTarget.value)}
+              maxLength={2000}
+            />
+          </div>
+        )}
+        {entries.map((entry, index) => (
+          <EntryForm
+            key={index}
+            brain={brain}
+            catalogue={catalogue}
+            entry={entry}
+            index={index}
+            onChange={(value) =>
+              setEntries((v) => v.map((old, i) => (i === index ? value : old)))
+            }
+            onRemove={() => setEntries((v) => v.filter((_, i) => i !== index))}
+          />
+        ))}
+        <div>
           <Button
-            variant="light"
+            variant="secondary"
             type="button"
             disabled={entries.length >= 100}
             onClick={() =>
@@ -1077,30 +1475,23 @@ function ManifestForm({
               ])
             }
           >
+            <Plus aria-hidden="true" />
             Add repository entry
           </Button>
-          <Textarea
-            label="Notes"
-            value={notes}
-            onChange={(e) => setNotes(e.currentTarget.value)}
-            maxLength={2048}
-          />
-          <Failure error={save.error} />
-          {save.error && current && (
-            <Text size="sm">
-              If this manifest changed, close this editor and reopen the current
-              selection before saving again.
-            </Text>
-          )}
-          <Group justify="flex-end">
-            <Button variant="default" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!valid} loading={save.isPending}>
-              Save manifest revision
-            </Button>
-          </Group>
-        </Stack>
+        </div>
+        <TextareaField
+          label="Notes"
+          value={notes}
+          onChange={(e) => setNotes(e.currentTarget.value)}
+          maxLength={2048}
+        />
+        <Failure error={save.error} />
+        {save.error && current && (
+          <p className="m-0 text-body text-foreground-secondary">
+            If this manifest changed, close this editor and reopen the current
+            selection before saving again.
+          </p>
+        )}
       </form>
     </Modal>
   );
@@ -1148,88 +1539,94 @@ function EntryForm({
       label: `Selected snapshot ${entry.snapshot_id}`,
     });
   return (
-    <Card withBorder>
-      <Stack>
-        <Group justify="space-between">
-          <Text fw={500}>Repository entry {index + 1}</Text>
-          <Button variant="subtle" color="red" type="button" onClick={onRemove}>
-            Remove entry
-          </Button>
-        </Group>
-        <Select
-          label={`Repository ${index + 1}`}
-          required
-          searchable
-          data={catalogue.repositories.map((r) => ({
-            value: r.id,
-            label: r.canonical_origin,
-          }))}
-          value={entry.repository_id || null}
-          onChange={(id) => {
-            setOffset(0);
-            onChange({
-              ...entry,
-              repository_id: id ?? "",
-              revision: "",
-              snapshot_id: null,
-            });
-          }}
+    <Card className="grid gap-4 bg-muted/40">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="m-0 text-body font-semibold text-foreground">
+          Repository entry {index + 1}
+        </h3>
+        <Button
+          variant="destructive-ghost"
+          size="sm"
+          type="button"
+          onClick={onRemove}
+        >
+          Remove entry
+        </Button>
+      </div>
+      <Select
+        label={`Repository ${index + 1}`}
+        required
+        searchable
+        data={catalogue.repositories.map((r) => ({
+          value: r.id,
+          label: r.canonical_origin,
+        }))}
+        value={entry.repository_id || null}
+        onChange={(id) => {
+          setOffset(0);
+          onChange({
+            ...entry,
+            repository_id: id ?? "",
+            revision: "",
+            snapshot_id: null,
+          });
+        }}
+      />
+      <Failure error={snapshots.error} />
+      <Select
+        label={`Published snapshot ${index + 1}`}
+        clearable
+        searchable
+        placeholder="Optional: select retained evidence"
+        data={choices}
+        value={entry.snapshot_id ?? null}
+        onChange={(id) => {
+          const s = snapshots.data?.items.find((s) => s.id === id);
+          onChange({
+            ...entry,
+            snapshot_id: id,
+            revision: s?.revision ?? entry.revision,
+          });
+        }}
+        disabled={!entry.repository_id}
+      />
+      {snapshots.data && (
+        <Pages
+          offset={offset}
+          total={snapshots.data.total}
+          onChange={setOffset}
         />
-        <Failure error={snapshots.error} />
-        <Select
-          label={`Published snapshot ${index + 1}`}
-          clearable
-          searchable
-          placeholder="Optional: select retained evidence"
-          data={choices}
-          value={entry.snapshot_id ?? null}
-          onChange={(id) => {
-            const s = snapshots.data?.items.find((s) => s.id === id);
-            onChange({
-              ...entry,
-              snapshot_id: id,
-              revision: s?.revision ?? entry.revision,
-            });
-          }}
-          disabled={!entry.repository_id}
-        />
-        {snapshots.data && (
-          <Pages
-            offset={offset}
-            total={snapshots.data.total}
-            onChange={setOffset}
-          />
-        )}
-        <TextInput
-          label={`Exact commit ${index + 1}`}
-          required
-          value={entry.revision}
-          onChange={(e) =>
-            onChange({
-              ...entry,
-              revision: e.currentTarget.value.trim(),
-              snapshot_id: null,
-            })
-          }
-        />
-        {!entry.snapshot_id && (
-          <Text size="xs" c="dimmed">
-            This selection records a revision without retained snapshot
-            evidence.
-          </Text>
-        )}
-        <Textarea
-          label={`Configuration paths ${index + 1}`}
-          description="One relative path per line"
-          value={(entry.config_paths ?? []).join("\n")}
-          onChange={(e) =>
-            onChange({
-              ...entry,
-              config_paths: e.currentTarget.value.split("\n"),
-            })
-          }
-        />
-      </Stack>
+      )}
+      <TextField
+        label={`Exact commit ${index + 1}`}
+        required
+        inputClassName="mono"
+        value={entry.revision}
+        onChange={(e) =>
+          onChange({
+            ...entry,
+            revision: e.currentTarget.value.trim(),
+            snapshot_id: null,
+          })
+        }
+      />
+      {!entry.snapshot_id && (
+        <p className="m-0 text-caption text-muted-foreground">
+          This selection records a revision without retained snapshot evidence.
+        </p>
+      )}
+      <TextareaField
+        label={`Configuration paths ${index + 1}`}
+        description="One relative path per line"
+        inputClassName="mono text-label"
+        value={(entry.config_paths ?? []).join("\n")}
+        onChange={(e) =>
+          onChange({
+            ...entry,
+            config_paths: e.currentTarget.value.split("\n"),
+          })
+        }
+      />
     </Card>
   );
 }

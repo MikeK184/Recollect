@@ -1,25 +1,32 @@
-import {
-  Accordion,
-  Alert,
-  Checkbox,
-  Group,
-  MultiSelect,
-  NumberInput,
-  Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-  Button,
-} from "@mantine/core";
+import { ChevronDown } from "lucide-react";
 import type { components } from "./api-schema";
 import type { useEvidenceList } from "./catalogueQueries";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Alert,
+  Button,
+  Checkbox,
+  MultiSelect,
+  NumberField,
+  Select,
+  TextField,
+} from "./components/ui";
 import { label, type Filters } from "./recallFilters";
 
 type Catalogue = components["schemas"]["WorkspaceCatalogue"];
 type Manifests = components["schemas"]["ManifestPage"];
 type Groups = NonNullable<ReturnType<typeof useEvidenceList>["data"]>;
 type Change = (patch: Partial<Filters>) => void;
+
+const channelOptions = [
+  { value: "exact", label: "Exact identities and literals" },
+  { value: "lexical", label: "Text search" },
+  { value: "graph", label: "Graph relationships" },
+  { value: "semantic", label: "Semantic similarity" },
+] as const;
 
 function RecallScopeFields({
   filters,
@@ -51,7 +58,7 @@ function RecallScopeFields({
     });
   }
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2 }}>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <MultiSelect
         label="Recall repositories"
         placeholder="All repositories"
@@ -111,37 +118,37 @@ function RecallScopeFields({
         }
       />
       {(manifests?.total ?? 0) > 20 && (
-        <Group>
+        <div className="flex items-center gap-2 md:col-span-2">
           <Button
-            variant="subtle"
-            size="xs"
+            variant="ghost"
+            size="sm"
             disabled={!manifestOffset}
             onClick={() => setManifestOffset(Math.max(0, manifestOffset - 20))}
           >
             Previous manifests
           </Button>
-          <Text size="xs">
+          <span className="mono text-caption text-muted-foreground">
             {manifestOffset + 1}–{Math.min(manifestOffset + 20, manifests!.total)}{" "}
             of {manifests!.total}
-          </Text>
+          </span>
           <Button
-            variant="subtle"
-            size="xs"
+            variant="ghost"
+            size="sm"
             disabled={manifestOffset + 20 >= manifests!.total}
             onClick={() => setManifestOffset(manifestOffset + 20)}
           >
             Next manifests
           </Button>
-        </Group>
+        </div>
       )}
-      <TextInput
+      <TextField
         type="datetime-local"
         label="Recall knowledge time (UTC)"
         step={1}
         value={filters.knowledge}
         onChange={(e) => change({ knowledge: e.currentTarget.value })}
       />
-      <TextInput
+      <TextField
         type="datetime-local"
         label="Recall fact time (UTC)"
         step={1}
@@ -168,13 +175,14 @@ function RecallScopeFields({
           })
         }
       />
-      <TextInput
+      <TextField
         label="Exact record UUID"
         disabled={!filters.exactKind}
         value={filters.exactId}
+        inputClassName="mono"
         onChange={(e) => change({ exactId: e.currentTarget.value })}
       />
-    </SimpleGrid>
+    </div>
   );
 }
 
@@ -186,21 +194,21 @@ function RecallGraphFields({
   change: Change;
 }) {
   return (
-    <Stack gap="xs">
-      <Text size="sm">
+    <div className="grid gap-3 rounded-md border border-border p-3">
+      <p className="m-0 text-body text-foreground-secondary">
         Graph search expands up to three eligible matches from the other
         selected channels. Recorded relationships do not establish truth or
         deployment behavior. Current knowledge only.
-      </Text>
+      </p>
       {(filters.mode === "history" ||
         !!filters.knowledge ||
         filters.channels.length === 1) && (
-        <Alert color="yellow" title="Graph search needs current query anchors">
+        <Alert variant="warning" title="Graph search needs current query anchors">
           Select another search channel and current knowledge, or disable graph
           search for history.
         </Alert>
       )}
-      <SimpleGrid cols={3}>
+      <div className="grid grid-cols-3 gap-3">
         <Select
           label="Recall graph"
           value={filters.graphKind}
@@ -219,7 +227,7 @@ function RecallGraphFields({
           }))}
           onChange={(value) => change({ graphDirection: value ?? "both" })}
         />
-        <NumberInput
+        <NumberField
           label="Recall graph hops"
           min={1}
           max={3}
@@ -231,8 +239,8 @@ function RecallGraphFields({
             })
           }
         />
-      </SimpleGrid>
-      <TextInput
+      </div>
+      <TextField
         label="Recall relationships"
         description="Optional comma-separated relationship names; empty includes all eligible relationships."
         value={filters.graphRelations}
@@ -244,18 +252,18 @@ function RecallGraphFields({
       />
       {filters.graphKind === "repository" &&
         filters.repositories.length !== 1 && (
-          <Text c="orange">
+          <p className="m-0 text-label text-warning-text">
             Select one repository above for its structural graph.
-          </Text>
+          </p>
         )}
       {filters.graphKind === "combined" &&
         (!filters.environment || !filters.manifest) && (
-          <Text c="orange">
+          <p className="m-0 text-label text-warning-text">
             Select an environment and exact manifest above for combined
             relationships.
-          </Text>
+          </p>
         )}
-    </Stack>
+    </div>
   );
 }
 
@@ -267,25 +275,39 @@ function RecallChannelFields({
   change: Change;
 }) {
   return (
-    <>
+    <div className="grid gap-3">
       {filters.strategy === "manual" ? (
-        <Checkbox.Group
-          label="Search channels"
-          value={filters.channels}
-          onChange={(v) => change({ channels: v, strategy: "manual" })}
-        >
-          <Group mt="xs">
-            <Checkbox value="exact" label="Exact identities and literals" />
-            <Checkbox value="lexical" label="Text search" />
-            <Checkbox value="graph" label="Graph relationships" />
-            <Checkbox value="semantic" label="Semantic similarity" />
-          </Group>
-        </Checkbox.Group>
+        <fieldset className="m-0 grid gap-2 border-0 p-0">
+          <legend className="mb-2 p-0 text-label font-medium text-foreground">
+            Search channels
+          </legend>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {channelOptions.map((option) => (
+              <Checkbox
+                key={option.value}
+                label={option.label}
+                value={option.value}
+                checked={filters.channels.includes(option.value)}
+                onChange={(e) => {
+                  const next = e.currentTarget.checked
+                    ? [...filters.channels, option.value]
+                    : filters.channels.filter((c) => c !== option.value);
+                  change({
+                    channels: channelOptions
+                      .map((c) => c.value as string)
+                      .filter((c) => next.includes(c)),
+                    strategy: "manual",
+                  });
+                }}
+              />
+            ))}
+          </div>
+        </fieldset>
       ) : (
-        <Text size="sm" c="dimmed">
+        <p className="m-0 text-body text-muted-foreground">
           Automatic retrieval chooses eligible methods for this query. Scope,
           time and evidence eligibility stay fixed.
-        </Text>
+        </p>
       )}
       <Checkbox
         label="Prefer source coverage before adding depth"
@@ -296,32 +318,32 @@ function RecallChannelFields({
         <RecallGraphFields filters={filters} change={change} />
       )}
       {filters.strategy === "manual" && filters.channels.includes("semantic") && (
-        <>
-          <Text size="sm">
+        <div className="grid gap-2 rounded-md border border-border p-3">
+          <p className="m-0 text-body text-foreground-secondary">
             Each Recall action may send this query to the approved embedding
             model. Failed queries are not automatically resent. Similarity does
             not establish truth or acceptance.
-          </Text>
-          <NumberInput
+          </p>
+          <NumberField
             label="Minimum semantic similarity"
             min={0}
             max={1}
             step={0.05}
-            decimalScale={2}
             value={filters.similarity}
+            className="max-w-[240px]"
             onChange={(v) =>
               change({
                 similarity: typeof v === "number" ? v : 0,
               })
             }
           />
-          <Text size="xs" c="dimmed">
+          <p className="m-0 text-caption text-muted-foreground">
             Zero applies no positive similarity threshold. A higher value can
             exclude useful evidence; it is not a confidence score.
-          </Text>
-        </>
+          </p>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -348,58 +370,64 @@ export function RecallOptions({
 }) {
   return (
     <details
-      className="feature-advanced evidence-search-options"
+      className="group/refine rounded-lg border border-border bg-card"
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary>Refine evidence search</summary>
-      <Select
-        label="Retrieval strategy"
-        value={filters.strategy}
-        allowDeselect={false}
-        data={[
-          { value: "auto", label: "Automatic" },
-          { value: "manual", label: "Choose methods" },
-        ]}
-        onChange={(value) =>
-          change({ strategy: value === "manual" ? "manual" : "auto" })
-        }
-        mb="md"
-      />
-      <SimpleGrid cols={{ base: 1, sm: 2 }}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-4 py-3 text-body font-medium text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        Refine evidence search
+        <ChevronDown
+          className="ml-auto size-4 text-muted-foreground transition-transform duration-fast group-open/refine:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
+      <div className="grid gap-4 border-t border-border px-4 pb-2 pt-4">
         <Select
-          label="Recall mode"
-          value={filters.mode}
+          label="Retrieval strategy"
+          value={filters.strategy}
           allowDeselect={false}
+          className="max-w-[320px]"
           data={[
-            { value: "investigation", label: "Investigation" },
-            { value: "strict_accepted", label: "Accepted and current" },
-            {
-              value: "strict_operational",
-              label: "Accepted and operationally verified",
-            },
-            { value: "history", label: "Qualified history" },
+            { value: "auto", label: "Automatic" },
+            { value: "manual", label: "Choose methods" },
           ]}
-          onChange={(v) => change({ mode: v ?? "investigation" })}
-        />
-        <Select
-          label="Recall collection"
-          clearable
-          placeholder="All collections"
-          value={filters.collection}
-          data={
-            groups?.groups
-              .filter((g) => g.kind === "collection")
-              .map((g) => ({ value: g.id, label: g.name })) ?? []
+          onChange={(value) =>
+            change({ strategy: value === "manual" ? "manual" : "auto" })
           }
-          onChange={(v) => change({ collection: v })}
         />
-      </SimpleGrid>
-      <Accordion>
-        <Accordion.Item value="filters">
-          <Accordion.Control>Scope, time and exact lookup</Accordion.Control>
-          <Accordion.Panel>
-            <Stack>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Select
+            label="Recall mode"
+            value={filters.mode}
+            allowDeselect={false}
+            data={[
+              { value: "investigation", label: "Investigation" },
+              { value: "strict_accepted", label: "Accepted and current" },
+              {
+                value: "strict_operational",
+                label: "Accepted and operationally verified",
+              },
+              { value: "history", label: "Qualified history" },
+            ]}
+            onChange={(v) => change({ mode: v ?? "investigation" })}
+          />
+          <Select
+            label="Recall collection"
+            clearable
+            placeholder="All collections"
+            value={filters.collection}
+            data={
+              groups?.groups
+                .filter((g) => g.kind === "collection")
+                .map((g) => ({ value: g.id, label: g.name })) ?? []
+            }
+            onChange={(v) => change({ collection: v })}
+          />
+        </div>
+        <Accordion type="single" collapsible>
+          <AccordionItem value="filters" className="border-t border-border">
+            <AccordionTrigger>Scope, time and exact lookup</AccordionTrigger>
+            <AccordionContent className="grid gap-4">
               <RecallScopeFields
                 filters={filters}
                 change={change}
@@ -409,10 +437,10 @@ export function RecallOptions({
                 setManifestOffset={setManifestOffset}
               />
               <RecallChannelFields filters={filters} change={change} />
-            </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
     </details>
   );
 }

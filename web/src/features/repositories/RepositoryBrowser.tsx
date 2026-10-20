@@ -1,31 +1,58 @@
-import { useEffect, useState } from "react";
-import { useDebouncedValue } from "@mantine/hooks";
-import {
-  Badge,
-  Button,
-  Code,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { FolderGit2, Search } from "lucide-react";
+import { FolderGit2, Upload } from "lucide-react";
 import { client, result, type Brain } from "../../api";
 import type { components } from "../../api-schema";
 import { useBrainSearch } from "../../app/useBrainSearch";
 import { useKnowledgeSelection } from "../knowledge/selection";
 import { useStableRows } from "../../components/useStableRows";
+import { EmptyState, ErrorState } from "../../components/AsyncState";
+import { SkeletonRows } from "../../components/Skeleton";
+import { StatusDot } from "../../components/StatusDot";
 import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from "../../components/AsyncState";
+  Badge,
+  Button,
+  Code,
+  Modal,
+  SearchInput,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+} from "../../components/ui";
+import { useDebouncedValue } from "../../lib/hooks";
+import { listItem } from "../../design/motion";
 import { RepositoryDialog } from "../../PublicationPanel";
 import { usePollInterval } from "../../usePollInterval";
+import { Toolbar, useOpener } from "./Toolbar";
+import { useExploreCount } from "../knowledge/frame";
 
-export function RepositoryBrowser({ brain }: { brain: Brain }) {
+const MotionRow = motion.create(TableRow);
+
+/** Canonical origin with the identifying last segment always visible; only
+ * the middle of a long path yields to the ellipsis. */
+function Origin({ value }: { value: string }) {
+  const cut = value.lastIndexOf("/") + 1;
+  return (
+    <span className="flex min-w-0" title={value}>
+      <span className="truncate">{value.slice(0, cut)}</span>
+      <span className="shrink-0">{value.slice(cut)}</span>
+    </span>
+  );
+}
+
+export function RepositoryBrowser({
+  brain,
+  toolbar,
+}: {
+  brain: Brain;
+  /** The switch row to place search, count and actions in; inline if absent. */
+  toolbar?: HTMLElement | null;
+}) {
   const pollNormal = usePollInterval("normal");
   const [route, patch] = useBrainSearch();
   const { select } = useKnowledgeSelection();
@@ -33,6 +60,7 @@ export function RepositoryBrowser({ brain }: { brain: Brain }) {
   const [query] = useDebouncedValue(text.trim(), 300);
   const [offset, setOffset] = useState(0);
   const [publishing, setPublishing] = useState(false);
+  const snapshotOpener = useOpener();
   const [snapshotRepo, setSnapshotRepo] = useState<
     components["schemas"]["Repository"] | null
   >(null);
@@ -57,146 +85,208 @@ export function RepositoryBrowser({ brain }: { brain: Brain }) {
       ),
   });
   const data = catalogue.isError ? undefined : catalogue.data;
+  // The switcher tab shows the Brain's repository count, not a search count.
+  useExploreCount("repositories", query ? null : data?.total);
   const stable = useStableRows(
     data?.items,
     JSON.stringify([brain.id, query, offset]),
     !!route.repository,
     (row) => row.id,
   );
+  // Rows stagger in on the first load only, never on refetch or paging.
+  const settled = useRef(false);
+  const firstLoad = !settled.current;
+  useEffect(() => {
+    if (stable.rows.length) settled.current = true;
+  });
   return (
-    <section className="feature-view repository-browser">
-      <div className="feature-toolbar">
-        <TextInput
-          className="feature-search"
-          aria-label="Search repository origins"
-          placeholder="Find a repository…"
-          leftSection={<Search size={18} />}
-          value={text}
-          maxLength={200}
-          onChange={(event) => {
-            setText(event.currentTarget.value);
-            setOffset(0);
-          }}
-        />
-        <Button variant="default" onClick={() => setPublishing(true)}>
+    <section className="flex flex-col gap-4">
+      <Toolbar target={toolbar}>
+        <div className="min-w-0 flex-[0_1_260px]">
+          <SearchInput
+            aria-label="Search repository origins"
+            placeholder="Find a repository…"
+            value={text}
+            maxLength={200}
+            onChange={(event) => {
+              setText(event.currentTarget.value);
+              setOffset(0);
+            }}
+          />
+        </div>
+        <span
+          className="mono ml-auto shrink-0 whitespace-nowrap text-caption text-muted-foreground"
+          aria-live="polite"
+        >
+          {data
+            ? `${data.total} ${query ? "matching " : ""}repositor${data.total === 1 ? "y" : "ies"}`
+            : catalogue.isPending
+              ? "Loading repositories"
+              : ""}
+        </span>
+        <Button variant="secondary" onClick={() => setPublishing(true)}>
+          <Upload aria-hidden="true" />
           Publish from host
         </Button>
-      </div>
+      </Toolbar>
       <ErrorState
         error={catalogue.error}
         retry={() => void catalogue.refetch()}
       />
-      {catalogue.isPending && <LoadingState label="Loading repositories…" />}
-      {data && (
-        <>
-          <Group justify="space-between" mb="sm">
-            <Text size="xs" c="dimmed">
-              {data.total} {query ? "matching " : ""}repositories
-            </Text>
-            {stable.pending > 0 && (
-              <Button variant="light" size="xs" onClick={stable.reveal}>
-                {stable.pending} new repositories · Show updates
-              </Button>
-            )}
-          </Group>
-          {!data.items.length && (
-            <EmptyState
-              icon={FolderGit2}
-              title={query ? "No matching repositories" : "No repositories yet"}
-              description={
-                query
-                  ? "Try another origin."
-                  : "Your connected host discovers repositories from your workspace."
-              }
-            />
-          )}
-          <div className="feature-list">
-            {stable.rows.map((repo) => (
-              <article
-                className={`repository-library-row ${route.repository === repo.id ? "is-selected" : ""}`}
-                key={repo.id}
-                data-testid="repository-card"
-              >
-                <button
-                  type="button"
-                  className="repository-library-name"
-                  onClick={() => patch({ repository: repo.id })}
-                >
-                  <span className="library-icon">
-                    <FolderGit2 size={18} />
-                  </span>
-                  <span>
-                    <strong>{repo.canonical_origin.split("/").at(-1)}</strong>
-                    <span className="feature-meta">
-                      {repo.canonical_origin}
-                    </span>
-                  </span>
-                </button>
-                <Badge variant="light" color="gray">
-                  {repo.origins.length} origin
-                  {repo.origins.length === 1 ? "" : "s"}
-                </Badge>
-                <Button
-                  variant="subtle"
-                  size="xs"
-                  onClick={() => setSnapshotRepo(repo)}
-                >
-                  Snapshots
-                </Button>
-              </article>
-            ))}
-          </div>
+      {catalogue.isPending && (
+        <TableWrap className="px-3">
+          <SkeletonRows label="Loading repositories…" rows={6} />
+        </TableWrap>
+      )}
+      {data && stable.pending > 0 && (
+        <div>
+          <Button variant="secondary" size="sm" onClick={stable.reveal}>
+            <StatusDot tone="accent" size={6} />
+            {stable.pending} new repositories · Show updates
+          </Button>
+        </div>
+      )}
+      {data && !data.items.length && (
+        <div className="rounded-lg border border-border bg-card">
+          <EmptyState
+            icon={FolderGit2}
+            title={query ? "No matching repositories" : "No repositories yet"}
+            description={
+              query
+                ? "Try another origin."
+                : "Your connected host discovers repositories from your workspace."
+            }
+          />
+        </div>
+      )}
+      {data && stable.rows.length > 0 && (
+        <TableWrap className="overflow-clip">
+          <Table>
+            <TableHead>
+              <tr>
+                <TableHeader scope="col">Repository</TableHeader>
+                <TableHeader scope="col">Origin</TableHeader>
+                <TableHeader scope="col">Origins</TableHeader>
+                <TableHeader scope="col" aria-label="Actions" />
+              </tr>
+            </TableHead>
+            <TableBody>
+              {stable.rows.map((repo, index) => {
+                const isSelected = route.repository === repo.id;
+                return (
+                  <MotionRow
+                    key={repo.id}
+                    data-testid="repository-card"
+                    selected={isSelected}
+                    variants={listItem}
+                    custom={index}
+                    initial={firstLoad ? "initial" : false}
+                    animate="animate"
+                    className="cursor-pointer"
+                    onClick={(event) => {
+                      // Focus stays on the row's name so closing the
+                      // inspector returns here.
+                      event.currentTarget
+                        .querySelector<HTMLButtonElement>("button")
+                        ?.focus({ preventScroll: true });
+                      patch({ repository: repo.id });
+                    }}
+                  >
+                    <TableCell primary className="whitespace-nowrap">
+                      <span className="flex items-center gap-2.5">
+                        <FolderGit2
+                          aria-hidden="true"
+                          className="size-4 shrink-0 text-muted-foreground"
+                        />
+                        <button
+                          type="button"
+                          aria-current={isSelected ? "true" : undefined}
+                          className="rounded-xs text-left font-medium text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          {repo.canonical_origin.split("/").at(-1)}
+                        </button>
+                      </span>
+                    </TableCell>
+                    <TableCell className="mono w-full max-w-0 text-caption text-foreground-secondary">
+                      <Origin value={repo.canonical_origin} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant="outline">
+                        {repo.origins.length} origin
+                        {repo.origins.length === 1 ? "" : "s"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          snapshotOpener.remember();
+                          setSnapshotRepo(repo);
+                        }}
+                      >
+                        Snapshots
+                      </Button>
+                    </TableCell>
+                  </MotionRow>
+                );
+              })}
+            </TableBody>
+          </Table>
           {(offset > 0 || data.next_offset != null) && (
-            <Group justify="space-between" mt="md">
+            <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
               <Button
-                variant="default"
-                size="xs"
+                variant="secondary"
+                size="sm"
+                aria-label="Previous repositories"
                 disabled={!offset}
                 onClick={() => setOffset(Math.max(0, offset - 50))}
               >
-                Previous repositories
+                Previous
               </Button>
-              <Text size="xs">
+              <span className="mono mx-auto text-caption text-muted-foreground">
                 {data.items.length ? offset + 1 : 0}–
                 {Math.min(offset + 50, data.total)} of {data.total}
-              </Text>
+              </span>
               <Button
-                variant="default"
-                size="xs"
+                variant="secondary"
+                size="sm"
+                aria-label="Next repositories"
                 disabled={data.next_offset == null}
                 onClick={() => setOffset(data.next_offset!)}
               >
-                Next repositories
+                Next
               </Button>
-            </Group>
+            </div>
           )}
-        </>
+        </TableWrap>
       )}
       <Modal
         opened={publishing}
         onClose={() => setPublishing(false)}
         title="Publish from your host"
+        description="Your connected coding host publishes an exact committed tree from its local checkout."
       >
-        <Stack>
-          <Text size="sm">
-            Your connected coding host publishes an exact committed tree from
-            its local checkout.
-          </Text>
-          <Text size="sm">
+        <div className="grid gap-3">
+          <p className="m-0 text-body text-foreground">
             Ask your agent, from a task scoped to this repository, to publish
             the checkout through the Recollect plugin.
-          </Text>
-          <Text size="xs" c="dimmed">
+          </p>
+          <p className="m-0 text-caption text-muted-foreground">
             Working files stay local. Retaining selected file text requires the
-            Brain policy and an explicit --retain-file selection.
-          </Text>
-        </Stack>
+            Brain policy and an explicit <Code>--retain-file</Code> selection.
+          </p>
+        </div>
       </Modal>
       {snapshotRepo && (
         <RepositoryDialog
           brain={brain}
           repository={snapshotRepo}
-          onClose={() => setSnapshotRepo(null)}
+          onClose={() => {
+            setSnapshotRepo(null);
+            snapshotOpener.restore();
+          }}
         />
       )}
     </section>

@@ -19,7 +19,7 @@ numbers below are dated observations until replacement proof is recorded.
 | [graph-intelligence.md](graph-intelligence.md) | active | Locally passing graph reliability and lease repair; failed semantic qualification and final integrated acceptance remain open |
 | [mcp-coordination.md](mcp-coordination.md) | active | Shared/native skills and cross-machine coordination locally delivered; direct-token and normal installed-host acceptance remain separate |
 | [operational-readiness.md](operational-readiness.md) | active | Normal graph reliability and a comparable memory-quality rerun |
-| [desktop-visual-experience.md](desktop-visual-experience.md) | complete | Cream/ink/sage desktop, locally validated grouped 3D, source navigation and exact generation invalidation |
+| [desktop-visual-experience.md](desktop-visual-experience.md) | active | Light and Ink redesign on Tailwind CSS and shadcn/ui ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md)) delivered locally and uncommitted, in progress until an intermittent 3D fresh-camera regression is fixed; grouped 3D, source navigation and exact generation invalidation are delivered |
 
 ## Implemented baseline
 
@@ -125,6 +125,13 @@ uses synthetic providers and does not upgrade a user's current host or deploymen
 | 2 | Incremental organization and recovery | Native invalidation, source edits, erasure, alias/override changes and older-backup replay have focused proof. Retain those results and complete final combined idempotency/privacy/recovery acceptance. | [Organization contract](../../contracts/automatic-knowledge-organization.md), [organization pack](../execution/active/graph-automatic-knowledge-mapping.md) |
 | 3 | Demonstrated memory-quality improvement | Reuse frozen questions and separate retrieval, answering and full-learning effects. The latest completed LongMemEval baseline is 20/50 (40%); subsequent repairs have no comparable scored rerun. | [Operations pack](../execution/active/operations-memory-quality-first-batch.md), [benchmark report](../../mappings/openrouter-benchmark-proof-2026-10-08.md) |
 | 3 | Finish direct-token and installed-host acceptance | Browser config and HTTP proof exist; fresh OpenCode/Claude launch and the rebuilt plugin's native acceptance remain separate. The recorded OpenCode service timeout needs a fresh verification. | [Direct-token pack](../execution/active/mcp-copy-ready-agent-config.md), [plugin evidence](../../mappings/plugin-workflow-repair-2026-10-07.md) |
+
+The desktop Light and Ink redesign ([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md))
+is delivered locally in the [desktop epic](desktop-visual-experience.md): the
+Tailwind-aware design check shipped and every destination is migrated; the
+migration slice stays in progress until the intermittent 3D fresh-camera
+regression is fixed. It is presentation only and independent of the priorities
+above.
 
 Priorities order the remaining work; they do not turn a partial implementation
 into a shipped slice. Current local reliability receipts replace the older

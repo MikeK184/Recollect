@@ -2,6 +2,18 @@
 
 Status: accepted
 
+### 2026 redesign — 2026-10-19
+
+[ADR 0025](../adr/0025-two-theme-desktop-redesign.md) amends this contract's
+presentation. The shared inspector docks at 400px inside the main panel from
+1440px and opens as a sheet below that, replacing the overlay drawer. Ask alone
+opens on the serif hero; every other page uses a compact sans header. Light and
+Ink are both supported, and 1440px is the smallest supported layout. Tiers,
+routes, the lineage inspector's content, the wiring split, the assurance band and
+every authority boundary below are unchanged. The
+[desktop contract](desktop-experience.md#shared-visual-language) holds the
+visual rules.
+
 ### Approved management concepts — 2026-10-05
 
 The approved October 5 concepts supersede the October 4 management presentation:
@@ -55,7 +67,9 @@ requested view selected and validated URL state preserved. An unknown view value
 falls back to the documented default. `/brains/{brain}` resolves to Dashboard. Explicit Ask and Activity routes remain.
 Nothing in this contract changes which handler authorizes or mutates data.
 
-The Knowledge surface owns one view switcher and one shared inspector region.
+The Knowledge surface owns one view switcher and one shared inspector region:
+the inspector docked at 400px inside the main panel from 1440px, or a sheet
+below that.
 Switching views preserves the current selection when the selection is meaningful
 in both views and clears it when it is not, never silently substituting an
 identifier across views or Brains.
@@ -162,9 +176,10 @@ is never reported as connected or healthy without a successful corresponding cal
 
 ### Presentation density
 
-The eyebrow, oversized serif heading, subtitle and full-width card stack pattern
-is reserved for Ask. Knowledge and Assurance views lead with content and use
-denser lists. Memory, Sources and Repositories lists present one primary
+Only Ask uses the serif hero (Newsreader, centred above the composer); no page
+uses an eyebrow, and every other page uses a compact sans header. This replaces
+the earlier eyebrow, oversized serif heading and full-width card stack reserved
+for Ask. Knowledge and Assurance views lead with content and use denser lists. Memory, Sources and Repositories lists present one primary
 identifier line plus at most one status line, with the full dimension set in the
 inspector. Status uses one composite mark whose meaning is also available as
 text, so no distinction depends on color alone.
@@ -189,8 +204,9 @@ remains reachable in its new location. No view change enables model transmission
 starts a job, calls a provider, executes a tool or writes memory.
 
 Keyboard navigation, focus return, accessible names, readable long labels,
-reduced motion, measured contrast and the tested 1280, 1440 and 1920 widths apply
-to every new arrangement. Brain switching cancels superseded requests and clears
+reduced motion, measured contrast in both Light and Ink, and the review sizes in
+the [display priority](desktop-experience.md#display-and-interaction-priority--2026-10-01)
+(1440px floor) apply to every new arrangement. Brain switching cancels superseded requests and clears
 incompatible selection and inspector state; late responses cannot populate the
 new Brain.
 
@@ -229,9 +245,10 @@ new Brain.
 ## Explicit Deferrals
 
 No new persistence, saved conversations, action-capable Ask, background refresh,
-cross-Brain aggregation, unified feed endpoint, new role, new authorization layer
-or framework change is introduced. Dark mode, mobile and small-tablet layouts stay
-deferred by the desktop contract. Renaming product terminology beyond the
+cross-Brain aggregation, unified feed endpoint, new role or new authorization layer
+is introduced, and this contract changes no framework (ADR 0025 separately
+replaces Mantine with Tailwind CSS and shadcn/ui). Mobile and small-tablet layouts
+stay deferred by the desktop contract; the Ink theme is no longer deferred. Renaming product terminology beyond the
 where-it-runs and tool-group explanations requires its own decision. Deleting the
 Search mode, the mandatory review inbox, adaptive decay and any automatic
 executable skill learning remain excluded.
@@ -319,9 +336,10 @@ Legacy session/context/runner/capture-settings URLs preserve the Brain and opaqu
 identities into their corresponding activity, private troubleshooting or Privacy
 view. Unavailable or denied records are not replaced by another record. Lazy closed
 panels perform no diagnostic reads; current access/policy refresh and revocation
-handling remain active where data is displayed. Use existing light theme, motion
-and components, bounded lists and short-desktop outer scrolling. No new runtime,
-animation dependency, schema or authorization model is selected.
+handling remain active where data is displayed. Use the current design system's
+themes, motion and components, bounded lists and short-desktop outer scrolling.
+This amendment selected no new runtime, animation dependency, schema or
+authorization model; the later stack change is ADR 0025's.
 
 ## Guided setup and automatic privacy — 2026-10-04
 

@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Alert, Button, Loader, Modal } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { client, result } from "./api";
-import "./features/feature-views.css";
-import "./features/connections/inline-management.css";
+import { Alert, Button, Modal, Spinner } from "./components/ui";
 import { usePollInterval } from "./usePollInterval";
 import {
   placementText,
@@ -35,14 +33,22 @@ export function McpConnectionDialog(props: Props) {
   });
   const summary = props.catalogue.connections.find((c) => c.id === props.id);
   const contents = query.error ? (
-    <Alert color="red">
+    <Alert
+      variant="destructive"
+      actions={
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => void query.refetch()}
+        >
+          Reload connection
+        </Button>
+      }
+    >
       {query.error.message}
-      <Button size="xs" onClick={() => void query.refetch()}>
-        Reload connection
-      </Button>
     </Alert>
   ) : props.id !== "new" && !query.data ? (
-    <Loader />
+    <Spinner label="Loading connection" />
   ) : (
     <ConnectionForm
       {...props}
@@ -63,8 +69,7 @@ export function McpConnectionDialog(props: Props) {
       opened
       onClose={props.close}
       title={props.id === "new" ? "Add connection" : "Edit connection"}
-      size={800}
-      className="connection-setup-modal"
+      size="xl"
     >
       {contents}
     </Modal>

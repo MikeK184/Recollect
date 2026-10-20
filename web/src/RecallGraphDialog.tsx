@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+import { GraphExplorer } from "./GraphExplorer";
+import { LoadingState } from "./components/AsyncState";
 import {
   Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
   Alert,
   Button,
-  Group,
-  Loader,
-  Modal,
-  NumberInput,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  NumberField,
   Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { GraphExplorer } from "./GraphExplorer";
+  TextField,
+} from "./components/ui";
 import { RecallScope, recallEvidence } from "./RecallResults";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
@@ -122,144 +129,166 @@ export function RecallGraphDialog({
     if (changed) onInvalidated();
   }, [changed, onInvalidated]);
   return (
-    <Modal
-      opened
-      onClose={onClose}
-      title="Relationships for recalled evidence"
-      size="90%"
-      closeButtonProps={{ "aria-label": "Close recalled graph" }}
-    >
-      <Stack>
-        <Text fw={600} className="claim-wrap">
-          {item.label}
-        </Text>
-        <Text size="sm">
-          Current graph read using the investigation selection. The evidence
-          query was recorded at {new Date(answer.knowledge_at).toLocaleString()}
-          ; this does not reconstruct a historical graph.
-        </Text>
-        <RecallScope selection={scope.selection} catalogue={catalogue} />
-        <Text size="xs" className="claim-wrap">
-          Exact manifest: {scope.manifest_revision_id ?? "None selected"} ·
-          Snapshot: {scope.snapshot_id ?? "Knowledge / manifest selection"} ·
-          Mode: {scope.mode}
-        </Text>
-        {view.isPending && <Loader aria-label="Loading recalled graph" />}
-        {view.error && (
-          <Alert color="red" title="Graph inspection unavailable">
-            {view.error.message} Return to the investigation to check scope or
-            graph readiness.
-          </Alert>
-        )}
-        {view.data && !view.isError && !changed && (
-          <>
-            <Accordion value={pathControls} onChange={setPathControls}>
-              <Accordion.Item value="path">
-                <Accordion.Control>Shortest path controls</Accordion.Control>
-                <Accordion.Panel>
-                  <Group align="end">
-                    <TextInput
-                      label="Investigation path start"
-                      value={start}
-                      onChange={(e) => {
-                        setStart(e.currentTarget.value);
-                        setPathRequest(null);
-                      }}
-                      style={{ flex: 1 }}
-                    />
-                    <TextInput
-                      label="Investigation path end"
-                      value={end}
-                      onChange={(e) => {
-                        setEnd(e.currentTarget.value);
-                        setPathRequest(null);
-                      }}
-                      style={{ flex: 1 }}
-                    />
-                    <Select
-                      label="Investigation path direction"
-                      value={direction}
-                      data={["both", "incoming", "outgoing"]}
-                      onChange={(v) => {
-                        setDirection(v ?? "both");
-                        setPathRequest(null);
-                      }}
-                    />
-                    <NumberInput
-                      label="Investigation path hops"
-                      value={hops}
-                      min={1}
-                      max={8}
-                      onChange={(v) => {
-                        setHops(Number(v) || 1);
-                        setPathRequest(null);
-                      }}
-                      w={120}
-                    />
-                    <Button
-                      disabled={!start || !end || start === end}
-                      loading={path.isFetching}
-                      onClick={() =>
-                        setPathRequest({
-                          nonce: crypto.randomUUID(),
-                          body: {
-                            scope: view.data!.scope,
-                            start,
-                            end,
-                            direction,
-                            max_hops: hops,
-                          },
-                        })
-                      }
-                    >
-                      Find investigation path
-                    </Button>
-                  </Group>
-                </Accordion.Panel>
-              </Accordion.Item>
-            </Accordion>
-            {path.error && (
-              <Alert color="red" title="Path unavailable">
-                {path.error.message}
-              </Alert>
-            )}
-            {path.data && !path.isError && (
-              <Text size="sm">
-                Path: {path.data.status.replaceAll("_", " ")}
-              </Text>
-            )}
-            <GraphExplorer
-              brain={brain}
-              view={view.data}
-              path={!path.isError ? (path.data ?? null) : null}
-              compactControls
-              expectedMemoryEpoch={answer.memory_epoch}
-              initialCenter={center}
-              initialDirection={request.graph?.direction ?? "both"}
-              initialHops={request.graph?.max_hops ?? 2}
-              onExpired={onInvalidated}
-              onStart={(key) => {
-                setPathControls("path");
-                setStart(key);
-                setPathRequest(null);
-              }}
-              onEnd={(key) => {
-                setPathControls("path");
-                setEnd(key);
-                setPathRequest(null);
-              }}
-              inspect={(node) => {
-                if (node.evidence.kind === "claim") onClaim(node.evidence.id);
-                else if (node.evidence.provenance.length)
-                  onEvidence(recallEvidence(node.evidence, 0));
-              }}
-            />
-          </>
-        )}
-        <Button variant="subtle" onClick={onClose}>
-          Back to investigation
-        </Button>
-      </Stack>
-    </Modal>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="full"
+        closeLabel="Close recalled graph"
+        className="h-[calc(100vh-64px)] w-[min(1600px,calc(100vw-64px))]"
+      >
+        <DialogHeader>
+          <DialogTitle>Relationships for recalled evidence</DialogTitle>
+          <DialogDescription className="[overflow-wrap:anywhere]">
+            {item.label}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="grid content-start gap-3">
+          <p className="m-0 text-body text-foreground-secondary">
+            Current graph read using the investigation selection. The evidence
+            query was recorded at{" "}
+            <span className="mono">
+              {new Date(answer.knowledge_at).toLocaleString()}
+            </span>
+            ; this does not reconstruct a historical graph.
+          </p>
+          <RecallScope selection={scope.selection} catalogue={catalogue} />
+          <p className="m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+            Exact manifest:{" "}
+            <span className="mono">{scope.manifest_revision_id ?? "None selected"}</span>{" "}
+            · Snapshot:{" "}
+            <span className="mono">
+              {scope.snapshot_id ?? "Knowledge / manifest selection"}
+            </span>{" "}
+            · Mode: {scope.mode}
+          </p>
+          {view.isPending && <LoadingState label="Loading recalled graph…" />}
+          {view.error && (
+            <Alert variant="destructive" title="Graph inspection unavailable">
+              {view.error.message} Return to the investigation to check scope or
+              graph readiness.
+            </Alert>
+          )}
+          {view.data && !view.isError && !changed && (
+            <>
+              <Accordion
+                type="single"
+                collapsible
+                value={pathControls ?? ""}
+                onValueChange={(value) => setPathControls(value || null)}
+                className="rounded-lg border border-border px-4"
+              >
+                <AccordionItem value="path">
+                  <AccordionTrigger>Shortest path controls</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <TextField
+                        label="Investigation path start"
+                        value={start}
+                        className="min-w-[220px] flex-1"
+                        inputClassName="mono"
+                        onChange={(e) => {
+                          setStart(e.currentTarget.value);
+                          setPathRequest(null);
+                        }}
+                      />
+                      <TextField
+                        label="Investigation path end"
+                        value={end}
+                        className="min-w-[220px] flex-1"
+                        inputClassName="mono"
+                        onChange={(e) => {
+                          setEnd(e.currentTarget.value);
+                          setPathRequest(null);
+                        }}
+                      />
+                      <Select
+                        label="Investigation path direction"
+                        value={direction}
+                        className="w-[180px]"
+                        data={["both", "incoming", "outgoing"]}
+                        onChange={(v) => {
+                          setDirection(v ?? "both");
+                          setPathRequest(null);
+                        }}
+                      />
+                      <NumberField
+                        label="Investigation path hops"
+                        value={hops}
+                        min={1}
+                        max={8}
+                        className="w-[120px]"
+                        onChange={(v) => {
+                          setHops(Number(v) || 1);
+                          setPathRequest(null);
+                        }}
+                      />
+                      <Button
+                        disabled={!start || !end || start === end}
+                        loading={path.isFetching}
+                        onClick={() =>
+                          setPathRequest({
+                            nonce: crypto.randomUUID(),
+                            body: {
+                              scope: view.data!.scope,
+                              start,
+                              end,
+                              direction,
+                              max_hops: hops,
+                            },
+                          })
+                        }
+                      >
+                        Find investigation path
+                      </Button>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+              {path.error && (
+                <Alert variant="destructive" title="Path unavailable">
+                  {path.error.message}
+                </Alert>
+              )}
+              {path.data && !path.isError && (
+                <p className="m-0 text-body text-foreground">
+                  Path: {path.data.status.replaceAll("_", " ")}
+                </p>
+              )}
+              <GraphExplorer
+                brain={brain}
+                view={view.data}
+                path={!path.isError ? (path.data ?? null) : null}
+                compactControls
+                expectedMemoryEpoch={answer.memory_epoch}
+                initialCenter={center}
+                initialDirection={request.graph?.direction ?? "both"}
+                initialHops={request.graph?.max_hops ?? 2}
+                onExpired={onInvalidated}
+                onStart={(key) => {
+                  setPathControls("path");
+                  setStart(key);
+                  setPathRequest(null);
+                }}
+                onEnd={(key) => {
+                  setPathControls("path");
+                  setEnd(key);
+                  setPathRequest(null);
+                }}
+                inspect={(node) => {
+                  if (node.evidence.kind === "claim") onClaim(node.evidence.id);
+                  else if (node.evidence.provenance.length)
+                    onEvidence(recallEvidence(node.evidence, 0));
+                }}
+              />
+            </>
+          )}
+        </DialogBody>
+        <DialogFooter className="justify-start">
+          <Button variant="ghost" onClick={onClose}>
+            <ArrowLeft aria-hidden="true" />
+            Back to investigation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

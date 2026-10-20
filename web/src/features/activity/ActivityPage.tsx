@@ -1,20 +1,14 @@
 import { useState } from "react";
-import {
-  Alert,
-  Button,
-  Card,
-  Code,
-  Drawer,
-  Group,
-  Stack,
-  Select,
-  Text,
-} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, History, Tv } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  History,
+  ShieldAlert,
+  Tv,
+} from "lucide-react";
 import { client, result, type Audit } from "../../api";
-import { iconSize } from "../../design/tokens";
 import { useBrain, useWorkspace } from "../../app/context";
 import { CapturePanel } from "../../CapturePanel";
 import { JobsPanel } from "../../JobsPanel";
@@ -22,8 +16,9 @@ import { ModelsPanel } from "../../ModelsPanel";
 import { McpPanel } from "../../McpPanel";
 import { RetentionPanel } from "../../RetentionPanel";
 import { PageHeader } from "../../components/PageHeader";
-import { staggerStyle } from "../../components/Motion";
-import { useFeatureTab } from "../../components/FeatureTabs";
+import { Page } from "../../components/Page";
+import { FeatureTabs, useFeatureTab } from "../../components/FeatureTabs";
+import { DetailInspector, InspectorSection, PropList } from "../../components/Inspector";
 import { useBrainSearch } from "../../app/useBrainSearch";
 import { AssuranceActivity } from "./Assurance";
 import { PipelineView } from "./PipelineView";
@@ -32,6 +27,9 @@ import {
   ErrorState,
   LoadingState,
 } from "../../components/AsyncState";
+import { Alert, Button, Code, Tile } from "../../components/ui";
+import { cn } from "../../lib/utils";
+import { useFirstLoadStagger } from "./firstLoad";
 import { usePollInterval } from "../../usePollInterval";
 const tabs = [
   { value: "capture", label: "Captured activity" },
@@ -76,13 +74,13 @@ export function ActivityPage() {
     "capture",
   );
   return (
-    <>
+    <Page>
       <PageHeader
         title="Activity"
+        description="What reached this Brain and what Recollect did with it."
         actions={
           <Button
-            variant="default"
-            leftSection={<Tv size={iconSize.small} />}
+            variant="secondary"
             onClick={() =>
               void navigate({
                 to: "/brains/$brainId/tv",
@@ -90,72 +88,81 @@ export function ActivityPage() {
               })
             }
           >
+            <Tv aria-hidden="true" />
             Ambient display
           </Button>
         }
       />
-      <div className="feature-toolbar">
-        <Select
-          aria-label="Activity view"
-          data={[...tabs]}
-          value={tab}
-          onChange={setTab}
-        />
-      </div>
-      <div>
-        {tab === "capture" && search.device && (
-          <Group justify="space-between" mb="md">
-            <Text size="sm">
-              Agent capture ·{" "}
-              {agent?.name ?? `Selected agent ${search.device.slice(0, 8)}`}{" "}
-              {roster.isError ? "· identity unavailable" : ""}
-            </Text>
-            <Button
-              variant="subtle"
-              onClick={() => patch({ device: undefined })}
+      <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
+        <div className="grid gap-4">
+          {tab === "capture" && search.device && (
+            <Alert
+              variant="info"
+              role="status"
+              className="items-center"
             >
-              Show all agents
-            </Button>
-          </Group>
-        )}
-        {tab === "capture" && (
-          <CapturePanel
-            key={`${brain.id}:${search.device ?? "all"}:${search.source ?? ""}:${search.version ?? ""}`}
-            brain={brain}
-            deviceId={search.device}
-            selectedSource={search.source}
-            selectedVersion={search.version}
-          />
-        )}
-        {tab === "pipeline" && <PipelineView />}
-        {tab === "attention" && <AssuranceActivity />}
-        {tab === "timeline" && <Timeline />}
-        {tab === "processing" && (
-          <JobsPanel
-            id={brain.id}
-            admin={brain.role === "admin"}
-            selectedJob={search.job}
-          />
-        )}
-        {tab === "tools" && (
-          <McpPanel
-            key={search.call}
-            brain={brain}
-            actor={session.user.id}
-            section="activity"
-            initialCall={search.call}
-          />
-        )}
-        {tab === "models" && <ModelsPanel brain={brain} section="activity" />}
-        {tab === "removal" && (
-          <RetentionPanel
-            brain={brain}
-            section="activity"
-            selectedRequest={search.erasure}
-          />
-        )}
-      </div>
-    </>
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  Agent capture ·{" "}
+                  <strong className="font-medium text-foreground">
+                    {agent?.name ?? (
+                      <>
+                        Selected agent{" "}
+                        <span className="mono">{search.device.slice(0, 8)}</span>
+                      </>
+                    )}
+                  </strong>{" "}
+                  {roster.isError ? "· identity unavailable" : ""}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => patch({ device: undefined })}
+                >
+                  Show all agents
+                </Button>
+              </div>
+            </Alert>
+          )}
+          {tab === "capture" && (
+            <CapturePanel
+              key={`${brain.id}:${search.device ?? "all"}:${search.source ?? ""}:${search.version ?? ""}`}
+              brain={brain}
+              deviceId={search.device}
+              selectedSource={search.source}
+              selectedVersion={search.version}
+            />
+          )}
+          {tab === "pipeline" && <PipelineView />}
+          {tab === "attention" && <AssuranceActivity />}
+          {tab === "timeline" && <Timeline />}
+          {tab === "processing" && (
+            <JobsPanel
+              id={brain.id}
+              admin={brain.role === "admin"}
+              selectedJob={search.job}
+            />
+          )}
+          {tab === "tools" && (
+            <McpPanel
+              key={search.call}
+              brain={brain}
+              actor={session.user.id}
+              section="activity"
+              initialCall={search.call}
+            />
+          )}
+          {tab === "models" && <ModelsPanel brain={brain} section="activity" />}
+          {tab === "removal" && (
+            <RetentionPanel
+              brain={brain}
+              section="activity"
+              selectedRequest={search.erasure}
+            />
+          )}
+        </div>
+      </FeatureTabs>
+    </Page>
   );
 }
 const labels: Record<string, string> = {
@@ -176,6 +183,9 @@ const labels: Record<string, string> = {
   "memory.erase": "Memory erasure requested",
   "retention.update": "Retention policy updated",
 };
+const actionLabel = (event: Audit) =>
+  labels[event.action] ??
+  event.action.replaceAll(".", " ").replaceAll("_", " ");
 function destination(event: Audit) {
   if (
     [
@@ -211,6 +221,20 @@ function destination(event: Audit) {
   // Do not manufacture a resource link from those unrelated UUIDs.
   return null;
 }
+const dayLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+const clock = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+/** Recent audit events grouped by local date, newest first, mono times. */
 function Timeline() {
   const pollNormal = usePollInterval("normal");
   const brain = useBrain();
@@ -228,9 +252,10 @@ function Timeline() {
     refetchInterval: pollNormal,
     gcTime: 0,
   });
+  const stagger = useFirstLoadStagger(query.data?.map((event) => event.id));
   if (brain.role !== "admin")
     return (
-      <Alert color="gray" title="Administrative timeline">
+      <Alert role="status" title="Administrative timeline" icon={<ShieldAlert aria-hidden="true" />}>
         Brain administrators can view the audit timeline. Your permitted
         processing, tool calls, and model usage are available in the activity
         selector.
@@ -249,97 +274,133 @@ function Timeline() {
         description="Changes and processing outcomes will appear here as this Brain is used."
       />
     );
+  const days = new Map<string, Audit[]>();
+  for (const event of query.data) {
+    const day = dayLabel(event.created_at);
+    days.set(day, [...(days.get(day) ?? []), event]);
+  }
+  const current = query.data.find((event) => event.id === selected);
+  let index = 0;
   return (
-    <Stack>
-      <Text size="xs" c="dimmed">
+    <div className="grid gap-3">
+      <p className="m-0 text-caption text-muted-foreground">
         Recent authorized audit events. Independent events may overlap in time.
-      </Text>
-      <Card withBorder p="lg">
-        {query.data.map((event, index) => {
-          const target = destination(event);
-          return (
-            <div
-              className="audit-row rc-enter"
-              style={staggerStyle(index)}
-              key={event.id}
-            >
-              <span className="audit-icon">
-                <Check size={15} />
-              </span>
-              <div className="job-info">
-                <Text fw={600} size="sm">
-                  {labels[event.action] ??
-                    event.action.replaceAll(".", " ").replaceAll("_", " ")}
-                </Text>
-                <Text size="xs" c="dimmed" mt={4}>
-                  {event.disposition.replaceAll("_", " ")} ·{" "}
-                  {event.actor_id === brain.owner_id ? "Brain owner" : "Member"}
-                </Text>
-              </div>
-              <Group gap="lg">
-                <Text size="xs" c="dimmed">
-                  {new Date(event.created_at).toLocaleString()}
-                </Text>
-                {target ? (
-                  <Link
-                    to={`/brains/$brainId/${target.section}`}
-                    params={{ brainId: brain.id }}
-                    search={target.search}
+      </p>
+      <div className="overflow-clip rounded-lg border border-border bg-card">
+        {[...days].map(([day, events]) => (
+          <section key={day} aria-label={day}>
+            <h3 className="sticky top-0 z-[1] m-0 border-b border-border bg-muted/85 px-4 py-1.5 text-caption font-medium text-muted-foreground backdrop-blur-chrome">
+              {day}
+            </h3>
+            {events.map((event) => {
+              const target = destination(event);
+              const entrance = stagger(event.id, index++);
+              return (
+                <div
+                  className={cn(
+                    "grid grid-cols-[72px_auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-4 py-2 last:border-b-0",
+                    selected === event.id && "bg-brand-soft/50",
+                    entrance.className,
+                  )}
+                  style={entrance.style}
+                  key={event.id}
+                >
+                  <time
+                    className="mono text-caption text-muted-foreground"
+                    dateTime={event.created_at}
+                    title={new Date(event.created_at).toLocaleString()}
                   >
-                    Open record
-                  </Link>
-                ) : (
-                  <Button
-                    variant="subtle"
-                    size="xs"
-                    onClick={() => setSelected(event.id)}
-                  >
-                    Details
-                  </Button>
-                )}
-              </Group>
-            </div>
-          );
-        })}
-      </Card>
-      <Drawer
+                    {clock(event.created_at)}
+                  </time>
+                  <Check
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <div className="grid min-w-0 gap-0.5">
+                    <span className="truncate text-body font-medium text-foreground first-letter:uppercase">
+                      {actionLabel(event)}
+                    </span>
+                    <span className="text-caption text-muted-foreground first-letter:uppercase">
+                      {event.disposition.replaceAll("_", " ")} ·{" "}
+                      {event.actor_id === brain.owner_id
+                        ? "Brain owner"
+                        : "Member"}
+                    </span>
+                  </div>
+                  {target ? (
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link
+                        to={`/brains/$brainId/${target.section}`}
+                        params={{ brainId: brain.id }}
+                        search={target.search}
+                      >
+                        Open record
+                        <ArrowUpRight aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-expanded={selected === event.id}
+                      onClick={() => setSelected(event.id)}
+                    >
+                      Details
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+        ))}
+      </div>
+      <DetailInspector
         opened={!!selected}
         onClose={() => setSelected(null)}
         title="Activity record"
       >
-        {query.data
-          .filter((event) => event.id === selected)
-          .map((event) => (
-            <Stack key={event.id}>
-              <Text fw={600}>
-                {labels[event.action] ??
-                  event.action.replaceAll(".", " ").replaceAll("_", " ")}
-              </Text>
-              <Text size="sm">
-                {new Date(event.created_at).toLocaleString()} ·{" "}
-                {event.disposition.replaceAll("_", " ")}
-              </Text>
-              <Text size="sm" c="dimmed">
+        {current ? (
+          <>
+            <InspectorSection>
+              <div className="flex items-center gap-3">
+                <Tile size="sm">
+                  <Check aria-hidden="true" />
+                </Tile>
+                <div className="grid min-w-0 gap-0.5">
+                  <p className="m-0 text-body font-semibold text-foreground first-letter:uppercase">
+                    {actionLabel(current)}
+                  </p>
+                  <p className="m-0 text-caption text-muted-foreground">
+                    <span className="mono">
+                      {new Date(current.created_at).toLocaleString()}
+                    </span>{" "}
+                    · {current.disposition.replaceAll("_", " ")}
+                  </p>
+                </div>
+              </div>
+              <p className="m-0 text-label text-foreground-secondary">
                 This is a recorded action. Its target may identify a command or
                 review receipt rather than a current memory.
-              </Text>
-              <Text size="xs">
-                Event <Code>{event.id}</Code>
-              </Text>
-              <Text size="xs">
-                Recorded by <Code>{event.actor_id}</Code>
-              </Text>
-              <Text size="xs">
-                Target <Code>{event.target_id}</Code>
-              </Text>
-            </Stack>
-          ))}
-        {selected && !query.data.some((event) => event.id === selected) && (
-          <Alert color="gray">
-            This event is no longer in the recent activity window.
-          </Alert>
+              </p>
+            </InspectorSection>
+            <InspectorSection label="Identifiers">
+              <PropList
+                items={[
+                  { term: "Event", value: <Code>{current.id}</Code> },
+                  { term: "Recorded by", value: <Code>{current.actor_id}</Code> },
+                  { term: "Target", value: <Code>{current.target_id}</Code> },
+                ]}
+              />
+            </InspectorSection>
+          </>
+        ) : (
+          selected && (
+            <Alert role="status">
+              This event is no longer in the recent activity window.
+            </Alert>
+          )
         )}
-      </Drawer>
-    </Stack>
+      </DetailInspector>
+    </div>
   );
 }

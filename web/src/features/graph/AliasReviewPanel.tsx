@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Badge,
   Button,
   Card,
-  Group,
-  Loader,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+  Spinner,
+  StatusBadge,
+} from "../../components/ui";
+import { OrganizationQuote } from "./OrganizationSources";
 import type { components } from "../../api-schema";
 import { client, result, type Brain } from "../../api";
 import { useContentDeadline } from "../../useContentDeadline";
@@ -157,35 +154,38 @@ export function AliasReviewPanel({
     view?.evidence.map((source) => [source.key, source]) ?? [],
   );
   return (
-    <Stack gap="md" role="region" aria-label="Alias evidence review">
-      <Text size="sm">
+    <div className="grid gap-4" role="region" aria-label="Alias evidence review">
+      <p className="m-0 text-body text-foreground-secondary">
         Review source-described alias navigation. Original entity identities
         stay separate; an alias decision does not establish accepted operational
         truth.
-      </Text>
+      </p>
       {!writable && (
-        <Text size="sm" c="dimmed">
+        <p className="m-0 text-body text-muted-foreground">
           Reader access · evidence inspection is available. Writers can record
           alias decisions.
-        </Text>
+        </p>
       )}
       {read.error && (
-        <Alert color="red" title="Alias evidence unavailable">
+        <Alert variant="destructive" title="Alias evidence unavailable">
           {read.error.message}
         </Alert>
       )}
       {!view && !read.error && !expired && (
-        <Group role="status">
-          <Loader size="sm" />
-          <Text>Reading current alias evidence…</Text>
-        </Group>
+        <p
+          role="status"
+          className="m-0 flex items-center gap-2 text-body text-foreground-secondary"
+        >
+          <Spinner />
+          Reading current alias evidence…
+        </p>
       )}
       {view && (
         <>
           {!view.candidates.length && (
-            <Text size="sm" c="dimmed">
+            <p className="m-0 text-body text-muted-foreground">
               No qualified alias candidates in this page and scope.
-            </Text>
+            </p>
           )}
           {view.candidates.map((candidate) => {
             const source = sources.get(candidate.source_key);
@@ -194,98 +194,103 @@ export function AliasReviewPanel({
             return (
               <Card
                 key={candidate.id}
-                withBorder
-                padding="md"
+                className="grid gap-2.5 [overflow-wrap:anywhere]"
                 data-testid="alias-candidate"
               >
-                <Stack gap="sm">
-                  <Group justify="space-between">
-                    <Title order={4}>
-                      {candidate.from.label} ↔ {candidate.to.label}
-                    </Title>
-                    <Badge
-                      variant="light"
-                      color={
-                        candidate.disposition === "accepted" ? "teal" : "gray"
-                      }
-                    >
-                      {candidate.disposition}
-                    </Badge>
-                  </Group>
-                  <Text size="xs" c="dimmed">
-                    {candidate.from.kind.replaceAll("_", " ")} ·{" "}
-                    {candidate.from.id}
-                    <br />
-                    {candidate.to.kind.replaceAll("_", " ")} · {candidate.to.id}
-                  </Text>
-                  <Text size="sm">{support(candidate.acceptance_state)}</Text>
-                  <Text size="xs" c="dimmed">
-                    {source?.evidence.label ?? "Qualified source evidence"} ·
-                    Exact UTF-8 bytes {candidate.byte_start}–
-                    {candidate.byte_end}
-                  </Text>
-                  <pre className="organization-quote">{candidate.quote}</pre>
-                  <Text size="xs" c="dimmed">
-                    Candidate {candidate.id}
-                    <br />
-                    Input {candidate.input_id}
-                    <br />
-                    Source {candidate.source_key}
-                    <br />
-                    Review version{" "}
-                    {candidate.change_id ?? "No recorded decision"}
-                  </Text>
-                  <Group>
-                    <Button
-                      variant="light"
-                      size="xs"
-                      disabled={!source || busy}
-                      onClick={() => source && onInspect(source)}
-                    >
-                      Inspect exact alias source
-                    </Button>
-                    {writable && (
-                      <>
-                        {candidate.disposition !== "accepted" && (
-                          <Button
-                            size="xs"
-                            disabled={busy || !supported}
-                            onClick={() => void decide(candidate, "accept")}
-                          >
-                            Accept alias navigation
-                          </Button>
-                        )}
-                        {candidate.disposition !== "rejected" && (
-                          <Button
-                            variant="default"
-                            size="xs"
-                            disabled={busy}
-                            onClick={() => void decide(candidate, "reject")}
-                          >
-                            Reject alias
-                          </Button>
-                        )}
-                        {candidate.disposition !== "pending" && (
-                          <Button
-                            variant="subtle"
-                            size="xs"
-                            disabled={busy}
-                            onClick={() => void decide(candidate, "revoke")}
-                          >
-                            Revoke alias decision
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </Group>
-                </Stack>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="m-0 text-title font-semibold">
+                    {candidate.from.label} ↔ {candidate.to.label}
+                  </h3>
+                  <StatusBadge
+                    state={
+                      candidate.disposition === "accepted"
+                        ? "positive"
+                        : candidate.disposition === "rejected"
+                          ? "negative"
+                          : "neutral"
+                    }
+                  >
+                    {candidate.disposition}
+                  </StatusBadge>
+                </div>
+                <p className="m-0 text-caption text-muted-foreground">
+                  {candidate.from.kind.replaceAll("_", " ")} ·{" "}
+                  <span className="mono">{candidate.from.id}</span>
+                  <br />
+                  {candidate.to.kind.replaceAll("_", " ")} ·{" "}
+                  <span className="mono">{candidate.to.id}</span>
+                </p>
+                <p className="m-0 text-body">
+                  {support(candidate.acceptance_state)}
+                </p>
+                <p className="m-0 text-caption text-muted-foreground">
+                  {source?.evidence.label ?? "Qualified source evidence"} ·
+                  Exact UTF-8 bytes{" "}
+                  <span className="mono">
+                    {candidate.byte_start}–{candidate.byte_end}
+                  </span>
+                </p>
+                <OrganizationQuote>{candidate.quote}</OrganizationQuote>
+                <p className="mono m-0 text-caption text-muted-foreground">
+                  Candidate {candidate.id}
+                  <br />
+                  Input {candidate.input_id}
+                  <br />
+                  Source {candidate.source_key}
+                  <br />
+                  Review version{" "}
+                  {candidate.change_id ?? "No recorded decision"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={!source || busy}
+                    onClick={() => source && onInspect(source)}
+                  >
+                    Inspect exact alias source
+                  </Button>
+                  {writable && (
+                    <>
+                      {candidate.disposition !== "accepted" && (
+                        <Button
+                          size="sm"
+                          disabled={busy || !supported}
+                          onClick={() => void decide(candidate, "accept")}
+                        >
+                          Accept alias navigation
+                        </Button>
+                      )}
+                      {candidate.disposition !== "rejected" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void decide(candidate, "reject")}
+                        >
+                          Reject alias
+                        </Button>
+                      )}
+                      {candidate.disposition !== "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void decide(candidate, "revoke")}
+                        >
+                          Revoke alias decision
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
               </Card>
             );
           })}
-          <Group justify="space-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Button
-              variant="subtle"
-              size="xs"
+              variant="ghost"
+              size="sm"
               disabled={!history.length || busy}
               onClick={() => {
                 setCursor(history[history.length - 1]);
@@ -294,12 +299,13 @@ export function AliasReviewPanel({
             >
               Previous aliases
             </Button>
-            <Text size="xs" c="dimmed">
-              Page {history.length + 1} · up to 25 candidates
-            </Text>
+            <p className="m-0 text-caption text-muted-foreground">
+              Page <span className="mono">{history.length + 1}</span> · up to
+              25 candidates
+            </p>
             <Button
-              variant="subtle"
-              size="xs"
+              variant="ghost"
+              size="sm"
               disabled={!view.next_cursor || busy}
               onClick={() => {
                 setHistory((old) => [...old, cursor]);
@@ -308,9 +314,9 @@ export function AliasReviewPanel({
             >
               Next aliases
             </Button>
-          </Group>
+          </div>
         </>
       )}
-    </Stack>
+    </div>
   );
 }

@@ -1,8 +1,8 @@
-import { Button, Modal, Stack } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "../api";
 import { EvidenceDialog } from "../ClaimsPanel";
 import { ErrorState, LoadingState } from "./AsyncState";
+import { Button, Modal } from "./ui";
 import { usePollInterval } from "../usePollInterval";
 
 /** Resolve an exact opaque evidence ID through the authorized canonical read.
@@ -38,20 +38,21 @@ export function CanonicalEvidenceInspector({
   });
   if (query.isError || !query.data)
     return (
-      <Modal opened onClose={close} title="Supporting evidence">
-        <Stack>
-          {query.isPending ? (
-            <LoadingState label="Opening exact evidence…" />
-          ) : (
-            <ErrorState
-              error={query.error}
-              retry={() => void query.refetch()}
-            />
-          )}
-          <Button variant="default" onClick={close}>
+      <Modal
+        opened
+        onClose={close}
+        title="Supporting evidence"
+        footer={
+          <Button variant="secondary" onClick={close}>
             Return to page
           </Button>
-        </Stack>
+        }
+      >
+        {query.isPending ? (
+          <LoadingState label="Opening exact evidence…" />
+        ) : (
+          <ErrorState error={query.error} retry={() => void query.refetch()} />
+        )}
       </Modal>
     );
   return (

@@ -242,10 +242,12 @@ test("desktop assets, keyboard navigation and layout remain consistent at suppor
       .filter((font) => font.status === "loaded")
       .map((font) => font.family),
   }));
-  expect(fonts.title).toContain("Newsreader");
-  expect(fonts.body).toContain("Manrope");
-  expect(fonts.loaded.join(" ")).toContain("Newsreader");
-  expect(fonts.loaded.join(" ")).toContain("Manrope");
+  // ADR 0025: page titles and the interface use Mona Sans; Newsreader is
+  // reserved for answers, the Ask hero and the wordmark.
+  expect(fonts.title).toContain("Mona Sans");
+  expect(fonts.body).toContain("Mona Sans");
+  expect(fonts.loaded.join(" ")).toContain("Mona Sans");
+  expect(fonts.loaded.join(" ")).not.toContain("Manrope");
   const logo = page
     .getByRole("link", { name: "Recollect home", exact: true })
     .locator("img");
@@ -757,7 +759,8 @@ test("authentication, font fallback and archived or unavailable Brain states rem
       () =>
         [...document.fonts].filter(
           (font) =>
-            font.family.includes("Newsreader") && font.status === "loaded",
+            /Mona Sans|JetBrains Mono|Newsreader/.test(font.family) &&
+            font.status === "loaded",
         ).length,
     ),
   ).toBe(0);

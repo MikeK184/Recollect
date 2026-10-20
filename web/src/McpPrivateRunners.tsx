@@ -4,15 +4,20 @@ import {
   Badge,
   Button,
   CopyButton,
-  Loader,
+  Input,
   Select,
+  Spinner,
+  StatusBadge,
   Switch,
-  TextInput,
-} from "@mantine/core";
+  Tile,
+} from "./components/ui";
+import { staggerStyle } from "./components/Motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowRight,
   Check,
+  CircleCheck,
   Copy,
   LockKeyhole,
   Monitor,
@@ -27,7 +32,6 @@ import {
   RunnerConnections,
   useRunnerCatalogue,
 } from "./features/connections/RunnerConnections";
-import "./features/connections/private-runners.css";
 import { usePollInterval } from "./usePollInterval";
 
 type Runner = components["schemas"]["McpPrivateRunner"];
@@ -69,14 +73,19 @@ function deviceLabel(runner: Runner, devices?: Device[]) {
 }
 function RunnerStatus({ runner }: { runner: Runner }) {
   return (
-    <Badge
-      variant="light"
-      color={
-        runner.enabled && runner.eligible && runner.available ? "teal" : "gray"
+    <StatusBadge
+      state={
+        !runner.enabled
+          ? "neutral"
+          : !runner.eligible
+            ? "negative"
+            : runner.available
+              ? "positive"
+              : "attention"
       }
     >
       {runnerStatus(runner)}
-    </Badge>
+    </StatusBadge>
   );
 }
 function SetupCopy({
@@ -93,19 +102,26 @@ function SetupCopy({
       {({ copied, copy }) => (
         <Button
           type="button"
-          size="xs"
-          variant="subtle"
+          size="sm"
+          variant="ghost"
           disabled={disabled}
-          leftSection={copied ? <Check size={13} /> : <Copy size={13} />}
           title="Start this runner on its registered device"
           onClick={copy}
         >
+          {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
           {copied ? "Command copied" : "Copy setup command"}
         </Button>
       )}
     </CopyButton>
   );
 }
+
+const cardClass =
+  "overflow-hidden rounded-lg border border-border bg-card transition-[border-color,box-shadow] duration-base ease-standard";
+const devicesLink =
+  "inline-flex items-center gap-1 rounded-sm text-label font-medium text-foreground-secondary transition-colors duration-fast hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3.5";
+const deviceLabelClass = "text-caption text-muted-foreground";
+
 export function McpPrivateRunners({
   brain,
   canConfigure,
@@ -172,80 +188,97 @@ export function McpPrivateRunners({
     />
   );
   return (
-    <section className="private-runners-view" aria-label="Private runners">
-      <header className="private-runners-toolbar">
-        <p className="private-runners-count">
-          {runners.data && !runners.error
-            ? `${runners.data.length} private runner${runners.data.length === 1 ? "" : "s"}`
-            : "Private runners"}
+    <section className="grid min-w-0 gap-3.5" aria-label="Private runners">
+      <header className="flex min-h-8 items-center justify-between gap-3">
+        <p className="m-0 text-label font-medium text-foreground-secondary">
+          {runners.data && !runners.error ? (
+            <>
+              <span className="mono">{runners.data.length}</span> private runner
+              {runners.data.length === 1 ? "" : "s"}
+            </>
+          ) : (
+            "Private runners"
+          )}
         </p>
         {canConfigure && (
           <Button
-            size="xs"
-            leftSection={<Plus size={14} />}
             disabled={
               !mayEdit || !runners.data || !!edit || runners.data.length >= 32
             }
             onClick={() => setEditing({ brain: brain.id, runner: "new" })}
           >
+            <Plus aria-hidden="true" />
             Add runner
           </Button>
         )}
       </header>
       {runners.isPending && (
-        <div role="status" className="private-runner-notice">
-          <Loader size="sm" /> Loading private runners…
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-label text-muted-foreground"
+        >
+          <Spinner size={14} /> Loading private runners…
         </div>
       )}
       {runners.error && (
-        <Alert color="red" title="Private runners unavailable">
+        <Alert
+          variant="destructive"
+          title="Private runners unavailable"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void runners.refetch()}
+            >
+              Refresh private runners
+            </Button>
+          }
+        >
           {runners.error.message}
-          <Button
-            size="xs"
-            variant="subtle"
-            onClick={() => void runners.refetch()}
-          >
-            Refresh private runners
-          </Button>
         </Alert>
       )}
       {edit === "new" && editor()}
       {!runners.error && runners.data?.length === 0 && edit !== "new" && (
-        <div className="private-runner-empty">
-          <span className="management-icon">
-            <Network size={20} />
-          </span>
-          <div>
-            <h3>No private runners yet</h3>
-            <p>Add a runner to reach services inside your network.</p>
+        <div
+          className={`${cardClass} flex animate-enter items-center gap-3.5 p-4`}
+        >
+          <Tile size="lg">
+            <Network aria-hidden="true" />
+          </Tile>
+          <div className="min-w-0">
+            <h3 className="m-0 text-title font-semibold text-foreground">
+              No private runners yet
+            </h3>
+            <p className="m-0 mt-0.5 text-body text-muted-foreground">
+              Add a runner to reach services inside your network.
+            </p>
           </div>
         </div>
       )}
       {!runners.error &&
-        runners.data?.map((runner) =>
+        runners.data?.map((runner, index) =>
           edit !== "new" && edit?.id === runner.id ? (
             editor(edit)
           ) : (
             <article
               key={runner.id}
-              className="private-runner-card"
+              className={`${cardClass} animate-enter hover:border-border-strong`}
+              style={staggerStyle(index)}
               data-testid="mcp-private-runner"
               aria-label={`Private runner ${runner.name}`}
             >
-              <header className="private-runner-heading">
-                <span className="management-icon private-runner-icon">
-                  <Network size={20} />
-                </span>
-                <div className="private-runner-identity">
-                  <h3>{runner.name}</h3>
-                  <div className="private-runner-meta">
-                    <span className="private-runner-device-label">Runs on</span>
-                    <Badge
-                      variant="light"
-                      color="gray"
-                      leftSection={<Monitor size={12} />}
-                      title={runner.device_id}
-                    >
+              <header className="flex items-start gap-3 border-b border-border px-4 py-3.5">
+                <Tile className="mt-0.5">
+                  <Network aria-hidden="true" />
+                </Tile>
+                <div className="min-w-0 flex-1">
+                  <h3 className="m-0 truncate text-title font-semibold text-foreground">
+                    {runner.name}
+                  </h3>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span className={deviceLabelClass}>Runs on</span>
+                    <Badge variant="outline" title={runner.device_id}>
+                      <Monitor aria-hidden="true" />
                       {deviceLabel(
                         runner,
                         devices.error ? undefined : devices.data,
@@ -253,20 +286,26 @@ export function McpPrivateRunners({
                     </Badge>
                   </div>
                 </div>
-                <div className="private-runner-actions">
+                <div className="flex shrink-0 items-center gap-2 pt-0.5">
                   <RunnerStatus runner={runner} />
                   {runner.enabled && (
-                    <span className="private-runner-enabled">Enabled</span>
+                    <span className="inline-flex items-center gap-1 text-caption text-muted-foreground">
+                      <CircleCheck
+                        aria-hidden="true"
+                        className="size-3.5 text-brand-text"
+                      />
+                      Enabled
+                    </span>
                   )}
                   {canConfigure && (
                     <Button
-                      size="xs"
-                      variant="subtle"
+                      size="sm"
+                      variant="ghost"
                       aria-label="Edit private runner"
-                      leftSection={<Pencil size={13} />}
                       disabled={!mayEdit || !!edit}
                       onClick={() => setEditing({ brain: brain.id, runner })}
                     >
+                      <Pencil aria-hidden="true" />
                       Edit
                     </Button>
                   )}
@@ -277,9 +316,10 @@ export function McpPrivateRunners({
                 runner={runner.id}
                 catalogue={catalogue}
               />
-              <footer className="private-runner-footer">
-                <Link className="private-runners-devices" to="/agents">
-                  Manage paired devices →
+              <footer className="flex min-h-11 items-center justify-between gap-3 border-t border-border bg-muted px-4 py-1.5">
+                <Link className={devicesLink} to="/agents">
+                  Manage paired devices
+                  <ArrowRight aria-hidden="true" />
                 </Link>
                 {canConfigure && (
                   <SetupCopy
@@ -297,8 +337,9 @@ export function McpPrivateRunners({
         !runners.data?.some((r) => r.id === edit.id) &&
         editor(edit)}
       {canConfigure && runners.data?.length === 0 && (
-        <Link className="private-runners-devices" to="/agents">
-          Manage paired devices →
+        <Link className={`${devicesLink} justify-self-start`} to="/agents">
+          Manage paired devices
+          <ArrowRight aria-hidden="true" />
         </Link>
       )}
     </section>
@@ -380,22 +421,22 @@ function RunnerEditor({
   });
   return (
     <form
-      className="private-runner-card private-runner-editor"
+      className={`${cardClass} animate-enter border-border-strong shadow-sm`}
       aria-label={runner ? "Edit private runner" : "Add private runner"}
       onSubmit={(e) => {
         e.preventDefault();
         if (valid && !save.isPending) save.mutate();
       }}
     >
-      <fieldset className="private-runner-fields" disabled={save.isPending}>
-        <header className="private-runner-heading">
-          <span className="management-icon private-runner-icon">
-            <Network size={20} />
-          </span>
-          <div className="private-runner-identity">
-            <TextInput
-              size="xs"
-              className="private-runner-name"
+      <fieldset className="m-0 min-w-0 border-0 p-0" disabled={save.isPending}>
+        <header className="flex items-start gap-3 border-b border-border px-4 py-3.5">
+          <Tile className="mt-0.5">
+            <Network aria-hidden="true" />
+          </Tile>
+          <div className="grid min-w-0 flex-1 gap-1.5">
+            <Input
+              size="sm"
+              className="max-w-[320px] font-medium"
               aria-label="Private runner name"
               placeholder="Runner name"
               required
@@ -406,15 +447,14 @@ function RunnerEditor({
                 save.reset();
               }}
             />
-            <div className="private-runner-meta">
-              <span className="private-runner-device-label">Runs on</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className={deviceLabelClass}>Runs on</span>
               {runner ? (
                 <Badge
-                  variant="light"
-                  color="gray"
-                  leftSection={<LockKeyhole size={12} />}
+                  variant="outline"
                   title={`Fixed paired device: ${runner.device_id}`}
                 >
+                  <LockKeyhole aria-hidden="true" />
                   {deviceLabel(
                     runner,
                     devices.error ? undefined : devices.data,
@@ -422,8 +462,8 @@ function RunnerEditor({
                 </Badge>
               ) : (
                 <Select
-                  size="xs"
-                  className="private-runner-device"
+                  size="sm"
+                  className="w-[260px]"
                   aria-label="Paired runner device"
                   placeholder={
                     devices.isPending
@@ -447,16 +487,13 @@ function RunnerEditor({
               )}
             </div>
           </div>
-          <div className="private-runner-actions">
+          <div className="flex shrink-0 items-center gap-3 pt-0.5">
             {runner ? (
               <RunnerStatus runner={latest ?? runner} />
             ) : (
-              <Badge variant="light" color="gray">
-                Not connected
-              </Badge>
+              <StatusBadge state="neutral">Not connected</StatusBadge>
             )}
             <Switch
-              size="xs"
               label="Enabled"
               aria-label="Private runner enabled"
               checked={enabled}
@@ -468,46 +505,56 @@ function RunnerEditor({
           </div>
         </header>
         {relationships?.(save.isPending)}
-        <div className="private-runner-editor-feedback">
-          {stale && (
-            <Alert color="yellow">
-              This registration changed. Cancel and reopen it before saving.
-            </Alert>
-          )}
-          {!runner && devices.error && (
-            <Alert color="red" title="Paired devices unavailable">
-              {devices.error.message}
-              <Button
-                size="xs"
-                variant="subtle"
-                onClick={() => void devices.refetch()}
-              >
-                Refresh paired devices
-              </Button>
-            </Alert>
-          )}
-          {!runner &&
-            !devices.isPending &&
-            !devices.error &&
-            !active.length && (
-              <Alert color="yellow">
-                {devices.data?.some(
-                  (d) =>
-                    d.claimed &&
-                    !d.revoked_at &&
-                    Date.parse(d.expires_at) > Date.now(),
-                )
-                  ? "All active devices already have a runner in this Brain."
-                  : "Connect the Recollect plugin on an active device first."}
+        {(stale ||
+          (!runner && devices.error) ||
+          (!runner && !devices.isPending && !devices.error && !active.length) ||
+          save.error) && (
+          <div className="grid gap-2 px-4 pb-3 pt-3">
+            {stale && (
+              <Alert variant="warning">
+                This registration changed. Cancel and reopen it before saving.
               </Alert>
             )}
-          {save.error && (
-            <Alert color="red" title="Private runner not saved">
-              {save.error.message}
-            </Alert>
-          )}
-        </div>
-        <footer className="private-runner-footer">
+            {!runner && devices.error && (
+              <Alert
+                variant="destructive"
+                title="Paired devices unavailable"
+                actions={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void devices.refetch()}
+                  >
+                    Refresh paired devices
+                  </Button>
+                }
+              >
+                {devices.error.message}
+              </Alert>
+            )}
+            {!runner &&
+              !devices.isPending &&
+              !devices.error &&
+              !active.length && (
+                <Alert variant="warning" role="status">
+                  {devices.data?.some(
+                    (d) =>
+                      d.claimed &&
+                      !d.revoked_at &&
+                      Date.parse(d.expires_at) > Date.now(),
+                  )
+                    ? "All active devices already have a runner in this Brain."
+                    : "Connect the Recollect plugin on an active device first."}
+                </Alert>
+              )}
+            {save.error && (
+              <Alert variant="destructive" title="Private runner not saved">
+                {save.error.message}
+              </Alert>
+            )}
+          </div>
+        )}
+        <footer className="flex min-h-12 items-center justify-between gap-3 border-t border-border bg-muted px-4 py-2">
           {runner ? (
             <SetupCopy
               brain={brain}
@@ -515,14 +562,16 @@ function RunnerEditor({
               disabled={save.isPending}
             />
           ) : (
-            <p>Save, then start the runner on its paired device.</p>
+            <p className="m-0 text-caption text-muted-foreground">
+              Save, then start the runner on its paired device.
+            </p>
           )}
-          <div className="private-runner-actions">
-            <Button size="xs" variant="default" type="button" onClick={close}>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" type="button" onClick={close}>
               Cancel
             </Button>
             <Button
-              size="xs"
+              size="sm"
               type="submit"
               loading={save.isPending}
               disabled={!valid}

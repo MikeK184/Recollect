@@ -2,6 +2,30 @@
 
 Status: accepted
 
+## 2026 redesign: Light and Ink, inset shell — 2026-10-19
+
+The user approved version 2 of the design system, decided in
+[ADR 0025](../adr/0025-two-theme-desktop-redesign.md). It replaces the
+cream/ink/sage light-only presentation, the Mantine component layer, Manrope
+and DM Mono, the serif page headings and the overlay record drawer. The
+[shared visual language](#shared-visual-language) and
+[display priority](#display-and-interaction-priority--2026-10-01) below state
+the current rules; the [design system](../foundation/design-system.md) holds the
+token values and component specifications.
+
+Earlier dated amendments in this contract keep their behavior, data, authority
+and acceptance. Their approved concept images and visual wording (cream or paper
+surfaces, sage headers, serif titles, traffic-light chrome, a 248px shell)
+govern composition, hierarchy and placement only; colour, type, radius, depth,
+theme and shell geometry follow the current design system. A redesigned page
+must keep every control, state, URL and permission its dated amendment requires.
+
+The migration is presentation only. It changes no route, URL state, API call,
+polling cadence, permission, policy, retention rule or failure state, starts no
+job and calls no provider. Delivery is tracked by the
+[desktop visual experience epic](../roadmap/epics/desktop-visual-experience.md);
+this amendment is not evidence that the redesign has shipped.
+
 ## Private Runner relationship cards — 2026-10-06
 
 Implement the user-approved `view-v2.png` concept in
@@ -168,9 +192,11 @@ redaction stays enabled and excluded values are never discarded by presentation.
 The user approved implementation of all ten items in the
 [browser review](https://github.com/MikeK184/Recollect/blob/f2673d71c4b63b536d41b3143eb39c207955b201/docs/research/browser-management-review-2026-10-05.md), with the
 revised Connections-style tool-group cards replacing the rejected list/inspector
-concept. All routes share the existing 248px shell, 14px navigation and compact
-Newsreader page-heading scale; route-specific management styles must not enlarge
-the sidebar, controls, typography or content gutters. Diagnostics is an always
+concept. All routes share one shell scale: the design system's sidebar,
+navigation and compact sans page header (the 248px shell and Newsreader page
+headings of this date are superseded by the 2026-10-19 redesign); route-specific
+management styles must not enlarge the sidebar, controls, typography or content
+gutters. Diagnostics is an always
 visible, labelled top-right icon, including when healthy; Team stays in account
 controls. Diagnostic detail continues to use existing operator authority.
 
@@ -186,9 +212,9 @@ one-time-secret lifecycle governed by the direct-auth contract.
 
 Connection preview becomes editable in its existing inspector, retaining
 identity, tabs, section positions and reserved Save/Cancel controls. Testing is
-explicit and separate from saving or executing tools. Tool groups use one paper
-card per real group, a sage identity header, dark icon tile and serif title, with
-MCPs and people inside the card and editing in place. Use, Manage and Share are
+explicit and separate from saving or executing tools. Tool groups use one card
+per real group with an identity header, icon tile and title in the current
+design system's styling, with MCPs and people inside the card and editing in place. Use, Manage and Share are
 independent icon controls beside each principal's name: green background for
 granted, red for not granted, with distinct icons, accessible names, tooltip
 labels and checked/pressed state. Do not depend on colour alone. Effective
@@ -279,9 +305,13 @@ force, and every route named below stays a real deep-linkable URL.
 
 The user prioritizes normal laptop screens and larger desktop monitors, up to
 about 32 inches. Aim for comfortable desktop reading and ordinary pointer use;
-physical screen size is not a fixed CSS resolution. Use 1440×900 and 1920×1080
-as practical review sizes, with wider desktop checks when a changed layout needs
-them. Existing 1280px checks can remain inexpensive compatibility coverage.
+physical screen size is not a fixed CSS resolution. The 2026-10-19 redesign sets
+1440px as the smallest supported layout (16-inch laptops and larger). Review
+pages at 1440×900, 1536×864, 1728×1117 and 2560×1440 in both themes, with other
+desktop sizes when a changed layout needs them. Below 1440px the inspector opens
+as a sheet and the sidebar collapses to its rail; content stays usable but is not
+a design target. Existing 1280px checks can remain inexpensive compatibility
+coverage.
 
 Mobile, small-screen optimization and exhaustive responsive matrices are low
 priority. Extra keyboard interactions, shortcuts, focus polish and keyboard-only
@@ -296,7 +326,9 @@ required.
 
 The user explicitly approved the complete desktop proposal on 2026-09-26 and
 requested implementation, consistent fonts/icons/SVGs and an original SVG logo.
-[ADR 0014](../adr/0014-desktop-experience-and-answers.md), the accepted
+On 2026-10-19 the user approved the two-theme redesign recorded in
+[ADR 0025](../adr/0025-two-theme-desktop-redesign.md).
+[ADR 0014](../adr/0014-desktop-experience-and-answers.md) as amended, the accepted
 [plan](../roadmap/desktop-experience/README.md),
 [design tokens](../foundation/design-system.md) and existing
 [foundations](../foundation/README.md) govern this work. Concept images illustrate
@@ -381,59 +413,117 @@ validity polling remains until an equally strong replacement is proven.
 
 ### Shared visual language
 
-Use the accepted primitive, semantic and component token layers. The user's
-2026-10-03 correction restores the original light Atlas palette and supersedes
-the earlier warm-dark direction: warm cream canvas `#f7f4ec`, light paper
-surfaces `#fffdf8`, cream sidebar `#eee9de`, dark ink `#101b2a` and sage-green
-accent `#3d6b59`. Keep the new motion, pipeline and terminal features, with
-readable per-category accents and subtle tints adapted to light surfaces.
-Terminal cards and ambient mode use the same light palette. No dark-mode switch.
-The exact values live in the design-system document.
-Newsreader 500 page headings
-are 36–40px/1.1 and section headings 24px/1.2; Manrope controls 14px/1.45 and
-reading text 16px/1.55; DM Mono metadata 12px/1.5. Self-host licensed font files
-and notices; no runtime external font request. Lucide icons use one shared
-size/stroke convention and navigation map rather than per-page variants.
+The 2026-10-19 redesign ([ADR 0025](../adr/0025-two-theme-desktop-redesign.md))
+governs this section and supersedes the 2026-10-03 light cream/ink/sage palette,
+the Manrope/DM Mono/serif-heading typography and the no-dark-mode rule. Exact
+values and component specifications live in the
+[design system](../foundation/design-system.md).
 
-Motion is purposeful and fluid: shared duration/easing tokens (fast ~150ms,
-base ~250ms, slow ~450ms, ambient ~1200ms; standard and emphasized easings) with
-staggered entrance for lists/cards (~40ms steps), pulsing status while a job is
-processing, skeleton loaders during loading, and smooth page-content transitions.
-Animations never change what data is shown, never imply precision the feeds do
-not have, and honor `prefers-reduced-motion` by degrading to static content. No
-decorative 3D rendering. The approved 2026-10-03 control-panel revision permits
-Motion for shared layout/transitions and React Flow for bounded read-only
-diagrams; CSS/SVG remain appropriate for simple effects. Keep Cytoscape for the
-existing knowledge graph. Load diagram dependencies only on their consuming routes.
+Use the accepted primitive, semantic and component token layers, expressed as
+OKLCH CSS variables under shadcn's names plus Recollect's `brand`, status,
+`kind-*`, terminal and ANSI roles. Feature code uses only token-backed Tailwind
+utilities or variables: no raw colour, arbitrary colour value, default-palette
+utility or inline style colour outside the design layer. Tailwind CSS v4 and
+shadcn/ui on one primitive family replace Mantine; no Mantine component or
+generated Mantine class remains once the migration ships.
 
-Agent and tool output renders in a terminal-style card: macOS traffic-light
-chrome, monospace body, bounded safe ANSI subset (colors/bold/dim; no cursor
-escapes), sanitized input, and the same truncation/redaction as the underlying
-detail views. The Rust plugin CLI presents an animated startup banner and live
-status lines (spinner, colored outcomes, elapsed time) on a TTY, falling back to
-plain output for non-TTY, `NO_COLOR` or CI.
+Two themes, Light and Ink, are complete and equally supported. The theme follows
+the operating-system setting until a person chooses one; an explicit choice is
+remembered as a non-sensitive browser preference, never as a Brain or account
+policy, and is applied before first paint so no page flashes the other theme.
+Every surface, chart, graph, diagram, status and focus state is defined in both
+themes, and both meet the contrast, focus and non-colour status rules below.
+Jade `brand` marks only AI and learning states: Ask, learning, live processing,
+checked controls, focus and the active navigation icon. Primary actions use ink
+`primary`, never jade. Status always pairs its colour with a word and its icon.
+
+Mona Sans sets the interface: page titles 28/34 600, section titles 20/28, card
+and dialog titles 16/24, body 14/20, labels 13/18 and captions 12/16. JetBrains
+Mono sets machine text — identifiers, times, durations, counts and code — with
+tabular figures. Newsreader is used only for Ask answers and quoted memory
+(17/28), the Ask hero (40/46) and the wordmark; it never sets interface chrome.
+Self-host the three families with pinned manifest hashes and OFL notices; no
+runtime external font request. Lucide icons use one shared size/stroke
+convention (16px, 1.75 stroke) and navigation map rather than per-page variants.
+
+The Brain shell places the sidebar (240px, or a 56px rail when collapsed)
+directly on the canvas and renders content in one inset main panel with a sticky
+topbar. Readable pages cap at 1200px and tables at 1600px; Graph and pipeline
+canvases are full-bleed and controls never stack above a canvas. Page headers are
+compact sans headers with at most two actions; only Ask uses the serif hero
+above its composer. No page uses an eyebrow.
+
+Selecting a record opens it in the one shared inspector, docked at 400px inside
+the main panel from 1440px and opened as a sheet with a scrim below that, instead
+of an overlay drawer. Only one inspector is open at a time. Its selection lives
+in validated URL state with the exact same-Brain identifier and revision; closing
+it returns focus to the row that opened it; and a docked inspector never covers
+the graph canvas. Other existing drawers that are not record inspection (Graph
+filters, insights, status and paths; Agents Manage access) keep their content,
+actions, permissions and URL state and are presented as sheets.
+
+A command palette opens with ⌘K (Ctrl+K elsewhere) from any authenticated page.
+It searches memory and sources through the existing authorized
+[literal list search](#literal-list-search), jumps to any route the account may open, offers non-destructive
+actions, and shows at most eight rows per group. Its first row hands the typed
+query to Ask, which ⌘↵ also does; the hand-off is an explicit Ask request under
+the [answer contract](retrieval-answers.md) and keeps the question out of URLs.
+Typing in the palette never calls a model, and superseded requests are cancelled
+so a late response cannot replace newer results. Destructive actions never run
+from the palette.
+
+Motion is purposeful and fluid: shared duration/easing tokens (instant 100ms,
+fast 160ms, base 220ms, slow 360ms, ambient 1600ms; standard, out, in and small
+bounce easings) with staggered first-load entrance for lists (30ms steps, at most
+ten), live status, shaped skeleton loaders and page-content transitions. Loops
+mean live work: a Brain with nothing happening is still. Ask shows a shimmer line
+while gathering evidence and reveals a validated answer whole, never streaming
+unvalidated tokens. Animations never change what data is shown, never imply
+precision the feeds do not have, and honor `prefers-reduced-motion` by degrading
+to static content. No decorative 3D rendering. Motion handles shared
+layout/transitions and React Flow bounded read-only diagrams; CSS/SVG remain
+appropriate for simple effects. The knowledge graph keeps its
+[ADR 0021](../adr/0021-grouped-spatial-graph-navigation.md) renderers, themed
+from the same tokens in both themes. Load diagram dependencies only on their
+consuming routes.
+
+Agent and tool output renders in a terminal card on a fixed dark terminal surface
+in both themes, with a bar naming the host, command and result state instead of
+window traffic lights: monospace body, bounded safe ANSI subset (colors/bold/dim;
+no cursor escapes) rendered as text, sanitized input, and the same
+truncation/redaction as the underlying detail views. The Rust plugin CLI presents
+an animated startup banner and live status lines (spinner, colored outcomes,
+elapsed time) on a TTY, falling back to plain output for non-TTY, `NO_COLOR` or CI.
 
 The Brain's Activity surface hosts a live pipeline view — capture → learning →
 memory/graph stage nodes with animated edges — that animates state diffs over the
-existing polling feeds: new items slide in, active edges pulse, counts tick, and
-a processing indicator glows while a learning job runs. It shows only real feed
-data: no fabricated counts, streaming text or causal ordering. A fullscreen
+existing polling feeds: stages stay in place while their state changes, new items
+slide in, the edge feeding a running stage flows, counts tick, and a processing
+stage glows while a learning job runs. One edge packet represents one recorded
+event; no events means no packets. It shows only real feed data: no fabricated
+counts, streaming text or causal ordering, and its cadence remains the contracted
+feed refresh below. A fullscreen
 ambient mode at `/brains/{brain}/tv` (hidden from navigation, toggled from
 Activity) cycles the Brain's recent memories one at a time with slow fade/scale
-transitions, category glow, timestamp and provenance; it reads only the existing
-authorized memory list.
+transitions, category glow, timestamp and provenance in the current theme; it
+reads only the existing authorized memory list.
 
 Create an original vector Recollect mark expressing remembered fragments gathering
 together, plus a reusable wordmark/compact icon and SVG favicon. It must remain
-recognizable at navigation size, use the same tokens, and have appropriate text
-alternatives or decorative semantics. A raster image is not a substitute.
+recognizable at navigation size and have appropriate text alternatives or
+decorative semantics. In the product the mark sits on its fixed paper app-icon
+tile so its original colours read in both themes; the wordmark is Newsreader with
+a jade full stop. A raster image is not a substitute.
 
-Shared PageHeader, FilterBar, ScopeSummary, DetailInspector, StatusBadge,
-AsyncState, SettingsSection and ActionMenu own recurring behavior. Keep forms,
-dialogs, tables and graphs on that system. No mobile redesign. Apply the display
-and interaction priority above. Keep readable long labels and non-color status
-meanings. Auth, invitation, OIDC error/recovery and expired-session views use the
-same system; the expired-session view is the sign-in view with a
+The design system's shared components (among them AppShell, Sidebar, Topbar,
+PageHeader, Inspector, CommandPalette, AskComposer, AnswerCard, StatusBadge,
+AsyncState, Table, TerminalCard and PipelineFlow) and the FilterBar,
+ScopeSummary, SettingsSection and ActionMenu compositions built from them own
+recurring behavior. Keep forms, dialogs, tables and graphs on that system. No
+mobile redesign. Apply the display and interaction priority above. Keep readable
+long labels and non-color status meanings. Auth, invitation, OIDC error/recovery
+and expired-session views use the same system in both themes; the expired-session
+view is the sign-in view with a
 "Your session ended — sign in again" notice, shown only after
 `GET /api/auth/me` confirms the session ended and never after an explicit sign-out.
 
@@ -441,7 +531,7 @@ same system; the expired-session view is the sign-in view with a
 
 | Destination | Required behavior and boundary |
 | --- | --- |
-| Ask | Question/citations/inspector governed by [answers](retrieval-answers.md); the default view is a chat-style conversation thread — user questions and model-grounded answers as turns, with citations as expandable evidence attachments and follow-ups in the same thread — and Search evidence is an explicit alternative mode retaining Matches, Disagreements, Sources, Copy context and advanced exact/mode/time/budget criteria. The thread stays temporary; applied restrictions stay visible. |
+| Ask | Question/citations/inspector governed by [answers](retrieval-answers.md); an empty thread opens on the serif Ask hero above the composer; the default view is a chat-style conversation thread — user questions and model-grounded answers as turns, with citations as expandable evidence attachments and follow-ups in the same thread — and Search evidence is an explicit alternative mode retaining Matches, Disagreements, Sources, Copy context and advanced exact/mode/time/budget criteria. The thread stays temporary; applied restrictions stay visible. |
 | Memory | Readable claim/decision/procedure/handover list and exact detail/history/support. Optional correction, review, withdrawal, conflict resolution and erasure retain canonical handlers. Handover generation selects exact claim revisions, never silently saves Ask text. |
 | Sources | Current paste/text-file/reference import, list/version content, collections/areas/environment filters and one Manage views editor. New-version editing and contextual reprocess/learning/erase retain their effects. Show reference-only/unavailable bytes honestly. Storage policy lives in Settings. |
 | Graph | Canvas first, compact kind/scope toolbar, filters/insights/status drawers and canonical inspector. Provide keyboard/list selection and textual paths. Default bounded knowledge overview uses current Brain-only investigation selection when no explicit selection exists; it invokes the existing read endpoint once, without model/rebuild/analytics. Explicit historical/repository/manifest selections are never guessed or reset. Missing exact inputs ask for selection. Existing bounds and oversize refusal remain. |
@@ -550,9 +640,21 @@ switches with positive useful controls. Measure request volume/performance rathe
 than claiming improvement by layout alone. Verify the actual desktop assets,
 fonts/logo and browser behavior; run frontend checks and `./scripts/validate.sh`.
 
+The 2026-10-19 redesign additionally proves, in a real browser in both Light and
+Ink at the review sizes above: every destination renders with token-backed
+styling and no Mantine dependency; the theme follows the system setting, keeps an
+explicit choice across reloads and paints no frame in the other theme; the
+inspector docks at 400px from 1440px and opens as a sheet below it, with focus
+return and URL state; ⌘K opens the palette, its results respect authorization,
+it hands a query to Ask without putting it in the URL and runs no destructive
+action; only Ask shows the serif hero; reduced motion shows complete static
+content; and the updated design check rejects a raw or default-palette colour.
+Existing route, Playwright and domain regressions pass unchanged in meaning.
+
 ## Explicit Deferrals
 
-Mobile/small-tablet redesign, dark mode, arbitrary MCP executable approval,
+Mobile/small-tablet redesign (below 1440px only the sheet inspector and sidebar
+rail are specified), arbitrary MCP executable approval,
 browser provider installation, broader administrative MCP parity, new source
 formats/connectors and general-purpose agent hosting. Saved or action-capable
 Ask requires separate authority. No external deployment, automatic version bump,

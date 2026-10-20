@@ -6,6 +6,12 @@ Amended 2026-10-01 by the user's [display and interaction priority](../contracts
 normal laptops and larger desktop monitors are primary; small-screen and extra
 keyboard work are optional rather than completion requirements.
 
+Amended 2026-10-19 by [ADR 0025](0025-two-theme-desktop-redesign.md): Tailwind
+CSS v4 and shadcn/ui replace Mantine; Light and Ink themes replace the one
+light-only token system; Mona Sans, JetBrains Mono and Newsreader (answers, the
+Ask hero and the wordmark only) replace Newsreader, Manrope and DM Mono. The
+route, icon, SVG identity, ownership and read-only answer decisions below remain.
+
 ## Decision
 
 Implement the user's explicitly approved 2026-09-26

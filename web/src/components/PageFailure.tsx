@@ -1,5 +1,5 @@
-import { Button } from "@mantine/core";
 import { RefreshCw } from "lucide-react";
+import { Button } from "./ui/button";
 import { EmptyState } from "./AsyncState";
 import { pageFailure } from "./pageFailureCopy";
 

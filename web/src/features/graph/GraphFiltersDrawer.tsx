@@ -2,14 +2,10 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   Button,
   Drawer,
-  Group,
   MultiSelect,
   Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+  TextField,
+} from "../../components/ui";
 import type { components } from "../../api-schema";
 import {
   evidenceModes,
@@ -59,15 +55,18 @@ export function GraphFiltersDrawer({
 }) {
   return (
     <Drawer
-      className="feature-drawer"
       opened={opened}
       onClose={onClose}
-      position="right"
       title="Graph filters"
-      size="lg"
+      size={620}
+      bodyClassName="grid content-start gap-4"
+      footer={
+        <Button onClick={onApply} loading={loading} disabled={needsSelection}>
+          Apply graph filters
+        </Button>
+      }
     >
-      <Stack>
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
+        <div className="grid gap-4 sm:grid-cols-2">
           <Select
             label="Graph kind"
             value={scope.kind}
@@ -94,7 +93,7 @@ export function GraphFiltersDrawer({
           <MultiSelect
             label="Graph repositories"
             searchable
-            value={scope.selection.repository_ids}
+            value={scope.selection.repository_ids ?? []}
             maxValues={scope.kind === "repository" ? 1 : 100}
             data={(repositories ?? []).map((r) => ({
               value: r.id,
@@ -109,7 +108,7 @@ export function GraphFiltersDrawer({
               });
             }}
           />
-          <TextInput
+          <TextField
             label="Graph fact time"
             description="Optional applicability time in your local timezone."
             type="datetime-local"
@@ -124,7 +123,7 @@ export function GraphFiltersDrawer({
             }
           />
           {scope.kind === "repository" && (
-            <Stack gap="xs">
+            <div className="grid gap-2">
               <Select
                 label="Graph snapshot"
                 searchable
@@ -137,24 +136,26 @@ export function GraphFiltersDrawer({
                 onChange={(id) => change({ ...scope, snapshot_id: id })}
               />
               {snapshots && snapshots.total > 20 && (
-                <Group>
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    size="xs"
+                    size="sm"
+                    variant="secondary"
                     disabled={!snapshotOffset}
                     onClick={() => setSnapshotOffset((n) => n - 20)}
                   >
                     Previous snapshots
                   </Button>
                   <Button
-                    size="xs"
+                    size="sm"
+                    variant="secondary"
                     disabled={snapshotOffset + 20 >= snapshots.total}
                     onClick={() => setSnapshotOffset((n) => n + 20)}
                   >
                     More snapshots
                   </Button>
-                </Group>
+                </div>
               )}
-            </Stack>
+            </div>
           )}
           <Select
             label="Graph environment"
@@ -173,7 +174,7 @@ export function GraphFiltersDrawer({
             }}
           />
           {scope.selection.environment_id && (
-            <Stack gap="xs">
+            <div className="grid gap-2">
               <Select
                 label="Graph manifest"
                 clearable
@@ -187,29 +188,31 @@ export function GraphFiltersDrawer({
                 }
               />
               {manifests && manifests.total > 20 && (
-                <Group>
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    size="xs"
+                    size="sm"
+                    variant="secondary"
                     disabled={!manifestOffset}
                     onClick={() => setManifestOffset((n) => n - 20)}
                   >
                     Previous manifests
                   </Button>
                   <Button
-                    size="xs"
+                    size="sm"
+                    variant="secondary"
                     disabled={manifestOffset + 20 >= manifests.total}
                     onClick={() => setManifestOffset((n) => n + 20)}
                   >
                     More manifests
                   </Button>
-                </Group>
+                </div>
               )}
-            </Stack>
+            </div>
           )}
           <MultiSelect
             label="Graph areas"
             searchable
-            value={scope.selection.area_ids}
+            value={scope.selection.area_ids ?? []}
             data={availableGroups
               .filter((g) => g.kind === "area")
               .map((g) => ({ value: g.id, label: g.name }))}
@@ -254,18 +257,13 @@ export function GraphFiltersDrawer({
             ).map((value) => ({ value, label: label(value) }))}
             onChange={(relations) => change({ ...scope, relations })}
           />
-        </SimpleGrid>
+        </div>
         <Failure error={error} />
-
-        <Text size="sm" c="dimmed">
+        <p className="m-0 text-label text-muted-foreground">
           Selected revisions stay exact. A path follows only the selected
           evidence and relation types; committed structure does not prove
           deployed behavior.
-        </Text>
-        <Button onClick={onApply} loading={loading} disabled={needsSelection}>
-          Apply graph filters
-        </Button>
-      </Stack>
+        </p>
     </Drawer>
   );
 }

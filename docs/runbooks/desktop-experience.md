@@ -12,7 +12,10 @@ at port 8787; its recorded Brain data and standing policies were preserved.
 Start the authorized root stack through the [installation procedure](installation.md)
 and open `http://127.0.0.1:8787`. Sign in using the existing account. Do not change
 policy merely to make a status look connected. Desktop is the supported design
-scope; dark mode and mobile/small-tablet redesign remain deferred.
+scope; mobile/small-tablet redesign remains deferred. The Light and Ink redesign
+on Tailwind CSS and shadcn/ui ([ADR 0025](../adr/0025-two-theme-desktop-redesign.md))
+is decided but not yet delivered; this guide describes the shipped light
+interface until that slice ships.
 
 Prioritize normal laptop screens and larger desktop monitors up to about 32
 inches, as the user clarified on 2026-10-01. Small-screen polish and extra
@@ -180,22 +183,50 @@ remove customer working trees. Use disposable Brains for verification.
 
 ## Develop the shared interface
 
-Use `web/src/design/tokens.ts` and Mantine theme/component defaults for all colors,
-fonts and geometry; `app/navigation.ts` is the contextual icon map. Feature pages
-compose the existing canonical typed API and inspectors. Keep visible protected
-content checks; do not mount unrelated polling panels behind hidden tabs.
+The interface is Tailwind CSS v4 plus shadcn/ui components on Radix
+([ADR 0025](../adr/0025-two-theme-desktop-redesign.md)); Mantine is gone.
 
-The development-only component preview page (`/design.html`) was removed on
-2026-10-19 with the web dead-code cleanup. `web/src/design/theme.ts` and
-`web/src/design/tokens.ts` are the component reference; the Vite dev server
-(`npm --prefix web run dev`) serves the real application only. The normal product
-continues to use the Rust-served build at port 8787.
+- Tokens: `web/src/design/tokens.css` holds every colour, radius, shadow, motion
+  and layout value for Light (`:root`) and Ink (`[data-theme="dark"]`).
+  `web/src/index.css` maps them into Tailwind (`bg-card`, `text-brand-text`,
+  `text-page`, `shadow-glow`, `duration-fast`…) and defines the shared
+  utilities and keyframes. Raw colours belong only in `web/src/design/`;
+  `npm --prefix web run check:design` enforces it.
+- Theme: `web/public/theme-init.js` sets `data-theme` before first paint from the
+  remembered choice (`recollect-theme` in local storage) or the system setting;
+  `web/src/design/theme-mode.ts` keeps it current. Canvas and WebGL renderers
+  read concrete colours through `resolveColor()` and re-read them on theme
+  change (`web/src/features/graph/graphColors.ts`).
+- Components: `web/src/components/ui/` is the kit (buttons, badges, fields,
+  input-based Select/MultiSelect, native checkbox/switch/radio, dialogs,
+  sheets, menus, tabs, command, table…). Shared page pieces live in
+  `web/src/components/` (`Page`, `PageHeader`, `AsyncState`, `FeatureTabs`,
+  `Inspector` — the docked record inspector — `TerminalCard`, `CodeBlock`).
+  Motion presets are in `web/src/design/motion.ts`; the app runs under
+  `MotionConfig reducedMotion="user"`.
+- Shell: `web/src/app/` holds the inset shell (sidebar, topbar, ⌘K command
+  palette, Ask hand-off); `app/navigation.ts` is the contextual icon map.
+
+Feature pages compose the existing canonical typed API and inspectors. Keep
+visible protected content checks; do not mount unrelated polling panels behind
+hidden tabs.
+
+The Vite dev server (`npm --prefix web run dev`) serves the real application
+and proxies `/api` to the stack on port 8787. The API accepts writes only from
+its public origin, so the proxy forwards requests that come from the dev
+server's own pages as that origin; requests from any other origin still fail
+the server's check. The normal product continues to use the Rust-served build
+at port 8787.
 
 Fonts and licenses live under `web/public/fonts/` and `web/public/licenses/`.
 The [font manifest](../../web/public/fonts/manifest.json) pins bytes/checksums and
 upstream revision. The [SVG identity guide](../../web/public/brand/README.md)
 describes the mark, monochrome variant and portable wordmark. Do not replace them
 with generated screenshot icons or introduce a runtime external-font request.
+The application loads Mona Sans, JetBrains Mono and Newsreader. Manrope and DM
+Mono stay in `web/public/` only because the public documentation site
+(`site/scripts/prepare.mjs`), which keeps its own system until the user decides
+otherwise, copies them from there; remove them only together with that copy.
 
 ## Verification
 

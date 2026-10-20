@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Alert } from "@mantine/core";
+import { Alert } from "../components/ui/alert";
 import { Outlet, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result } from "../api";
@@ -38,17 +38,26 @@ function BrainBoundary({ id }: { id: string }) {
   );
   if (query.isError)
     return (
-      <ErrorState error={query.error} retry={() => void query.refetch()} />
+      <div className="mx-auto w-full max-w-[1248px] px-6 pt-6">
+        <ErrorState error={query.error} retry={() => void query.refetch()} />
+      </div>
     );
-  if (query.isPending) return <LoadingState label="Opening Brain…" />;
+  if (query.isPending)
+    return (
+      <div className="mx-auto w-full max-w-[1248px] px-6 pt-6">
+        <LoadingState label="Opening Brain…" />
+      </div>
+    );
   if (!query.data) return null;
   return (
     <BrainContext.Provider value={query.data}>
       {query.data.archived && (
-        <Alert color="yellow" mb="lg" title="This Brain is archived">
-          Its content and history are preserved. Reopen it in Settings to
-          continue using this space.
-        </Alert>
+        <div className="mx-auto w-full max-w-[1248px] px-6 pt-6">
+          <Alert variant="warning" title="This Brain is archived">
+            Its content and history are preserved. Reopen it in Settings to
+            continue using this space.
+          </Alert>
+        </div>
       )}
       {/* Metadata revisions invalidate assurance queries, not the entire page.
           Effective role changes still discard the protected route subtree. */}

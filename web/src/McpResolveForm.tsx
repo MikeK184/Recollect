@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Button, Group, Select, Stack, Textarea } from "@mantine/core";
+import { Alert, Button, Select, TextareaField } from "./components/ui";
 import { useQuery } from "@tanstack/react-query";
 import { client, result, RequestError } from "./api";
 import type { components } from "./api-schema";
@@ -69,7 +69,7 @@ export function McpResolveForm({
     }
   };
   return (
-    <Stack aria-label="Reconciliation evidence">
+    <div className="grid gap-3" aria-label="Reconciliation evidence">
       <Select
         label="Evidence source"
         searchable
@@ -90,10 +90,10 @@ export function McpResolveForm({
         }}
       />
       {(offset > 0 || (sources.data?.total ?? 0) > 50) && (
-        <Group>
+        <div className="flex flex-wrap gap-2">
           <Button
-            size="xs"
-            variant="light"
+            size="sm"
+            variant="secondary"
             disabled={offset === 0 || !!pending}
             onClick={() => {
               setOffset(Math.max(0, offset - 50));
@@ -104,8 +104,8 @@ export function McpResolveForm({
             Previous sources
           </Button>
           <Button
-            size="xs"
-            variant="light"
+            size="sm"
+            variant="secondary"
             disabled={offset + 50 >= (sources.data?.total ?? 0) || !!pending}
             onClick={() => {
               setOffset(offset + 50);
@@ -115,7 +115,7 @@ export function McpResolveForm({
           >
             More sources
           </Button>
-        </Group>
+        </div>
       )}
       <Select
         label="Retained evidence version"
@@ -134,10 +134,10 @@ export function McpResolveForm({
         onChange={setVersion}
       />
       {(versionOffset > 0 || (versions.data?.total ?? 0) > 20) && (
-        <Group>
+        <div className="flex flex-wrap gap-2">
           <Button
-            size="xs"
-            variant="light"
+            size="sm"
+            variant="secondary"
             disabled={versionOffset === 0 || !!pending}
             onClick={() => {
               setVersionOffset(Math.max(0, versionOffset - 20));
@@ -147,8 +147,8 @@ export function McpResolveForm({
             Newer versions
           </Button>
           <Button
-            size="xs"
-            variant="light"
+            size="sm"
+            variant="secondary"
             disabled={
               versionOffset + 20 >= (versions.data?.total ?? 0) || !!pending
             }
@@ -159,7 +159,7 @@ export function McpResolveForm({
           >
             Older versions
           </Button>
-        </Group>
+        </div>
       )}
       <Select
         label="Observed outcome"
@@ -173,7 +173,7 @@ export function McpResolveForm({
           { value: "unknown", label: "Still unknown" },
         ]}
       />
-      <Textarea
+      <TextareaField
         label="Evidence explanation"
         description="Explain what this retained source establishes. The original missing response remains recorded."
         maxLength={2000}
@@ -182,11 +182,12 @@ export function McpResolveForm({
         onChange={(e) => setExplanation(e.currentTarget.value)}
       />
       {(error || sources.error || versions.error) && (
-        <Alert color="red">
+        <Alert variant="destructive">
           {error ?? sources.error?.message ?? versions.error?.message}
         </Alert>
       )}
       <Button
+        className="justify-self-start"
         disabled={
           !version || !explanation.trim() || !!sources.error || !!versions.error
         }
@@ -195,6 +196,6 @@ export function McpResolveForm({
       >
         {pending ? "Check evidence submission" : "Save evidence resolution"}
       </Button>
-    </Stack>
+    </div>
   );
 }

@@ -1,29 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import "./features/feature-views.css";
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eraser, Trash2, TriangleAlert } from "lucide-react";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { PolicyRow } from "./features/settings/PolicyRow";
 import { useIdempotency } from "./useIdempotency";
 import { useLineageOverlay } from "./features/knowledge/selection";
-import { TriangleAlert } from "lucide-react";
 import { usePollInterval } from "./usePollInterval";
+import { EmptyState } from "./components/AsyncState";
+import { SkeletonRows } from "./components/Skeleton";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardBar,
+  Modal,
+  NumberField,
+  NumberInput,
+  Select,
+  Spinner,
+  StatusBadge,
+  Switch,
+  TextField,
+} from "./components/ui";
+import { cn } from "./lib/utils";
+import { useFirstLoadStagger } from "./features/activity/firstLoad";
 type Policy = components["schemas"]["RetentionPolicy"];
 type Settings = components["schemas"]["RetentionSettings"];
 type Erasure = components["schemas"]["ErasureStatus"];
@@ -31,7 +33,7 @@ type Target = components["schemas"]["ErasureTarget"];
 const label = (s: string) => s.replaceAll("_", " ");
 const time = (s: string) => new Date(s).toLocaleString();
 function Failure({ error }: { error: Error | null }) {
-  return error ? <Alert color="red">{error.message}</Alert> : null;
+  return error ? <Alert variant="destructive">{error.message}</Alert> : null;
 }
 const policyFields: {
   key: keyof Policy;
@@ -94,90 +96,93 @@ export function RetentionPolicyEditor({
     },
   });
   const form = (
-    <Stack className={inline ? "privacy-editor" : undefined}>
-      {policyFields
-        .filter((f) => !fields || fields.includes(f.key))
-        .map((f) =>
-          inline ? (
-            <PolicyRow
-              key={f.key}
-              title={f.key === "claim_days" ? "Memory" : f.title}
-              description={
-                f.key === "raw_session_days"
-                  ? "Conversation events and session text"
-                  : f.key === "tool_output_days"
-                    ? "Captured results from managed tools"
-                    : f.optional
-                      ? "Blank keeps content until erased."
-                      : "Expiry runs automatically."
-              }
-            >
-              {readOnly && f.optional ? (
-                <span className="privacy-duration-value">
-                  {settings.policy[f.key] == null
-                    ? "Until erased"
-                    : `${settings.policy[f.key]} days`}
-                </span>
-              ) : (
-                <div className="privacy-policy-row-controls">
-                  <NumberInput
-                    aria-label={f.title + " · days"}
-                    min={1}
-                    max={f.max ?? 3650}
-                    allowDecimal={false}
-                    value={
+    <div className="grid gap-4">
+      <div className={cn("grid", inline ? "gap-0" : "grid-cols-2 gap-x-4 gap-y-3")}>
+        {policyFields
+          .filter((f) => !fields || fields.includes(f.key))
+          .map((f) =>
+            inline ? (
+              <PolicyRow
+                key={f.key}
+                title={f.key === "claim_days" ? "Memory" : f.title}
+                description={
+                  f.key === "raw_session_days"
+                    ? "Conversation events and session text"
+                    : f.key === "tool_output_days"
+                      ? "Captured results from managed tools"
+                      : f.optional
+                        ? "Blank keeps content until erased."
+                        : "Expiry runs automatically."
+                }
+              >
+                {readOnly && f.optional ? (
+                  <span className="mono text-label text-foreground">
+                    {settings.policy[f.key] == null
+                      ? "Until erased"
+                      : `${settings.policy[f.key]} days`}
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <NumberInput
+                      aria-label={f.title + " · days"}
+                      min={1}
+                      max={f.max ?? 3650}
+                      allowDecimal={false}
+                      value={
+                        readOnly
+                          ? ((settings.policy[f.key] as number | null) ?? "")
+                          : ((draft[f.key] as number | null) ?? "")
+                      }
+                      placeholder={f.optional ? "Until erased" : undefined}
+                      readOnly={readOnly}
+                      hideControls={readOnly}
+                      className="w-32"
+                      onChange={(v) =>
+                        setDraft({
+                          ...draft,
+                          [f.key]:
+                            typeof v === "number" ? v : f.optional ? null : 0,
+                        })
+                      }
+                    />
+                    <Select
+                      aria-label={f.title + " duration unit"}
+                      data={["days"]}
+                      value="days"
+                      onChange={() => undefined}
                       readOnly
-                        ? ((settings.policy[f.key] as number | null) ?? "")
-                        : ((draft[f.key] as number | null) ?? "")
-                    }
-                    placeholder={f.optional ? "Until erased" : undefined}
-                    readOnly={readOnly}
-                    hideControls={readOnly}
-                    onChange={(v) =>
-                      setDraft({
-                        ...draft,
-                        [f.key]:
-                          typeof v === "number" ? v : f.optional ? null : 0,
-                      })
-                    }
-                  />
-                  <Select
-                    aria-label={f.title + " duration unit"}
-                    data={["days"]}
-                    value="days"
-                    readOnly
-                  />
-                </div>
-              )}
-            </PolicyRow>
-          ) : (
-            <NumberInput
-              key={f.key}
-              label={f.title + " · days"}
-              description={
-                f.optional ? "Leave blank to retain until erased." : undefined
-              }
-              min={1}
-              max={f.max ?? 3650}
-              allowDecimal={false}
-              value={(draft[f.key] as number | null) ?? ""}
-              onChange={(v) =>
-                setDraft({
-                  ...draft,
-                  [f.key]: typeof v === "number" ? v : f.optional ? null : 0,
-                })
-              }
-            />
-          ),
-        )}
+                      className="w-24"
+                    />
+                  </div>
+                )}
+              </PolicyRow>
+            ) : (
+              <NumberField
+                key={f.key}
+                label={f.title + " · days"}
+                description={
+                  f.optional ? "Leave blank to retain until erased." : undefined
+                }
+                min={1}
+                max={f.max ?? 3650}
+                allowDecimal={false}
+                value={(draft[f.key] as number | null) ?? ""}
+                onChange={(v) =>
+                  setDraft({
+                    ...draft,
+                    [f.key]: typeof v === "number" ? v : f.optional ? null : 0,
+                  })
+                }
+              />
+            ),
+          )}
+      </div>
       {(!fields || fields.includes("allow_support_excerpts")) && (
         <PolicyRow title="Supporting excerpt capture">
           {readOnly ? (
-            settings.policy.allow_support_excerpts ? (
-              "Allowed"
-            ) : (
-              "Disabled"
-            )
+            <span className="text-body text-foreground">
+              {settings.policy.allow_support_excerpts ? "Allowed" : "Disabled"}
+            </span>
           ) : (
             <Switch
               aria-label="Allow explicitly retained supporting excerpts"
@@ -193,23 +198,24 @@ export function RetentionPolicyEditor({
         </PolicyRow>
       )}
       {(!fields || fields.includes("backup_days")) && (
-        <Text size="xs" c="dimmed">
+        <p className="m-0 text-caption text-muted-foreground">
           The backup window is recorded for the forthcoming backup adapter.
           External copies remain outside this installation’s control.
-        </Text>
+        </p>
       )}
+      <Failure error={save.error} />
       {!readOnly && (
-        <div className="privacy-retention-save-line">
-          <Text size="xs" className="privacy-duration-warning">
-            <TriangleAlert size={17} aria-hidden="true" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="m-0 flex items-start gap-2 text-caption text-warning-text">
+            <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden="true" />
             <span>
               Shortening a duration can expire existing content immediately.
               Extending it does not recover removed content.
             </span>
-          </Text>
-          <Group justify="flex-end">
+          </p>
+          <div className="flex gap-2">
             <Button
-              variant="default"
+              variant="secondary"
               disabled={save.isPending}
               onClick={onClose}
             >
@@ -218,11 +224,10 @@ export function RetentionPolicyEditor({
             <Button loading={save.isPending} onClick={() => save.mutate()}>
               Save changes
             </Button>
-          </Group>
+          </div>
         </div>
       )}
-      <Failure error={save.error} />
-    </Stack>
+    </div>
   );
   return inline ? (
     form
@@ -258,53 +263,55 @@ function ErasureProgress({ brain, item }: { brain: string; item: Erasure }) {
   });
   const current = item.state === "complete" ? item : (retry.data ?? item);
   return (
-    <Stack gap="xs">
-      <Group>
-        <Badge
-          color={
+    <div className="grid gap-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <StatusBadge
+          state={
             current.state === "complete"
-              ? "teal"
+              ? "positive"
               : current.state === "error"
-                ? "red"
-                : "orange"
+                ? "negative"
+                : "attention"
           }
         >
           {current.state === "complete"
             ? "Central cleanup complete"
             : label(current.state)}
-        </Badge>
-        <Text size="sm">
+        </StatusBadge>
+        <span className="mono text-caption text-foreground-secondary">
           {current.pending_artifacts} files pending · journal{" "}
           {current.journaled ? "saved" : "pending"}
           {current.graph_pending
             ? " · graph cleanup pending"
             : " · graph cleanup complete"}
-        </Text>
-      </Group>
+        </span>
+      </div>
       {current.error_code && (
-        <Alert color="red">
+        <Alert variant="destructive">
           {label(current.error_code)}. Content is unavailable while cleanup
           retries.
         </Alert>
       )}
-      <Text size="xs" c="dimmed">
-        {current.acknowledged_devices ?? 0} devices have acknowledged this
-        deletion position. Host-side copies require device check-in or their
-        known expiry. Central completion does not confirm removal from offline
-        devices or external backups.
-      </Text>
+      <p className="m-0 text-caption text-muted-foreground">
+        <span className="mono">{current.acknowledged_devices ?? 0}</span>{" "}
+        devices have acknowledged this deletion position. Host-side copies
+        require device check-in or their known expiry. Central completion does
+        not confirm removal from offline devices or external backups.
+      </p>
       {current.state !== "complete" && (
-        <Button
-          variant="light"
-          size="xs"
-          loading={retry.isPending}
-          onClick={() => retry.mutate()}
-        >
-          Retry cleanup
-        </Button>
+        <div>
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={retry.isPending}
+            onClick={() => retry.mutate()}
+          >
+            Retry cleanup
+          </Button>
+        </div>
       )}
       <Failure error={retry.error} />
-    </Stack>
+    </div>
   );
 }
 export function EraseAction({
@@ -366,15 +373,15 @@ export function EraseAction({
   return (
     <>
       <Button
-        color="red"
-        variant="subtle"
-        size="xs"
+        variant="destructive-ghost"
+        size="sm"
         onClick={() => {
           erase.reset();
           setAttempt((a) => a + 1);
           setOpened(true);
         }}
       >
+        <Eraser aria-hidden="true" />
         Erase {label(target.kind)}
       </Button>
       {opened && (
@@ -383,96 +390,100 @@ export function EraseAction({
           onClose={() => setOpened(false)}
           title="Erase controlled memory"
           size="lg"
+          footer={
+            erase.data ? undefined : (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={erase.isPending}
+                  onClick={() => {
+                    erase.reset();
+                    setAttempt((a) => a + 1);
+                  }}
+                >
+                  Refresh erasure preview
+                </Button>
+                <Button
+                  variant="destructive"
+                  loading={erase.isPending}
+                  disabled={
+                    !preview.data || preview.isFetching || !!preview.error
+                  }
+                  onClick={() => erase.mutate()}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Confirm erasure
+                </Button>
+              </>
+            )
+          }
         >
-          <Stack>
+          <div className="grid gap-3">
             {erase.data ? (
               <>
-                <Alert color="orange">
+                <Alert variant="warning" role="status">
                   Content is now unavailable. Cleanup progress is shown below.
                 </Alert>
                 <ErasureProgress brain={brain} item={erase.data} />
               </>
             ) : (
               <>
-                <Text fw={600} style={{ overflowWrap: "anywhere" }}>
+                <p className="m-0 break-words text-title font-semibold text-foreground [overflow-wrap:anywhere]">
                   {name}
-                </Text>
-                <Text size="sm">
+                </p>
+                <p className="m-0 text-body text-foreground-secondary">
                   This permanently removes controlled content and dependent
                   revisions. Erasing the current revision does not restore an
                   older assertion.
-                </Text>
-                {preview.isPending && <Loader size="sm" />}
+                </p>
+                {preview.isPending && <Spinner label="Previewing erasure" />}
                 <Failure error={preview.error} />
                 {preview.data && (
-                  <>
-                    <Text>
+                  <div className="grid gap-2 rounded-lg border border-border bg-muted/50 px-3.5 py-3">
+                    <p className="m-0 mono text-label text-foreground">
                       {preview.data.source_versions} source versions ·{" "}
                       {preview.data.claim_revisions} claim revisions ·{" "}
                       {preview.data.snapshots} snapshots ·{" "}
                       {preview.data.manifest_revisions} manifest revisions
-                    </Text>
-                    <Text size="sm">
+                    </p>
+                    <p className="m-0 mono text-caption text-muted-foreground">
                       {preview.data.artifacts} stored files ·{" "}
                       {preview.data.jobs} queued or running jobs ·{" "}
                       {preview.data.independent_claim_revisions} independent
                       claim revisions preserved
-                    </Text>
+                    </p>
                     {!!preview.data.model_input_fences && (
-                      <Text size="sm">
+                      <p className="m-0 text-label text-foreground-secondary">
                         {preview.data.model_input_fences} supporting source
                         versions will be fenced from further model transmission.
                         Independently retained evidence remains inspectable.
-                      </Text>
+                      </p>
                     )}
                     {!!preview.data.capture_event_fences && (
-                      <Text size="sm">
+                      <p className="m-0 text-label text-foreground-secondary">
                         {preview.data.capture_event_fences} capture events will
                         be removed from host inboxes during synchronization.
-                      </Text>
+                      </p>
                     )}
                     {!!preview.data.model_claim_fences && (
-                      <Text size="sm">
+                      <p className="m-0 text-label text-foreground-secondary">
                         {preview.data.model_claim_fences} contributing claim
                         revisions will be fenced from further model
                         transmission. Independent records remain inspectable.
-                      </Text>
+                      </p>
                     )}
-                    {preview.data.shared_sources && (
-                      <Alert color="yellow">
-                        Some selected sources also belong to other collections.
-                        Erasing them removes their content throughout this
-                        Brain.
-                      </Alert>
-                    )}
-                  </>
+                  </div>
+                )}
+                {preview.data?.shared_sources && (
+                  <Alert variant="warning">
+                    Some selected sources also belong to other collections.
+                    Erasing them removes their content throughout this Brain.
+                  </Alert>
                 )}
                 <Failure error={erase.error} />
-                <Group>
-                  <Button
-                    variant="default"
-                    disabled={erase.isPending}
-                    onClick={() => {
-                      erase.reset();
-                      setAttempt((a) => a + 1);
-                    }}
-                  >
-                    Refresh erasure preview
-                  </Button>
-                  <Button
-                    color="red"
-                    loading={erase.isPending}
-                    disabled={
-                      !preview.data || preview.isFetching || !!preview.error
-                    }
-                    onClick={() => erase.mutate()}
-                  >
-                    Confirm erasure
-                  </Button>
-                </Group>
               </>
             )}
-          </Stack>
+          </div>
         </Modal>
       )}
     </>
@@ -522,8 +533,8 @@ export function ExcerptAction({
   return (
     <>
       <Button
-        size="xs"
-        variant="light"
+        size="sm"
+        variant="secondary"
         onClick={() => {
           save.reset();
           setOpened(true);
@@ -536,39 +547,9 @@ export function ExcerptAction({
           opened
           onClose={() => setOpened(false)}
           title="Retain supporting excerpt"
-        >
-          <Stack>
-            <Text size="sm">
-              Select exact lines from this source, up to 8 KiB. The excerpt has
-              its own retention period and preserves provenance. Explicit source
-              erasure also removes its excerpts.
-            </Text>
-            <TextInput
-              label="Excerpt title"
-              value={name}
-              maxLength={120}
-              onChange={(e) => setName(e.currentTarget.value)}
-            />
-            <NumberInput
-              label="First line"
-              value={first}
-              min={1}
-              allowDecimal={false}
-              onChange={(v) => setFirst(Number(v))}
-            />
-            <NumberInput
-              label="Last line"
-              value={last}
-              min={first}
-              allowDecimal={false}
-              onChange={(v) => setLast(Number(v))}
-            />
-            <Failure error={save.error} />
-            {save.data ? (
-              <Alert color="teal">
-                Excerpt retained. It is available as a separate source.
-              </Alert>
-            ) : (
+          description="Select exact lines from this source, up to 8 KiB. The excerpt has its own retention period and preserves provenance. Explicit source erasure also removes its excerpts."
+          footer={
+            save.data ? undefined : (
               <Button
                 loading={save.isPending}
                 disabled={!name.trim() || first < 1 || last < first}
@@ -576,8 +557,39 @@ export function ExcerptAction({
               >
                 Create excerpt
               </Button>
+            )
+          }
+        >
+          <div className="grid gap-4">
+            <TextField
+              label="Excerpt title"
+              value={name}
+              maxLength={120}
+              onChange={(e) => setName(e.currentTarget.value)}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField
+                label="First line"
+                value={first}
+                min={1}
+                allowDecimal={false}
+                onChange={(v) => setFirst(Number(v))}
+              />
+              <NumberField
+                label="Last line"
+                value={last}
+                min={first}
+                allowDecimal={false}
+                onChange={(v) => setLast(Number(v))}
+              />
+            </div>
+            <Failure error={save.error} />
+            {save.data && (
+              <Alert variant="brand" role="status">
+                Excerpt retained. It is available as a separate source.
+              </Alert>
             )}
-          </Stack>
+          </div>
         </Modal>
       )}
     </>
@@ -634,78 +646,92 @@ export function RetentionPanel({
       ),
     refetchInterval: pollNormal,
   });
+  const stagger = useFirstLoadStagger(erasures.data?.items.map((i) => i.id));
   useEffect(() => {
     if (selectedRequest && erasures.data)
       focused.current?.scrollIntoView({ block: "center" });
   }, [selectedRequest, erasures.data]);
   return (
-    <section className="feature-setting">
-      <Stack>
-        {simple && (
-          <Text size="sm">
-            Retention runs automatically. Durations differ by content type.
-          </Text>
+    <Card className="overflow-hidden p-0" role="region" aria-label={section === "settings" ? "Retention" : "Data removal"}>
+      <CardBar>
+        <h3>{section === "settings" ? "Retention" : "Data removal"}</h3>
+        {section === "activity" && (
+          <span className="text-caption text-muted-foreground">
+            Erasure and expiry requests with their cleanup progress.
+          </span>
         )}
-        <Group justify="space-between">
-          <Title order={3}>
-            {section === "settings" ? "Retention" : "Data removal"}
-          </Title>
-          {section === "settings" &&
-            brain.role === "admin" &&
-            !brain.archived && (
-              <Button
-                variant="default"
-                disabled={!policy.data}
-                onClick={() => setEditing(true)}
-              >
-                Edit retention
-              </Button>
-            )}
-        </Group>
+        {section === "settings" && brain.role === "admin" && !brain.archived && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ml-auto"
+            disabled={!policy.data}
+            onClick={() => setEditing(true)}
+          >
+            Edit retention
+          </Button>
+        )}
+      </CardBar>
+      <div className="grid gap-3 p-4">
+        {simple && (
+          <p className="m-0 text-body text-foreground-secondary">
+            Retention runs automatically. Durations differ by content type.
+          </p>
+        )}
         {section === "settings" && (
           <>
             <Failure error={policy.error} />
-            {policy.isPending && <Loader size="sm" />}
+            {policy.isPending && <SkeletonRows rows={2} label="Loading retention…" />}
             {!policy.error && policy.data && (
               <>
-                <Text size="sm">
-                  Raw sessions: {policy.data.policy.raw_session_days} days · raw
-                  tool output: {policy.data.policy.tool_output_days} days.
-                  Excerpts are{" "}
+                <p className="m-0 text-body text-foreground-secondary">
+                  Raw sessions:{" "}
+                  <span className="mono">
+                    {policy.data.policy.raw_session_days} days
+                  </span>{" "}
+                  · raw tool output:{" "}
+                  <span className="mono">
+                    {policy.data.policy.tool_output_days} days
+                  </span>
+                  . Excerpts are{" "}
                   {policy.data.policy.allow_support_excerpts
                     ? "permitted"
                     : "disabled"}
                   .
-                </Text>
-                <Group gap="xs">
+                </p>
+                <div className="flex flex-wrap gap-1.5">
                   {policyFields
                     .filter((f) => f.optional)
                     .map((f) => (
-                      <Badge variant="light" key={f.key}>
+                      <Badge variant="outline" key={f.key}>
                         {f.title}:{" "}
                         {policy.data!.policy[f.key] == null
                           ? "until erased"
                           : String(policy.data!.policy[f.key]) + " days"}
                       </Badge>
                     ))}
-                </Group>
+                </div>
               </>
             )}
-            <details className="feature-details">
-              <summary>Retention details and history</summary>
-              <Text size="sm" mt="sm">
-                Open evidence to preview erasure. Turning storage off only
-                affects future captures.
-              </Text>
-              {brain.role === "admin" && (
-                <Button
-                  component="a"
-                  href={`/brains/${brain.id}/activity?tab=timeline`}
-                  variant="subtle"
-                >
-                  View policy changes in activity
-                </Button>
-              )}
+            <details className="group rounded-md border border-border px-3 py-2">
+              <summary className="cursor-pointer text-label font-medium text-foreground">
+                Retention details and history
+              </summary>
+              <div className="mt-2 grid gap-2">
+                <p className="m-0 text-body text-foreground-secondary">
+                  Open evidence to preview erasure. Turning storage off only
+                  affects future captures.
+                </p>
+                {brain.role === "admin" && (
+                  <div>
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={`/brains/${brain.id}/activity?tab=timeline`}>
+                        View policy changes in activity
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </details>
           </>
         )}
@@ -713,81 +739,95 @@ export function RetentionPanel({
           <>
             <Failure error={erasures.error} />
             {erasures.isPending ? (
-              <Loader size="sm" />
+              <SkeletonRows rows={3} label="Loading data removal…" />
             ) : erasures.data?.items.length === 0 ? (
-              <Text size="sm">No erasure or expiry requests.</Text>
+              <EmptyState
+                icon={Eraser}
+                title="No erasure or expiry requests"
+                description="Requests appear here when content is erased or expires."
+                className="py-8"
+              />
             ) : (
               !erasures.error &&
-              erasures.data?.items.map((item) => (
-                <Card
-                  withBorder
-                  key={item.id}
-                  p="md"
-                  ref={item.id === selectedRequest ? focused : undefined}
-                  className={
-                    item.id === selectedRequest
-                      ? "activity-selected"
-                      : undefined
-                  }
-                  data-testid={
-                    item.id === selectedRequest ? "selected-erasure" : undefined
-                  }
-                >
-                  <Stack gap="sm">
-                    <Text size="sm">
-                      {label(item.cause)} · {label(item.target.kind)} ·{" "}
-                      {time(item.created_at)}
-                    </Text>
+              erasures.data?.items.map((item, index) => {
+                const selected = item.id === selectedRequest;
+                const entrance = stagger(item.id, index);
+                return (
+                  <div
+                    key={item.id}
+                    ref={selected ? focused : undefined}
+                    className={cn(
+                      "grid gap-2.5 rounded-lg border border-border bg-card px-4 py-3",
+                      selected && "border-brand bg-brand-soft/40",
+                      entrance.className,
+                    )}
+                    style={entrance.style}
+                    data-testid={selected ? "selected-erasure" : undefined}
+                  >
+                    <p className="m-0 flex flex-wrap items-center gap-x-2 text-body text-foreground">
+                      <span className="font-medium capitalize">
+                        {label(item.cause)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        · {label(item.target.kind)} ·
+                      </span>
+                      <span className="mono text-caption text-muted-foreground">
+                        {time(item.created_at)}
+                      </span>
+                    </p>
                     {brain.role === "admin" ? (
                       <ErasureProgress brain={brain.id} item={item} />
                     ) : (
-                      <>
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge>{label(item.state)}</Badge>
-                        <Text size="xs">
-                          {item.pending_artifacts} files pending.
+                        <span className="text-caption text-muted-foreground">
+                          <span className="mono">{item.pending_artifacts}</span>{" "}
+                          files pending.
                           {item.graph_pending
                             ? " Graph cleanup pending. "
                             : " "}
                           Offline host copies require check-in.
-                        </Text>
-                      </>
+                        </span>
+                      </div>
                     )}
-                  </Stack>
-                </Card>
-              ))
+                  </div>
+                );
+              })
             )}
             {erasures.data && erasures.data.total > 20 && (
-              <Group>
+              <div className="flex gap-2">
                 <Button
-                  variant="subtle"
+                  variant="ghost"
+                  size="sm"
                   disabled={offset === 0}
                   onClick={() => setOffset(Math.max(0, offset - 20))}
                 >
                   Previous requests
                 </Button>
                 <Button
-                  variant="subtle"
+                  variant="ghost"
+                  size="sm"
                   disabled={offset + 20 >= erasures.data.total}
                   onClick={() => setOffset(offset + 20)}
                 >
                   Next requests
                 </Button>
-              </Group>
+              </div>
             )}
           </>
         )}
-        {editing &&
-          brain.role === "admin" &&
-          !brain.archived &&
-          policy.data &&
-          !policy.error && (
-            <RetentionPolicyEditor
-              brain={brain.id}
-              settings={policy.data}
-              onClose={() => setEditing(false)}
-            />
-          )}
-      </Stack>
-    </section>
+      </div>
+      {editing &&
+        brain.role === "admin" &&
+        !brain.archived &&
+        policy.data &&
+        !policy.error && (
+          <RetentionPolicyEditor
+            brain={brain.id}
+            settings={policy.data}
+            onClose={() => setEditing(false)}
+          />
+        )}
+    </Card>
   );
 }

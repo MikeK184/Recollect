@@ -1,23 +1,23 @@
 import { useEffect, useState } from "react";
+import { BookOpen, Play, ServerCog, Wrench } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { StatusDot } from "./components/StatusDot";
+import { staggerStyle } from "./components/Motion";
+import { client, result, RequestError, type Brain } from "./api";
+import type { components } from "./api-schema";
+import { CodeBlock } from "./components/Markdown";
+import { ToolDescription } from "./components/ToolDescription";
 import {
   Alert,
   Badge,
   Button,
   Card,
-  Group,
-  Loader,
   Modal,
   Select,
-  Stack,
-  Text,
-} from "@mantine/core";
-import { BookOpen, FileText } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { StatusDot } from "./components/StatusDot";
-import { client, result, RequestError, type Brain } from "./api";
-import type { components } from "./api-schema";
-import { CodeBlock } from "./components/Markdown";
-import { ToolDescription } from "./components/ToolDescription";
+  Spinner,
+} from "./components/ui";
+import { Disclosure } from "./features/connections/ui";
+import { cn } from "./lib/utils";
 import type { McpTool } from "./McpRunDialog";
 import type { McpCatalogue, McpProfile } from "./McpPanel";
 import { usePollInterval } from "./usePollInterval";
@@ -63,64 +63,94 @@ export function ToolReadNotice({ read }: { read: MetadataRead }) {
       [401, 403].includes(read.error.status);
     return (
       <Alert
-        color={denied ? "gray" : "red"}
+        variant={denied ? "default" : "destructive"}
         title={
           denied
             ? "Tool metadata access unavailable"
             : "Tool metadata unavailable"
         }
+        actions={
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={read.refreshing}
+            loading={read.refreshing}
+            onClick={read.reload}
+          >
+            Reload tools
+          </Button>
+        }
       >
-        <Text size="sm">{read.error.message}</Text>
-        <Button
-          size="xs"
-          variant="light"
-          mt="xs"
-          disabled={read.refreshing}
-          loading={read.refreshing}
-          onClick={read.reload}
-        >
-          Reload tools
-        </Button>
+        {read.error.message}
       </Alert>
     );
   }
   if (read.pending || read.refreshing)
     return (
-      <Group gap="xs" className="connection-tools-loading" role="status">
-        <Loader size="xs" />
-        <Text size="xs" c="dimmed">
-          {read.pending
-            ? "Loading approved tools…"
-            : "Refreshing approved tools…"}
-        </Text>
-      </Group>
+      <div
+        className="flex items-center gap-2 text-caption text-muted-foreground"
+        role="status"
+      >
+        <Spinner size={14} />
+        {read.pending ? "Loading approved tools…" : "Refreshing approved tools…"}
+      </div>
     );
   return null;
 }
 
-export function ApprovedToolDetails({ tool }: { tool: ToolDescriptor }) {
+/** JSON schemas and hints, each behind its own disclosure. */
+function SchemaDisclosures({
+  tool,
+  hints = false,
+}: {
+  tool: ToolDescriptor;
+  hints?: boolean;
+}) {
   return (
-    <section className="inspector-approved-tool">
-      <Text fw={600} size="sm">
-        {tool.name}
-      </Text>
-      <ToolDescription text={tool.description ?? ""} />
-      <details className="tool-metadata">
-        <summary>Input schema</summary>
+    <>
+      <Disclosure summary="Input schema">
         <CodeBlock
           language="json"
           code={JSON.stringify(tool.inputSchema, null, 2)}
         />
-      </details>
+      </Disclosure>
       {tool.outputSchema != null && (
-        <details className="tool-metadata">
-          <summary>Output schema</summary>
+        <Disclosure summary="Output schema">
           <CodeBlock
             language="json"
             code={JSON.stringify(tool.outputSchema, null, 2)}
           />
-        </details>
+        </Disclosure>
       )}
+      {hints && tool.annotations != null && (
+        <Disclosure summary="Behavior hints">
+          <p className="m-0 text-caption text-muted-foreground">
+            Hints do not authorize use or establish actual behavior.
+          </p>
+          <CodeBlock
+            language="json"
+            code={JSON.stringify(tool.annotations, null, 2)}
+          />
+        </Disclosure>
+      )}
+    </>
+  );
+}
+
+export function ApprovedToolDetails({ tool }: { tool: ToolDescriptor }) {
+  return (
+    <section className="grid min-w-0 gap-2 border-t border-border py-3 first:border-t-0 first:pt-0">
+      <div className="flex min-w-0 items-center gap-2">
+        <Wrench
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+        <span className="mono min-w-0 truncate text-label font-medium text-foreground">
+          {tool.name}
+        </span>
+      </div>
+      <ToolDescription text={tool.description ?? ""} />
+      <SchemaDisclosures tool={tool} />
     </section>
   );
 }
@@ -238,81 +268,98 @@ export function InspectorToolGroup({
             : `${tools.length} on this page`);
   return (
     <section
-      className="inspector-tool-group"
+      className="grid min-w-0 gap-2 rounded-md border border-border bg-card p-3"
       aria-label={`Tool group ${profile.name}`}
     >
-      <Group justify="space-between">
-        <BookOpen size={18} />
-        <strong>{profile.name}</strong>
-        <Badge color="gray" variant="light">
+      <div className="flex min-w-0 items-center gap-2">
+        <BookOpen
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+        <strong className="min-w-0 flex-1 truncate text-label font-semibold text-foreground">
+          {profile.name}
+        </strong>
+        <Badge className={cn(tools != null && !blocked && "mono")}>
           {count}
         </Badge>
-      </Group>
+      </div>
       {profile.description && (
-        <p className="management-muted">{profile.description}</p>
+        <p className="m-0 text-caption text-muted-foreground">
+          {profile.description}
+        </p>
       )}
       {blocked ? (
-        <Text size="xs" c="dimmed" mt="sm">
+        <p className="m-0 text-caption text-muted-foreground">
           {blocked === "Use access required"
             ? "Use access is required to read this group’s tools."
             : "Tool discovery is paused for this configuration."}
-        </Text>
+        </p>
       ) : (
         <>
           <ToolReadNotice read={read} />
           {unavailable ? (
-            <Text size="sm" c="dimmed" mt="sm">
+            <p className="m-0 text-label text-muted-foreground">
               {availabilityLabel(unavailable.reason)}
-            </Text>
+            </p>
           ) : (
             !read.error &&
             tools != null && (
               <>
-                {tools.map((tool) =>
-                  detailed ? (
-                    <ApprovedToolDetails key={tool.name} tool={tool} />
-                  ) : (
-                    <div className="inspector-tool-name" key={tool.name}>
-                      <FileText size={14} />
-                      <code>{tool.name}</code>
+                {detailed ? (
+                  <div className="grid">
+                    {tools.map((tool) => (
+                      <ApprovedToolDetails key={tool.name} tool={tool} />
+                    ))}
+                  </div>
+                ) : (
+                  tools.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {tools.map((tool) => (
+                        <code
+                          key={tool.name}
+                          className="mono inline-flex h-[22px] max-w-full items-center truncate rounded-sm border border-border bg-muted px-1.5 text-caption text-foreground-secondary"
+                        >
+                          {tool.name}
+                        </code>
+                      ))}
                     </div>
-                  ),
+                  )
                 )}
                 {tools.length === 0 && (
-                  <Text size="xs" c="dimmed" mt="sm">
+                  <p className="m-0 text-caption text-muted-foreground">
                     {canConfigure
                       ? "No approved tools in this connector."
                       : data?.total === 0
                         ? "No eligible approved tools in this group."
                         : "No tools from this connection on this page. Other pages may contain more."}
-                  </Text>
+                  </p>
                 )}
               </>
             )
           )}
           {!canConfigure && data && (data.total > 20 || offset > 0) && (
-            <Group mt="sm" gap="xs" className="inspector-tool-pagination">
+            <div className="flex items-center justify-between gap-2">
               <Button
-                variant="default"
-                size="compact-xs"
+                variant="secondary"
+                size="sm"
                 disabled={offset === 0}
                 onClick={() => setOffset((value) => Math.max(0, value - 20))}
               >
                 Previous tools
               </Button>
-              <Text size="xs" c="dimmed">
+              <span className="mono text-caption text-muted-foreground">
                 {Math.min(offset + 1, data.total)}–
                 {Math.min(offset + 20, data.total)} of {data.total} group tools
-              </Text>
+              </span>
               <Button
-                variant="default"
-                size="compact-xs"
+                variant="secondary"
+                size="sm"
                 disabled={data.next_offset == null}
                 onClick={() => setOffset(data.next_offset!)}
               >
                 Next tools
               </Button>
-            </Group>
+            </div>
           )}
         </>
       )}
@@ -368,136 +415,114 @@ export function DiscoveryDialog({
       opened
       onClose={close}
       title={`Tools · ${connectionName ?? profile.name}`}
+      description="Available tools from this approved group. Choose a tool to run it."
       size="xl"
+      bodyClassName="grid gap-4"
     >
-      <Stack>
-        <Text size="sm">
-          Available tools from this approved group. Choose a tool to run it.
-        </Text>
-        {environments.length > 0 && (
-          <Select
-            label="Tool environment"
-            value={environment}
-            clearable={!profile.environment_id}
-            disabled={!!profile.environment_id}
-            placeholder="Brain-wide"
-            data={environments}
-            onChange={(v) => {
-              setEnvironment(v);
-              setOffset(0);
-            }}
-          />
-        )}
-        <ToolReadNotice
-          read={{
-            error: query.error,
-            pending: query.isPending,
-            refreshing: query.isFetching,
-            reload: () => void query.refetch(),
+      {environments.length > 0 && (
+        <Select
+          label="Tool environment"
+          value={environment}
+          clearable={!profile.environment_id}
+          disabled={!!profile.environment_id}
+          placeholder="Brain-wide"
+          data={environments}
+          className="max-w-[320px]"
+          onChange={(v) => {
+            setEnvironment(v);
+            setOffset(0);
           }}
         />
-        {data && (
-          <>
-            <Text fw={600}>{data.total} tools · Approved catalogue</Text>
-            {connectionId && (
-              <Text size="xs" c="dimmed">
-                Showing {connectionName} tools on this page of {profile.name}.
-                Other pages may contain more.
-              </Text>
-            )}
-            {data.unavailable_connections.map((c) => (
-              <Alert color="yellow" key={c.connection_id}>
-                {c.name}: {availabilityLabel(c.reason)}
-              </Alert>
-            ))}
-            {data.total === 0 && (
-              <Text>
-                No eligible cached tools are available in this profile.
-              </Text>
-            )}
+      )}
+      <ToolReadNotice
+        read={{
+          error: query.error,
+          pending: query.isPending,
+          refreshing: query.isFetching,
+          reload: () => void query.refetch(),
+        }}
+      />
+      {data && (
+        <>
+          <p className="m-0 text-title font-semibold text-foreground">
+            <span className="mono">{data.total}</span> tools · Approved
+            catalogue
+          </p>
+          {connectionId && (
+            <p className="m-0 text-caption text-muted-foreground">
+              Showing {connectionName} tools on this page of {profile.name}.
+              Other pages may contain more.
+            </p>
+          )}
+          {data.unavailable_connections.map((c) => (
+            <Alert variant="warning" role="status" key={c.connection_id}>
+              {c.name}: {availabilityLabel(c.reason)}
+            </Alert>
+          ))}
+          {data.total === 0 && (
+            <p className="m-0 text-body text-muted-foreground">
+              No eligible cached tools are available in this profile.
+            </p>
+          )}
+          <div className="grid gap-3">
             {data.tools
               .filter(
                 (item) => !connectionId || item.connection_id === connectionId,
               )
-              .map((item) => (
+              .map((item, index) => (
                 <Card
-                  withBorder
                   key={`${item.connection_id}:${item.tool.name}`}
                   data-testid="mcp-cached-tool"
+                  className="grid animate-enter gap-2"
+                  style={staggerStyle(index)}
                 >
-                  <Text fw={600}>
-                    {item.connection_name} · {item.tool.name}
-                  </Text>
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <p className="m-0 min-w-0 text-label font-semibold text-foreground [overflow-wrap:anywhere]">
+                      {item.connection_name} · {item.tool.name}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => run(item, environment)}
+                    >
+                      <Play aria-hidden="true" />
+                      Run tool
+                    </Button>
+                  </div>
                   <ToolDescription text={item.tool.description ?? ""} />
-                  <Button
-                    size="xs"
-                    mt="sm"
-                    onClick={() => run(item, environment)}
-                  >
-                    Run tool
-                  </Button>
-                  <details className="tool-metadata">
-                    <summary>Tool details</summary>
-                    <Text size="xs" c="dimmed">
+                  <Disclosure summary="Tool details">
+                    <p className="mono m-0 text-caption text-muted-foreground">
                       Connection {item.connection_id}
-                    </Text>
-                    <details>
-                      <summary>Input schema</summary>
-                      <CodeBlock
-                        language="json"
-                        code={JSON.stringify(item.tool.inputSchema, null, 2)}
-                      />
-                    </details>
-                    {item.tool.outputSchema != null && (
-                      <details>
-                        <summary>Output schema</summary>
-                        <CodeBlock
-                          language="json"
-                          code={JSON.stringify(item.tool.outputSchema, null, 2)}
-                        />
-                      </details>
-                    )}
-                    {item.tool.annotations != null && (
-                      <details>
-                        <summary>Behavior hints</summary>
-                        <Text size="xs">
-                          Hints do not authorize use or establish actual
-                          behavior.
-                        </Text>
-                        <CodeBlock
-                          language="json"
-                          code={JSON.stringify(item.tool.annotations, null, 2)}
-                        />
-                      </details>
-                    )}
-                  </details>
+                    </p>
+                    <SchemaDisclosures tool={item.tool} hints />
+                  </Disclosure>
                 </Card>
               ))}
-            {(data.total > 20 || offset > 0) && (
-              <Group>
-                <Button
-                  variant="light"
-                  disabled={offset === 0}
-                  onClick={() => setOffset((v) => Math.max(0, v - 20))}
-                >
-                  Previous tools
-                </Button>
-                <Text size="sm">
-                  {Math.min(offset + 1, data.total)}–
-                  {Math.min(offset + 20, data.total)} of {data.total}
-                </Text>
-                <Button
-                  variant="light"
-                  disabled={data.next_offset == null}
-                  onClick={() => setOffset(data.next_offset!)}
-                >
-                  Next tools
-                </Button>
-              </Group>
-            )}
-          </>
-        )}
-      </Stack>
+          </div>
+          {(data.total > 20 || offset > 0) && (
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="secondary"
+                disabled={offset === 0}
+                onClick={() => setOffset((v) => Math.max(0, v - 20))}
+              >
+                Previous tools
+              </Button>
+              <span className="mono text-caption text-muted-foreground">
+                {Math.min(offset + 1, data.total)}–
+                {Math.min(offset + 20, data.total)} of {data.total}
+              </span>
+              <Button
+                variant="secondary"
+                disabled={data.next_offset == null}
+                onClick={() => setOffset(data.next_offset!)}
+              >
+                Next tools
+              </Button>
+            </div>
+          )}
+        </>
+      )}
     </Modal>
   );
 }
@@ -517,15 +542,15 @@ export function ConnectionObservation({
 }) {
   if (failed)
     return (
-      <Text size="xs" c="dimmed">
+      <p className="m-0 text-caption text-muted-foreground">
         Current session status unavailable
-      </Text>
+      </p>
     );
   if (pending || !status)
     return (
-      <Text size="xs" c="dimmed">
+      <p className="m-0 text-caption text-muted-foreground">
         Checking observed sessions…
-      </Text>
+      </p>
     );
   const visible = status.instances.filter((i) => i.connection_id === id);
   const active = visible.filter(
@@ -540,8 +565,8 @@ export function ConnectionObservation({
       ["starting", "ready", "draining"].includes(i.state),
   );
   return (
-    <Stack gap="xs">
-      <div className="connection-runtime">
+    <div className="grid gap-1.5">
+      <div className="flex items-center gap-2 text-label text-foreground">
         <StatusDot
           tone={active.length ? "accent" : "muted"}
           live={active.some(
@@ -554,27 +579,32 @@ export function ConnectionObservation({
             : "No current session observed"}
         </span>
       </div>
-      <span className="connection-runtime-note">
-        {active.length
-          ? `${active.reduce((n, i) => n + i.active_calls, 0)} active calls · `
-          : ""}
-        Checked {new Date(checkedAt).toLocaleTimeString()} · up to 50 visible
-        sessions, active first
+      <span className="text-caption text-muted-foreground">
+        {active.length ? (
+          <span className="mono">
+            {`${active.reduce((n, i) => n + i.active_calls, 0)} active calls · `}
+          </span>
+        ) : (
+          ""
+        )}
+        Checked{" "}
+        <span className="mono">{new Date(checkedAt).toLocaleTimeString()}</span>{" "}
+        · up to 50 visible sessions, active first
       </span>
       {previous.length > 0 && (
-        <Text size="xs" c="dimmed">
+        <p className="m-0 text-caption text-muted-foreground">
           {previous.length} earlier-configuration session
           {previous.length === 1 ? "" : "s"} still observed.
-        </Text>
+        </p>
       )}
       {!previous.length &&
         !active.length &&
         visible.some((i) => !i.current_configuration) && (
-          <Text size="xs" c="dimmed">
+          <p className="m-0 text-caption text-muted-foreground">
             Previous configuration sessions are excluded.
-          </Text>
+          </p>
         )}
-    </Stack>
+    </div>
   );
 }
 
@@ -647,86 +677,97 @@ export function ConnectionTest({
       onClose={close}
       title={`Test connection · ${summary.name}`}
       size="md"
+      bodyClassName="grid gap-3"
     >
-      <Stack>
-        {detail.isPending && <Loader size="sm" />}
-        {detail.error && <Alert color="red">{detail.error.message}</Alert>}
-        {!detail.error &&
-          detail.data &&
-          (!eligible ? (
-            <>
-              <Text size="sm">
-                {!summary.enabled ||
-                summary.availability !== "configured" ||
-                !definition?.enabled
-                  ? "This connection is paused or unavailable. Resolve its configuration before testing."
-                  : !owner
-                    ? "Anonymous server checks are available to the installation owner."
-                    : summary.placement !== "central"
-                      ? "This connection runs on a device. Test it with a permitted tool call."
-                      : detail.data.credential_alias ||
-                          Object.keys(detail.data.configuration ?? {}).length
-                        ? "This connection uses credentials or custom settings. Test it with a permitted tool call."
-                        : "This connector requires a permitted tool call to test it."}
-              </Text>
-              {group &&
-              summary.enabled &&
-              summary.availability === "configured" &&
-              definition?.enabled ? (
-                <Button onClick={() => tools(group.id)}>
-                  Open {group.name} tools
-                </Button>
-              ) : (
-                <Text size="sm" c="dimmed">
-                  {summary.enabled &&
-                  summary.availability === "configured" &&
-                  definition?.enabled
-                    ? "Ask a tool-group administrator for Use access to this connection."
-                    : "No tool test is available for this configuration."}
-                </Text>
-              )}
-            </>
-          ) : (
-            <>
-              <Text size="sm">
-                Check the anonymous server handshake and list its tool metadata.
-                No tool is executed, and approved tools and permissions stay
-                unchanged.
-              </Text>
-              {probe.isPending && (
-                <Text size="xs" role="status">
-                  Checking server…
-                </Text>
-              )}
-              {probe.error && (
-                <Alert color="red" title="Server check failed">
-                  {probe.error.message}
-                </Alert>
-              )}
-              {probe.data && !probe.isPending && !probe.error && (
-                <Alert
-                  color="brand"
-                  title={`Server responded · ${probe.data.count} tools listed`}
-                >
-                  <Text size="sm">{probe.data.checkedAt}</Text>
-                  <Text size="xs">
-                    Anonymous check; no tools executed. This does not verify
-                    tool permissions or future availability.
-                  </Text>
-                </Alert>
-              )}
+      {detail.isPending && <Spinner label="Loading connection" />}
+      {detail.error && (
+        <Alert variant="destructive">{detail.error.message}</Alert>
+      )}
+      {!detail.error &&
+        detail.data &&
+        (!eligible ? (
+          <>
+            <p className="m-0 text-body text-foreground-secondary">
+              {!summary.enabled ||
+              summary.availability !== "configured" ||
+              !definition?.enabled
+                ? "This connection is paused or unavailable. Resolve its configuration before testing."
+                : !owner
+                  ? "Anonymous server checks are available to the installation owner."
+                  : summary.placement !== "central"
+                    ? "This connection runs on a device. Test it with a permitted tool call."
+                    : detail.data.credential_alias ||
+                        Object.keys(detail.data.configuration ?? {}).length
+                      ? "This connection uses credentials or custom settings. Test it with a permitted tool call."
+                      : "This connector requires a permitted tool call to test it."}
+            </p>
+            {group &&
+            summary.enabled &&
+            summary.availability === "configured" &&
+            definition?.enabled ? (
               <Button
-                loading={probe.isPending}
-                onClick={() => {
-                  probe.reset();
-                  probe.mutate();
-                }}
+                className="justify-self-start"
+                onClick={() => tools(group.id)}
               >
-                Check server
+                Open {group.name} tools
               </Button>
-            </>
-          ))}
-      </Stack>
+            ) : (
+              <p className="m-0 text-label text-muted-foreground">
+                {summary.enabled &&
+                summary.availability === "configured" &&
+                definition?.enabled
+                  ? "Ask a tool-group administrator for Use access to this connection."
+                  : "No tool test is available for this configuration."}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="m-0 text-body text-foreground-secondary">
+              Check the anonymous server handshake and list its tool metadata.
+              No tool is executed, and approved tools and permissions stay
+              unchanged.
+            </p>
+            {probe.isPending && (
+              <p
+                className="m-0 flex items-center gap-2 text-caption text-muted-foreground"
+                role="status"
+              >
+                <StatusDot live />
+                Checking server…
+              </p>
+            )}
+            {probe.error && (
+              <Alert variant="destructive" title="Server check failed">
+                {probe.error.message}
+              </Alert>
+            )}
+            {probe.data && !probe.isPending && !probe.error && (
+              <Alert
+                variant="brand"
+                role="status"
+                icon={<ServerCog aria-hidden="true" />}
+                title={`Server responded · ${probe.data.count} tools listed`}
+              >
+                <p className="mono m-0 text-caption">{probe.data.checkedAt}</p>
+                <p className="m-0 text-caption">
+                  Anonymous check; no tools executed. This does not verify tool
+                  permissions or future availability.
+                </p>
+              </Alert>
+            )}
+            <Button
+              className="justify-self-start"
+              loading={probe.isPending}
+              onClick={() => {
+                probe.reset();
+                probe.mutate();
+              }}
+            >
+              Check server
+            </Button>
+          </>
+        ))}
     </Modal>
   );
 }

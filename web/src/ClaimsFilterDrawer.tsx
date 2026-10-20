@@ -1,13 +1,6 @@
-import {
-  Badge,
-  Button,
-  Drawer,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { X } from "lucide-react";
 import { ScopeSummary } from "./components/ScopeSummary";
+import { Badge, Button, Drawer, Select, TextField } from "./components/ui";
 import { instant, label, time } from "./claimsShared";
 import { memoryKinds } from "./MemoryForms";
 import type { ClaimsRouteState } from "./useClaimsRoute";
@@ -19,33 +12,41 @@ export function ClaimsScopeSummary({ state }: { state: ClaimsRouteState }) {
   return (
     <ScopeSummary>
       {memoryKind && (
-        <Badge variant="light">
+        <Badge>
           {memoryKinds.find((item) => item.value === memoryKind)?.label ??
             label(memoryKind)}
         </Badge>
       )}
       {mode !== "investigation" && (
-        <Badge variant="light">{label(mode ?? "investigation")}</Badge>
+        <Badge>{label(mode ?? "investigation")}</Badge>
       )}
       {environment && (
-        <Badge variant="light">
+        <Badge>
           {catalogue.data?.environments.find((e) => e.id === environment)
             ?.name ?? "Selected environment"}
         </Badge>
       )}
       {repository && (
-        <Badge variant="light">
-          {catalogue.data?.repositories.find((r) => r.id === repository)
-            ?.canonical_origin ?? "Selected repository"}
+        <Badge className="max-w-[360px]">
+          <span className="truncate">
+            {catalogue.data?.repositories.find((r) => r.id === repository)
+              ?.canonical_origin ?? "Selected repository"}
+          </span>
         </Badge>
       )}
       {times.fact_at && (
-        <Badge variant="light">Fact time {time(times.fact_at)}</Badge>
+        <Badge>
+          Fact time <span className="mono">{time(times.fact_at)}</span>
+        </Badge>
       )}
       {times.knowledge_at && (
-        <Badge variant="light">Knowledge time {time(times.knowledge_at)}</Badge>
+        <Badge>
+          Knowledge time{" "}
+          <span className="mono">{time(times.knowledge_at)}</span>
+        </Badge>
       )}
-      <Button variant="subtle" size="compact-sm" onClick={clear}>
+      <Button variant="ghost" size="sm" onClick={clear}>
+        <X aria-hidden="true" className="size-3.5" />
         Clear filters
       </Button>
     </ScopeSummary>
@@ -83,18 +84,32 @@ export function ClaimsFilterDrawer({
   } = state;
   return (
     <Drawer
-      className="feature-drawer"
       opened={filtering}
       onClose={() => setFiltering(false)}
       position="right"
       title="Filter memory"
-      size="md"
+      description="Search matches subjects, predicates, values and rationale. These filters keep applicability and knowledge history explicit."
+      footer={
+        <>
+          <Button variant="secondary" onClick={clear}>
+            Clear memory filters
+          </Button>
+          <Button
+            onClick={() => {
+              setTimes({
+                fact_at: instant(factDraft) ?? undefined,
+                knowledge_at: instant(knowledgeDraft) ?? undefined,
+              });
+              setOffset(0);
+              setFiltering(false);
+            }}
+          >
+            Apply filters
+          </Button>
+        </>
+      }
     >
-      <Stack>
-        <Text size="sm" c="dimmed">
-          Search matches subjects, predicates, values and rationale. These
-          filters keep applicability and knowledge history explicit.
-        </Text>
+      <div className="grid gap-4">
         {kind === undefined && (
           <Select
             label="Filter memory kind"
@@ -153,36 +168,23 @@ export function ClaimsFilterDrawer({
             setOffset(0);
           }}
         />
-        <TextInput
+        <TextField
           type="datetime-local"
           step="1"
           label="Fact time (UTC)"
+          inputClassName="mono"
           value={factDraft}
           onChange={(event) => setFactDraft(event.currentTarget.value)}
         />
-        <TextInput
+        <TextField
           type="datetime-local"
           step="1"
           label="Knowledge time (UTC)"
+          inputClassName="mono"
           value={knowledgeDraft}
           onChange={(event) => setKnowledgeDraft(event.currentTarget.value)}
         />
-        <Button variant="default" onClick={clear}>
-          Clear memory filters
-        </Button>
-        <Button
-          onClick={() => {
-            setTimes({
-              fact_at: instant(factDraft) ?? undefined,
-              knowledge_at: instant(knowledgeDraft) ?? undefined,
-            });
-            setOffset(0);
-            setFiltering(false);
-          }}
-        >
-          Apply filters
-        </Button>
-      </Stack>
+      </div>
     </Drawer>
   );
 }

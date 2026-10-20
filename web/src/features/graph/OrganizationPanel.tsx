@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Alert,
-  Button,
-  Drawer,
-  Group,
-  Loader,
-  Modal,
-  Text,
-} from "@mantine/core";
+import { useReducedMotion } from "motion/react";
+import { Drawer, Modal } from "../../components/ui";
 import { client, result, type Brain } from "../../api";
 import { EvidenceDialog } from "../../ClaimsPanel";
 import type { GraphChoice } from "../../GraphCanvas";
@@ -17,7 +10,6 @@ import { useIdempotency } from "../../useIdempotency";
 import { AliasReviewPanel } from "./AliasReviewPanel";
 import { FieldOrganizationPanel } from "./FieldOrganizationPanel";
 import { useOrganizationSources } from "./useOrganizationSources";
-import "./organization.css";
 import { usePollInterval } from "../../usePollInterval";
 import { feedsGraphScene } from "./sceneKeys";
 import { useQualifiedRead } from "./useQualifiedRead";
@@ -202,7 +194,24 @@ export function OrganizationPanel({
     setAliases(false);
     setCommandError(error);
   }
+  // Exploring a topic or entity brings its evidence graph into view, so what
+  // was expanded is visible (and its renderer, paused off-screen, settles).
+  const sourcesRegion = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  const reveal = useRef(false);
+  useEffect(() => {
+    if (!reveal.current || !center) return;
+    reveal.current = false;
+    const frame = requestAnimationFrame(() =>
+      sourcesRegion.current?.scrollIntoView({
+        block: "start",
+        behavior: reducedMotion ? "auto" : "smooth",
+      }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [center, reducedMotion]);
   function expand(next: Center | null) {
+    reveal.current = !!next;
     setCenter(next);
     setCursor(null);
     setHistory([]);
@@ -294,7 +303,7 @@ export function OrganizationPanel({
     ) : null;
   return (
     <section
-      className="organization-panel"
+      className="organization-panel grid min-w-0 gap-6"
       aria-label="Automatic knowledge organization"
     >
       <OrganizationToolbar
@@ -309,11 +318,11 @@ export function OrganizationPanel({
         onRefresh={refresh}
       />
       <ScopeBadges scope={scope} />
-      <Text size="sm" c="dimmed">
+      <p className="m-0 max-w-[80ch] text-body text-muted-foreground">
         Topics organize eligible sources and source-backed entities across
         sessions. A source can belong to several topics; mentions and
         source-described links keep their evidence.
-      </Text>
+      </p>
       <OrganizationStatus
         failure={failure}
         expires={expires}
@@ -333,6 +342,7 @@ export function OrganizationPanel({
             onExpand={expand}
             onOrganize={organize}
           />
+          <div ref={sourcesRegion} className="scroll-mt-4" />
           <OrganizationSourcesSection
             view={view}
             center={center}
@@ -365,8 +375,7 @@ export function OrganizationPanel({
         opened={aliases && !!view}
         onClose={() => setAliases(false)}
         title="Review alias evidence"
-        size="xl"
-        position="right"
+        size={680}
       >
         {aliases && view && receipt && (
           <AliasReviewPanel

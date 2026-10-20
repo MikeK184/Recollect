@@ -1,19 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Button,
-  Group,
-  Loader,
-  Modal,
-  Select,
-  Stack,
-  Text,
-} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "../../api";
 import type { components } from "../../api-schema";
 import { ErrorState } from "../../components/AsyncState";
 import { useIdempotency } from "../../useIdempotency";
+import { Alert, Button, Modal, Select, Spinner } from "../../components/ui";
 
 type Automation = components["schemas"]["AutomationSettings"];
 
@@ -33,27 +24,27 @@ export function ChooseModelNotice({ brain }: { brain: Brain }) {
   const admin = brain.role === "admin" && !brain.archived;
   return (
     <>
-      <Alert color="yellow" title="Choose a model">
-        <Stack gap="xs">
-          <Text size="sm">
-            No text model is selected for this Brain, so nothing is sent to an
-            AI provider. Capture, search and your evidence keep working. Choose
-            a model to turn on automatic memory, semantic search and Ask.
-          </Text>
-          {admin ? (
-            <Button
-              w="fit-content"
-              size="compact-md"
-              onClick={() => setOpen(true)}
-            >
+      <Alert
+        variant="warning"
+        title="Choose a model"
+        actions={
+          admin ? (
+            <Button size="sm" onClick={() => setOpen(true)}>
               Choose a model
             </Button>
-          ) : (
-            <Text size="sm" c="dimmed">
-              An administrator of this Brain can choose the model.
-            </Text>
-          )}
-        </Stack>
+          ) : undefined
+        }
+      >
+        <p>
+          No text model is selected for this Brain, so nothing is sent to an AI
+          provider. Capture, search and your evidence keep working. Choose a
+          model to turn on automatic memory, semantic search and Ask.
+        </p>
+        {!admin && (
+          <p className="mt-1 text-caption text-muted-foreground">
+            An administrator of this Brain can choose the model.
+          </p>
+        )}
       </Alert>
       {open && <ChooseModelDialog brain={brain} close={() => setOpen(false)} />}
     </>
@@ -92,7 +83,7 @@ function ChooseModelDialog({
           retry={() => automation.refetch()}
         />
       ) : (
-        <Loader size="sm" />
+        <Spinner label="Loading model settings" />
       )}
     </Modal>
   );
@@ -169,16 +160,16 @@ function ChooseModelForm({
   const listFailed =
     !!catalogue.data?.error_code || refresh.isError || catalogue.isError;
   return (
-    <Stack>
-      <Text size="sm">
+    <div className="grid gap-4">
+      <p className="m-0 text-body text-foreground-secondary">
         Choose the {providerName(provider)} text model for this Brain. This also
         turns on autonomous memory with the managed limits: eligible retained
         sources and questions may be sent to {providerName(provider)} within a
         daily allowance. You can change the model or the permissions later in
         Settings.
-      </Text>
+      </p>
       {!automation.models.installed.credentials_present && (
-        <Alert color="yellow">
+        <Alert variant="warning">
           The {providerName(provider)} credential is missing on this
           installation. Model processing cannot run until an administrator adds
           it.
@@ -201,10 +192,10 @@ function ChooseModelForm({
         }}
         disabled={refresh.isPending || save.isPending}
         allowDeselect={false}
-        data-autofocus
+        inputClassName="mono"
       />
       {entry && (
-        <Text size="xs" c="dimmed">
+        <p className="-mt-2 m-0 mono text-caption text-muted-foreground">
           {entry.input_usd_per_million == null
             ? "Price unknown"
             : `$${entry.input_usd_per_million.toFixed(2)} input`}
@@ -212,27 +203,29 @@ function ChooseModelForm({
             ? ""
             : ` · $${entry.output_usd_per_million.toFixed(2)} output`}{" "}
           / 1M tokens · reference rates, checked {entry.checked_on}
-        </Text>
+        </p>
       )}
       {listFailed && (
-        <Alert color="red">
+        <Alert
+          variant="destructive"
+          actions={
+            <Button
+              variant="destructive-ghost"
+              size="sm"
+              loading={refresh.isPending}
+              onClick={() => refresh.mutate()}
+            >
+              Retry
+            </Button>
+          }
+        >
           The model list could not be loaded. Check the provider credential and
           try again.
-          <Button
-            variant="subtle"
-            color="red"
-            size="compact-sm"
-            ml="xs"
-            loading={refresh.isPending}
-            onClick={() => refresh.mutate()}
-          >
-            Retry
-          </Button>
         </Alert>
       )}
       <ErrorState error={save.error} />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={close} disabled={save.isPending}>
+      <div className="-mx-5 -mb-5 flex justify-end gap-2 border-t border-border bg-muted px-5 py-3">
+        <Button variant="secondary" onClick={close} disabled={save.isPending}>
           Cancel
         </Button>
         <Button
@@ -242,7 +235,7 @@ function ChooseModelForm({
         >
           Use this model
         </Button>
-      </Group>
-    </Stack>
+      </div>
+    </div>
   );
 }

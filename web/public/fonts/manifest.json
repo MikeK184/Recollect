@@ -26,6 +26,20 @@
       "source": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/dmmono/DMMono-Medium.ttf",
       "sha256": "fd327daf461db87b44a87def475d251bf03b997f7c07d9680592d75dbbfaad0b",
       "bytes": 50360
+    },
+    {
+      "file": "mona-sans-variable.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/monasans/MonaSans%5Bwdth%2Cwght%5D.ttf",
+      "sha256": "fd6e79634b5ae804a45aac7e2e3c2a325b41291fba59034f4732b0135b8475b3",
+      "bytes": 349140,
+      "retrieved": "2026-10-19"
+    },
+    {
+      "file": "jetbrains-mono-variable.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf",
+      "sha256": "48715a42ec242c21e9f02692891e147d022299a52e48d5e413e1a942193ffeda",
+      "bytes": 187208,
+      "retrieved": "2026-10-19"
     }
   ]
 }

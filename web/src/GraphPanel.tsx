@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useBrainSearch } from "./app/useBrainSearch";
-import "./features/feature-views.css";
-import { Drawer, Group, Loader, Text } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { AnalyticsPanel } from "./AnalyticsPanel";
+import { Drawer, Spinner, StatusBadge } from "./components/ui";
+import { cn } from "./lib/utils";
+import { ChromeSlot, chromeCard } from "./features/graph/GraphStage";
+import { stateTone } from "./features/graph/GraphStatusDrawer";
 import { GraphExplorer } from "./GraphExplorer";
 import { useContentDeadline } from "./useContentDeadline";
 import { useWorkspaceCatalogue, useEvidenceList } from "./catalogueQueries";
@@ -26,6 +28,7 @@ import {
   GraphDetailDialogs,
   GraphEmptyState,
   GraphEntityCard,
+  GraphFiltersButton,
   GraphScopeSummary,
   GraphToolbar,
 } from "./features/graph/GraphPanelParts";
@@ -33,6 +36,7 @@ import { GraphFiltersDrawer } from "./features/graph/GraphFiltersDrawer";
 import { GraphPathDrawer } from "./features/graph/GraphPathDrawer";
 import { GraphEntitiesDrawer } from "./features/graph/GraphEntitiesDrawer";
 import { GraphStatusDrawer } from "./features/graph/GraphStatusDrawer";
+import { label } from "./features/graph/graphScope";
 import {
   useGraphScene,
   useSceneVerification,
@@ -239,71 +243,97 @@ export function GraphPanel({ brain }: { brain: Brain }) {
       ? read.data
       : undefined;
   const needsSelection = missingExactSelection(scope);
+  const failure =
+    read.error ?? generationError ?? (!readable ? status.error : null);
   return (
     <section
-      className="feature-view graph-surface"
+      className="graph-surface relative flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label="Evidence graphs"
     >
-      <GraphToolbar
-        scope={scope}
-        readable={!!readable}
-        onKindChange={(kind) => {
-          change({ ...initial(), kind });
-          setDrawer("filters");
-        }}
-        onOpen={setDrawer}
-      />
-      <GraphScopeSummary scope={scope} availableGroups={availableGroups} />
-      <Failure
-        error={
-          read.error ?? generationError ?? (!readable ? status.error : null)
-        }
-      />
+      <ChromeSlot zone="header-tools" order={0}>
+        <GraphToolbar
+          scope={scope}
+          readable={!!readable}
+          onKindChange={(kind) => {
+            change({ ...initial(), kind });
+            setDrawer("filters");
+          }}
+          onOpen={setDrawer}
+        />
+      </ChromeSlot>
+      {scene && readable && (
+        <ChromeSlot zone="header-meta" order={0}>
+          <StatusBadge state={stateTone(scene.state)}>
+            {label(scene.state).replace(/^./, (c) => c.toUpperCase())}
+          </StatusBadge>
+        </ChromeSlot>
+      )}
+      <ChromeSlot
+        zone="header-extra"
+        order={0}
+        className="flex flex-wrap items-center gap-1.5"
+      >
+        <GraphFiltersButton onOpen={() => setDrawer("filters")} />
+        <GraphScopeSummary scope={scope} availableGroups={availableGroups} />
+      </ChromeSlot>
+      {failure && (
+        <ChromeSlot zone="top-left" order={10} className="w-[26rem] rounded-lg shadow-md">
+          <Failure error={failure} />
+        </ChromeSlot>
+      )}
       {read.isFetching && (
-        <Group role="status" my="lg">
-          <Loader size="sm" />
-          <Text>Reading eligible graph evidence…</Text>
-        </Group>
+        <ChromeSlot zone="top-left" order={11}>
+          <p
+            role="status"
+            className={cn(
+              chromeCard,
+              "m-0 flex items-center gap-2 px-3 py-2 text-label text-foreground-secondary",
+            )}
+          >
+            <Spinner />
+            Reading eligible graph evidence…
+          </p>
+        </ChromeSlot>
       )}
       {!readable && !read.isFetching && (
-        <GraphEmptyState
-          needsSelection={needsSelection}
-          unavailable={!!read.error}
-          onChooseInputs={() => setDrawer("filters")}
-          onLoad={() => load()}
-        />
+        <div className="grid min-h-0 flex-1 place-items-center p-6">
+          <GraphEmptyState
+            needsSelection={needsSelection}
+            unavailable={!!read.error}
+            onChooseInputs={() => setDrawer("filters")}
+            onLoad={() => load()}
+          />
+        </div>
       )}
       {readable && submitted && (
-        <>
-          <GraphExplorer
-            key={submitted.nonce}
-            brain={brain}
-            view={readable}
-            path={pathSubmitted && !path.error ? (path.data ?? null) : null}
-            inspect={inspect}
-            onExpired={clear}
-            compactControls
-            initialCenter={route.center ?? ""}
-            initialDirection={route.direction ?? "outgoing"}
-            initialHops={route.hops ?? 1}
-            initialExploration={initialExploration}
-            onExplore={(center, direction, hops) =>
-              patchRoute({ center, direction, hops })
-            }
-            onReadStarted={sceneStarted}
-            onViewAccepted={sceneAccepted}
-            onStart={(key) => {
-              setStart(key);
-              setPathSubmitted(null);
-              setDrawer("path");
-            }}
-            onEnd={(key) => {
-              setEnd(key);
-              setPathSubmitted(null);
-              setDrawer("path");
-            }}
-          />
-        </>
+        <GraphExplorer
+          key={submitted.nonce}
+          brain={brain}
+          view={readable}
+          path={pathSubmitted && !path.error ? (path.data ?? null) : null}
+          inspect={inspect}
+          onExpired={clear}
+          compactControls
+          initialCenter={route.center ?? ""}
+          initialDirection={route.direction ?? "outgoing"}
+          initialHops={route.hops ?? 1}
+          initialExploration={initialExploration}
+          onExplore={(center, direction, hops) =>
+            patchRoute({ center, direction, hops })
+          }
+          onReadStarted={sceneStarted}
+          onViewAccepted={sceneAccepted}
+          onStart={(key) => {
+            setStart(key);
+            setPathSubmitted(null);
+            setDrawer("path");
+          }}
+          onEnd={(key) => {
+            setEnd(key);
+            setPathSubmitted(null);
+            setDrawer("path");
+          }}
+        />
       )}
       <GraphFiltersDrawer
         opened={drawer === "filters"}
@@ -374,12 +404,10 @@ export function GraphPanel({ brain }: { brain: Brain }) {
         renderNode={renderNode}
       />
       <Drawer
-        className="feature-drawer"
         opened={drawer === "insights"}
         onClose={() => setDrawer(null)}
-        position="right"
         title="Graph insights"
-        size="lg"
+        size={600}
       >
         {drawer === "insights" && (
           <AnalyticsPanel brain={brain} scope={scope} inspect={inspect} />

@@ -1,49 +1,54 @@
-import { Button, Group } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import { History, MessageSquare } from "lucide-react";
 import { useBrain } from "../../app/context";
+import { Page } from "../../components/Page";
 import { PageHeader } from "../../components/PageHeader";
+import { Badge, Button } from "../../components/ui";
 import { BrainPipeline } from "./PipelineView";
+
+const roleLabel = (role: string) =>
+  `${role.charAt(0).toUpperCase()}${role.slice(1).replaceAll("_", " ")} access`;
 
 export function DashboardPage() {
   const brain = useBrain();
   return (
-    <section className="brain-dashboard">
+    <Page>
       <PageHeader
         title="Dashboard"
+        description="What this Brain learned recently and what it is working on now."
+        meta={
+          <>
+            <Badge variant="outline">Brain</Badge>
+            <Badge>{roleLabel(brain.role)}</Badge>
+            {brain.archived && <Badge variant="warning">Archived</Badge>}
+          </>
+        }
         actions={
-          <Group gap="sm">
-            <Button
-              renderRoot={(props) => (
-                <Link
-                  {...props}
-                  to="/brains/$brainId/activity"
-                  params={{ brainId: brain.id }}
-                  search={{ tab: "attention" }}
-                />
-              )}
-              variant="default"
-              leftSection={<History size={16} />}
-            >
-              Activity details
+          <>
+            <Button asChild variant="secondary">
+              <Link
+                to="/brains/$brainId/activity"
+                params={{ brainId: brain.id }}
+                search={{ tab: "attention" }}
+              >
+                <History aria-hidden="true" />
+                Activity details
+              </Link>
             </Button>
-            <Button
-              renderRoot={(props) => (
-                <Link
-                  {...props}
-                  to="/brains/$brainId/ask"
-                  params={{ brainId: brain.id }}
-                  search={{}}
-                />
-              )}
-              leftSection={<MessageSquare size={16} />}
-            >
-              Ask this Brain
+            <Button asChild>
+              <Link
+                to="/brains/$brainId/ask"
+                params={{ brainId: brain.id }}
+                search={{}}
+              >
+                <MessageSquare aria-hidden="true" />
+                Ask this Brain
+              </Link>
             </Button>
-          </Group>
+          </>
         }
       />
       <BrainPipeline brain={brain} dashboard />
-    </section>
+    </Page>
   );
 }

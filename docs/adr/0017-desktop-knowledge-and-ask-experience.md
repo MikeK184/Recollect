@@ -20,6 +20,12 @@ current blockers, with historical failures retained in Activity. The
 records the current-status evidence required; an old failed job alone is not a
 current blocker.
 
+Amended 2026-10-19 by [ADR 0025](0025-two-theme-desktop-redesign.md): the
+eyebrow and large serif heading silhouette reserved for Ask below becomes the
+serif Ask hero, other pages use compact sans page headers, and the shared
+inspector docks at 400px inside the main panel (a sheet below 1440px). Token,
+typography and theme references to ADR 0014 now resolve through ADR 0025.
+
 ## Decision
 
 Restructure the Brain experience by visit frequency and human role, not by
@@ -71,7 +77,8 @@ and the UI must say so.
 
 Presentation must stop treating all pages as interchangeable. The eyebrow,
 large serif heading, subtitle and full-width card stack silhouette is reserved
-for Ask. Archive and assurance views use denser lists with a single composite
+for Ask (amended by [ADR 0025](0025-two-theme-desktop-redesign.md): now the
+serif Ask hero, with compact sans headers elsewhere). Archive and assurance views use denser lists with a single composite
 status mark whose full review, freshness and operational dimensions remain
 readable in the inspector and available as text, so the accepted three-state
 separation is preserved without fifty-one repeated chips per screen.

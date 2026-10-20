@@ -1,15 +1,11 @@
+import { Route, Settings2, TriangleAlert } from "lucide-react";
 import {
   Button,
   Drawer,
-  NumberInput,
+  NumberField,
   Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
-import { Settings2, TriangleAlert } from "lucide-react";
-import { iconSize } from "../../design/tokens";
+  TextField,
+} from "../../components/ui";
 import { label } from "./graphExplorerShared";
 import type { ExplorerPath, ExplorerView } from "./graphExplorerShared";
 import type { GraphExplorationState } from "./useGraphExploration";
@@ -25,8 +21,8 @@ export function GraphExplorationSettings({
   const { center, setCenter, direction, setDirection, hops, setHops } =
     exploration;
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2 }}>
-      <TextInput
+    <div className="grid gap-4 sm:grid-cols-2">
+      <TextField
         label="Exploration center"
         description="An exact entity key; select a node below to fill it."
         value={center}
@@ -38,7 +34,7 @@ export function GraphExplorationSettings({
         data={["outgoing", "incoming", "both"]}
         onChange={(value) => setDirection(value ?? "outgoing")}
       />
-      <NumberInput
+      <NumberField
         label="Exploration hops"
         min={1}
         max={8}
@@ -57,7 +53,7 @@ export function GraphExplorationSettings({
         }))}
         onChange={(value) => setCenter(value ?? "")}
       />
-    </SimpleGrid>
+    </div>
   );
 }
 
@@ -71,18 +67,18 @@ export function GraphCoverageIndicator({
 }) {
   const { coverageOpen, setCoverageOpen } = exploration;
   return shownView?.coverage.partial ? (
-    <span className="graph-coverage">
+    <span className="graph-coverage flex min-w-0 flex-wrap items-center gap-2">
       <button
         type="button"
-        className="graph-coverage-toggle"
+        className="inline-flex h-[22px] items-center gap-1 rounded-full bg-warning-soft px-2 text-caption font-medium text-warning-text transition-colors duration-fast hover:bg-warning-soft/70 focus-visible:outline-2 focus-visible:outline-ring"
         aria-expanded={coverageOpen}
         onClick={() => setCoverageOpen((value) => !value)}
       >
-        <TriangleAlert size={iconSize.small} />
+        <TriangleAlert className="size-3.5" aria-hidden="true" />
         Coverage limits
       </button>
       {coverageOpen && (
-        <span className="graph-coverage-reasons">
+        <span className="min-w-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
           {shownView.coverage.reasons.map(label).join(" · ")}
         </span>
       )}
@@ -90,7 +86,7 @@ export function GraphCoverageIndicator({
   ) : null;
 }
 
-// The buttons that sit in the canvas chrome: open the drawer, toggle the path.
+// The buttons that sit in the canvas toolbar: open the drawer, toggle the path.
 export function GraphCanvasTools({
   path,
   exploration,
@@ -102,21 +98,20 @@ export function GraphCanvasTools({
     exploration;
   return (
     <>
-      <Button
-        variant="default"
-        leftSection={<Settings2 size={iconSize.small} />}
-        onClick={() => setControlsOpened(true)}
-      >
+      <Button variant="ghost" size="sm" onClick={() => setControlsOpened(true)}>
+        <Settings2 aria-hidden="true" />
         Explore
       </Button>
       {path?.status === "path" && data && (
         <Button
-          variant="light"
+          variant={inPath ? "secondary" : "ghost"}
+          size="sm"
           onClick={() => {
             setShowPath((value) => !value);
             setChoice(null);
           }}
         >
+          <Route aria-hidden="true" />
           {inPath ? "Return to exploration" : "Show shortest path on canvas"}
         </Button>
       )}
@@ -142,19 +137,15 @@ export function GraphExploreDrawer({
   } = exploration;
   return (
     <Drawer
-      className="feature-drawer"
       opened={controlsOpened}
       onClose={() => setControlsOpened(false)}
-      position="right"
       title="Explore relationships"
-      size="lg"
+      description="Choose an exact entity and a bounded traversal. Scope and eligibility stay the same as the current graph."
+      size={520}
+      bodyClassName="grid content-start gap-4"
     >
-      <Stack>
-        <Text size="sm" c="dimmed">
-          Choose an exact entity and a bounded traversal. Scope and eligibility
-          stay the same as the current graph.
-        </Text>
-        <GraphExplorationSettings view={view} exploration={exploration} />
+      <GraphExplorationSettings view={view} exploration={exploration} />
+      <div className="flex flex-wrap gap-2">
         <Button
           onClick={() => {
             load(center);
@@ -165,7 +156,7 @@ export function GraphExploreDrawer({
           Explore from center
         </Button>
         <Button
-          variant="default"
+          variant="secondary"
           onClick={() => {
             load(null);
             setControlsOpened(false);
@@ -174,16 +165,18 @@ export function GraphExploreDrawer({
         >
           Show eligible overview
         </Button>
-        {data && (
-          <Text size="xs" className="feature-meta">
-            Generation {shownView!.generation.id} · {label(shownView!.state)} ·{" "}
-            {shownView!.total_nodes} eligible entities in this{" "}
-            {shownView!.coverage.reasons.includes("graph_window")
-              ? "window"
-              : "selection"}
-          </Text>
-        )}
-      </Stack>
+      </div>
+      {data && (
+        <p className="m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+          Generation <span className="mono">{shownView!.generation.id}</span> ·{" "}
+          {label(shownView!.state)} ·{" "}
+          <span className="mono">{shownView!.total_nodes}</span> eligible
+          entities in this{" "}
+          {shownView!.coverage.reasons.includes("graph_window")
+            ? "window"
+            : "selection"}
+        </p>
+      )}
     </Drawer>
   );
 }

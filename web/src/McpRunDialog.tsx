@@ -1,15 +1,14 @@
 import { CodeBlock } from "./components/CodeBlock";
 import { useState } from "react";
+import { Play } from "lucide-react";
 import {
   Alert,
   Button,
-  Code,
   Modal,
-  NumberInput,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
+  NumberField,
+  TextareaField,
+} from "./components/ui";
+import { Disclosure } from "./features/connections/ui";
 import { client, result, RequestError, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { McpProfile } from "./McpPanel";
@@ -91,58 +90,61 @@ export function McpRunDialog({
       opened
       onClose={close}
       title={`Run tool · ${tool.tool.name}`}
-      size="xl"
+      description={`${profile.name} · ${tool.connection_name}`}
+      size="lg"
       closeOnClickOutside={!busy}
-    >
-      <Stack>
-        <Text>
-          {profile.name} · {tool.connection_name}
-        </Text>
-        <Text size="sm" c="dimmed">
-          The selected tool group and environment remain fixed for this call.
-          Tools may change their target system.
-        </Text>
-        <details>
-          <summary>Input schema</summary>
-          <CodeBlock
-            language="json"
-            code={JSON.stringify(tool.tool.inputSchema, null, 2)}
-          />
-        </details>
-        <Textarea
-          label="Tool arguments"
-          description="Non-secret JSON. Connector credentials are supplied by the selected runner."
-          autosize
-          minRows={6}
-          maxRows={18}
-          value={argumentsText}
-          onChange={(e) => setArguments(e.currentTarget.value)}
-          disabled={busy || !!pending}
-        />
-        <NumberInput
-          label="Call timeout (seconds)"
-          min={1}
-          max={3600}
-          allowDecimal={false}
-          value={timeout}
-          onChange={setTimeout}
-          disabled={busy || !!pending}
-        />
-        {error && (
-          <Alert color="red" title="Call not confirmed">
-            {error}
-          </Alert>
-        )}
-        {pending && (
-          <Text size="sm">
-            Request {pending.request_id}. Retrying checks this same submission;
-            it does not repeat a completed tool call.
-          </Text>
-        )}
+      bodyClassName="grid gap-4"
+      footer={
         <Button onClick={() => void run()} loading={busy}>
+          <Play aria-hidden="true" />
           {pending ? "Check submission" : "Run tool"}
         </Button>
-      </Stack>
+      }
+    >
+      <p className="m-0 text-label text-muted-foreground">
+        The selected tool group and environment remain fixed for this call.
+        Tools may change their target system.
+      </p>
+      <Disclosure summary="Input schema">
+        <CodeBlock
+          language="json"
+          code={JSON.stringify(tool.tool.inputSchema, null, 2)}
+        />
+      </Disclosure>
+      <TextareaField
+        label="Tool arguments"
+        description="Non-secret JSON. Connector credentials are supplied by the selected runner."
+        autosize
+        minRows={6}
+        maxRows={18}
+        inputClassName="mono text-label"
+        spellCheck={false}
+        value={argumentsText}
+        onChange={(e) => setArguments(e.currentTarget.value)}
+        disabled={busy || !!pending}
+      />
+      <NumberField
+        label="Call timeout (seconds)"
+        className="max-w-[240px]"
+        min={1}
+        max={3600}
+        allowDecimal={false}
+        value={timeout}
+        onChange={setTimeout}
+        disabled={busy || !!pending}
+      />
+      {error && (
+        <Alert variant="destructive" title="Call not confirmed">
+          {error}
+        </Alert>
+      )}
+      {pending && (
+        <p className="m-0 text-label text-foreground-secondary">
+          Request <span className="mono text-caption">{pending.request_id}</span>
+          . Retrying checks this same submission; it does not repeat a completed
+          tool call.
+        </p>
+      )}
     </Modal>
   );
 }

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { ansiForeground, palette } from "../design/tokens";
+import { ansiForeground } from "../design/tokens";
+import { cn } from "../lib/utils";
 
 // Bounded safe ANSI subset for untrusted terminal text: SGR reset (0), bold
 // (1), dim (2) and standard/bright foreground colors (30–37, 90–97). Every
@@ -95,40 +96,68 @@ export function renderAnsi(text: string): ReactNode[] {
 
 export type TerminalStatusTone = "ok" | "error" | "pending" | "muted";
 
+const toneClass: Record<TerminalStatusTone, string> = {
+  ok: "text-ansi-green",
+  error: "text-ansi-red",
+  pending: "text-ansi-yellow",
+  muted: "text-terminal-muted",
+};
+
 /**
- * macOS-chrome terminal card for agent and tool output. The body renders
- * untrusted text through the bounded safe ANSI subset; it never widens what
- * the caller passes in.
+ * Terminal card for agent and tool output on the fixed dark terminal surface
+ * (both themes). The bar names the host or command and the result state; the
+ * body renders untrusted text through the bounded safe ANSI subset and never
+ * widens what the caller passes in.
  */
 export function TerminalCard({
   title,
   status,
   text,
   emptyText = "No output captured",
+  className,
 }: {
   title?: string;
   status?: { label: string; tone: TerminalStatusTone };
   text: string;
   emptyText?: string;
+  className?: string;
 }) {
   return (
-    <div className="terminal-card" aria-label={title ?? "Terminal output"}>
-      <div className="terminal-card-bar">
-        <span className="terminal-dots" aria-hidden>
-          <span style={{ background: palette.trafficRed }} />
-          <span style={{ background: palette.trafficYellow }} />
-          <span style={{ background: palette.trafficGreen }} />
-        </span>
-        {title && <span className="terminal-card-title">{title}</span>}
+    <div
+      role="group"
+      className={cn(
+        "overflow-hidden rounded-lg border border-terminal-border bg-terminal text-terminal-foreground",
+        className,
+      )}
+      aria-label={title ?? "Terminal output"}
+    >
+      <div className="mono flex h-9 items-center gap-2 border-b border-terminal-border bg-terminal-bar px-3 text-caption text-terminal-muted">
+        <span aria-hidden="true">$</span>
+        {title && <span className="min-w-0 truncate">{title}</span>}
         {status && (
-          <span className={`terminal-chip terminal-chip-${status.tone}`}>
+          <span
+            className={cn(
+              "ml-auto inline-flex shrink-0 items-center gap-1.5",
+              toneClass[status.tone],
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "relative inline-block size-1.5 rounded-full bg-current",
+                status.tone === "pending" &&
+                  "after:absolute after:inset-0 after:animate-ping after:rounded-full after:bg-current after:content-['']",
+              )}
+            />
             {status.label}
           </span>
         )}
       </div>
-      <pre className="terminal-card-body">
-        {text ? renderAnsi(text) : (
-          <span className="terminal-card-empty">{emptyText}</span>
+      <pre className="mono m-0 max-h-[420px] overflow-auto whitespace-pre-wrap px-3.5 py-3 text-label leading-5 [overflow-wrap:anywhere] scrollbar-thin">
+        {text ? (
+          renderAnsi(text)
+        ) : (
+          <span className="text-terminal-muted">{emptyText}</span>
         )}
       </pre>
     </div>

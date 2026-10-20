@@ -1,31 +1,44 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Badge, Button } from "@mantine/core";
+import { motion, useReducedMotion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
+import { FileText } from "lucide-react";
 import { client, result } from "../../api";
 import { useBrain } from "../../app/context";
 import { memoryKinds } from "../../MemoryForms";
 import type { components } from "../../api-schema";
 import { useContentDeadline } from "../../useContentDeadline";
-import "./tv.css";
 import { usePollInterval } from "../../usePollInterval";
+import { Brand } from "../../components/Brand";
+import { Badge, Button, KindChip, Kbd } from "../../components/ui";
+import { cn } from "../../lib/utils";
+import type { Kind } from "../../design/tokens";
 
 type View = components["schemas"]["ClaimView"];
 
-// Cycle cadence and transition length. --tv-interval in tv.css must mirror
-// INTERVAL_MS; the ambient duration comes from the shared motion tokens.
+// Cycle cadence and transition length. The enter transition uses the shared
+// ambient duration (motion-ambient, 1.6s); the outgoing item stays mounted for
+// exactly that long. A Brain with fewer than two memories is still.
 const INTERVAL_MS = 8000;
-const TRANSITION_MS = 1300;
+const TRANSITION_MS = 1600;
+const ambient = [0.2, 0, 0, 1] as const; // ease-standard
 
 const label = (s: string) => s.replaceAll("_", " ");
 const time = (s?: string | null) => (s ? new Date(s).toLocaleString() : "");
-// Mantine color names resolve to the per-category accents in design/theme.ts.
-const kindBadgeColor: Record<string, string> = {
-  claim: "blue",
-  decision: "yellow",
-  procedure: "violet",
-  handover: "cyan",
+const memoryKind = (kind: string): Kind =>
+  (["claim", "decision", "procedure", "handover"] as const).includes(
+    kind as "claim",
+  )
+    ? (kind as Kind)
+    : "claim";
+
+// Category glow behind the memory: the kind's soft tint, crossfading slowly.
+const glow: Record<string, string> = {
+  claim: "from-kind-claim-soft",
+  decision: "from-kind-decision-soft",
+  procedure: "from-kind-procedure-soft",
+  handover: "from-kind-handover-soft",
 };
 
 function bodyOf(view: View): string {
@@ -48,26 +61,46 @@ function ItemContent({ view }: { view: View }) {
   ].filter(Boolean);
   return (
     <>
-      <Badge color={kindBadgeColor[content.kind] ?? "gray"}>
+      <KindChip kind={memoryKind(content.kind)}>
         {memoryKinds.find((k) => k.value === content.kind)?.label ??
           label(content.kind)}
-      </Badge>
-      <div className="tv-qualification" data-attention={flags.length > 0}>
+      </KindChip>
+      <div
+        className={cn(
+          "tv-qualification mono mt-3.5 text-caption text-muted-foreground",
+          flags.length > 0 &&
+            "rounded-md bg-warning-soft px-3 py-2 text-warning-text",
+        )}
+        data-attention={flags.length > 0}
+      >
         Review: {label(view.revision.review)} · Freshness:{" "}
         {label(view.eligibility.effective_freshness)} · Operational:{" "}
         {label(content.operational)}
-        {flags.length > 0 && <strong>{flags.join(" · ")}</strong>}
+        {flags.length > 0 && (
+          <strong className="mt-0.5 block font-sans text-label font-semibold">
+            {flags.join(" · ")}
+          </strong>
+        )}
       </div>
-      <h1 className="tv-title">{content.subject || content.predicate}</h1>
-      {body && <p className="tv-body">{body}</p>}
-      <div className="tv-meta">
-        <span>{time(view.revision.recorded_at)}</span>
-        <span aria-hidden="true">·</span>
-        <span>
-          {label(view.revision.origin)}
+      <h1 className="tv-title m-0 mt-5 text-balance font-serif text-[clamp(48px,4.2vw,88px)] font-medium leading-[1.06] tracking-[-0.025em] text-foreground [overflow-wrap:anywhere]">
+        {content.subject || content.predicate}
+      </h1>
+      {body && (
+        <p className="m-0 mt-6 line-clamp-5 max-w-[72ch] text-[20px] leading-8 text-foreground-secondary">
+          {body}
+        </p>
+      )}
+      <div className="mt-7 flex flex-wrap items-center gap-3">
+        <span className="mono text-caption text-muted-foreground">
+          {time(view.revision.recorded_at)} · {label(view.revision.origin)}
           {view.revision.actor_name ? ` · ${view.revision.actor_name}` : ""}
         </span>
-        {source && <span className="tv-source-chip">{source.label}</span>}
+        {source && (
+          <Badge variant="outline" className="max-w-[44ch]">
+            <FileText aria-hidden="true" />
+            <span className="truncate">{source.label}</span>
+          </Badge>
+        )}
       </div>
     </>
   );
@@ -78,6 +111,7 @@ export function MemoryTv() {
   const brain = useBrain();
   const navigate = useNavigate();
   const router = useRouter();
+  const reduced = useReducedMotion();
   const surface = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState(() => document.hidden);
   // The same bounded authorized memory list read the Memory surface uses,
@@ -106,6 +140,7 @@ export function MemoryTv() {
   const [previous, setPrevious] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const current = items.find((view) => view.revision.id === selected);
+  const position = current ? items.indexOf(current) + 1 : 0;
   const prev =
     previous !== selected
       ? items.find((view) => view.revision.id === previous)
@@ -204,91 +239,141 @@ export function MemoryTv() {
     return () => window.removeEventListener("keydown", onKey);
   }, [exit]);
 
+  const kind = current?.revision.content.kind;
+  const cycling = !!current && items.length > 1 && !hidden;
   const root = (
     <div
       ref={surface}
-      className="tv-root"
+      className="tv-root fixed inset-0 z-[950] flex flex-col overflow-hidden bg-background px-10 pb-8 pt-7 text-foreground outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={`Ambient memory display for ${brain.name}`}
       tabIndex={-1}
     >
-      <div className="tv-glow" data-kind={current?.revision.content.kind} />
-      {claims.isPending && (
-        <div className="tv-center">
-          <span className="tv-wordmark tv-pulse">Recollect.</span>
-          <p className="tv-empty-copy">Recalling this Brain’s memories…</p>
-        </div>
-      )}
-      {(claims.isError || expired) && (
-        <div className="tv-center">
-          <p className="tv-error-line">
-            {expired
-              ? "This display reached its content deadline. Refreshing memories…"
-              : "Memories are unavailable. Displayed content has been cleared."}
-          </p>
-          <Button
-            variant="subtle"
-            size="xs"
-            onClick={() => void claims.refetch()}
-          >
-            Try again
-          </Button>
-        </div>
-      )}
-      {!claims.isPending && available && items.length === 0 && (
-        <div className="tv-center">
-          <h1 className="tv-empty-title">Nothing remembered yet</h1>
-          <p className="tv-empty-copy">
-            Memories will appear here as this Brain learns from its sources and
-            activity.
-          </p>
-        </div>
-      )}
-      {current && (
-        <div className="tv-stage">
-          {prev && (
-            <article
-              key={`exit-${prev.revision.id}-${tick}`}
-              className="tv-item tv-item-exit"
-              aria-hidden="true"
-            >
-              <ItemContent view={prev} />
-            </article>
-          )}
-          <article key={current.revision.id} className="tv-item tv-item-enter">
-            <ItemContent view={current} />
-          </article>
-        </div>
-      )}
-      <header className="tv-corner tv-top-left">
-        <img src="/brand/recollect-symbol.svg" width={22} height={22} alt="" />
-        <span>Recollect</span>
-        <span aria-hidden="true">·</span>
-        <span className="tv-brain-name">{brain.name}</span>
-      </header>
-      {available && claims.data && (
-        <span className="tv-corner tv-bottom-right">
-          last updated {time(claims.data.knowledge_at)}
-        </span>
-      )}
-      <Button
-        className="tv-corner tv-bottom-left"
-        variant="subtle"
-        size="xs"
-        onClick={exit}
-      >
-        Exit display · Esc
-      </Button>
-      {current && items.length > 1 && !hidden && (
+      {Object.entries(glow).map(([name, tint]) => (
         <div
-          key={`progress-${current.revision.id}-${tick}`}
-          className="tv-progress"
+          key={name}
           aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-0 bg-radial-[ellipse_55%_45%_at_42%_48%] to-transparent to-72% transition-opacity duration-[1600ms] ease-standard",
+            tint,
+            kind === name ? "opacity-100" : "opacity-0",
+          )}
+        />
+      ))}
+      <header className="relative flex items-center gap-3">
+        <Brand />
+        <span aria-hidden="true" className="h-5 w-px bg-border" />
+        <span className="min-w-0 truncate text-body text-muted-foreground">
+          {brain.name}
+        </span>
+        {available && claims.data && (
+          <span className="mono ml-auto shrink-0 text-caption text-muted-foreground first-letter:uppercase">
+            last updated {time(claims.data.knowledge_at)}
+          </span>
+        )}
+      </header>
+      <main className="relative grid min-h-0 flex-1 place-items-center py-10">
+        {claims.isPending && (
+          <div className="grid justify-items-center gap-4 text-center">
+            <Brand size="lg" compact />
+            <p role="status" className="m-0 text-body">
+              <span className="shimmer-text">
+                Recalling this Brain’s memories…
+              </span>
+            </p>
+          </div>
+        )}
+        {(claims.isError || expired) && (
+          <div className="grid max-w-[52ch] justify-items-center gap-4 text-center">
+            <p className="m-0 text-title text-foreground-secondary">
+              {expired
+                ? "This display reached its content deadline. Refreshing memories…"
+                : "Memories are unavailable. Displayed content has been cleared."}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => void claims.refetch()}>
+              Try again
+            </Button>
+          </div>
+        )}
+        {!claims.isPending && available && items.length === 0 && (
+          <div className="grid max-w-[560px] justify-items-center gap-3 text-center">
+            <h1 className="m-0 font-serif text-[40px] font-medium leading-[46px] tracking-[-0.02em] text-foreground-secondary">
+              Nothing remembered yet
+            </h1>
+            <p className="m-0 max-w-[46ch] text-body text-muted-foreground">
+              Memories will appear here as this Brain learns from its sources
+              and activity.
+            </p>
+          </div>
+        )}
+        {current && (
+          <div className="grid w-full max-w-[880px] max-h-full">
+            {prev && !reduced && (
+              <motion.article
+                key={`exit-${prev.revision.id}-${tick}`}
+                className="tv-item tv-item-exit pointer-events-none flex min-w-0 flex-col items-start [grid-area:1/1]"
+                aria-hidden="true"
+                initial={{ opacity: 1, scale: 1 }}
+                animate={{ opacity: 0, scale: 1.015 }}
+                transition={{ duration: TRANSITION_MS / 2000, ease: [0.4, 0, 1, 1] }}
+              >
+                <ItemContent view={prev} />
+              </motion.article>
+            )}
+            <motion.article
+              key={current.revision.id}
+              className="tv-item tv-item-enter flex min-w-0 flex-col items-start [grid-area:1/1]"
+              initial={reduced ? false : { opacity: 0, scale: 0.985 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: TRANSITION_MS / 1000,
+                ease: ambient,
+                delay: prev ? 0.2 : 0,
+              }}
+            >
+              <ItemContent view={current} />
+            </motion.article>
+          </div>
+        )}
+      </main>
+      <footer className="relative grid gap-3.5">
+        {/* Time until the next memory; absent (not empty) when nothing cycles. */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            "h-1 overflow-hidden rounded-full",
+            cycling && !reduced && "bg-secondary",
+          )}
         >
-          <span />
+          {cycling && !reduced && (
+            <motion.span
+              key={`progress-${current!.revision.id}-${tick}`}
+              className="block h-full origin-left rounded-full bg-brand"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: INTERVAL_MS / 1000, ease: "linear" }}
+            />
+          )}
         </div>
-      )}
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-2.5"
+            aria-label="Exit display · Esc"
+            onClick={exit}
+          >
+            Exit display
+            <Kbd>Esc</Kbd>
+          </Button>
+          {current && items.length > 1 && (
+            <span className="mono ml-auto text-caption text-muted-foreground">
+              {position} of {items.length}
+            </span>
+          )}
+        </div>
+      </footer>
     </div>
   );
 

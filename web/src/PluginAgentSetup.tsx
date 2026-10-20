@@ -1,20 +1,24 @@
-import {
-  Button,
-  Code,
-  CopyButton,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { Copy, Check } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import type { Brain } from "./api";
+import { TerminalCard } from "./components/TerminalCard";
+import { Button, Code, CopyButton, TextField } from "./components/ui";
+import { Disclosure } from "./features/connections/ui";
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+
+const stepTitle = "m-0 text-title font-semibold text-foreground";
+const stepText = "m-0 text-body text-foreground-secondary";
+const stepNote = "m-0 text-caption text-muted-foreground";
+
 export function SetupCopy({ value, label }: { value: string; label: string }) {
   return (
     <CopyButton value={value}>
       {({ copied, copy }) => (
-        <Button variant="default" onClick={copy}>
+        <Button
+          variant="secondary"
+          className="justify-self-start"
+          onClick={copy}
+        >
+          {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
           {copied ? "Copied" : label}
         </Button>
       )}
@@ -38,14 +42,15 @@ export function PluginInstall({
         ? JSON.stringify({ plugins: [`${plugin}/opencode/index.mjs`] }, null, 2)
         : `claude plugin marketplace add ${quote(directory)}\nclaude plugin install recollect-memory@recollect`;
   return (
-    <Stack gap="md">
-      <Title order={3}>Install the plugin</Title>
-      <Text size="sm">
+    <div className="grid gap-3">
+      <h3 className={stepTitle}>Install the plugin</h3>
+      <p className={stepText}>
         Automatic recall and session capture. Keep the plugin package in a
         permanent folder.
-      </Text>
-      <TextInput
+      </p>
+      <TextField
         label="Plugin package folder"
+        inputClassName="mono text-label"
         value={directory}
         onChange={(e) => setDirectory(e.currentTarget.value)}
       />
@@ -59,104 +64,115 @@ export function PluginInstall({
         }
       />
       {host === "opencode" && (
-        <Text size="xs" c="dimmed">
+        <p className={stepNote}>
           Merge into the plugins list in opencode.json; keep existing entries.
-        </Text>
+        </p>
       )}
-      <details className="feature-advanced">
-        <summary>Replacing an existing Recollect setup</summary>
-        <Text size="sm" mt="sm">
+      <Disclosure summary="Replacing an existing Recollect setup">
+        <p className={stepText}>
           Drain pending captures using the original setup, then remove the
           previous first-party MCP entry before enabling the plugin. Verify the
           new connection before retiring old setup files. Preserve other plugins
           and credentials; do not run both capture paths for the same session.
-        </Text>
-      </details>
-    </Stack>
+        </p>
+      </Disclosure>
+    </div>
   );
 }
+/** The prompt that asks a coding agent to connect itself to this Brain. */
+export const pluginConnectPrompt = (brain: { id: string; name: string }) =>
+  `Use the Recollect connect skill to connect to ${window.location.origin}, Brain ${brain.name} (${brain.id}). Use browser authorization and the OS credential store. Keep the optional execution runner disabled.`;
+
 export function PluginConnect({
   brain,
   compact = false,
+  hostLabel,
 }: {
   brain: Brain;
   compact?: boolean;
+  /** Names the coding host in the compact terminal bar. */
+  hostLabel?: string;
 }) {
-  const connect = `Use the Recollect connect skill to connect to ${window.location.origin}, Brain ${brain.name} (${brain.id}). Use browser authorization and the OS credential store. Keep the optional execution runner disabled.`;
+  const connect = pluginConnectPrompt(brain);
   if (compact)
     return (
-      <div className="agent-compact-connect">
-        <span>Connect to this Brain using your agent:</span>
-        <div>
-          <code>Use the Recollect connect skill for {brain.name}</code>
+      <div className="grid min-w-0 gap-3">
+        <div className="relative min-w-0">
+          <TerminalCard
+            title={`Connect prompt${hostLabel ? ` · ${hostLabel}` : ""}`}
+            text={`\u001b[2mConnect to this Brain using your agent:\u001b[0m\nUse the Recollect connect skill for ${brain.name}`}
+          />
           <CopyButton value={connect}>
             {({ copied, copy }) => (
-              <Button
-                variant="subtle"
-                size="compact-sm"
+              <button
+                type="button"
                 onClick={copy}
                 aria-label="Copy connection prompt"
+                title={copied ? "Copied" : "Copy connection prompt"}
+                className="absolute right-1.5 top-1 grid size-7 place-items-center rounded-md text-terminal-muted transition-colors duration-fast hover:bg-terminal-border hover:text-terminal-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
               >
-                {copied ? <Check size={18} /> : <Copy size={18} />}
-              </Button>
+                {copied ? (
+                  <Check aria-hidden="true" className="size-4 text-ansi-green" />
+                ) : (
+                  <Copy aria-hidden="true" className="size-4" />
+                )}
+              </button>
             )}
           </CopyButton>
         </div>
-        <details className="agent-prompt-details">
-          <summary>View connection prompt</summary>
+        <Disclosure summary="View connection prompt">
           <Code block>{connect}</Code>
-          <Text size="xs">
+          <p className={stepNote}>
             Restart your host, trust the plugin, then send this prompt. Approve
             the connection in your browser. Credentials stay in the operating
             system credential store.
-          </Text>
-        </details>
+          </p>
+        </Disclosure>
       </div>
     );
   return (
-    <Stack gap="md">
-      <Title order={3}>Connect once</Title>
-      <Text size="sm">
+    <div className="grid gap-3">
+      <h3 className={stepTitle}>Connect once</h3>
+      <p className={stepText}>
         Restart your host, trust the plugin, then send this prompt. Approve the
         connection in your browser.
-      </Text>
+      </p>
       <Code block>{connect}</Code>
       <SetupCopy value={connect} label="Copy connection prompt" />
-      <Text size="xs" c="dimmed">
+      <p className={stepNote}>
         Your credential stays in the operating system credential store.
-      </Text>
-    </Stack>
+      </p>
+    </div>
   );
 }
 
 export function PluginFinish({ brain }: { brain: Brain }) {
   const verify = `What relevant knowledge does Recollect already have for this workspace? Cite its sources and say if no relevant memory was available. Do not change any permissions.`;
   return (
-    <Stack gap="md">
-      <Title order={3}>Start a normal session</Title>
-      <Text size="sm">
+    <div className="grid gap-3">
+      <h3 className={stepTitle}>Start a normal session</h3>
+      <p className={stepText}>
         The plugin recalls relevant memory and captures permitted evidence in
         the background. Check recorded activity in {brain.name}.
-      </Text>
+      </p>
       <SetupCopy value={verify} label="Copy verification prompt" />
-      <Text size="xs" c="dimmed">
+      <p className={stepNote}>
         The next view shows Brain activity. Installation alone does not prove a
         read or upload from this agent. An empty Brain may have no relevant
         memory yet.
-      </Text>
-      <details className="feature-advanced">
-        <summary>Optional tool execution</summary>
-        <Text size="sm" mt="sm">
+      </p>
+      <Disclosure summary="Optional tool execution">
+        <p className={stepText}>
           The execution runner lets Recollect execute separately authorized
           connected tools on this computer or its private network. Automatic
           memory and your host’s ordinary coding tools do not require it. It
           stays off by default.
-        </Text>
-        <Text size="sm" mt="sm">
+        </p>
+        <p className={stepText}>
           To enable it explicitly, ask the connect skill to reconnect with{" "}
-          <code>--with-runner</code>. Tool access still requires its own grants.
-        </Text>
-      </details>
-    </Stack>
+          <Code>--with-runner</Code>. Tool access still requires its own grants.
+        </p>
+      </Disclosure>
+    </div>
   );
 }

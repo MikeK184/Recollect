@@ -1,27 +1,20 @@
 import type { Dispatch, SetStateAction } from "react";
 import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Menu,
-  Stack,
-  Tabs,
-  Text,
-} from "@mantine/core";
-import {
   Activity,
+  ArrowRight,
   Box,
-  Copy,
-  Database,
+  CircleCheck,
+  CircleDashed,
   FileText,
+  Globe,
+  HardDrive,
   Layers,
   MoreHorizontal,
   Monitor,
   Pause,
   Pencil,
   Play,
+  Plus,
   Server,
   Unplug,
   X,
@@ -31,8 +24,35 @@ import type { Brain } from "./api";
 import type { components } from "./api-schema";
 import type { ServerDraft } from "./features/connections/mcpConfig";
 import { EmptyState } from "./components/AsyncState";
-import { StatusDot } from "./components/StatusDot";
 import { McpConnectorIcon } from "./components/McpConnectorIcon";
+import { staggerStyle } from "./components/Motion";
+import {
+  Alert,
+  Badge,
+  Button,
+  CopyAction,
+  Count,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  IconButton,
+  StatusBadge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  Tile,
+} from "./components/ui";
+import { Disclosure, FactRows, SectionLabel } from "./features/connections/ui";
+import { cn } from "./lib/utils";
 import { McpConnectionDialog } from "./McpConnectionDialog";
 import type { McpCatalogue } from "./McpPanel";
 import {
@@ -84,8 +104,58 @@ type InspectorProps = {
   clear: (message: string) => void;
 };
 
+const mutedText = "m-0 text-label text-muted-foreground";
+
+/** Configured status: colour, icon and word together; history is separate. */
+function ConnectionStatus({ item }: { item: ConnectionSummary }) {
+  if (item.availability !== "configured")
+    return (
+      <StatusBadge state="attention">
+        {availabilityLabel(item.availability)}
+      </StatusBadge>
+    );
+  return item.last_successful_call_at ? (
+    <Badge variant="brand">
+      <CircleCheck aria-hidden="true" />
+      Last call succeeded
+    </Badge>
+  ) : (
+    <Badge>
+      <CircleDashed aria-hidden="true" />
+      Configured · not tested
+    </Badge>
+  );
+}
+
+function ScopeBadges({
+  item,
+  environmentName,
+}: {
+  item: ConnectionSummary;
+  environmentName: (id: string | null | undefined) => string;
+}) {
+  const PlacementIcon = item.placement === "local" ? Monitor : Server;
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <Badge
+        variant="outline"
+        className="max-w-[200px]"
+        title={environmentName(item.environment_id)}
+      >
+        <Layers aria-hidden="true" />
+        <span className="truncate">{environmentName(item.environment_id)}</span>
+      </Badge>
+      <Badge variant="outline">
+        <PlacementIcon aria-hidden="true" />
+        {placementLabel(item.placement)}
+      </Badge>
+    </div>
+  );
+}
+
 function ConnectionRow({
   item,
+  index,
   brain,
   data,
   inspected,
@@ -94,6 +164,7 @@ function ConnectionRow({
   environmentName,
 }: {
   item: ConnectionSummary;
+  index: number;
   brain: Brain;
   data: McpCatalogue;
   inspected: ConnectionSummary | undefined;
@@ -110,98 +181,77 @@ function ConnectionRow({
     setInspectorDismissed,
     setInspectorTab,
   } = controls;
+  const selected = inspected?.id === item.id;
+  const locked = !!connection && connection !== "new" && connection !== item.id;
   return (
     <article
-      className={
-        "connection-row" + (inspected?.id === item.id ? " selected" : "")
-      }
+      className={cn(
+        "group/row relative flex animate-enter items-center gap-3 rounded-lg border bg-card p-3.5 transition-[background-color,border-color,box-shadow,transform] duration-fast ease-standard",
+        selected
+          ? "selected border-brand/40 bg-brand-soft/35 shadow-xs"
+          : "border-border hover:-translate-y-px hover:border-border-strong hover:shadow-sm",
+      )}
+      style={staggerStyle(index)}
       data-testid="mcp-connection"
     >
       <McpConnectorIcon
         definition={data.definitions.find((d) => d.key === item.definition_key)}
       />
-      <div className="connection-row-content">
+      <div className="grid min-w-0 flex-1 gap-1">
         <button
-          className="connection-select"
-          disabled={
-            !!connection && connection !== "new" && connection !== item.id
-          }
+          type="button"
+          className="w-fit max-w-full truncate rounded-sm text-left text-body font-semibold text-foreground outline-none after:absolute after:inset-0 after:rounded-lg after:content-[''] hover:underline hover:underline-offset-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+          disabled={locked}
+          aria-current={selected ? "true" : undefined}
           onClick={() => {
             setInspectedId(item.id);
             setInspectorDismissed(false);
             setInspectorTab("overview");
           }}
         >
-          <strong>{item.name}</strong>
+          {item.name}
         </button>
-        <small>
+        <small
+          className={cn(
+            "truncate text-caption text-muted-foreground",
+            item.id === inspected?.id && visibleDetail && "mono",
+          )}
+        >
           {item.id === inspected?.id && visibleDetail
             ? visibleDetail.target
             : (data.definitions.find((d) => d.key === item.definition_key)
                 ?.name ?? "Approved connector")}
         </small>
-        <div className="connection-scope-badges">
-          <Badge
-            variant="light"
-            color="brand"
-            title={environmentName(item.environment_id)}
-            leftSection={<Layers size={12} />}
-          >
-            {environmentName(item.environment_id)}
-          </Badge>
-          <Badge
-            variant="outline"
-            color="gray"
-            leftSection={
-              item.placement === "local" ? (
-                <Monitor size={12} />
-              ) : (
-                <Server size={12} />
-              )
-            }
-          >
-            {placementLabel(item.placement)}
-          </Badge>
-        </div>
+        <ScopeBadges item={item} environmentName={environmentName} />
       </div>
-      <div className="connection-row-status">
-        <Badge
-          leftSection={
-            <StatusDot
-              tone={item.availability === "configured" ? "accent" : "idle"}
-              size={8}
-            />
-          }
-          variant="light"
-          color={item.availability === "configured" ? "brand" : "gray"}
-        >
-          {item.availability === "configured"
-            ? item.last_successful_call_at
-              ? "Last call succeeded"
-              : "Configured · not tested"
-            : availabilityLabel(item.availability)}
-        </Badge>
+      <div className="relative z-[1] flex shrink-0 flex-col items-end gap-1">
+        <ConnectionStatus item={item} />
         <small
+          className="text-caption text-muted-foreground"
           title={
             item.last_successful_call_at
               ? new Date(item.last_successful_call_at).toLocaleString()
               : undefined
           }
         >
-          {item.last_successful_call_at
-            ? "Last call · " +
-              new Date(item.last_successful_call_at).toLocaleDateString()
-            : "No observed successful call"}
+          {item.last_successful_call_at ? (
+            <>
+              Last call ·{" "}
+              <span className="mono">
+                {new Date(item.last_successful_call_at).toLocaleDateString()}
+              </span>
+            </>
+          ) : (
+            "No observed successful call"
+          )}
         </small>
       </div>
-      <div className="connection-row-actions">
+      <div className="relative z-[1] flex shrink-0 items-center gap-1">
         <Button
-          variant="subtle"
-          size="compact-sm"
+          variant="ghost"
+          size="sm"
           aria-label={"View " + item.name}
-          disabled={
-            !!connection && connection !== "new" && connection !== item.id
-          }
+          disabled={locked}
           onClick={() => {
             setInspectedId(item.id);
             setInspectorDismissed(false);
@@ -209,36 +259,34 @@ function ConnectionRow({
         >
           Inspect
         </Button>
-        <Menu position="bottom-end" withinPortal>
-          <Menu.Target>
-            <ActionIcon
-              variant="subtle"
-              size={26}
-              aria-label={"Actions for " + item.name}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton
+              size="icon-sm"
+              label={"Actions for " + item.name}
               disabled={!!connection}
             >
-              <MoreHorizontal size={20} />
-            </ActionIcon>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<Box size={16} />}
-              onClick={() => {
+              <MoreHorizontal aria-hidden="true" />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => {
                 if (connection) return;
                 setInspectedId(item.id);
                 setInspectorDismissed(false);
                 setInspectorTab("overview");
               }}
             >
+              <Box aria-hidden="true" />
               View connection
-            </Menu.Item>
+            </DropdownMenuItem>
             {data.can_configure && (
               <>
-                <Menu.Divider />
-                <Menu.Item
-                  leftSection={<Pencil size={16} />}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
                   disabled={brain.archived}
-                  onClick={() => {
+                  onSelect={() => {
                     if (connection) return;
                     setImportedDraft(undefined);
                     setInspectedId(item.id);
@@ -247,21 +295,24 @@ function ConnectionRow({
                     setConnection(item.id);
                   }}
                 >
+                  <Pencil aria-hidden="true" />
                   Edit connection
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={
-                    item.enabled ? <Pause size={16} /> : <Play size={16} />
-                  }
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   disabled={brain.archived}
-                  onClick={() => !connection && setPower(item.id)}
+                  onSelect={() => !connection && setPower(item.id)}
                 >
+                  {item.enabled ? (
+                    <Pause aria-hidden="true" />
+                  ) : (
+                    <Play aria-hidden="true" />
+                  )}
                   {item.enabled ? "Pause use…" : "Enable use…"}
-                </Menu.Item>
+                </DropdownMenuItem>
               </>
             )}
-          </Menu.Dropdown>
-        </Menu>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </article>
   );
@@ -292,88 +343,95 @@ function InspectorHeading({
     setInspectorTab,
   } = controls;
   return (
-    <Group gap="md" mb="lg" className="connection-inspector-heading">
+    <header className="flex items-start gap-3 border-b border-border px-4 py-3.5">
       <McpConnectorIcon
         definition={data.definitions.find(
           (d) => d.key === inspected.definition_key,
         )}
       />
-      <div className="connection-inspector-identity">
+      <div className="min-w-0 flex-1">
         {connection === inspected.id ? (
           <div ref={setConnectionNameMount} />
         ) : (
-          <h2 className="management-title">{inspected.name}</h2>
+          <h2 className="m-0 truncate text-title font-semibold text-foreground">
+            {inspected.name}
+          </h2>
         )}
-        <p className="management-muted inspector-target">
+        <p
+          className={cn(
+            "m-0 mt-0.5 truncate text-caption text-muted-foreground",
+            visibleDetail && "mono",
+          )}
+        >
           {visibleDetail?.target ?? "Approved MCP connector"}
         </p>
       </div>
-      <div className="connection-inspector-actions">
-        <Menu position="bottom-end" withinPortal>
-          <Menu.Target>
-            <ActionIcon
-              variant="subtle"
-              size={26}
-              aria-label="Connection actions"
+      <div className="-mr-1 flex shrink-0 items-center gap-0.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton
+              size="icon-sm"
+              label="Connection actions"
               disabled={!!connection}
             >
-              <MoreHorizontal size={20} />
-            </ActionIcon>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<FileText size={16} />}
+              <MoreHorizontal aria-hidden="true" />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
               disabled={!!connection}
-              onClick={() => !connection && setInspectorTab("tools")}
+              onSelect={() => !connection && setInspectorTab("tools")}
             >
+              <FileText aria-hidden="true" />
               View approved tools
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<Activity size={16} />}
+            </DropdownMenuItem>
+            <DropdownMenuItem
               disabled={!!connection}
-              onClick={() => !connection && setInspectorTab("activity")}
+              onSelect={() => !connection && setInspectorTab("activity")}
             >
+              <Activity aria-hidden="true" />
               View connection history
-            </Menu.Item>
+            </DropdownMenuItem>
             {data.can_configure && (
               <>
-                <Menu.Divider />
-                <Menu.Item
-                  leftSection={<Pencil size={16} />}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
                   disabled={brain.archived}
-                  onClick={() => {
+                  onSelect={() => {
                     if (connection) return;
                     setImportedDraft(undefined);
                     setInspectorTab("overview");
                     setConnection(inspected.id);
                   }}
                 >
+                  <Pencil aria-hidden="true" />
                   Edit connection
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={
-                    inspected.enabled ? <Pause size={16} /> : <Play size={16} />
-                  }
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   disabled={brain.archived || !!connection}
-                  onClick={() => !connection && setPower(inspected.id)}
+                  onSelect={() => !connection && setPower(inspected.id)}
                 >
+                  {inspected.enabled ? (
+                    <Pause aria-hidden="true" />
+                  ) : (
+                    <Play aria-hidden="true" />
+                  )}
                   {inspected.enabled ? "Pause use…" : "Enable use…"}
-                </Menu.Item>
+                </DropdownMenuItem>
               </>
             )}
-          </Menu.Dropdown>
-        </Menu>
-        <ActionIcon
-          variant="subtle"
-          size={26}
-          aria-label="Close connection details"
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <IconButton
+          size="icon-sm"
+          label="Close connection details"
           disabled={!!connection}
           onClick={() => setInspectorDismissed(true)}
         >
-          <X size={20} />
-        </ActionIcon>
+          <X aria-hidden="true" />
+        </IconButton>
       </div>
-    </Group>
+    </header>
   );
 }
 
@@ -395,29 +453,35 @@ function InspectorTestStatus({
     setInspectorTab,
   } = controls;
   return (
-    <div className="inspector-test-section">
-      <Group justify="space-between" mb="sm">
-        <h3 className="management-title inspector-section-title">
-          Test status
-        </h3>
-        <Badge color={inspected.last_successful_call_at ? "brand" : "yellow"}>
-          {inspected.last_successful_call_at
-            ? "Successful call recorded"
-            : "Configured · not tested"}
-        </Badge>
-      </Group>
-      <p className="management-muted">
-        {inspected.last_successful_call_at
-          ? "Last successful call: " +
-            new Date(inspected.last_successful_call_at).toLocaleDateString()
-          : "No successful call recorded."}
+    <section className="grid gap-2.5 border-t border-border pt-4">
+      <SectionLabel
+        actions={
+          inspected.last_successful_call_at ? (
+            <StatusBadge state="positive">Successful call recorded</StatusBadge>
+          ) : (
+            <StatusBadge state="attention">Configured · not tested</StatusBadge>
+          )
+        }
+      >
+        Test status
+      </SectionLabel>
+      <p className={mutedText}>
+        {inspected.last_successful_call_at ? (
+          <>
+            Last successful call:{" "}
+            <span className="mono text-foreground">
+              {new Date(inspected.last_successful_call_at).toLocaleDateString()}
+            </span>
+          </>
+        ) : (
+          "No successful call recorded."
+        )}
       </p>
-      <p className="connection-test-meaning">
+      <p className="m-0 text-caption text-muted-foreground">
         Test checks the anonymous server handshake and tool metadata. It does
         not run tools or update approved metadata.
       </p>
-      <details className="inspector-session-details">
-        <summary>Runtime sessions</summary>
+      <Disclosure summary="Runtime sessions">
         <ConnectionObservation
           id={inspected.id}
           status={runtime.error ? undefined : runtime.data}
@@ -425,23 +489,21 @@ function InspectorTestStatus({
           failed={!!runtime.error}
           checkedAt={runtime.dataUpdatedAt}
         />
-      </details>
+      </Disclosure>
       {data.can_configure && (
-        <Group mt="md" gap="xs" className="connection-inspector-actions">
+        <div className="flex flex-wrap gap-2 pt-1">
           <Button
             size="sm"
-            color="green"
-            leftSection={<Play size={17} />}
             aria-label="Test connection"
             disabled={brain.archived || !inspected.enabled || !!connection}
             onClick={() => setTesting(inspected.id)}
           >
+            <Play aria-hidden="true" />
             Test connection
           </Button>
           <Button
             size="sm"
-            variant="default"
-            leftSection={<Pencil size={17} />}
+            variant="secondary"
             aria-label="Edit connection"
             disabled={brain.archived || !!connection}
             onClick={() => {
@@ -450,11 +512,12 @@ function InspectorTestStatus({
               setConnection(inspected.id);
             }}
           >
+            <Pencil aria-hidden="true" />
             Edit
           </Button>
-        </Group>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -476,19 +539,22 @@ function InspectorToolAccess({
 >) {
   const { connection, setPower } = controls;
   return (
-    <section className="inspector-tool-access">
-      <Group justify="space-between">
-        <h3 className="management-title inspector-section-title">
-          Tool access
-        </h3>
-        <Button
-          variant="subtle"
-          size="compact-sm"
-          onClick={() => onSectionChange?.("profiles")}
-        >
-          Manage access →
-        </Button>
-      </Group>
+    <section className="grid gap-2.5 border-t border-border pt-4">
+      <SectionLabel
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-mr-2"
+            onClick={() => onSectionChange?.("profiles")}
+          >
+            Manage access
+            <ArrowRight aria-hidden="true" />
+          </Button>
+        }
+      >
+        Tool access
+      </SectionLabel>
       {data.profiles
         .filter((p) => p.connection_ids.includes(inspected.id))
         .map((p) => (
@@ -502,13 +568,13 @@ function InspectorToolAccess({
           />
         ))}
       {!data.profiles.some((p) => p.connection_ids.includes(inspected.id)) && (
-        <p className="management-muted">No visible tool groups.</p>
+        <p className={mutedText}>No visible tool groups.</p>
       )}
       {data.can_configure && (
         <Button
-          variant="subtle"
-          size="compact-xs"
-          mt="md"
+          variant="ghost"
+          size="sm"
+          className="-ml-2.5 justify-self-start"
           disabled={brain.archived || !!connection}
           onClick={() => !connection && setPower(inspected.id)}
         >
@@ -554,45 +620,44 @@ function InspectorOverview(props: InspectorProps) {
           manageRunners={onManageRunners}
         />
       ) : (
-        <>
-          <h3 className="management-title inspector-section-title">
-            Configuration
-          </h3>
-          <dl>
-            <dt>Target</dt>
-            <dd>
-              {detailError ? (
-                "Unavailable"
-              ) : visibleDetail ? (
-                <span className="inspector-target-value">
-                  <code>{visibleDetail.target}</code>
-                  <Button
-                    variant="subtle"
-                    size="compact-xs"
-                    aria-label="Copy target URL"
-                    onClick={() =>
-                      void navigator.clipboard.writeText(visibleDetail.target)
-                    }
-                  >
-                    <Copy size={16} />
-                  </Button>
-                </span>
-              ) : data.can_configure ? (
-                "Loading…"
-              ) : (
-                "Visible to managers"
-              )}
-            </dd>
-            <dt>Scope</dt>
-            <dd>
-              <code>{environmentName(inspected.environment_id)}</code>
-            </dd>
-            <dt>Runs on</dt>
-            <dd>
-              <code>{placementLabel(inspected.placement)}</code>
-            </dd>
-          </dl>
-        </>
+        <section className="grid gap-1">
+          <SectionLabel>Configuration</SectionLabel>
+          <FactRows
+            items={[
+              {
+                term: "Target",
+                value: detailError ? (
+                  "Unavailable"
+                ) : visibleDetail ? (
+                  <span className="flex min-w-0 items-center justify-end gap-1">
+                    <code className="mono min-w-0 text-caption [overflow-wrap:anywhere]">
+                      {visibleDetail.target}
+                    </code>
+                    <CopyAction
+                      iconOnly
+                      variant="ghost"
+                      size="icon-sm"
+                      label="Copy target URL"
+                      value={visibleDetail.target}
+                    />
+                  </span>
+                ) : data.can_configure ? (
+                  "Loading…"
+                ) : (
+                  "Visible to managers"
+                ),
+              },
+              {
+                term: "Scope",
+                value: environmentName(inspected.environment_id),
+              },
+              {
+                term: "Runs on",
+                value: placementLabel(inspected.placement),
+              },
+            ]}
+          />
+        </section>
       )}
       <InspectorTestStatus
         brain={brain}
@@ -623,52 +688,48 @@ function InspectorTools({
   InspectorProps,
   "brain" | "data" | "inspected" | "visibleDefinition" | "approvedTools"
 >) {
-  return (
-    <Stack mt="lg">
-      {data.can_configure ? (
-        <>
-          <Text size="xs" c="dimmed">
-            Approved metadata. Tool access is granted independently.
-          </Text>
-          <ToolReadNotice read={approvedTools} />
-          {visibleDefinition?.tools.length === 0 && (
-            <Text size="sm" c="dimmed">
-              No approved tools in this connector.
-            </Text>
-          )}
-          {visibleDefinition?.tools.map((tool) => (
+  return data.can_configure ? (
+    <div className="grid gap-3">
+      <p className="m-0 text-caption text-muted-foreground">
+        Approved metadata. Tool access is granted independently.
+      </p>
+      <ToolReadNotice read={approvedTools} />
+      {visibleDefinition?.tools.length === 0 && (
+        <p className={mutedText}>No approved tools in this connector.</p>
+      )}
+      {!!visibleDefinition?.tools.length && (
+        <div className="grid">
+          {visibleDefinition.tools.map((tool) => (
             <ApprovedToolDetails key={tool.name} tool={tool} />
           ))}
-        </>
-      ) : (
-        <>
-          <Text size="xs" c="dimmed">
-            Approved tools from your permitted groups. No server connection is
-            started.
-          </Text>
-          {data.profiles
-            .filter((p) => p.connection_ids.includes(inspected.id))
-            .map((p) => (
-              <InspectorToolGroup
-                key={`${p.id}:${inspected.id}:${p.environment_id ?? "brain-wide"}`}
-                brain={brain}
-                profile={p}
-                connection={inspected}
-                canConfigure={false}
-                approved={approvedTools}
-                detailed
-              />
-            ))}
-          {!data.profiles.some((p) =>
-            p.connection_ids.includes(inspected.id),
-          ) && (
-            <Text size="sm" c="dimmed">
-              No visible tool groups. Use access is required to inspect tools.
-            </Text>
-          )}
-        </>
+        </div>
       )}
-    </Stack>
+    </div>
+  ) : (
+    <div className="grid gap-3">
+      <p className="m-0 text-caption text-muted-foreground">
+        Approved tools from your permitted groups. No server connection is
+        started.
+      </p>
+      {data.profiles
+        .filter((p) => p.connection_ids.includes(inspected.id))
+        .map((p) => (
+          <InspectorToolGroup
+            key={`${p.id}:${inspected.id}:${p.environment_id ?? "brain-wide"}`}
+            brain={brain}
+            profile={p}
+            connection={inspected}
+            canConfigure={false}
+            approved={approvedTools}
+            detailed
+          />
+        ))}
+      {!data.profiles.some((p) => p.connection_ids.includes(inspected.id)) && (
+        <p className={mutedText}>
+          No visible tool groups. Use access is required to inspect tools.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -677,21 +738,32 @@ function InspectorActivity({
   controls,
 }: Pick<InspectorProps, "inspected" | "controls">) {
   return (
-    <Stack mt="lg">
-      <Text size="sm">
-        {inspected.last_successful_call_at
-          ? "Last successful call: " +
-            new Date(inspected.last_successful_call_at).toLocaleString()
-          : "No observed successful call for this configuration."}
-      </Text>
-      <Text size="xs" c="dimmed">
+    <div className="grid gap-3">
+      <p className="m-0 text-body text-foreground">
+        {inspected.last_successful_call_at ? (
+          <>
+            Last successful call:{" "}
+            <span className="mono">
+              {new Date(inspected.last_successful_call_at).toLocaleString()}
+            </span>
+          </>
+        ) : (
+          "No observed successful call for this configuration."
+        )}
+      </p>
+      <p className="m-0 text-caption text-muted-foreground">
         Inspect tool calls and session diagnostics across this Brain’s permitted
         connections.
-      </Text>
-      <Button variant="default" onClick={() => controls.setDiagnostics(true)}>
+      </p>
+      <Button
+        variant="secondary"
+        className="justify-self-start"
+        onClick={() => controls.setDiagnostics(true)}
+      >
+        <Activity aria-hidden="true" />
         Open tool activity
       </Button>
-    </Stack>
+    </div>
   );
 }
 
@@ -700,30 +772,130 @@ function ConnectionInspector(props: InspectorProps) {
   const { connection, inspectorTab, setInspectorTab } = controls;
   return (
     <aside
-      className="management-surface connection-inspector"
+      className="sticky top-4 flex max-h-[calc(100vh-96px)] min-w-0 animate-pane-in flex-col overflow-hidden rounded-lg border border-border bg-card"
       aria-label="Connection details"
     >
       <InspectorHeading {...props} />
       <Tabs
-        value={inspectorTab}
-        onChange={(value) => {
+        value={inspectorTab ?? "overview"}
+        onValueChange={(value) => {
           if (!connection) setInspectorTab(value);
         }}
+        className="min-h-0 flex-1 gap-0"
       >
-        <Tabs.List>
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="tools" disabled={!!connection}>
+        <TabsList className="shrink-0 px-2">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tools" disabled={!!connection}>
             Tools
-          </Tabs.Tab>
-          <Tabs.Tab value="activity" disabled={!!connection}>
+          </TabsTrigger>
+          <TabsTrigger value="activity" disabled={!!connection}>
             Activity
-          </Tabs.Tab>
-        </Tabs.List>
+          </TabsTrigger>
+        </TabsList>
+        <div
+          key={inspectorTab}
+          className="grid min-h-0 animate-enter content-start gap-4 overflow-auto p-4 scrollbar-thin"
+        >
+          {inspectorTab === "overview" && <InspectorOverview {...props} />}
+          {inspectorTab === "tools" && <InspectorTools {...props} />}
+          {inspectorTab === "activity" && <InspectorActivity {...props} />}
+        </div>
       </Tabs>
-      {inspectorTab === "overview" && <InspectorOverview {...props} />}
-      {inspectorTab === "tools" && <InspectorTools {...props} />}
-      {inspectorTab === "activity" && <InspectorActivity {...props} />}
     </aside>
+  );
+}
+
+function transportLabel(transport: string) {
+  return transport === "streamable_http"
+    ? "HTTP"
+    : transport === "stdio"
+      ? "Local"
+      : transport;
+}
+
+/** Approved connectors listed inside the empty state for configurers. */
+function ApprovedConnectors({
+  definitions,
+  onAdd,
+}: {
+  definitions: McpCatalogue["definitions"];
+  onAdd?: (key: string) => void;
+}) {
+  return (
+    <div className="mx-auto mt-2 grid w-full max-w-[760px] gap-2 text-left">
+      <div className="flex items-center gap-2">
+        <h3 className="m-0 text-label font-medium text-foreground">
+          Approved connectors you can add
+        </h3>
+        <Count>{definitions.length}</Count>
+      </div>
+      <TableWrap>
+        <Table>
+          <TableHead>
+            <tr>
+              <TableHeader>Connector</TableHeader>
+              <TableHeader className="w-24">Transport</TableHeader>
+              <TableHeader className="w-32">Status</TableHeader>
+              {onAdd && (
+                <TableHeader className="w-[88px] text-right">Action</TableHeader>
+              )}
+            </tr>
+          </TableHead>
+          <TableBody>
+            {definitions.map((definition) => {
+              const TransportIcon =
+                definition.transport === "stdio" ? HardDrive : Globe;
+              return (
+                <TableRow key={definition.key}>
+                  <TableCell className="h-auto py-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Tile size="sm">
+                        <TransportIcon aria-hidden="true" />
+                      </Tile>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-foreground">
+                          {definition.name}
+                        </div>
+                        {definition.description && (
+                          <div className="line-clamp-2 text-caption text-muted-foreground">
+                            {definition.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {transportLabel(definition.transport)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge state="positive">Approved</StatusBadge>
+                  </TableCell>
+                  {onAdd && (
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        aria-label={`Add ${definition.name}`}
+                        onClick={() => onAdd(definition.key)}
+                      >
+                        <Plus aria-hidden="true" />
+                        Add
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableWrap>
+      <p className="m-0 max-w-[400px] text-caption text-muted-foreground">
+        Connector approval controls what can be configured. Brain access
+        controls who can use it.
+      </p>
+    </div>
   );
 }
 
@@ -734,6 +906,7 @@ export function ConnectionsSection({
   environment,
   setupSaved,
   setSetupSaved,
+  onAddConnector,
   ...inspector
 }: Omit<InspectorProps, "inspected"> & {
   inspected: ConnectionSummary | undefined;
@@ -743,6 +916,8 @@ export function ConnectionsSection({
   environment: string | null;
   setupSaved: boolean;
   setSetupSaved: Setter<boolean>;
+  /** Start a connection from an approved connector in the empty state. */
+  onAddConnector?: (definitionKey: string) => void;
 }) {
   const {
     brain,
@@ -755,105 +930,151 @@ export function ConnectionsSection({
     onSectionChange,
     onManageRunners,
   } = inspector;
+  const approved = data.definitions.filter((d) => d.enabled);
   return (
     <>
       {setupSaved && (
-        <Alert title="Connection saved · not tested" color="brand">
-          <Text size="sm">
-            Saved without a tool call. Tool access is granted separately.
-          </Text>
-          <Group mt="md">
-            {onSectionChange && (
-              <Button onClick={() => onSectionChange("profiles")}>
-                Manage tool access
+        <Alert
+          variant="brand"
+          role="status"
+          icon={<CircleCheck aria-hidden="true" />}
+          title="Connection saved · not tested"
+          className="animate-enter"
+          actions={
+            <>
+              {onSectionChange && (
+                <Button size="sm" onClick={() => onSectionChange("profiles")}>
+                  Manage tool access
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSetupSaved(false)}
+              >
+                Dismiss
               </Button>
-            )}
-            <Button variant="subtle" onClick={() => setSetupSaved(false)}>
-              Dismiss
-            </Button>
-          </Group>
+            </>
+          }
+        >
+          Saved without a tool call. Tool access is granted separately.
         </Alert>
       )}
       {data.can_configure && data.definitions.length === 0 && (
-        <Alert title="No approved connectors">
+        <Alert role="status" title="No approved connectors">
           Start with Add connection to register an MCP connector. Then choose
           where it runs and which agents may use it.
         </Alert>
       )}
       {!data.connections.length && (
-        <EmptyState
-          icon={Unplug}
-          title="Tools, when you need them"
-          description="Add an approved connection, then include it in a tool group with explicit tool-use permissions."
-        />
+        <section
+          className="rounded-lg border border-border bg-card pb-6"
+          aria-label="No connections yet"
+        >
+          <EmptyState
+            icon={Unplug}
+            title="No connections yet"
+            description="Add an approved connector, then include it in a tool group with explicit tool-use permissions."
+            className="pb-4 [&_p]:max-w-[440px]"
+          />
+          {data.can_configure && approved.length > 0 && (
+            <div className="px-6">
+              <ApprovedConnectors
+                definitions={approved}
+                onAdd={onAddConnector}
+              />
+            </div>
+          )}
+        </section>
       )}
 
       {runtime.error && (
-        <Alert color="gray" title="Session status unavailable">
+        <Alert
+          role="status"
+          title="Session status unavailable"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void runtime.refetch()}
+            >
+              Retry status
+            </Button>
+          }
+        >
           {runtime.error.message}
-          <Button
-            size="xs"
-            variant="subtle"
-            onClick={() => void runtime.refetch()}
-          >
-            Retry status
-          </Button>
         </Alert>
       )}
       {(connectionSearch || environment) && (
-        <Text size="xs" c="dimmed">
+        <p className="mono m-0 text-caption text-muted-foreground">
           {matchingConnections.length} of {data.connections.length} loaded
           connections
-        </Text>
+        </p>
       )}
       {!!data.connections.length && !matchingConnections.length && (
-        <Text size="sm" c="dimmed" role="status">
+        <p className={mutedText} role="status">
           No connections match these filters.
-        </Text>
+        </p>
       )}
       {initialConnection &&
         !data.connections.some((c) => c.id === initialConnection) && (
-          <Text size="sm" c="dimmed" role="status">
+          <p className={mutedText} role="status">
             This connection is unavailable or no longer visible to you.
-          </Text>
+          </p>
         )}
-      <div
-        className={"connections-layout" + (!inspected ? " no-selection" : "")}
-      >
-        <div>
-          {matchingConnections.map((item) => (
-            <ConnectionRow
-              key={item.id}
-              item={item}
-              brain={brain}
-              data={data}
-              inspected={inspected}
-              visibleDetail={visibleDetail}
-              controls={controls}
-              environmentName={environmentName}
-            />
-          ))}
-        </div>
-        {inspected && (
-          <ConnectionInspector {...inspector} inspected={inspected} />
-        )}
-      </div>
-      {onManageRunners && (
-        <div className="management-surface private-runner-note">
-          <div className="management-icon">
-            <Database />
+      {(!!matchingConnections.length || inspected) && (
+        <div
+          className={cn(
+            "grid items-start gap-4",
+            inspected && "grid-cols-[minmax(0,1fr)_400px]",
+          )}
+        >
+          <div className="grid min-w-0 gap-2.5">
+            {matchingConnections.map((item, index) => (
+              <ConnectionRow
+                key={item.id}
+                index={index}
+                item={item}
+                brain={brain}
+                data={data}
+                inspected={inspected}
+                visibleDetail={visibleDetail}
+                controls={controls}
+                environmentName={environmentName}
+              />
+            ))}
           </div>
-          <div>
-            <h3 className="management-title">Need a private network?</h3>
-            <p className="management-muted">
-              Use a private runner to connect to tools inside your network.
+          {inspected && (
+            <ConnectionInspector
+              {...inspector}
+              inspected={inspected}
+            />
+          )}
+        </div>
+      )}
+      {onManageRunners && (
+        <section
+          className="flex items-center gap-3.5 rounded-lg border border-border bg-card p-4"
+          aria-label="Need a private network?"
+        >
+          <Tile>
+            <Server aria-hidden="true" />
+          </Tile>
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-title font-semibold text-foreground">
+              Need a private network?
+            </h2>
+            <p className="m-0 mt-0.5 text-body text-muted-foreground">
+              Use a Private Runner to reach tools inside your network.
             </p>
           </div>
-          <Button variant="subtle" onClick={onManageRunners}>
-            Manage runners →
+          <Button variant="ghost" onClick={onManageRunners}>
+            Manage runners
+            <ArrowRight aria-hidden="true" />
           </Button>
-        </div>
+        </section>
       )}
     </>
   );
 }
+

@@ -5,39 +5,42 @@ import {
   FileText,
   History,
   Info,
-  List,
+  ListOrdered,
   MessageSquare,
   Pencil,
   RefreshCw,
   Search,
   ShieldCheck,
+  Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Checkbox,
-  Divider,
-  Group,
-  Loader,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Switch,
-  Text,
-  Title,
-  Tooltip,
-} from "@mantine/core";
 import { HostIcon } from "./components/HostIcon";
 import { SemanticPanel } from "./SemanticPanel";
 import type { Brain } from "./api";
 import type { components } from "./api-schema";
 import { Failure, Pages, label, time } from "./ModelsShared";
 import { ChooseModelNotice, needsModel } from "./features/settings/ChooseModel";
+import { EmptyState } from "./components/AsyncState";
+import { SkeletonRows } from "./components/Skeleton";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardBar,
+  Checkbox,
+  IconButton,
+  Modal,
+  NumberField,
+  Progress,
+  Select,
+  StatusBadge,
+  Switch,
+  Tile,
+  Tooltip,
+} from "./components/ui";
+import { cn } from "./lib/utils";
 
 type Policy = components["schemas"]["ModelPolicy"];
 type Settings = components["schemas"]["ModelSettings"];
@@ -45,6 +48,20 @@ type Installed = components["schemas"]["InstalledModels"];
 type Catalogue = components["schemas"]["ModelCatalogue"];
 type Usage = components["schemas"]["ModelUsage"];
 type UpdateDraft = (patch: Partial<Policy>) => void;
+
+// Read-only controls keep their full colour so the saved policy reads clearly;
+// editing is entered explicitly with Edit AI permissions.
+const settled = "disabled:opacity-100 disabled:cursor-default";
+const settledToggle = "cursor-default opacity-100";
+
+function SubHeading({ children, id }: { children: ReactNode; id?: string }) {
+  return (
+    <h3 id={id} className="m-0 text-body font-semibold text-foreground">
+      {children}
+    </h3>
+  );
+}
+
 export function PolicyDetails({
   policy,
   editable,
@@ -56,9 +73,9 @@ export function PolicyDetails({
 }) {
   return (
     <>
-      <div className="management-content-policy">
-        <h3 className="management-title">Allowed content</h3>
-        <div className="management-chips">
+      <div className="grid gap-2.5">
+        <SubHeading>Allowed content</SubHeading>
+        <div className="flex flex-wrap gap-2">
           {[
             "claim",
             "repository",
@@ -69,50 +86,42 @@ export function PolicyDetails({
             "raw_session",
           ].map((value) => {
             const allowed =
-              policy.enabled &&
-              policy.content_classes.includes(value);
+              policy.enabled && policy.content_classes.includes(value);
             return (
-              <label
+              <Checkbox
                 key={value}
-                className={
-                  "management-chip" + (allowed ? "" : " denied")
+                aria-label={`Allow ${label(value)}`}
+                label={label(value)}
+                checked={policy.content_classes.includes(value)}
+                disabled={!editable}
+                className={cn(
+                  "h-[30px] items-center gap-2 rounded-full border border-border pl-2 pr-3 text-label transition-colors duration-fast [&>span:first-child]:mt-0",
+                  editable && "hover:border-border-strong hover:bg-accent",
+                  !editable && settledToggle,
+                  !allowed && "text-muted-foreground",
+                )}
+                onChange={(event) =>
+                  updateDraft({
+                    content_classes: event.currentTarget.checked
+                      ? [...policy.content_classes, value]
+                      : policy.content_classes.filter((v) => v !== value),
+                    ...(value === "claim" && !event.currentTarget.checked
+                      ? { autonomous_memory: false }
+                      : {}),
+                  })
                 }
-              >
-                <Checkbox
-                  aria-label={`Allow ${label(value)}`}
-                  checked={policy.content_classes.includes(value)}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    updateDraft({
-                      content_classes: event.currentTarget.checked
-                        ? [...policy.content_classes, value]
-                        : policy.content_classes.filter(
-                            (v) => v !== value,
-                          ),
-                      ...(value === "claim" &&
-                      !event.currentTarget.checked
-                        ? { autonomous_memory: false }
-                        : {}),
-                    })
-                  }
-                />
-                {label(value)}
-              </label>
+              />
             );
           })}
         </div>
       </div>
-      <section
-        className="ai-policy-detail"
-        aria-label="Automatic processing"
-      >
-        <h3 className="ai-processing-title">
-          Automatic processing
-        </h3>
-        <Group mt="sm">
-          <Checkbox
+      <section className="grid gap-2.5" aria-label="Automatic processing">
+        <SubHeading>Automatic processing</SubHeading>
+        <div className="flex flex-wrap gap-x-8 gap-y-2">
+          <Switch
             label="Automatic source learning"
             checked={policy.automatic_learning}
+            className={cn(!editable && settledToggle)}
             disabled={
               !editable ||
               !policy.enabled ||
@@ -124,9 +133,10 @@ export function PolicyDetails({
               })
             }
           />
-          <Checkbox
+          <Switch
             label="Automatic search indexing"
             checked={policy.automatic_embedding}
+            className={cn(!editable && settledToggle)}
             disabled={
               !editable ||
               !policy.enabled ||
@@ -138,85 +148,88 @@ export function PolicyDetails({
               })
             }
           />
-        </Group>
+        </div>
       </section>
-      <section
-        className="ai-policy-detail ai-processing-limits"
-        aria-label="Processing limits"
-      >
-        <Group gap="xs">
-          <h3 className="ai-processing-title">
-            Processing limits
-          </h3>
-          <Tooltip
-            label="Per model call and per Brain. The daily allowance resets at midnight UTC."
-            multiline
-            w={260}
-            events={{ hover: true, focus: true, touch: true }}
-          >
-            <ActionIcon
+      <section className="grid gap-2.5" aria-label="Processing limits">
+        <div className="flex items-center gap-1">
+          <SubHeading>Processing limits</SubHeading>
+          <Tooltip label="Per model call and per Brain. The daily allowance resets at midnight UTC.">
+            <IconButton
               type="button"
-              variant="subtle"
-              size="sm"
-              aria-label="About processing limits"
+              size="icon-sm"
+              label="About processing limits"
             >
-              <Info size={16} />
-            </ActionIcon>
+              <Info aria-hidden="true" />
+            </IconButton>
           </Tooltip>
-        </Group>
-        <div className="ai-limits-grid">
-          <NumberInput
-            label="Maximum output tokens"
-            value={policy.max_output_tokens}
-            min={128}
-            max={4096}
-            step={256}
-            allowDecimal={false}
-            disabled={!editable}
-            onChange={(value) =>
-              updateDraft({ max_output_tokens: Number(value) })
-            }
-          />
-          <NumberInput
-            label="Maximum input bytes"
-            value={policy.max_input_bytes}
-            min={256}
-            max={32768}
-            step={1024}
-            allowDecimal={false}
-            disabled={!editable}
-            onChange={(value) =>
-              updateDraft({ max_input_bytes: Number(value) })
-            }
-          />
-          <NumberInput
-            label="Daily token allowance"
-            value={policy.daily_token_limit}
-            min={1000}
-            max={10000000}
-            step={1000}
-            allowDecimal={false}
-            disabled={!editable}
-            onChange={(value) =>
-              updateDraft({ daily_token_limit: Number(value) })
-            }
-          />
-          <NumberInput
-            label="Concurrent model calls"
-            value={policy.max_concurrent}
-            min={1}
-            max={4}
-            allowDecimal={false}
-            disabled={!editable}
-            onChange={(value) =>
-              updateDraft({ max_concurrent: Number(value) })
-            }
-          />
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          {(
+            [
+              ["Maximum output tokens", "max_output_tokens", 128, 4096, 256],
+              ["Maximum input bytes", "max_input_bytes", 256, 32768, 1024],
+              ["Daily token allowance", "daily_token_limit", 1000, 10000000, 1000],
+              ["Concurrent model calls", "max_concurrent", 1, 4, 1],
+            ] as const
+          ).map(([name, key, min, max, step]) => (
+            <NumberField
+              key={key}
+              label={name}
+              value={policy[key]}
+              min={min}
+              max={max}
+              step={step}
+              allowDecimal={false}
+              disabled={!editable}
+              hideControls={!editable}
+              inputClassName={settled}
+              onChange={(value) => updateDraft({ [key]: Number(value) })}
+            />
+          ))}
         </div>
       </section>
     </>
   );
 }
+
+const purposeRows: {
+  purpose: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    purpose: "answering",
+    title: "Answer questions",
+    description: "Use this Brain’s evidence to answer with citations.",
+    icon: MessageSquare,
+  },
+  {
+    purpose: "embedding",
+    title: "Find related knowledge",
+    description: "Index approved content for semantic search.",
+    icon: Search,
+  },
+  {
+    purpose: "extraction",
+    title: "Learn from sources",
+    description: "Extract evidence-backed memory into this Brain.",
+    icon: BookOpen,
+  },
+  {
+    purpose: "reranking",
+    title: "Order search results",
+    description: "Use the provider to rank and order retrieved results.",
+    icon: ListOrdered,
+  },
+  {
+    purpose: "synthesis",
+    title: "Maintain memory",
+    description: "Summarize, organize and maintain this Brain’s memory.",
+    icon: Database,
+  },
+];
+
 export function AiPermissionsCard({
   brain,
   policy,
@@ -246,172 +259,159 @@ export function AiPermissionsCard({
   updateDraft: UpdateDraft;
   togglePurpose: (purpose: string, allowed: boolean) => void;
 }) {
+  const automatic = policy.autonomous_memory && policy.enabled;
   return (
-    <section className="management-surface">
-      <div className="management-section-heading">
-        <div>
-          <h2 className="management-title ai-policy-title">
+    <Card
+      className={cn(
+        "grid gap-5 p-5 transition-[border-color,box-shadow] duration-fast",
+        editing && "border-border-strong shadow-sm",
+      )}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="m-0 text-title font-semibold text-foreground">
             AI permissions
           </h2>
-          <p className="management-muted">
-            Choose what this Brain may send to your installed AI
-            provider.
+          <p className="m-0 mt-1 text-body text-muted-foreground">
+            Choose what this Brain may send to your installed AI provider.
           </p>
         </div>
         {brain.role === "admin" && !editing && (
-          <Button
-            variant="default"
-            leftSection={<Pencil size={17} />}
-            disabled={brain.archived}
-            onClick={onEdit}
-          >
+          <Button disabled={brain.archived} onClick={onEdit}>
+            <Pencil aria-hidden="true" />
             Edit AI permissions
           </Button>
         )}
         {editing && (
-          <Group gap="xs" className="ai-inline-actions">
-            <Button
-              variant="default"
-              disabled={saving}
-              onClick={onCancel}
-            >
+          <div className="flex shrink-0 gap-2">
+            <Button variant="secondary" disabled={saving} onClick={onCancel}>
               Cancel
             </Button>
             <Button loading={saving} onClick={onSave}>
-              {changedEmbedding
-                ? "Save and rebuild"
-                : "Save AI permissions"}
+              {changedEmbedding ? "Save and rebuild" : "Save AI permissions"}
             </Button>
-          </Group>
+          </div>
         )}
       </div>
       <Failure error={saveError} />
-      <div className="ai-installed-provider">
-        <strong>Selected provider</strong>
-        <span className="ai-provider-identity">
-          <HostIcon host={installed.provider} size={26} />
-          <span>
-            {installed.provider === "openai"
-              ? "OpenAI"
-              : installed.provider}
-          </span>
-        </span>
-        <Switch
-          label="Allow AI processing"
-          description={
-            needsModel(policy) ? "Choose a text model first." : undefined
-          }
-          checked={policy.enabled}
-          disabled={!editable || needsModel(policy)}
-          onChange={(event) =>
-            updateDraft({
-              enabled: event.currentTarget.checked,
-              ...(!event.currentTarget.checked
-                ? {
-                    automatic_learning: false,
-                    automatic_embedding: false,
-                  }
-                : {}),
-            })
-          }
-        />
-      </div>
-      <div className="ai-automatic-memory">
-        <RefreshCw size={37} />
-        <div>
-          <strong>Automatic memory</strong>
-          <p className="management-muted">
-            Learning and maintenance follow this Brain’s standing
-            policy.
-          </p>
-        </div>
-        <Switch
-          label="Automatic memory"
-          checked={policy.autonomous_memory && policy.enabled}
-          disabled={
-            !editable ||
-            !policy.enabled ||
-            !["extraction", "synthesis"].every((p) =>
-              policy.purposes.includes(p),
-            ) ||
-            !policy.content_classes.includes("claim")
-          }
-          onChange={(event) =>
-            updateDraft({
-              autonomous_memory: event.currentTarget.checked,
-              automatic_learning: event.currentTarget.checked,
-            })
-          }
-        />
-      </div>
-      <h3 className="ai-processing-title">Allowed processing</h3>
-      {[
-        {
-          purpose: "answering",
-          title: "Answer questions",
-          description:
-            "Use this Brain’s evidence to answer with citations.",
-          icon: MessageSquare,
-        },
-        {
-          purpose: "embedding",
-          title: "Find related knowledge",
-          description:
-            "Index approved content for semantic search.",
-          icon: Search,
-        },
-        {
-          purpose: "extraction",
-          title: "Learn from sources",
-          description:
-            "Extract evidence-backed memory into this Brain.",
-          icon: BookOpen,
-        },
-        {
-          purpose: "reranking",
-          title: "Order search results",
-          description:
-            "Use the provider to rank and order retrieved results.",
-          icon: List,
-        },
-        {
-          purpose: "synthesis",
-          title: "Maintain memory",
-          description:
-            "Summarize, organize and maintain this Brain’s memory.",
-          icon: Database,
-        },
-      ].map((row) => (
-        <div key={row.purpose} className="management-row">
-          <row.icon size={20} />
-          <div className="management-row-main">
-            <strong>{row.title}</strong>
-            <p className="management-muted">{row.description}</p>
+      <div className="grid gap-2">
+        <div className="flex items-center gap-3 rounded-lg border border-border py-2.5 pl-2.5 pr-3.5">
+          <Tile size="sm" className="size-8">
+            <HostIcon host={installed.provider} size={18} />
+          </Tile>
+          <div className="min-w-0 flex-1">
+            <div className="text-caption text-muted-foreground">
+              Selected provider
+            </div>
+            <div className="text-body font-medium text-foreground">
+              {installed.provider === "openai" ? "OpenAI" : installed.provider}
+            </div>
           </div>
-          <Checkbox
-            label={
-              policy.purposes.includes(row.purpose)
-                ? "Allowed"
-                : "Disallowed"
+          <Switch
+            label="Allow AI processing"
+            description={
+              needsModel(policy) ? "Choose a text model first." : undefined
             }
-            aria-label={row.title}
-            checked={policy.purposes.includes(row.purpose)}
-            disabled={!editable}
+            checked={policy.enabled}
+            className={cn("items-center", !editable && settledToggle)}
+            disabled={!editable || needsModel(policy)}
             onChange={(event) =>
-              togglePurpose(
-                row.purpose,
-                event.currentTarget.checked,
-              )
+              updateDraft({
+                enabled: event.currentTarget.checked,
+                ...(!event.currentTarget.checked
+                  ? {
+                      automatic_learning: false,
+                      automatic_embedding: false,
+                    }
+                  : {}),
+              })
             }
           />
         </div>
-      ))}
+        <div className="flex items-center gap-3 rounded-lg border border-border py-2.5 pl-2.5 pr-3.5">
+          <Tile size="sm" tone={automatic ? "brand" : "muted"} className="size-8">
+            {automatic ? (
+              <Sparkles aria-hidden="true" />
+            ) : (
+              <RefreshCw aria-hidden="true" />
+            )}
+          </Tile>
+          <div className="min-w-0 flex-1">
+            <div className="text-body font-medium text-foreground">
+              Automatic memory
+            </div>
+            <div className="text-caption text-muted-foreground">
+              Learning and maintenance follow this Brain’s standing policy.
+            </div>
+          </div>
+          <Switch
+            aria-label="Automatic memory"
+            label={automatic ? "On" : "Off"}
+            checked={automatic}
+            className={cn("items-center", !editable && settledToggle)}
+            disabled={
+              !editable ||
+              !policy.enabled ||
+              !["extraction", "synthesis"].every((p) =>
+                policy.purposes.includes(p),
+              ) ||
+              !policy.content_classes.includes("claim")
+            }
+            onChange={(event) =>
+              updateDraft({
+                autonomous_memory: event.currentTarget.checked,
+                automatic_learning: event.currentTarget.checked,
+              })
+            }
+          />
+        </div>
+      </div>
+      <div className="grid gap-2.5">
+        <SubHeading>Allowed processing</SubHeading>
+        <ul className="m-0 grid list-none overflow-hidden rounded-lg border border-border p-0">
+          {purposeRows.map((row) => {
+            const allowed = policy.purposes.includes(row.purpose);
+            return (
+              <li
+                key={row.purpose}
+                className="flex items-center gap-3 border-b border-border py-2 pl-2.5 pr-3.5 last:border-b-0"
+              >
+                <Tile size="sm" className="size-8">
+                  <row.icon aria-hidden="true" />
+                </Tile>
+                <div className="min-w-0 flex-1">
+                  <div className="text-body font-medium text-foreground">
+                    {row.title}
+                  </div>
+                  <div className="text-caption text-muted-foreground">
+                    {row.description}
+                  </div>
+                </div>
+                <Checkbox
+                  label={allowed ? "Allowed" : "Disallowed"}
+                  aria-label={row.title}
+                  checked={allowed}
+                  disabled={!editable}
+                  className={cn(
+                    "w-28 items-center text-label",
+                    !editable && settledToggle,
+                    !allowed && "text-muted-foreground",
+                  )}
+                  onChange={(event) =>
+                    togglePurpose(row.purpose, event.currentTarget.checked)
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
       <PolicyDetails
         policy={policy}
         editable={editable}
         updateDraft={updateDraft}
       />
-    </section>
+    </Card>
   );
 }
 export function SelectedModelsCard({
@@ -459,20 +459,25 @@ export function SelectedModelsCard({
     if (!id) return null;
     const entry = modelCatalogue?.models.find((m) => m.id === id);
     if (!entry)
-      return <p className="management-muted ai-model-price">Price unknown</p>;
+      return (
+        <p className="m-0 text-caption text-muted-foreground">Price unknown</p>
+      );
     const amount = (value: number | null | undefined) =>
       value == null ? "Unknown" : `$${value.toFixed(2)}`;
     return (
-      <p className="management-muted ai-model-price">
-        {amount(entry.input_usd_per_million)} input
-        {entry.kind === "text"
-          ? ` · ${amount(entry.cached_input_usd_per_million)} cached · ${amount(entry.output_usd_per_million)} output`
-          : ""}{" "}
-        / 1M tokens
+      <div className="grid gap-0.5">
+        <p className="m-0 mono text-caption text-muted-foreground">
+          {amount(entry.input_usd_per_million)} input
+          {entry.kind === "text"
+            ? ` · ${amount(entry.cached_input_usd_per_million)} cached · ${amount(entry.output_usd_per_million)} output`
+            : ""}{" "}
+          / 1M tokens
+        </p>
         <a
           href={entry.source_url}
           target="_blank"
           rel="noreferrer"
+          className="w-fit text-caption text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
           title={
             policy?.provider === "openrouter"
               ? "Reference rates; OpenRouter routes can charge different prices. Request history shows actual billed cost."
@@ -480,166 +485,171 @@ export function SelectedModelsCard({
           }
         >
           {policy?.provider === "openrouter" ? "Reference" : "Standard"} ·{" "}
-          {entry.checked_on}
+          <span className="mono">{entry.checked_on}</span>
           {entry.pricing_stale ? " · stale" : ""}
         </a>
-      </p>
+      </div>
     );
   };
+  // View mode reads as values; edit mode shows the full controls.
+  const view = !editable;
+  const selectClass = cn(view && "[&_input~svg]:hidden");
+  const inputClass = cn(
+    view &&
+      "h-6 border-transparent bg-transparent px-0 shadow-none hover:border-transparent disabled:cursor-default disabled:opacity-100",
+  );
   return (
-    <section className="management-surface ai-installed-models">
-      <h3 className="management-title">Selected models</h3>
-      <Select
-        label="AI provider"
-        value={policy.provider}
-        data={(providers ?? [installed]).map(
-          (p) => ({
+    <Card className="grid gap-4 p-5">
+      <h2 className="m-0 text-title font-semibold text-foreground">
+        Selected models
+      </h2>
+      <div className="grid gap-4">
+        <Select
+          label="AI provider"
+          value={policy.provider}
+          data={(providers ?? [installed]).map((p) => ({
             value: p.provider,
-            label:
-              p.provider === "openrouter"
-                ? "OpenRouter"
-                : "OpenAI",
-          }),
-        )}
-        disabled={!editable}
-        allowDeselect={false}
-        onChange={(value) => {
-          const next = providers?.find(
-            (p) => p.provider === value,
-          );
-          if (next && next.provider !== policy.provider) {
-            updateDraft({
-              provider: next.provider,
-              text_model: next.text_model ?? "",
-              embedding_model: next.embedding_model,
-              embedding_dimensions: next.embedding_dimensions,
-              // Without an installation model the Brain must choose one
-              // before any processing can be allowed.
-              ...(!next.text_model
-                ? {
-                    enabled: false,
-                    automatic_learning: false,
-                    automatic_embedding: false,
-                  }
-                : {}),
-            });
-            refreshModels(next.provider);
-          }
-        }}
-      />
-      {!installed.credentials_present && (
-        <Alert color="yellow" mt="sm">
-          The selected provider credential is missing on this
-          installation.
-        </Alert>
-      )}
-      {policy.text_model ===
-        "meta/muse-spark-1.3-contributor" && (
-        <Alert color="yellow" mt="sm">
-          Meta may use prompts and outputs to improve its products
-          for this Contributor model.
-        </Alert>
-      )}
-      {needsModel(policy) &&
-        (editable ? (
-          <Alert color="yellow" mt="sm" title="Choose a model">
-            Choose a text model below, then allow AI processing.
-          </Alert>
-        ) : (
-          <div className="ai-choose-model">
-            <ChooseModelNotice brain={brain} />
-          </div>
-        ))}
-      <Select
-        label="Text model"
-        placeholder="Choose a model"
-        value={policy.text_model || null}
-        data={modelChoices("text", policy.text_model)}
-        disabled={!editable}
-        allowDeselect={false}
-        onChange={(value) =>
-          value && updateDraft({ text_model: value })
-        }
-      />
-      {price(policy.text_model)}
-      <Select
-        label="Embedding model"
-        value={policy.embedding_model}
-        data={modelChoices("embedding", policy.embedding_model)}
-        disabled={!editable}
-        allowDeselect={false}
-        onChange={(value) =>
-          value &&
-          updateDraft({
-            embedding_model: value,
-            embedding_dimensions:
-              modelCatalogue?.models.find(
-                (m) => m.id === value,
-              )?.max_dimensions ?? policy.embedding_dimensions,
-          })
-        }
-      />
-      {price(policy.embedding_model)}
-      <Select
-        label="Embedding dimensions"
-        value={String(policy.embedding_dimensions)}
-        disabled={!editable}
-        allowDeselect={false}
-        data={[
-          ...new Set([
-            256,
-            512,
-            1024,
-            1536,
-            3072,
-            policy.embedding_dimensions,
-          ]),
-        ]
-          .filter(
-            (n) =>
-              n <=
-              (modelCatalogue?.models.find(
-                (m) => m.id === policy.embedding_model,
-              )?.max_dimensions ?? policy.embedding_dimensions),
-          )
-          .sort((a, b) => a - b)
-          .map((n) => ({
-            value: String(n),
-            label: n.toLocaleString(),
+            label: p.provider === "openrouter" ? "OpenRouter" : "OpenAI",
           }))}
-        onChange={(value) =>
-          value &&
-          updateDraft({ embedding_dimensions: Number(value) })
-        }
-      />
-      {brain.role === "admin" && !brain.archived && (
-        <Button
-          mt="sm"
-          size="compact-sm"
-          variant="subtle"
-          loading={refreshing}
-          onClick={() => refreshModels(catalogueProvider)}
-        >
-          Refresh available models
-        </Button>
-      )}
-      <Failure
-        error={catalogueError}
-      />
-      {modelCatalogue?.error_code && (
-        <Text size="xs" c="red">
-          Model list unavailable. Current selection is retained.
-        </Text>
-      )}
-      <p className="management-muted ai-catalogue-state">
-        {modelCatalogue?.observed_at
-          ? `Availability checked ${time(modelCatalogue.observed_at)}${modelCatalogue.stale ? " · stale" : ""}`
-          : "Refresh to load models available to this account."}
-      </p>
+          disabled={!editable}
+          allowDeselect={false}
+          className={cn(selectClass, view && "gap-0.5 [&_label]:text-caption [&_label]:font-normal [&_label]:text-muted-foreground")}
+          inputClassName={cn(inputClass, view && "font-medium")}
+          onChange={(value) => {
+            const next = providers?.find((p) => p.provider === value);
+            if (next && next.provider !== policy.provider) {
+              updateDraft({
+                provider: next.provider,
+                text_model: next.text_model ?? "",
+                embedding_model: next.embedding_model,
+                embedding_dimensions: next.embedding_dimensions,
+                // Without an installation model the Brain must choose one
+                // before any processing can be allowed.
+                ...(!next.text_model
+                  ? {
+                      enabled: false,
+                      automatic_learning: false,
+                      automatic_embedding: false,
+                    }
+                  : {}),
+              });
+              refreshModels(next.provider);
+            }
+          }}
+        />
+        {!installed.credentials_present && (
+          <Alert variant="warning">
+            The selected provider credential is missing on this installation.
+          </Alert>
+        )}
+        {policy.text_model === "meta/muse-spark-1.3-contributor" && (
+          <Alert variant="warning">
+            Meta may use prompts and outputs to improve its products for this
+            Contributor model.
+          </Alert>
+        )}
+        {needsModel(policy) &&
+          (editable ? (
+            <Alert variant="warning" title="Choose a model">
+              Choose a text model below, then allow AI processing.
+            </Alert>
+          ) : (
+            <ChooseModelNotice brain={brain} />
+          ))}
+        <div className="grid gap-1.5 border-t border-border pt-4">
+          <Select
+            label="Text model"
+            placeholder="Choose a model"
+            value={policy.text_model || null}
+            data={modelChoices("text", policy.text_model)}
+            disabled={!editable}
+            allowDeselect={false}
+            className={cn(selectClass, view && "gap-0.5 [&_label]:text-caption [&_label]:font-normal [&_label]:text-muted-foreground")}
+            inputClassName={cn(inputClass, "mono text-label")}
+            onChange={(value) => value && updateDraft({ text_model: value })}
+          />
+          {price(policy.text_model)}
+        </div>
+        <div className="grid gap-1.5 border-t border-border pt-4">
+          <Select
+            label="Embedding model"
+            value={policy.embedding_model}
+            data={modelChoices("embedding", policy.embedding_model)}
+            disabled={!editable}
+            allowDeselect={false}
+            className={cn(selectClass, view && "gap-0.5 [&_label]:text-caption [&_label]:font-normal [&_label]:text-muted-foreground")}
+            inputClassName={cn(inputClass, "mono text-label")}
+            onChange={(value) =>
+              value &&
+              updateDraft({
+                embedding_model: value,
+                embedding_dimensions:
+                  modelCatalogue?.models.find((m) => m.id === value)
+                    ?.max_dimensions ?? policy.embedding_dimensions,
+              })
+            }
+          />
+          {price(policy.embedding_model)}
+        </div>
+        <div className="border-t border-border pt-4">
+          <Select
+            label="Embedding dimensions"
+            value={String(policy.embedding_dimensions)}
+            disabled={!editable}
+            allowDeselect={false}
+            className={cn(selectClass, view && "gap-0.5 [&_label]:text-caption [&_label]:font-normal [&_label]:text-muted-foreground")}
+            inputClassName={cn(inputClass, "mono text-label")}
+            data={[
+              ...new Set([256, 512, 1024, 1536, 3072, policy.embedding_dimensions]),
+            ]
+              .filter(
+                (n) =>
+                  n <=
+                  (modelCatalogue?.models.find(
+                    (m) => m.id === policy.embedding_model,
+                  )?.max_dimensions ?? policy.embedding_dimensions),
+              )
+              .sort((a, b) => a - b)
+              .map((n) => ({
+                value: String(n),
+                label: n.toLocaleString(),
+              }))}
+            onChange={(value) =>
+              value && updateDraft({ embedding_dimensions: Number(value) })
+            }
+          />
+        </div>
+      </div>
+      <div className="grid gap-1 border-t border-border pt-4">
+        {brain.role === "admin" && !brain.archived && (
+          <div className="-ml-2.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={refreshing}
+              onClick={() => refreshModels(catalogueProvider)}
+            >
+              {!refreshing && <RefreshCw aria-hidden="true" />}
+              Refresh available models
+            </Button>
+          </div>
+        )}
+        <Failure error={catalogueError} />
+        {modelCatalogue?.error_code && (
+          <p className="m-0 text-caption text-destructive-text">
+            Model list unavailable. Current selection is retained.
+          </p>
+        )}
+        <p className="m-0 text-caption text-muted-foreground">
+          {modelCatalogue?.observed_at
+            ? `Availability checked ${time(modelCatalogue.observed_at)}${modelCatalogue.stale ? " · stale" : ""}`
+            : "Refresh to load models available to this account."}
+        </p>
+      </div>
       {changedEmbedding && (
-        <Alert color="yellow" mt="sm">
-          Saving rebuilds search embeddings and may incur provider
-          usage. Exact and text search stay available.
+        <Alert variant="warning">
+          Saving rebuilds search embeddings and may incur provider usage. Exact
+          and text search stay available.
           {!policy.enabled ||
           !policy.automatic_embedding ||
           !policy.purposes.includes("embedding")
@@ -647,7 +657,31 @@ export function SelectedModelsCard({
             : ""}
         </Alert>
       )}
-    </section>
+    </Card>
+  );
+}
+function OptionRow({
+  icon: Icon,
+  children,
+  onClick,
+}: {
+  icon: LucideIcon;
+  children: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-body text-foreground outline-none transition-colors duration-fast hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+    >
+      <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+      <span className="flex-1">{children}</span>
+      <ChevronRight
+        className="size-4 text-muted-foreground transition-transform duration-fast group-hover:translate-x-0.5"
+        aria-hidden="true"
+      />
+    </button>
   );
 }
 export function MoreOptionsCard({
@@ -664,33 +698,29 @@ export function MoreOptionsCard({
   onAdvanced: () => void;
 }) {
   return (
-    <section className="management-surface ai-more-options">
-      <h3 className="management-title">More options</h3>
-      <button onClick={onDiagnostics}>
-        <FileText size={22} />
-        <span>Diagnostics</span>
-        <ChevronRight size={18} />
-      </button>
-      {brain.role === "admin" && (
-        <button onClick={onHistory}>
-          <History size={22} />
-          <span>Policy history</span>
-          <ChevronRight size={18} />
-        </button>
-      )}
-      {brain.role === "admin" && !brain.archived && !editing && (
-        <button onClick={onAdvanced}>
-          <ShieldCheck size={22} />
-          <span>Advanced policy</span>
-          <ChevronRight size={18} />
-        </button>
-      )}
-      <button onClick={onDiagnostics}>
-        <Database size={22} />
-        <span>Recent batches</span>
-        <ChevronRight size={18} />
-      </button>
-    </section>
+    <Card className="overflow-hidden p-0">
+      <CardBar>
+        <h3>More options</h3>
+      </CardBar>
+      <div className="grid gap-0.5 p-1">
+        <OptionRow icon={FileText} onClick={onDiagnostics}>
+          Diagnostics
+        </OptionRow>
+        {brain.role === "admin" && (
+          <OptionRow icon={History} onClick={onHistory}>
+            Policy history
+          </OptionRow>
+        )}
+        {brain.role === "admin" && !brain.archived && !editing && (
+          <OptionRow icon={ShieldCheck} onClick={onAdvanced}>
+            Advanced policy
+          </OptionRow>
+        )}
+        <OptionRow icon={Database} onClick={onDiagnostics}>
+          Recent batches
+        </OptionRow>
+      </div>
+    </Card>
   );
 }
 export function DiagnosticsModal({
@@ -725,21 +755,22 @@ export function DiagnosticsModal({
       title="Models & search diagnostics"
       size="xl"
     >
-      <Stack>
+      <div className="grid gap-4">
         {installed && (
-          <Text size="sm">
+          <p className="m-0 mono text-label text-foreground-secondary">
             {policy?.text_model || "No text model selected"} ·{" "}
             {policy?.embedding_model} ·{" "}
             {policy?.embedding_dimensions.toLocaleString()} dimensions
-          </Text>
+          </p>
         )}
-        <Group>
-          <Button variant="default" onClick={onHistory}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={onHistory}>
+            <History aria-hidden="true" />
             Policy history
           </Button>
           {brain.role === "admin" && !brain.archived && (
             <Button
-              variant="default"
+              variant="secondary"
               loading={checkPending}
               disabled={!policy?.enabled}
               onClick={onCheck}
@@ -747,21 +778,30 @@ export function DiagnosticsModal({
               Check selected models
             </Button>
           )}
-        </Group>
-        <Text size="xs" c="dimmed">
-          A check sends fixed synthetic text to the provider and may
-          incur usage. It does not change permissions.
-        </Text>
+        </div>
+        <p className="m-0 text-caption text-muted-foreground">
+          A check sends fixed synthetic text to the provider and may incur
+          usage. It does not change permissions.
+        </p>
         <Failure error={checkError} />
         {checkPassed && (
-          <Alert color="brand">
-            Both selected models responded successfully to the requested
-            check.
+          <Alert variant="brand" role="status">
+            Both selected models responded successfully to the requested check.
           </Alert>
         )}
         {diagnostics && <SemanticPanel brain={brain} />}
-      </Stack>
+      </div>
     </Modal>
+  );
+}
+function UsageStat({ label: name, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-0.5">
+      <span className="text-caption text-muted-foreground">{name}</span>
+      <span className="mono text-title font-semibold text-foreground">
+        {children}
+      </span>
+    </div>
   );
 }
 export function UsageSection({
@@ -779,87 +819,149 @@ export function UsageSection({
   onOffset: (offset: number) => void;
   learning: ReactNode;
 }) {
+  const share = usage?.daily_limit
+    ? (usage.charged_tokens / usage.daily_limit) * 100
+    : 0;
   return (
-    <>
-      <Title order={3}>Model usage and learning</Title>
-      <Failure error={usageError} />
-      {usagePending && <Loader size="sm" />}
-      {!usageError && usage && (
-        <>
-          <Text size="sm">
-            {usage.charged_tokens.toLocaleString()} /{" "}
-            {usage.daily_limit.toLocaleString()} tokens accounted for{" "}
-            {usage.day} UTC ·{" "}
-            {usage.remaining_tokens.toLocaleString()} remaining ·{" "}
-            {usage.in_flight} calls in flight.
-          </Text>
-          <Text size="xs" c="dimmed">
-            Uncertain calls retain their reserved allowance. Starting a
-            new attempt can incur another provider charge.
-          </Text>
-        </>
-      )}
-      <Divider label="Learning results" />
-      {learning}
-      <Divider label="Model request history" />
-      {usage?.total === 0 && (
-        <Text size="sm">No model calls have been admitted.</Text>
-      )}
-      {!usageError &&
-        usage?.requests.map((request) => (
-          <Card key={request.id} withBorder>
-            <Group justify="space-between">
-              <Text size="sm" fw={600}>
-                {label(request.purpose)} ·{" "}
+    <div className="grid gap-4">
+      <Card className="grid gap-4 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="m-0 text-title font-semibold text-foreground">
+              Model usage and learning
+            </h3>
+            <p className="m-0 mt-1 text-body text-muted-foreground">
+              Allowance accounted today, learning outcomes and admitted model
+              requests.
+            </p>
+          </div>
+          {usage && !usageError && (
+            <Badge variant="outline" className="mono">
+              {usage.day} UTC
+            </Badge>
+          )}
+        </div>
+        <Failure error={usageError} />
+        {usagePending && <SkeletonRows rows={2} label="Loading model usage…" />}
+        {!usageError && usage && (
+          <>
+            <div className="grid grid-cols-4 gap-4">
+              <UsageStat label="Tokens accounted">
+                {usage.charged_tokens.toLocaleString()}
+              </UsageStat>
+              <UsageStat label="Daily allowance">
+                {usage.daily_limit.toLocaleString()}
+              </UsageStat>
+              <UsageStat label="Remaining">
+                {usage.remaining_tokens.toLocaleString()}
+              </UsageStat>
+              <UsageStat label="Calls in flight">{usage.in_flight}</UsageStat>
+            </div>
+            <Progress
+              label="Daily allowance used"
+              value={share}
+              className="h-1.5"
+            />
+            <p className="m-0 text-caption text-muted-foreground">
+              Uncertain calls retain their reserved allowance. Starting a new
+              attempt can incur another provider charge.
+            </p>
+          </>
+        )}
+      </Card>
+      <Card className="overflow-hidden p-0">
+        <CardBar>
+          <h3>Learning results</h3>
+        </CardBar>
+        {learning}
+      </Card>
+      <Card className="overflow-hidden p-0">
+        <CardBar>
+          <h3>Model request history</h3>
+          {usage && !usageError && (
+            <span className="mono text-caption text-muted-foreground">
+              {usage.total.toLocaleString()}
+            </span>
+          )}
+        </CardBar>
+        {usage?.total === 0 && (
+          <EmptyState
+            icon={Sparkles}
+            title="No model calls have been admitted"
+            description="Requests appear here once this Brain sends permitted content to its provider."
+            className="py-8"
+          />
+        )}
+        {!usageError &&
+          usage?.requests.map((request) => (
+            <div
+              key={request.id}
+              className="grid gap-0.5 border-b border-border px-4 py-2.5 last:border-b-0"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate text-body font-medium text-foreground">
+                  {label(request.purpose)} ·{" "}
+                  {request.detail_expired ? (
+                    "Request detail expired"
+                  ) : (
+                    <span className="mono text-label">
+                      {request.returned_model ?? request.model}
+                    </span>
+                  )}
+                </span>
+                {request.suppressed ? (
+                  <StatusBadge state="attention">Output discarded</StatusBadge>
+                ) : request.state === "succeeded" ? (
+                  <StatusBadge state="positive">
+                    <span className="capitalize">{label(request.state)}</span>
+                  </StatusBadge>
+                ) : (
+                  <StatusBadge state="neutral">
+                    <span className="capitalize">{label(request.state)}</span>
+                  </StatusBadge>
+                )}
+              </div>
+              <p className="m-0 text-caption text-muted-foreground">
+                <span className="mono">{time(request.created_at)}</span> ·{" "}
+                <span className="mono">
+                  {request.charged_tokens.toLocaleString()}
+                </span>{" "}
+                tokens{" "}
                 {request.detail_expired
-                  ? "Request detail expired"
-                  : (request.returned_model ?? request.model)}
-              </Text>
-              <Badge
-                color={
-                  request.suppressed
-                    ? "yellow"
-                    : request.state === "succeeded"
-                      ? "teal"
-                      : "gray"
-                }
-              >
-                {request.suppressed
-                  ? "Output discarded"
-                  : label(request.state)}
-              </Badge>
-            </Group>
-            <Text size="xs" c="dimmed">
-              {time(request.created_at)} ·{" "}
-              {request.charged_tokens.toLocaleString()} tokens{" "}
-              {request.detail_expired
-                ? "accounted; detailed history expired"
-                : request.total_tokens === null
-                  ? "reserved"
-                  : "used"}
-            </Text>
-            {request.provider === "openrouter" && (
-              <Text size="xs" c="dimmed">
-                OpenRouter ·{" "}
-                {request.cost_usd == null
-                  ? "Billed cost unavailable"
-                  : request.cost_usd > 0 && request.cost_usd < 0.000001
-                    ? "< $0.000001 billed"
-                    : `$${request.cost_usd.toFixed(6)} billed`}
-              </Text>
-            )}
-            {request.error_code && (
-              <Text size="sm" c="red">
-                {label(request.error_code)}
-              </Text>
-            )}
-          </Card>
-        ))}
-      <Pages
-        offset={offset}
-        total={usage?.total ?? 0}
-        change={onOffset}
-      />
-    </>
+                  ? "accounted; detailed history expired"
+                  : request.total_tokens === null
+                    ? "reserved"
+                    : "used"}
+              </p>
+              {request.provider === "openrouter" && (
+                <p className="m-0 text-caption text-muted-foreground">
+                  OpenRouter ·{" "}
+                  <span className="mono">
+                    {request.cost_usd == null
+                      ? "Billed cost unavailable"
+                      : request.cost_usd > 0 && request.cost_usd < 0.000001
+                        ? "< $0.000001 billed"
+                        : `$${request.cost_usd.toFixed(6)} billed`}
+                  </span>
+                </p>
+              )}
+              {request.error_code && (
+                <p className="m-0 text-label text-destructive-text">
+                  {label(request.error_code)}
+                </p>
+              )}
+            </div>
+          ))}
+        {usage && usage.total > 20 && (
+          <div className="border-t border-border px-4 py-2">
+            <Pages
+              offset={offset}
+              total={usage?.total ?? 0}
+              change={onOffset}
+            />
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

@@ -16,12 +16,17 @@ export function BrainIcon({
     : null;
   return (
     <span
-      className="brain-artwork"
+      className="grid shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-muted text-muted-foreground"
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
       {source && failed !== source ? (
-        <img src={source} alt="" onError={() => setFailed(source)} />
+        <img
+          src={source}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setFailed(source)}
+        />
       ) : (
         <Layers3 size={Math.round(size * 0.58)} />
       )}

@@ -35,7 +35,7 @@ is not a tested compatibility matrix or a current package-version catalogue.
 | Graph traversal and analytics | Neo4j Community Edition with GDS Community Edition |
 | Graph client | Rust Reqwest adapter to the official Neo4j Query API |
 | MCP | Official Rust SDK rmcp; stdio locally and Streamable HTTP remotely |
-| Browser | React, TypeScript, Vite, Mantine, TanStack Query and Router |
+| Browser | React, TypeScript, Vite, Tailwind CSS v4 and shadcn/ui, TanStack Query and Router ([ADR 0025](../adr/0025-two-theme-desktop-redesign.md) replaces Mantine) |
 | API description/client | Utoipa OpenAPI and a generated TypeScript client |
 | Jobs | PostgreSQL transactional outbox, durable jobs and bounded Rust workers |
 | Artifact storage | Content-addressed files on a durable volume; an internal seam permits later object storage |
@@ -53,8 +53,10 @@ service is selected.
 
 Build the React application into static assets served by the Rust API from the
 same origin. Node is build tooling, not an additional production application
-runtime. Useful Mantine components can be reused from the reference frontend;
-Next.js server rendering is not selected. [Vite deployment](https://vite.dev/guide/static-deploy.html).
+runtime. shadcn/ui components are copied into the repository and themed from
+the [design system](design-system.md) tokens; Mantine is retired by
+[ADR 0025](../adr/0025-two-theme-desktop-redesign.md). Next.js server rendering
+is not selected. [Vite deployment](https://vite.dev/guide/static-deploy.html).
 
 Official [Axum](https://docs.rs/axum/latest/axum/),
 [SQLx](https://github.com/transact-rs/sqlx), and

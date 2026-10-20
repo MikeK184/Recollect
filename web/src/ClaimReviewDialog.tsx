@@ -1,20 +1,15 @@
-import { useState, type ComponentType } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
+import { FileText, PencilLine } from "lucide-react";
 import {
   Alert,
   Badge,
   Button,
-  Card,
   Checkbox,
-  Divider,
-  Group,
-  Loader,
   Modal,
   Select,
-  Stack,
-  Text,
-  Textarea,
-  Title,
-} from "@mantine/core";
+  StatusBadge,
+  TextareaField,
+} from "./components/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
@@ -50,12 +45,46 @@ function Scope({
       catalogue?.repositories.find((r) => r.id === id)?.canonical_origin ?? id,
   );
   return (
-    <Text size="xs" className="claim-wrap">
+    <p className="m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
       {environment} · {repos.join(", ") || "All repositories"} ·{" "}
-      {content.validity.kind === "unknown"
-        ? "Unknown fact time"
-        : `${content.validity.from ?? "Unknown start"} → ${content.validity.to ?? (content.validity.kind === "point" ? `${content.validity.precision} precision` : "Unknown end")}`}
-    </Text>
+      <span className="mono">
+        {content.validity.kind === "unknown"
+          ? "Unknown fact time"
+          : `${content.validity.from ?? "Unknown start"} → ${content.validity.to ?? (content.validity.kind === "point" ? `${content.validity.precision} precision` : "Unknown end")}`}
+      </span>
+    </p>
+  );
+}
+
+/** A hairline group heading inside the review dialog. */
+function Group({
+  label: text,
+  children,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid min-w-0 gap-3 border-t border-border pt-4">
+      <h3 className="section-label m-0">{text}</h3>
+      {children}
+    </section>
+  );
+}
+const muted = "m-0 text-label text-muted-foreground";
+const card = "grid gap-2 rounded-lg border border-border bg-card p-3";
+function Pending({ text }: { text: string }) {
+  return (
+    <p
+      role="status"
+      className="m-0 flex items-center gap-2 text-label text-muted-foreground"
+    >
+      <span
+        aria-hidden="true"
+        className="size-3.5 animate-spin rounded-full border-2 border-border-strong border-t-transparent"
+      />
+      {text}
+    </p>
   );
 }
 function InspectConflict({
@@ -95,25 +124,37 @@ function InspectConflict({
     query.data.selected.revision.id !== claim.id
   )
     return (
-      <Modal opened onClose={onClose} title="Conflict evidence" size="xl">
-        <Stack>
+      <Modal
+        opened
+        onClose={onClose}
+        title="Conflict evidence"
+        size="xl"
+        footer={
+          <Button variant="secondary" onClick={onClose}>
+            Back to review
+          </Button>
+        }
+      >
+        <div className="grid gap-3">
           {query.isPending ? (
-            <Loader />
+            <Pending text="Loading conflict evidence…" />
           ) : (
-            <Alert color="yellow">
+            <Alert variant="warning">
               {query.error?.message ??
                 "This exact conflict revision is unavailable. Its prior content has been cleared."}
             </Alert>
           )}
           {query.isError && (
-            <Button variant="light" onClick={() => void query.refetch()}>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-fit"
+              onClick={() => void query.refetch()}
+            >
               Retry conflict inspection
             </Button>
           )}
-          <Button variant="default" onClick={onClose}>
-            Back to review
-          </Button>
-        </Stack>
+        </div>
       </Modal>
     );
   if (selected)
@@ -125,34 +166,48 @@ function InspectConflict({
       />
     );
   return (
-    <Modal opened onClose={onClose} title="Conflict evidence" size="xl">
-      <Stack>
-        <Title order={3}>{claim.content.subject}</Title>
-        <Text fw={600}>
-          {claim.content.predicate}: {claim.content.value}
-        </Text>
-        <Scope content={claim.content} catalogue={catalogue} />
-        <Text size="sm">
-          {label(claim.origin)} by {claim.actor_name} · {label(claim.review)} ·{" "}
-          {label(claim.content.operational)}
-        </Text>
-        <Text size="sm">{claim.content.rationale}</Text>
-        {query.data?.selected?.evidence.map((e) => (
-          <Button
-            key={e.id}
-            variant="default"
-            h="auto"
-            py="sm"
-            className="claim-evidence-button"
-            onClick={() => setSelected(e)}
-          >
-            {e.label} · {label(e.availability)}
-          </Button>
-        ))}
-        <Button variant="default" onClick={onClose}>
+    <Modal
+      opened
+      onClose={onClose}
+      title="Conflict evidence"
+      size="xl"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
           Back to review
         </Button>
-      </Stack>
+      }
+    >
+      <div className="grid gap-3">
+        <h3 className="m-0 text-title font-semibold text-foreground [overflow-wrap:anywhere]">
+          {claim.content.subject}
+        </h3>
+        <p className="m-0 text-body font-medium text-foreground [overflow-wrap:anywhere]">
+          {claim.content.predicate}: {claim.content.value}
+        </p>
+        <Scope content={claim.content} catalogue={catalogue} />
+        <p className="m-0 text-label text-foreground-secondary">
+          {label(claim.origin)} by {claim.actor_name} · {label(claim.review)} ·{" "}
+          {label(claim.content.operational)}
+        </p>
+        {claim.content.rationale && (
+          <p className="m-0 text-body text-foreground-secondary [overflow-wrap:anywhere]">
+            {claim.content.rationale}
+          </p>
+        )}
+        <div className="grid gap-2">
+          {query.data?.selected?.evidence.map((e) => (
+            <Button
+              key={e.id}
+              variant="secondary"
+              className="claim-evidence-button h-auto justify-start whitespace-normal py-2 text-left [overflow-wrap:anywhere]"
+              onClick={() => setSelected(e)}
+            >
+              <FileText aria-hidden="true" />
+              {e.label} · {label(e.availability)}
+            </Button>
+          ))}
+        </div>
+      </div>
     </Modal>
   );
 }
@@ -271,12 +326,17 @@ export function ClaimReviewDialog({
   if (history.isError)
     return (
       <Modal opened onClose={onClose} size="xl" title="Review and corrections">
-        <Stack>
-          <Alert color="red">{history.error.message}</Alert>
-          <Button variant="light" onClick={() => void history.refetch()}>
+        <div className="grid gap-3">
+          <Alert variant="destructive">{history.error.message}</Alert>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-fit"
+            onClick={() => void history.refetch()}
+          >
             Retry history
           </Button>
-        </Stack>
+        </div>
       </Modal>
     );
   if (inspecting)
@@ -326,83 +386,120 @@ export function ClaimReviewDialog({
     );
   }
   return (
-    <Modal opened onClose={onClose} size="xl" title="Review and corrections">
-      <Stack className="claims-panel">
-        <Text size="sm" c="dimmed">
-          Recollect learns and maintains memory automatically. These optional
-          controls let you correct a record or its review when needed.
-        </Text>
-        {outcome && (
-          <Text size="xs" c="dimmed">
-            Input reviewed in this decision
-          </Text>
-        )}
-        <Title order={3}>{r.content.subject}</Title>
-        <Text fw={600}>
-          {r.content.predicate}: {r.content.value}
-        </Text>
-        <Scope content={r.content} catalogue={catalogue} />
-        <Group>
-          <Badge>{label(r.review)}</Badge>
-          <Badge variant="outline">{label(r.lifecycle ?? "active")}</Badge>
-        </Group>
-        <Button variant="default" onClick={() => setInspecting(r)}>
-          Inspect evidence for this claim
+    <Modal
+      opened
+      onClose={onClose}
+      size="xl"
+      title="Review and corrections"
+      description="Recollect learns and maintains memory automatically. These optional controls let you correct a record or its review when needed."
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Back to claim
         </Button>
+      }
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-2">
+          {outcome && (
+            <p className="m-0 text-caption text-muted-foreground">
+              Input reviewed in this decision
+            </p>
+          )}
+          <h3 className="m-0 text-title font-semibold text-foreground [overflow-wrap:anywhere]">
+            {r.content.subject}
+          </h3>
+          <p className="m-0 text-body font-medium text-foreground [overflow-wrap:anywhere]">
+            {r.content.predicate}: {r.content.value}
+          </p>
+          <Scope content={r.content} catalogue={catalogue} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge
+              state={
+                r.review === "accepted"
+                  ? "positive"
+                  : r.review === "rejected"
+                    ? "negative"
+                    : "neutral"
+              }
+            >
+              {label(r.review)}
+            </StatusBadge>
+            <Badge variant="outline">{label(r.lifecycle ?? "active")}</Badge>
+          </div>
+          <div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setInspecting(r)}
+            >
+              <FileText aria-hidden="true" />
+              Inspect evidence for this claim
+            </Button>
+          </div>
+        </div>
         {!current && !outcome && (
-          <Alert color="yellow">
+          <Alert variant="warning">
             {openedCurrent
               ? "This claim changed while review was open. Retry an interrupted request, or return to the claim to inspect its latest revision."
               : "This is a historical revision. Return to latest knowledge before making a review decision."}
           </Alert>
         )}
         {brain.role === "reader" && (
-          <Text c="dimmed">
+          <p className={muted}>
             Read-only access. A writer or administrator can review claims.
-          </Text>
+          </p>
         )}
-        {brain.archived && <Alert>This Brain is archived.</Alert>}
+        {brain.archived && (
+          <Alert variant="default" role="status">
+            This Brain is archived.
+          </Alert>
+        )}
         {outcome ? (
-          <Card withBorder>
-            <Stack>
-              <Title order={4}>Review recorded</Title>
-              <Text size="sm">
-                {label(outcome.decision.action)} by{" "}
-                {outcome.decision.actor_name} ·{" "}
+          <div className="grid gap-3 rounded-lg border border-border bg-card p-4">
+            <h4 className="m-0 text-title font-semibold text-foreground">
+              Review recorded
+            </h4>
+            <p className="m-0 text-label text-foreground-secondary">
+              {label(outcome.decision.action)} by {outcome.decision.actor_name}{" "}
+              ·{" "}
+              <span className="mono text-caption">
                 {time(outcome.decision.recorded_at)}
-              </Text>
-              <Text size="sm" className="claim-wrap">
-                {outcome.decision.reason}
-              </Text>
-              {outcome.claims.map((v) => (
-                <Card withBorder key={v.revision.id}>
-                  <Text fw={600}>{v.revision.content.value}</Text>
-                  <Text size="sm">
-                    {label(v.revision.review)} ·{" "}
-                    {label(v.revision.lifecycle ?? "active")}
-                  </Text>
-                  <Alert
-                    color={v.eligibility.strict_accepted ? "teal" : "yellow"}
-                    mt="xs"
-                  >
-                    <Text size="sm">
-                      {v.eligibility.strict_accepted
-                        ? "Eligible for strict accepted context"
-                        : "Does not qualify for strict accepted context"}
-                    </Text>
-                    <Text size="xs">
-                      {v.eligibility.reasons.map(label).join(" · ")}
-                    </Text>
-                  </Alert>
-                </Card>
-              ))}
+              </span>
+            </p>
+            <p className="m-0 text-body text-foreground [overflow-wrap:anywhere]">
+              {outcome.decision.reason}
+            </p>
+            {outcome.claims.map((v) => (
+              <div key={v.revision.id} className={card}>
+                <p className="m-0 text-body font-medium text-foreground [overflow-wrap:anywhere]">
+                  {v.revision.content.value}
+                </p>
+                <p className="m-0 text-label text-foreground-secondary">
+                  {label(v.revision.review)} ·{" "}
+                  {label(v.revision.lifecycle ?? "active")}
+                </p>
+                <Alert
+                  variant={v.eligibility.strict_accepted ? "brand" : "warning"}
+                  role="status"
+                >
+                  <p>
+                    {v.eligibility.strict_accepted
+                      ? "Eligible for strict accepted context"
+                      : "Does not qualify for strict accepted context"}
+                  </p>
+                  <p className="!mt-1 text-caption text-muted-foreground">
+                    {v.eligibility.reasons.map(label).join(" · ")}
+                  </p>
+                </Alert>
+              </div>
+            ))}
+            <div>
               <Button onClick={onClose}>Return to claim</Button>
-            </Stack>
-          </Card>
+            </div>
+          </div>
         ) : (
           writable && (
-            <>
-              <Divider label="Review this claim" />
+            <Group label="Review this claim">
               <Select
                 label="Review action"
                 value={action}
@@ -443,25 +540,25 @@ export function ClaimReviewDialog({
                 ]}
               />
               {action === "accept" && (
-                <Text size="sm">
+                <p className="m-0 text-body text-foreground-secondary">
                   Acceptance records your review. Evidence availability,
                   freshness, conflicting claims and operational verification
                   still determine eligibility.
-                </Text>
+                </p>
               )}
               {action === "reject" && (
-                <Alert color="red">
+                <Alert variant="destructive" role="status">
                   Rejecting records a rule against this value in its applicable
                   scope and time. A new source or claim ID cannot silently
                   restore it.
                 </Alert>
               )}
               {action === "withdraw" && (
-                <Text size="sm">
+                <p className="m-0 text-body text-foreground-secondary">
                   Withdrawal removes the assertion from ordinary context and
                   blocks re-entry. It does not declare the value false or erase
                   its evidence.
-                </Text>
+                </p>
               )}
               {action === "revalidate" && (
                 <Select
@@ -487,23 +584,29 @@ export function ClaimReviewDialog({
               )}
               {(action === "correct" || action === "revalidate") && (
                 <>
-                  <Button
-                    variant="default"
-                    onClick={() => setEditing({ kind: "single", revision: r })}
-                  >
-                    Edit reviewed content
-                  </Button>
+                  <div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        setEditing({ kind: "single", revision: r })
+                      }
+                    >
+                      <PencilLine aria-hidden="true" />
+                      Edit reviewed content
+                    </Button>
+                  </div>
                   {content && (
-                    <Card withBorder>
-                      <Text size="sm" fw={600}>
+                    <div className={card}>
+                      <p className="m-0 text-label font-medium text-foreground [overflow-wrap:anywhere]">
                         Prepared value: {content.value}
-                      </Text>
+                      </p>
                       <Scope content={content} catalogue={catalogue} />
-                    </Card>
+                    </div>
                   )}
                 </>
               )}
-              <Textarea
+              <TextareaField
                 label="Review reason"
                 required
                 minRows={2}
@@ -513,50 +616,49 @@ export function ClaimReviewDialog({
                 onChange={(e) => setReason(e.target.value)}
               />
               {save.error && (
-                <Alert color="red" title="Review failed">
+                <Alert variant="destructive" title="Review failed">
                   {save.error.message}
                 </Alert>
               )}
-              <Button
-                loading={save.isPending}
-                disabled={
-                  !action ||
-                  !reason.trim() ||
-                  (action === "correct" && !content) ||
-                  (action === "revalidate" && !basis)
-                }
-                onClick={() => save.mutate("single")}
-              >
-                Confirm review
-              </Button>
-            </>
+              <div>
+                <Button
+                  loading={save.isPending}
+                  disabled={
+                    !action ||
+                    !reason.trim() ||
+                    (action === "correct" && !content) ||
+                    (action === "revalidate" && !basis)
+                  }
+                  onClick={() => save.mutate("single")}
+                >
+                  Confirm review
+                </Button>
+              </div>
+            </Group>
           )
         )}
-        <Divider label="Current conflicting claims" />
-        {history.isPending && <Loader />}
-        {history.data?.conflicts.length === 0 && (
-          <Text size="sm" c="dimmed">
-            No current overlapping conflicts.
-          </Text>
-        )}
-        {(history.data?.conflicts ?? []).map((c) => (
-          <Card withBorder key={c.claim_id}>
-            <Stack gap="xs">
-              <Text fw={600} className="claim-wrap">
+        <Group label="Current conflicting claims">
+          {history.isPending && <Pending text="Loading review history…" />}
+          {history.data?.conflicts.length === 0 && (
+            <p className={muted}>No current overlapping conflicts.</p>
+          )}
+          {(history.data?.conflicts ?? []).map((c) => (
+            <div key={c.claim_id} className={card}>
+              <p className="m-0 text-body font-medium text-foreground [overflow-wrap:anywhere]">
                 {c.content.value}
-              </Text>
+              </p>
               <Scope
                 content={drafts[c.claim_id] ?? c.content}
                 catalogue={catalogue}
               />
-              <Text size="xs">
+              <p className="m-0 text-caption text-foreground-secondary">
                 {label(c.review)} · {label(c.content.operational)} ·{" "}
                 {c.actor_name}
-              </Text>
-              <Group>
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
                 <Button
-                  size="xs"
-                  variant="default"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setInspecting(c)}
                 >
                   Inspect conflicting evidence
@@ -581,18 +683,18 @@ export function ClaimReviewDialog({
                     }}
                   />
                 )}
-              </Group>
-            </Stack>
-          </Card>
-        ))}
-        {writable && !outcome && !!history.data?.conflicts.length && (
-          <Card withBorder>
-            <Stack>
-              <Title order={4}>Resolve selected conflicts</Title>
-              <Text size="sm">
+              </div>
+            </div>
+          ))}
+          {writable && !outcome && !!history.data?.conflicts.length && (
+            <div className="grid gap-3 rounded-lg border border-border bg-muted p-4">
+              <h4 className="m-0 text-title font-semibold text-foreground">
+                Resolve selected conflicts
+              </h4>
+              <p className="m-0 text-body text-foreground-secondary">
                 This claim is included. Select the other claims explicitly.
                 Unselected conflicts remain open.
-              </Text>
+              </p>
               <Select
                 label="Conflict resolution"
                 value={disposition}
@@ -623,143 +725,152 @@ export function ClaimReviewDialog({
               )}
               {disposition === "keep_both" &&
                 participants.map((p) => (
-                  <Card withBorder key={p.claim_id}>
-                    <Text size="sm" fw={600}>
+                  <div key={p.claim_id} className={card}>
+                    <p className="m-0 text-label font-medium text-foreground [overflow-wrap:anywhere]">
                       {p.content.value}
-                    </Text>
+                    </p>
                     <Scope
                       content={drafts[p.claim_id] ?? p.content}
                       catalogue={catalogue}
                     />
-                    <Button
-                      variant="default"
-                      size="xs"
-                      mt="xs"
-                      onClick={() =>
-                        setEditing({ kind: "participant", revision: p })
-                      }
-                    >
-                      Adjust applicability for {p.content.value.slice(0, 60)}
-                    </Button>
-                  </Card>
+                    <div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          setEditing({ kind: "participant", revision: p })
+                        }
+                      >
+                        Adjust applicability for {p.content.value.slice(0, 60)}
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               {disposition === "replace" && (
                 <>
-                  <Button
-                    variant="default"
-                    onClick={() =>
-                      setEditing({ kind: "replacement", revision: r })
-                    }
-                  >
-                    Prepare replacement
-                  </Button>
+                  <div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        setEditing({ kind: "replacement", revision: r })
+                      }
+                    >
+                      Prepare replacement
+                    </Button>
+                  </div>
                   {replacement && (
-                    <Text size="sm">Replacement: {replacement.value}</Text>
+                    <p className="m-0 text-body text-foreground [overflow-wrap:anywhere]">
+                      Replacement: {replacement.value}
+                    </p>
                   )}
                 </>
               )}
-              <Text size="sm">
+              <p className="m-0 text-label text-muted-foreground">
                 The review reason above applies to this resolution. Every
                 selected claim must still have the revision inspected here.
-              </Text>
-              <Button
-                loading={save.isPending}
-                disabled={
-                  participants.length < 2 ||
-                  !reason.trim() ||
-                  (disposition === "replace" && !replacement) ||
-                  (disposition === "keep_selected" &&
-                    !participants.some((p) => p.claim_id === selectedId))
-                }
-                onClick={() => save.mutate("conflict")}
-              >
-                Confirm conflict resolution
-              </Button>
-            </Stack>
-          </Card>
-        )}
-        <Divider label="Applicable review rules" />
-        {history.data?.rules.length === 0 && (
-          <Text size="sm" c="dimmed">
-            No matching review rules.
-          </Text>
-        )}
-        {history.data?.rules.map((rule) => (
-          <Card withBorder key={rule.id}>
-            <Stack gap="xs">
-              <Group>
-                <Badge color="orange">{label(rule.kind)}</Badge>
+              </p>
+              <div>
+                <Button
+                  loading={save.isPending}
+                  disabled={
+                    participants.length < 2 ||
+                    !reason.trim() ||
+                    (disposition === "replace" && !replacement) ||
+                    (disposition === "keep_selected" &&
+                      !participants.some((p) => p.claim_id === selectedId))
+                  }
+                  onClick={() => save.mutate("conflict")}
+                >
+                  Confirm conflict resolution
+                </Button>
+              </div>
+            </div>
+          )}
+        </Group>
+        <Group label="Applicable review rules">
+          {history.data?.rules.length === 0 && (
+            <p className={muted}>No matching review rules.</p>
+          )}
+          {history.data?.rules.map((rule) => (
+            <div key={rule.id} className={card}>
+              <div className="flex flex-wrap gap-1.5">
+                <StatusBadge state="attention">{label(rule.kind)}</StatusBadge>
                 {history.data.exempted_rule_ids.includes(rule.id) && (
-                  <Badge color="teal">Exception for the current revision</Badge>
+                  <StatusBadge state="positive">
+                    Exception for the current revision
+                  </StatusBadge>
                 )}
-              </Group>
-              <Text size="sm" className="claim-wrap">
+              </div>
+              <p className="m-0 text-label text-foreground [overflow-wrap:anywhere]">
                 {rule.content.subject} · {rule.content.predicate}:{" "}
                 {rule.content.value}
-              </Text>
+              </p>
               <Scope content={rule.content} catalogue={catalogue} />
-              <Text size="xs">Recorded {time(rule.created_at)}</Text>
-              <Text size="xs" className="claim-wrap">
-                Original revision: {rule.revision_id}
-              </Text>
-            </Stack>
-          </Card>
-        ))}
-        <Divider label="Review decision history" />
-        {history.data?.total === 0 && (
-          <Text size="sm" c="dimmed">
-            No review decisions yet.
-          </Text>
-        )}
-        {history.data?.decisions.map((d) => (
-          <Card withBorder key={d.id}>
-            <Stack gap="xs">
-              <Text fw={600}>
+              <p className="m-0 text-caption text-muted-foreground">
+                Recorded <span className="mono">{time(rule.created_at)}</span>
+              </p>
+              <p className="m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+                Original revision:{" "}
+                <span className="mono">{rule.revision_id}</span>
+              </p>
+            </div>
+          ))}
+        </Group>
+        <Group label="Review decision history">
+          {history.data?.total === 0 && (
+            <p className={muted}>No review decisions yet.</p>
+          )}
+          {history.data?.decisions.map((d) => (
+            <div key={d.id} className={card}>
+              <p className="m-0 text-body font-medium text-foreground">
                 {label(d.action)} · {d.actor_name}
-              </Text>
-              <Text size="xs">
-                {time(d.recorded_at)}
+              </p>
+              <p className="m-0 text-caption text-muted-foreground">
+                <span className="mono">{time(d.recorded_at)}</span>
                 {d.revalidation_basis
                   ? ` · ${label(d.revalidation_basis)}`
                   : ""}
-              </Text>
-              <Text size="sm" className="claim-wrap">
+              </p>
+              <p className="m-0 text-body text-foreground-secondary [overflow-wrap:anywhere]">
                 {d.reason}
-              </Text>
+              </p>
               {d.transitions.map((t) => (
-                <Text size="xs" className="claim-wrap" key={t.claim_id}>
+                <p
+                  className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]"
+                  key={t.claim_id}
+                >
                   {t.before_revision ?? "New claim"} → {t.after_revision}
-                </Text>
+                </p>
               ))}
-            </Stack>
-          </Card>
-        ))}
-        {!!history.data && history.data.total > 20 && (
-          <Group justify="space-between">
-            <Button
-              disabled={!offset}
-              variant="subtle"
-              onClick={() => setOffset((o) => Math.max(0, o - 20))}
-            >
-              Previous decisions
-            </Button>
-            <Text size="xs">
-              {offset + 1}–{Math.min(offset + 20, history.data.total)} of{" "}
-              {history.data.total}
-            </Text>
-            <Button
-              disabled={offset + 20 >= history.data.total}
-              variant="subtle"
-              onClick={() => setOffset((o) => o + 20)}
-            >
-              Next decisions
-            </Button>
-          </Group>
-        )}
-        <Button variant="default" onClick={onClose}>
-          Back to claim
-        </Button>
-      </Stack>
+            </div>
+          ))}
+          {!!history.data && history.data.total > 20 && (
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                disabled={!offset}
+                variant="secondary"
+                size="sm"
+                onClick={() => setOffset((o) => Math.max(0, o - 20))}
+              >
+                Previous decisions
+              </Button>
+              <span className="mono text-caption text-muted-foreground">
+                {offset + 1}–{Math.min(offset + 20, history.data.total)} of{" "}
+                {history.data.total}
+              </span>
+              <Button
+                disabled={offset + 20 >= history.data.total}
+                variant="secondary"
+                size="sm"
+                onClick={() => setOffset((o) => o + 20)}
+              >
+                Next decisions
+              </Button>
+            </div>
+          )}
+        </Group>
+      </div>
     </Modal>
   );
 }

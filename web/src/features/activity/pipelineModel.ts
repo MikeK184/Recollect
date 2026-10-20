@@ -179,3 +179,24 @@ export function observedStages(
   }
   return changes;
 }
+
+/** Visual tone of one pipeline stage or input, derived from recorded state only. */
+export type StageTone = "done" | "running" | "waiting" | "failed" | "idle";
+export function stageTone(state: string): StageTone {
+  switch (state) {
+    case "running":
+      return "running";
+    case "queued":
+    case "waiting":
+      return "waiting";
+    case "failed":
+      return "failed";
+    case "succeeded":
+    case "completed":
+    case "ready":
+    case "reference_only":
+      return "done";
+    default:
+      return "idle";
+  }
+}

@@ -3,34 +3,31 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
-  Alert,
-  Badge,
-  Button,
-  CopyButton,
-  Divider,
-  Group,
-  Loader,
-  Portal,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
-import { Check, Copy } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+  Check,
+  Compass,
+  Copy,
+  FileText,
+  FolderGit2,
+  GitCommitHorizontal,
+  History,
+  Network,
+  Waypoints,
+} from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   Outlet,
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import "../feature-views.css";
-import "./knowledge-inspector.css";
 import {
   defaultKnowledgeView,
   resolveKnowledgeView,
@@ -38,10 +35,33 @@ import {
 } from "../../app/navigation";
 import { useBrain } from "../../app/context";
 import { useBrainSearch, type BrainSearch } from "../../app/useBrainSearch";
-import { DetailInspector } from "../../components/DetailInspector";
+import {
+  DetailInspector,
+  InspectorSection,
+  Quote,
+} from "../../components/Inspector";
+import { Page } from "../../components/Page";
+import { PageHeader } from "../../components/PageHeader";
+import {
+  Alert,
+  Badge,
+  Button,
+  CopyButton,
+  KindChip,
+  StatusBadge,
+} from "../../components/ui";
 import { useContentDeadline } from "../../useContentDeadline";
 import { client, result, type Brain } from "../../api";
 import type { components } from "../../api-schema";
+import {
+  EvidenceButton,
+  freshnessTone,
+  memoryKindChip,
+  operationalTone,
+  reviewTone,
+} from "../../claimsShared";
+import { useWideLayout } from "../../lib/hooks";
+import { cn } from "../../lib/utils";
 const SourceInspector = lazy(() =>
   import("../../EvidencePanel").then((m) => ({ default: m.SourceInspector })),
 );
@@ -73,6 +93,11 @@ import {
   useLineageOverlay,
   type KnowledgeSelection,
 } from "./selection";
+import {
+  ExploreFrameContext,
+  KnowledgeSwitcher,
+  type ExploreView,
+} from "./frame";
 import { usePollInterval } from "../../usePollInterval";
 import { useWorkspaceCatalogue } from "../../catalogueQueries";
 
@@ -188,6 +213,57 @@ function knowledgeScope() {
   };
 }
 
+/** A quiet one-line note inside the inspector. */
+function Muted({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 text-label text-muted-foreground [overflow-wrap:anywhere]">
+      {children}
+    </p>
+  );
+}
+
+/** A short in-flight read: a spinner beside the words it is waiting for. */
+function Pending({ label: text }: { label: string }) {
+  return (
+    <p
+      role="status"
+      className="m-0 flex items-center gap-2 text-label text-muted-foreground"
+    >
+      <span
+        aria-hidden="true"
+        className="size-3.5 animate-spin rounded-full border-2 border-border-strong border-t-transparent"
+      />
+      {text}
+    </p>
+  );
+}
+
+/**
+ * One labelled fact line. The term and its value are separate visually but
+ * read (and match) as "Term: value", so every dimension stays one sentence.
+ */
+function Fact({ term, children }: { term: string; children: ReactNode }) {
+  return (
+    <p className="m-0 grid grid-cols-[112px_minmax(0,1fr)] items-center gap-x-3 text-label">
+      <span className="text-muted-foreground">
+        {term}
+        <span className="sr-only">:</span>
+      </span>{" "}
+      <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-foreground [overflow-wrap:anywhere]">
+        {children}
+      </span>
+    </p>
+  );
+}
+
+/** Graph and evidence kinds as category chips where a category exists. */
+function EvidenceKind({ kind }: { kind: string }) {
+  if (kind === "claim") return <KindChip kind="claim">Claim</KindChip>;
+  if (kind === "source_version")
+    return <KindChip kind="source">Source</KindChip>;
+  return <Badge variant="outline">{label(kind)}</Badge>;
+}
+
 /** One bounded read around a graph center; never an unbounded traversal. */
 function useNeighbourhood(brain: Brain, center: string, enabled = true) {
   const pollNormal = usePollInterval("normal");
@@ -219,35 +295,37 @@ function useNeighbourhood(brain: Brain, center: string, enabled = true) {
   };
 }
 
+const nodeButtonClass =
+  "lineage-node-button -mx-2 flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-label text-foreground transition-colors duration-fast ease-standard hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring";
+
 function Neighbourhood({ brain, center }: { brain: Brain; center: string }) {
   const { select } = useKnowledgeSelection();
   const query = useNeighbourhood(brain, center);
   if (query.expired)
-    return (
-      <Text size="sm" c="dimmed">
-        Neighbourhood expired; waiting for a fresh read.
-      </Text>
-    );
-  if (query.isPending) return <Loader size="sm" />;
+    return <Muted>Neighbourhood expired; waiting for a fresh read.</Muted>;
+  if (query.isPending) return <Pending label="Loading neighbourhood…" />;
   if (query.isError)
     return (
-      <Alert color="red">
+      <Alert
+        variant="destructive"
+        actions={
+          <Button
+            variant="destructive-ghost"
+            size="sm"
+            onClick={() => void query.refetch()}
+          >
+            Retry neighbourhood
+          </Button>
+        }
+      >
         {query.error.message}
-        <Button
-          variant="subtle"
-          size="xs"
-          mt="xs"
-          onClick={() => void query.refetch()}
-        >
-          Retry neighbourhood
-        </Button>
       </Alert>
     );
   // A missing generation surfaces as a request error above; an existing
   // generation may be "ready" or "partial" (coverage limits) and both carry
   // eligible nodes, exactly like the graph canvas renders them.
   const data = query.data;
-  if (!data) return <Loader size="sm" />;
+  if (!data) return <Pending label="Loading neighbourhood…" />;
   const nodes = data.nodes.filter((node) => node.key !== center);
   // Node keys carry revision ids for claims; the graph-node selection
   // resolves them through the canonical claim read.
@@ -262,34 +340,39 @@ function Neighbourhood({ brain, center }: { brain: Brain; center: string }) {
     });
   };
   return (
-    <Stack gap="xs">
+    <div className="grid gap-2">
       {nodes.length === 0 && (
-        <Text size="sm" c="dimmed">
-          No eligible neighbours within one hop.
-        </Text>
+        <Muted>No eligible neighbours within one hop.</Muted>
       )}
-      {nodes.map((node) => (
-        <Group key={node.key} justify="space-between" gap="xs" wrap="nowrap">
-          <Button
-            variant="subtle"
-            size="compact-xs"
-            className="lineage-node-button"
-            onClick={() => openNode(node.key)}
-          >
-            {node.evidence.label}
-          </Button>
-          <Badge size="xs" variant="light" color="gray">
-            {label(node.evidence.kind)}
-          </Badge>
-        </Group>
-      ))}
+      {nodes.length > 0 && (
+        <ul className="m-0 grid list-none gap-0.5 p-0">
+          {nodes.map((node) => (
+            <li key={node.key} className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                className={nodeButtonClass}
+                onClick={() => openNode(node.key)}
+              >
+                <Waypoints
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-muted-foreground"
+                />
+                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                  {node.evidence.label}
+                </span>
+              </button>
+              <EvidenceKind kind={node.evidence.kind} />
+            </li>
+          ))}
+        </ul>
+      )}
       {data.edges.length > 0 && (
-        <Text size="xs" c="dimmed">
-          {data.edges.length} recorded relationship
-          {data.edges.length === 1 ? "" : "s"} in this bounded read.
-        </Text>
+        <p className="m-0 text-caption text-muted-foreground">
+          <span className="mono">{data.edges.length}</span> recorded
+          relationship{data.edges.length === 1 ? "" : "s"} in this bounded read.
+        </p>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -306,34 +389,29 @@ function EvidenceList({
   useLineageOverlay(!!selected);
   return (
     <>
-      <Stack gap="xs">
+      <div className="grid gap-2">
         {evidence.length === 0 && (
-          <Text size="sm" c="dimmed">
-            No supporting evidence is recorded for this revision.
-          </Text>
+          <Muted>No supporting evidence is recorded for this revision.</Muted>
         )}
         {evidence.map((item, index) => (
-          <Button
+          <EvidenceButton
             key={`${item.kind}:${item.id}`}
-            variant="default"
-            size="compact-xs"
             className="lineage-evidence-button"
-            onClick={() => setSelected(item)}
-          >
-            {item.label} · {label(item.kind)} · {label(item.availability)}
-            {supports?.[index]?.line_from
-              ? ` · lines ${supports[index].line_from}–${supports[index].line_to}`
-              : ""}
-          </Button>
+            evidence={item}
+            support={supports?.[index]}
+            onOpen={() => setSelected(item)}
+          />
         ))}
-      </Stack>
+      </div>
       {selected && (
-        <EvidenceDialog
-          brain={brain}
-          evidence={selected}
-          onClose={() => setSelected(null)}
-          returnLabel="Back to lineage"
-        />
+        <Suspense fallback={null}>
+          <EvidenceDialog
+            brain={brain}
+            evidence={selected}
+            onClose={() => setSelected(null)}
+            returnLabel="Back to lineage"
+          />
+        </Suspense>
       )}
     </>
   );
@@ -367,55 +445,55 @@ function CanonicalEvidenceRead({
         ),
       ),
   });
-  if (query.isPending) return <Loader size="sm" />;
+  if (query.isPending) return <Pending label="Loading evidence…" />;
   if (query.isError || !query.data)
     return (
-      <Alert color="red">
+      <Alert
+        variant="destructive"
+        actions={
+          <Button
+            variant="destructive-ghost"
+            size="sm"
+            onClick={() => void query.refetch()}
+          >
+            Retry evidence read
+          </Button>
+        }
+      >
         {query.error?.message ?? "This exact evidence is unavailable."}
-        <Button
-          variant="subtle"
-          size="xs"
-          mt="xs"
-          onClick={() => void query.refetch()}
-        >
-          Retry evidence read
-        </Button>
       </Alert>
     );
   const item = query.data.evidence;
   return (
-    <Stack gap="xs">
-      <Text fw={600} size="sm" className="lineage-wrap">
+    <div className="grid gap-2.5">
+      <h3 className="m-0 text-title font-semibold text-foreground [overflow-wrap:anywhere]">
         {item.label}
-      </Text>
-      <Group gap="xs">
-        <Badge size="xs">{label(item.kind)}</Badge>
-        <Badge size="xs" variant="light" color="gray">
-          {label(item.availability)}
-        </Badge>
-      </Group>
-      {item.reference && (
-        <Text size="sm" className="lineage-wrap">
-          Reference: {item.reference}
-        </Text>
-      )}
+      </h3>
+      <div className="flex flex-wrap gap-1.5">
+        <EvidenceKind kind={item.kind} />
+        <Badge variant="outline">{label(item.availability)}</Badge>
+      </div>
+      {item.reference && <Fact term="Reference">{item.reference}</Fact>}
       {item.revision && (
-        <Text size="xs" c="dimmed" className="lineage-wrap">
-          Exact revision: {item.revision}
-        </Text>
+        <Fact term="Exact revision">
+          <span className="mono text-caption">{item.revision}</span>
+        </Fact>
       )}
       {kind === "source_version" && item.source_id && (
-        <Button
-          variant="light"
-          size="compact-xs"
-          onClick={() =>
-            select({ kind: "source", id: item.source_id!, version: id })
-          }
-        >
-          Open in Sources
-        </Button>
+        <div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              select({ kind: "source", id: item.source_id!, version: id })
+            }
+          >
+            <FileText aria-hidden="true" />
+            Open in Sources
+          </Button>
+        </div>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -429,15 +507,20 @@ function ClaimLineageView({
   brain,
   view,
   centerKey,
+  recordAction,
 }: {
   brain: Brain;
   view: View;
   centerKey: string;
+  /** Opens the full record (history and actions) for a memory selection. */
+  recordAction?: ReactNode;
 }) {
   const [evidenceItem, setEvidenceItem] = useState<Evidence | null>(null);
   const [reviewing, setReviewing] = useState<View | null>(null);
   const queries = useQueryClient();
-  const catalogue = useWorkspaceCatalogue(brain.id, undefined, { enabled: !!reviewing });
+  const catalogue = useWorkspaceCatalogue(brain.id, undefined, {
+    enabled: !!reviewing,
+  });
   useLineageOverlay(!!evidenceItem || !!reviewing);
   const r = view.revision;
   const flags: string[] = [];
@@ -445,116 +528,188 @@ function ClaimLineageView({
   if (view.eligibility.rule_ids?.length) flags.push("Blocked by review rule");
   if (view.eligibility.conflicting_claim_ids?.length)
     flags.push("Unresolved conflict");
+  const chip = memoryKindChip(r.content.kind);
+  const validity = r.content.validity;
+  // Handover and procedure records repeat their kind as the predicate.
+  const redundant =
+    label(r.content.predicate).toLowerCase() === r.content.kind.toLowerCase();
   return (
-    <Stack gap="sm">
-      {evidenceItem && (
-        <EvidenceDialog
-          brain={brain}
-          evidence={evidenceItem}
-          onClose={() => setEvidenceItem(null)}
-          returnLabel="Back to lineage"
-        />
-      )}
-      {reviewing && catalogue.isPending && (
-        <Text role="status" size="sm">
-          Loading correction scope…
-        </Text>
-      )}
-      {reviewing && catalogue.isError && (
-        <Alert color="red" title="Correction scope unavailable">
-          {catalogue.error.message}
-          <Button variant="subtle" onClick={() => void catalogue.refetch()}>
-            Retry correction scope
-          </Button>
-        </Alert>
-      )}
-      {reviewing && catalogue.data && !catalogue.isError && (
-        <ClaimReviewDialog
-          brain={brain}
-          catalogue={catalogue.data}
-          view={reviewing}
-          current={
-            !view.knowledge_until && reviewing.revision.id === view.revision.id
-          }
-          Editor={ClaimEditor}
-          EvidenceViewer={EvidenceDialog}
-          onClose={() => setReviewing(null)}
-          onSaved={() =>
-            void queries.invalidateQueries({
-              predicate: (query) => query.queryKey.includes(brain.id),
-            })
-          }
-        />
-      )}
-      <Title order={4}>{r.content.subject}</Title>
-      <Text size="sm" className="lineage-wrap">
-        {r.content.predicate}: {r.content.value}
-      </Text>
+    <>
+      <InspectorSection>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <KindChip kind={chip.kind}>{chip.label}</KindChip>
+          {flags.map((flag) => (
+            <StatusBadge key={flag} state="attention">
+              {flag}
+            </StatusBadge>
+          ))}
+        </div>
+        <h3 className="m-0 text-title font-semibold text-foreground [overflow-wrap:anywhere]">
+          {r.content.subject}
+        </h3>
+        <Quote className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+          {redundant ? null : `${r.content.predicate}: `}
+          {r.content.value}
+        </Quote>
+        {recordAction && <div className="-ml-2.5">{recordAction}</div>}
+      </InspectorSection>
       {/* The three dimensions stay separate lines; a compact view may
           summarize, never merge or reorder them. */}
-      <Text size="sm">Review: {label(r.review)}</Text>
-      <Text size="sm">
-        Freshness: {label(view.eligibility.effective_freshness)}
-      </Text>
-      <Text size="sm">Operational: {label(r.content.operational)}</Text>
-      {flags.length > 0 && (
-        <Group gap="xs">
-          {flags.map((flag) => (
-            <Badge key={flag} size="xs" color="yellow">
-              {flag}
-            </Badge>
-          ))}
-        </Group>
-      )}
-      <Text size="xs" c="dimmed">
-        Fact time:{" "}
-        {r.content.validity.kind === "unknown"
-          ? "unknown; no interval is inferred"
-          : r.content.validity.kind === "point"
-            ? `${r.content.validity.from ? time(r.content.validity.from) : "unknown"} (${r.content.validity.precision} precision)`
-            : `${r.content.validity.from ? time(r.content.validity.from) : "unknown"} → ${r.content.validity.to ? time(r.content.validity.to) : "unknown"} (end excluded)`}
-        . Knowledge time: learned {time(r.recorded_at)}
-        {view.knowledge_until
-          ? ` · replaced ${time(view.knowledge_until)}`
-          : ""}
-        .
-      </Text>
-      <Text size="xs" c="dimmed">
-        Provenance: {label(r.origin)} by {r.actor_name}
-      </Text>
-      <Group gap="xs">
-        <Button
-          variant="default"
-          size="compact-xs"
-          onClick={() => setReviewing(view)}
-        >
-          Review and corrections
-        </Button>
-        <EraseAction
-          brain={brain.id}
-          permitted={brain.role === "admin"}
-          target={{ kind: "claim", id: r.claim_id }}
-          name={r.content.subject}
+      <InspectorSection label="Status">
+        <Fact term="Review">
+          <StatusBadge state={reviewTone(r.review)}>
+            {label(r.review)}
+          </StatusBadge>
+        </Fact>
+        <Fact term="Freshness">
+          <StatusBadge
+            state={freshnessTone(view.eligibility.effective_freshness)}
+          >
+            {label(view.eligibility.effective_freshness)}
+          </StatusBadge>
+        </Fact>
+        <Fact term="Operational">
+          <StatusBadge state={operationalTone(r.content.operational)}>
+            {label(r.content.operational)}
+          </StatusBadge>
+        </Fact>
+      </InspectorSection>
+      <InspectorSection label="Time and provenance">
+        <Fact term="Fact time">
+          {validity.kind === "unknown" ? (
+            "unknown; no interval is inferred"
+          ) : validity.kind === "point" ? (
+            <span>
+              <span className="mono text-caption">
+                {validity.from ? time(validity.from) : "unknown"}
+              </span>{" "}
+              ({validity.precision} precision)
+            </span>
+          ) : (
+            <span>
+              <span className="mono text-caption">
+                {validity.from ? time(validity.from) : "unknown"} →{" "}
+                {validity.to ? time(validity.to) : "unknown"}
+              </span>{" "}
+              (end excluded)
+            </span>
+          )}
+        </Fact>
+        <Fact term="Knowledge time">
+          <span>
+            learned{" "}
+            <span className="mono text-caption">{time(r.recorded_at)}</span>
+            {view.knowledge_until && (
+              <>
+                {" "}
+                · replaced{" "}
+                <span className="mono text-caption">
+                  {time(view.knowledge_until)}
+                </span>
+              </>
+            )}
+          </span>
+        </Fact>
+        <Fact term="Provenance">
+          {label(r.origin)} by {r.actor_name}
+        </Fact>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setReviewing(view)}
+          >
+            Review and corrections
+          </Button>
+          <Suspense fallback={null}>
+            <EraseAction
+              brain={brain.id}
+              permitted={brain.role === "admin"}
+              target={{ kind: "claim", id: r.claim_id }}
+              name={r.content.subject}
+            />
+          </Suspense>
+        </div>
+        {reviewing && catalogue.isPending && (
+          <Pending label="Loading correction scope…" />
+        )}
+        {reviewing && catalogue.isError && (
+          <Alert
+            variant="destructive"
+            title="Correction scope unavailable"
+            actions={
+              <Button
+                variant="destructive-ghost"
+                size="sm"
+                onClick={() => void catalogue.refetch()}
+              >
+                Retry correction scope
+              </Button>
+            }
+          >
+            {catalogue.error.message}
+          </Alert>
+        )}
+      </InspectorSection>
+      <InspectorSection label={`Supporting evidence · ${view.evidence.length}`}>
+        <EvidenceList
+          brain={brain}
+          evidence={view.evidence}
+          supports={r.content.supports}
         />
-      </Group>
-      <Divider label="Supporting evidence" />
-      <EvidenceList
-        brain={brain}
-        evidence={view.evidence}
-        supports={r.content.supports}
-      />
+      </InspectorSection>
       {!view.knowledge_until && (
-        <>
-          <Divider label="Current graph neighbourhood" />
+        <InspectorSection label="Current graph neighbourhood">
           <Neighbourhood brain={brain} center={centerKey} />
-        </>
+        </InspectorSection>
       )}
-    </Stack>
+      {evidenceItem && (
+        <Suspense fallback={null}>
+          <EvidenceDialog
+            brain={brain}
+            evidence={evidenceItem}
+            onClose={() => setEvidenceItem(null)}
+            returnLabel="Back to lineage"
+          />
+        </Suspense>
+      )}
+      {reviewing && catalogue.data && !catalogue.isError && (
+        // Lazy dialogs suspend locally, so loading one never hides the
+        // inspector (and the control that keeps focus) behind a fallback.
+        <Suspense fallback={null}>
+          <ClaimReviewDialog
+            brain={brain}
+            catalogue={catalogue.data}
+            view={reviewing}
+            current={
+              !view.knowledge_until &&
+              reviewing.revision.id === view.revision.id
+            }
+            Editor={ClaimEditor}
+            EvidenceViewer={EvidenceDialog}
+            onClose={() => setReviewing(null)}
+            onSaved={() =>
+              void queries.invalidateQueries({
+                predicate: (query) => query.queryKey.includes(brain.id),
+              })
+            }
+          />
+        </Suspense>
+      )}
+    </>
   );
 }
 
 /** Memory list selection: the id is a claim id. */
-function MemoryLineage({ brain, id }: { brain: Brain; id: string }) {
+function MemoryLineage({
+  brain,
+  id,
+  recordAction,
+}: {
+  brain: Brain;
+  id: string;
+  recordAction?: ReactNode;
+}) {
   const pollNormal = usePollInterval("normal");
   const [search] = useBrainSearch();
   const query = useQuery({
@@ -573,25 +728,28 @@ function MemoryLineage({ brain, id }: { brain: Brain; id: string }) {
         }),
       ),
   });
-  if (query.isPending) return <Loader size="sm" />;
+  if (query.isPending) return <Pending label="Loading memory…" />;
   if (query.isError || !query.data)
     return (
-      <Alert color="red">
+      <Alert
+        variant="destructive"
+        actions={
+          <Button
+            variant="destructive-ghost"
+            size="sm"
+            onClick={() => void query.refetch()}
+          >
+            Retry memory read
+          </Button>
+        }
+      >
         {query.error?.message ?? "This memory is unavailable."}
-        <Button
-          variant="subtle"
-          size="xs"
-          mt="xs"
-          onClick={() => void query.refetch()}
-        >
-          Retry memory read
-        </Button>
       </Alert>
     );
   const view = query.data.selected;
   if (!view)
     return (
-      <Alert color="yellow">
+      <Alert variant="warning" role="status">
         This memory’s content is unavailable. Its remaining history stays
         reachable from the Memory list; no substitute revision is shown.
       </Alert>
@@ -601,6 +759,7 @@ function MemoryLineage({ brain, id }: { brain: Brain; id: string }) {
       brain={brain}
       view={view}
       centerKey={`claim:${view.revision.id}`}
+      recordAction={recordAction}
     />
   );
 }
@@ -635,26 +794,25 @@ function GraphClaimLineage({
       ),
   });
   if (!revisionId)
-    return (
-      <Text size="sm" c="dimmed">
-        This graph node has no resolvable claim identity.
-      </Text>
-    );
-  if (query.isPending) return <Loader size="sm" />;
+    return <Muted>This graph node has no resolvable claim identity.</Muted>;
+  if (query.isPending) return <Pending label="Loading claim…" />;
   if (query.isError || !query.data)
     return (
-      <Alert color="yellow">
+      <Alert
+        variant="warning"
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void query.refetch()}
+          >
+            Retry claim read
+          </Button>
+        }
+      >
         This graph node points at a claim revision that no longer resolves. Its
         remaining history stays reachable from the Memory list; no substitute
         revision is shown.
-        <Button
-          variant="subtle"
-          size="xs"
-          mt="xs"
-          onClick={() => void query.refetch()}
-        >
-          Retry claim read
-        </Button>
       </Alert>
     );
   return (
@@ -693,56 +851,71 @@ function SourceDerivations({
   const { select } = useKnowledgeSelection();
   const query = useNeighbourhood(brain, `source_version:${version}`);
   if (query.expired)
-    return (
-      <Text size="sm" c="dimmed">
-        Linked memory expired; waiting for a fresh read.
-      </Text>
-    );
+    return <Muted>Linked memory expired; waiting for a fresh read.</Muted>;
   if (query.isError)
     return (
-      <Alert color="gray" title="Derived memory unavailable">
+      <Alert variant="default" role="status" title="Derived memory unavailable">
         {query.error.message}
       </Alert>
     );
-  if (query.isPending) return <Loader size="sm" />;
+  if (query.isPending) return <Pending label="Loading linked memory…" />;
   const nodes =
     query.data?.nodes.filter((node) => node.evidence.kind === "claim") ?? [];
   return (
-    <details className="feature-details" open>
-      <summary>Linked memory · {nodes.length} in this view</summary>
-      <Stack gap="xs" className="source-linked-memory">
-        {nodes.map((node) => (
-          <button
-            type="button"
-            className="derived-memory-row"
-            key={node.key}
-            onClick={() => select({ kind: "graph-node", key: node.key })}
-          >
-            <strong>{node.evidence.label}</strong>
-            <span>
-              {[
-                node.evidence.claim?.review,
-                node.evidence.claim?.freshness,
-                node.evidence.claim?.operational,
-                ...node.evidence.qualifications,
-              ]
-                .filter(Boolean)
-                .map((value) => label(value!))
-                .join(" · ")}
-            </span>
-          </button>
-        ))}
-        {!nodes.length && (
-          <Text size="sm" c="dimmed">
-            No linked memory in the current eligible graph.
-          </Text>
-        )}
-        <Text size="xs" c="dimmed">
-          Cites this exact version; shared evidence is not independent
-          corroboration.
-        </Text>
-      </Stack>
-    </details>
+    <div className="source-linked-memory grid gap-2">
+      <p className="m-0 text-caption text-muted-foreground">
+        Linked memory · <span className="mono">{nodes.length}</span> in this
+        view
+      </p>
+      {nodes.length > 0 && (
+        <ul className="m-0 grid list-none gap-0.5 p-0">
+          {nodes.map((node) => {
+            const dimensions = [
+              node.evidence.claim?.review,
+              node.evidence.claim?.freshness,
+              node.evidence.claim?.operational,
+              ...node.evidence.qualifications,
+            ]
+              .filter(Boolean)
+              .map((value) => label(value!))
+              .join(" · ");
+            return (
+              <li key={node.key} className="flex min-w-0">
+                <button
+                  type="button"
+                  className={cn(
+                    nodeButtonClass,
+                    "derived-memory-row items-start",
+                  )}
+                  onClick={() => select({ kind: "graph-node", key: node.key })}
+                >
+                  <KindChip kind="claim" className="mt-px">
+                    Claim
+                  </KindChip>
+                  <span className="grid min-w-0 flex-1 gap-0.5">
+                    <span className="font-medium [overflow-wrap:anywhere]">
+                      {node.evidence.label}
+                    </span>
+                    {dimensions && (
+                      <span className="text-caption text-muted-foreground">
+                        {dimensions}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!nodes.length && (
+        <Muted>No linked memory in the current eligible graph.</Muted>
+      )}
+      <p className="m-0 text-caption text-muted-foreground">
+        Derived records cite this exact version; shared evidence is not
+        independent support.
+      </p>
+    </div>
   );
 }
 
@@ -758,17 +931,21 @@ function GraphNodeLineage({
     return <GraphClaimLineage brain={brain} nodeKey={nodeKey} />;
   if ((canonicalEvidenceKinds as readonly string[]).includes(kind) && id)
     return (
-      <CanonicalEvidenceRead
-        brain={brain}
-        kind={kind as (typeof canonicalEvidenceKinds)[number]}
-        id={id}
-      />
+      <InspectorSection>
+        <CanonicalEvidenceRead
+          brain={brain}
+          kind={kind as (typeof canonicalEvidenceKinds)[number]}
+          id={id}
+        />
+      </InspectorSection>
     );
   return (
-    <Text size="sm" c="dimmed">
-      Unknown graph entity kind “{kind}”. Its identity is {nodeKey}; no evidence
-      or applicability is inferred for unsupported kinds.
-    </Text>
+    <InspectorSection>
+      <Muted>
+        Unknown graph entity kind “{kind}”. Its identity is {nodeKey}; no
+        evidence or applicability is inferred for unsupported kinds.
+      </Muted>
+    </InspectorSection>
   );
 }
 
@@ -784,24 +961,39 @@ function GraphEdgeLineage({
   evidenceId: string;
 }) {
   return (
-    <Stack gap="sm">
-      <Title order={4}>{label(relation)} relationship</Title>
-      <Text size="sm" c="dimmed">
-        A graph edge records a provenance or dependency relationship. It is
-        never presented as independent support for a claim.
-      </Text>
-      {(canonicalEvidenceKinds as readonly string[]).includes(evidenceKind) ? (
-        <CanonicalEvidenceRead
-          brain={brain}
-          kind={evidenceKind as (typeof canonicalEvidenceKinds)[number]}
-          id={evidenceId}
-        />
-      ) : (
-        <Text size="sm" c="dimmed">
-          Recorded evidence: {label(evidenceKind)} · {evidenceId}
-        </Text>
-      )}
-    </Stack>
+    <>
+      <InspectorSection>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline">
+            <GitCommitHorizontal aria-hidden="true" />
+            Relationship
+          </Badge>
+        </div>
+        <h3 className="m-0 text-title font-semibold capitalize text-foreground">
+          {label(relation)} relationship
+        </h3>
+        <Muted>
+          A graph edge records a provenance or dependency relationship. It is
+          never presented as independent support for a claim.
+        </Muted>
+      </InspectorSection>
+      <InspectorSection label="Recorded evidence">
+        {(canonicalEvidenceKinds as readonly string[]).includes(
+          evidenceKind,
+        ) ? (
+          <CanonicalEvidenceRead
+            brain={brain}
+            kind={evidenceKind as (typeof canonicalEvidenceKinds)[number]}
+            id={evidenceId}
+          />
+        ) : (
+          <Muted>
+            Recorded evidence: {label(evidenceKind)} ·{" "}
+            <span className="mono text-caption">{evidenceId}</span>
+          </Muted>
+        )}
+      </InspectorSection>
+    </>
   );
 }
 
@@ -827,24 +1019,28 @@ function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
         ),
       ),
   });
-  if (catalogue.isPending) return <Loader size="sm" />;
+  if (catalogue.isPending) return <Pending label="Loading repository…" />;
   if (catalogue.isError)
     return (
-      <Alert color="red">
+      <Alert
+        variant="destructive"
+        actions={
+          <Button
+            variant="destructive-ghost"
+            size="sm"
+            onClick={() => void catalogue.refetch()}
+          >
+            Retry repository
+          </Button>
+        }
+      >
         The repository catalogue could not be checked. {catalogue.error.message}
-        <Button
-          variant="subtle"
-          size="xs"
-          onClick={() => void catalogue.refetch()}
-        >
-          Retry repository
-        </Button>
       </Alert>
     );
   const repo = catalogue.data;
   if (!repo)
     return (
-      <Alert color="yellow">
+      <Alert variant="warning" role="status">
         This repository is no longer listed in the Brain catalogue. Its recorded
         scopes and history are preserved.
       </Alert>
@@ -853,74 +1049,113 @@ function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
     (origin) => origin !== repo.canonical_origin,
   );
   return (
-    <Stack gap="sm">
-      {snapshots && (
-        <RepositoryDialog
-          brain={brain}
-          repository={repo}
-          onClose={() => setSnapshots(false)}
-        />
-      )}
-      {adding && (
-        <AliasDialog
-          brain={brain}
-          repository={repo}
-          onClose={() => setAdding(false)}
-          onSaved={() => {
-            setAdding(false);
-            for (const key of [
-              "repository-identity",
-              "repository-catalogue",
-              "workspace",
-            ])
-              void cache.invalidateQueries({ queryKey: [key, brain.id] });
-          }}
-        />
-      )}
-      <Title order={4}>{repo.canonical_origin}</Title>
-      <Group>
-        <Button variant="default" size="xs" onClick={() => setSnapshots(true)}>
-          Snapshots
-        </Button>
-        {brain.role === "admin" && !brain.archived && (
-          <Button variant="default" size="xs" onClick={() => setAdding(true)}>
-            Add origin
+    <>
+      <InspectorSection>
+        <div className="flex items-start gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-md bg-muted text-foreground-secondary">
+            <FolderGit2 aria-hidden="true" className="size-4" />
+          </span>
+          <div className="grid min-w-0 gap-1">
+            <h3 className="m-0 text-title font-semibold text-foreground [overflow-wrap:anywhere]">
+              {repo.canonical_origin.split("/").at(-1) || repo.canonical_origin}
+            </h3>
+            <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+              {repo.canonical_origin}
+            </p>
+          </div>
+        </div>
+        <Muted>Canonical normalized origin.</Muted>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSnapshots(true)}
+          >
+            <GitCommitHorizontal aria-hidden="true" />
+            Snapshots
           </Button>
-        )}
-      </Group>
-      <Text size="xs" c="dimmed">
-        Canonical normalized origin.
-      </Text>
+          {brain.role === "admin" && !brain.archived && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setAdding(true)}
+            >
+              Add origin
+            </Button>
+          )}
+        </div>
+      </InspectorSection>
       {extra.length > 0 && (
-        <Stack gap="4px">
-          <Text size="sm" fw={600}>
-            All recorded origins
-          </Text>
-          {repo.origins.map((origin) => (
-            <Text key={origin} size="sm" className="lineage-wrap">
-              {origin}
-            </Text>
-          ))}
-        </Stack>
+        <InspectorSection label="All recorded origins">
+          <ul className="m-0 grid list-none gap-1 p-0">
+            {repo.origins.map((origin) => (
+              <li
+                key={origin}
+                className="mono text-caption text-foreground-secondary [overflow-wrap:anywhere]"
+              >
+                {origin}
+              </li>
+            ))}
+          </ul>
+        </InspectorSection>
       )}
       {/* Machine identifiers stay out of list rows; the inspector offers the
           copyable field instead. */}
-      <details className="record-identity">
-        <summary>Repository identifier</summary>
-        <CopyButton value={repo.id}>
-          {({ copied, copy }) => (
-            <Button
-              size="xs"
-              variant="default"
-              onClick={copy}
-              leftSection={copied ? <Check size={14} /> : <Copy size={14} />}
-            >
-              {copied ? "Copied" : "Copy repository ID"}
-            </Button>
-          )}
-        </CopyButton>
-      </details>
-    </Stack>
+      <InspectorSection>
+        <details className="record-identity group/identity">
+          <summary className="cursor-pointer text-label font-medium text-foreground-secondary hover:text-foreground">
+            Repository identifier
+          </summary>
+          <div className="mt-2.5 grid gap-2">
+            <code className="mono rounded-sm bg-muted px-2 py-1 text-caption text-foreground [overflow-wrap:anywhere]">
+              {repo.id}
+            </code>
+            <CopyButton value={repo.id}>
+              {({ copied, copy }) => (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-fit"
+                  onClick={copy}
+                >
+                  {copied ? (
+                    <Check aria-hidden="true" className="text-brand-text" />
+                  ) : (
+                    <Copy aria-hidden="true" />
+                  )}
+                  {copied ? "Copied" : "Copy repository ID"}
+                </Button>
+              )}
+            </CopyButton>
+          </div>
+        </details>
+      </InspectorSection>
+      <Suspense fallback={null}>
+        {snapshots && (
+          <RepositoryDialog
+            brain={brain}
+            repository={repo}
+            onClose={() => setSnapshots(false)}
+          />
+        )}
+        {adding && (
+          <AliasDialog
+            brain={brain}
+            repository={repo}
+            onClose={() => setAdding(false)}
+            onSaved={() => {
+              setAdding(false);
+              for (const key of [
+                "repository-identity",
+                "repository-catalogue",
+                "workspace",
+              ])
+                void cache.invalidateQueries({ queryKey: [key, brain.id] });
+            }}
+          />
+        )}
+      </Suspense>
+    </>
   );
 }
 
@@ -928,20 +1163,19 @@ function RepositoryLineage({ brain, id }: { brain: Brain; id: string }) {
  * The one canonical lineage inspector. Every Knowledge view renders this same
  * definition through the shared selection; no page forks a private copy.
  */
-function LineageInspector() {
+function LineageInspector({ recordAction }: { recordAction?: ReactNode }) {
   const brain = useBrain();
   const { selection } = useKnowledgeSelection();
-  if (!selection)
-    return (
-      <Text size="sm" c="dimmed">
-        Select a memory, source, graph item, or repository to inspect its
-        lineage here.
-      </Text>
-    );
+  if (!selection) return null;
   switch (selection.kind) {
     case "memory":
       return (
-        <MemoryLineage key={selection.id} brain={brain} id={selection.id} />
+        <MemoryLineage
+          key={selection.id}
+          brain={brain}
+          id={selection.id}
+          recordAction={recordAction}
+        />
       );
     case "source":
       return (
@@ -977,24 +1211,75 @@ function LineageInspector() {
   }
 }
 
-/** The shared lineage inspector region; the surface renders it exactly once. */
+/**
+ * The shared lineage inspector region; the surface renders it exactly once.
+ *
+ * The region (`aside`, "Lineage inspector") is one persistent element: it
+ * lives in a detached container that moves into the docked inspector (from
+ * 1440px) or the sheet (below) while a record is selected, and back to a
+ * hidden parking spot when nothing is. Its React subtree never remounts, so
+ * nested dialogs and their state survive while another inspector briefly owns
+ * the dock, and every view switch keeps the same region.
+ */
 export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
   const brain = useBrain();
   const navigate = useNavigate();
+  const wide = useWideLayout();
   const { selection, select, actions, nestedOpen } = useKnowledgeSelection();
-  const region = useRef<HTMLElement>(null);
-  useEffect(() => {
-    // Following lineage replaces the focused link without closing the drawer.
-    // Re-enter the trap before the next Tab can reach the background page.
-    if (selection && !region.current?.contains(document.activeElement))
-      region.current?.querySelector<HTMLButtonElement>("button")?.focus();
-  }, [selection]);
   const [search, patch] = useBrainSearch();
   const detailed =
     (selection?.kind !== "source" && search.detail === "record") ||
     !!search.knowledge ||
     !!search.revision;
+  const opened = !!selection && !detailed;
+  const [container] = useState(() => {
+    const node = document.createElement("div");
+    node.className = "contents";
+    return node;
+  });
+  const parking = useRef<HTMLDivElement>(null);
+  const region = useRef<HTMLElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (!container.parentNode) parking.current?.appendChild(container);
+    return () => container.remove();
+  }, [container]);
+  // The inspector body hands its slot over on mount and takes it back on
+  // unmount; a stable callback is only called for those two events.
+  const mount = useCallback(
+    (slot: HTMLDivElement | null) => {
+      if (slot) slot.appendChild(container);
+      else if (parking.current && container.parentNode !== parking.current)
+        parking.current.appendChild(container);
+    },
+    [container],
+  );
+  useEffect(() => {
+    if (!selection) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== document.body) {
+      // Remember the row, node or link that opened this record so closing
+      // returns focus there, unless focus is already inside an inspector.
+      if (
+        !region.current?.contains(active) &&
+        !active.closest("[data-inspector-dock], [role='dialog']")
+      )
+        opener.current = active;
+      return;
+    }
+    // Following lineage replaces the activated link. Re-enter the region so
+    // the next Tab stays inside the inspector instead of the page start.
+    const frame = requestAnimationFrame(() => {
+      const node = region.current;
+      const now = document.activeElement;
+      if (node?.isConnected && (!now || now === document.body))
+        node.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selection]);
   const close = () => {
+    const target = opener.current;
+    opener.current = null;
     select(null);
     patch({
       claim: null,
@@ -1004,112 +1289,165 @@ export function KnowledgeInspectorRegion({ view }: { view: KnowledgeView }) {
       detail: null,
       ...(selection?.kind === "repository" ? { repository: null } : {}),
     });
+    window.setTimeout(() => {
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    }, 40);
   };
+  // "Show in" links carry only identities the destination can resolve, and
+  // never point at the route already shown.
+  const onExplore =
+    useRouterState({ select: (state) => state.location.pathname }).split(
+      "/",
+    )[3] === "explore";
+  const viewLinks = knowledgeViews
+    .filter(
+      (entry) =>
+        (entry.view === "explore" || entry.view === "graph") &&
+        entry.view !== view &&
+        !(entry.view === "explore" && onExplore),
+    )
+    .map((entry) => ({
+      ...entry,
+      search: selectionSearch(selection, entry.view, search),
+    }))
+    .filter((entry) => Object.keys(entry.search).length > 0);
   return (
-    <Portal>
-      <aside
-        ref={region}
-        className="knowledge-inspector-region"
-        aria-label="Lineage inspector"
-        data-knowledge-view={view}
-      >
-        <DetailInspector
-          opened={!!selection && !detailed}
-          onClose={close}
-          title="Knowledge lineage"
-          withinPortal={false}
-          closeOnEscape={!nestedOpen}
-          trapFocus={!nestedOpen}
+    <>
+      <div ref={parking} className="sr-only" />
+      {createPortal(
+        <aside
+          ref={region}
+          tabIndex={-1}
+          className="knowledge-inspector-region flex min-h-full min-w-0 flex-1 flex-col outline-none"
+          aria-label="Lineage inspector"
+          data-knowledge-view={view}
+          onKeyDown={(event) => {
+            // In the docked inspector this region sits outside the panel's own
+            // key handling; Escape closes it unless a nested dialog owns it.
+            if (
+              event.key !== "Escape" ||
+              event.defaultPrevented ||
+              nestedOpen ||
+              !opened
+            )
+              return;
+            event.stopPropagation();
+            close();
+          }}
         >
-          <Stack
-            gap="md"
-            data-testid={
-              selection?.kind === "graph-node"
-                ? "exploration-node"
-                : selection?.kind === "graph-edge"
-                  ? "exploration-edge"
-                  : undefined
-            }
-          >
-            <Group gap="xs" className="knowledge-view-links">
-              {knowledgeViews
-                .filter(
-                  (entry) =>
-                    (entry.view === "explore" || entry.view === "graph") &&
-                    entry.view !== view,
-                )
-                .map((entry) => {
-                  const destinationSearch = selectionSearch(
-                    selection,
-                    entry.view,
-                    search,
-                  );
-                  return Object.keys(destinationSearch).length ? (
-                    <Link
-                      key={entry.view}
-                      to={`/brains/$brainId/${entry.view}`}
-                      params={{ brainId: brain.id }}
-                      search={destinationSearch}
-                    >
-                      Show in {entry.label}
-                    </Link>
-                  ) : null;
-                })}
-            </Group>
-            {selection?.kind === "memory" && (
-              <Button
-                onClick={() =>
-                  void navigate({
-                    to: `/brains/$brainId/${selection.kind === "memory" ? "memory" : "sources"}`,
-                    params: { brainId: brain.id },
-                    search: {
-                      ...selectionSearch(
-                        selection,
-                        selection.kind === "memory" ? "memory" : "sources",
-                        search,
-                      ),
-                      detail: "record",
-                    },
-                  })
+          {opened && (
+            <>
+              <div
+                className="grid min-w-0"
+                data-testid={
+                  selection?.kind === "graph-node"
+                    ? "exploration-node"
+                    : selection?.kind === "graph-edge"
+                      ? "exploration-edge"
+                      : undefined
                 }
-                variant="subtle"
-                w="fit-content"
               >
-                {selection.kind === "memory"
-                  ? "Memory history & actions"
-                  : "Source history & actions"}
-              </Button>
-            )}
-            {actions}
-            <Suspense
-              fallback={
-                <Text role="status" size="sm">
-                  Loading inspection…
-                </Text>
-              }
-            >
-              <LineageInspector />
-            </Suspense>
-          </Stack>
-        </DetailInspector>
-      </aside>
-    </Portal>
+                {actions && (
+                  <InspectorSection className="empty:hidden">
+                    {actions}
+                  </InspectorSection>
+                )}
+                <Suspense fallback={<Pending label="Loading inspection…" />}>
+                  <LineageInspector
+                    recordAction={
+                      selection?.kind === "memory" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            void navigate({
+                              to: "/brains/$brainId/memory",
+                              params: { brainId: brain.id },
+                              search: {
+                                ...selectionSearch(selection, "memory", search),
+                                detail: "record",
+                              },
+                            })
+                          }
+                        >
+                          <History aria-hidden="true" />
+                          Memory history &amp; actions
+                        </Button>
+                      ) : undefined
+                    }
+                  />
+                </Suspense>
+              </div>
+              {viewLinks.length > 0 && (
+                <div
+                  className={cn(
+                    "sticky -bottom-4 z-[1] -mx-4 -mb-4 mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3",
+                    wide ? "bg-card" : "bg-popover",
+                  )}
+                >
+                  {viewLinks.map((entry) => (
+                    <Button
+                      key={entry.view}
+                      asChild
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <Link
+                        to={`/brains/$brainId/${entry.view}`}
+                        params={{ brainId: brain.id }}
+                        search={entry.search}
+                      >
+                        {entry.view === "graph" ? (
+                          <Network aria-hidden="true" />
+                        ) : (
+                          <Compass aria-hidden="true" />
+                        )}
+                        Show in {entry.label}
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </aside>,
+        container,
+      )}
+      <DetailInspector
+        opened={opened}
+        onClose={close}
+        title="Knowledge lineage"
+        closeOnEscape={!nestedOpen}
+        returnFocus={false}
+      >
+        <div ref={mount} className="flex min-h-full flex-col" />
+      </DetailInspector>
+    </>
   );
 }
 
 /**
- * Pathless layout route component wrapping the four Knowledge routes. It stays
+ * Pathless layout route component wrapping the Knowledge routes. It stays
  * mounted across view switches, so the inspector region is a single instance
- * while each view keeps its own URL and lazy bundle. The contextual sidebar is
- * the sole navigation between the views; selections are carried through
- * validated URL state by each page. Brain changes never carry a selection.
+ * while each view keeps its own URL and lazy bundle. Memory, Sources,
+ * Repositories and Explore share one Explore frame (compact header and view
+ * switcher); Graph is full-bleed, with nothing stacked above its canvas.
+ * Selections are carried through validated URL state by each page. Brain
+ * changes never carry a selection.
  */
 export function KnowledgeSurface() {
   const brain = useBrain();
   const view = useKnowledgeView();
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const explore = path.split("/")[3] === "explore";
+  const framed = view !== "graph";
   const [selection, setSelection] = useState<KnowledgeSelection>(null);
   const [actions, setActions] = useState<ReactNode>(null);
   const [nestedOpen, setNestedOpen] = useState(false);
+  const [actionSlot, setActionSlot] = useState<HTMLDivElement | null>(null);
+  const [counts, setCounts] = useState<Partial<Record<ExploreView, number>>>(
+    {},
+  );
   const select = useCallback(
     (next: KnowledgeSelection, controls?: ReactNode) => {
       setSelection(next);
@@ -1117,17 +1455,27 @@ export function KnowledgeSurface() {
     },
     [],
   );
+  const setCount = useCallback(
+    (target: ExploreView, count: number | null) =>
+      setCounts((previous) =>
+        (previous[target] ?? null) === count
+          ? previous
+          : { ...previous, [target]: count ?? undefined },
+      ),
+    [],
+  );
   // Brain switches clear the selection: an identifier from one Brain is never
   // substituted into another. View switches are cleared by each page's own
   // unmount cleanup so a deep-linked selection for the arriving view (whose
   // effect runs first) survives the transition.
-  const firstBrain = useRef(true);
+  // A Brain id (not a "first run" flag) decides, so development double
+  // effects never clear a deep-linked selection on mount.
+  const shownBrain = useRef(brain.id);
   useEffect(() => {
-    if (firstBrain.current) {
-      firstBrain.current = false;
-      return;
-    }
+    if (shownBrain.current === brain.id) return;
+    shownBrain.current = brain.id;
     select(null);
+    setCounts({});
   }, [brain.id, select]);
   const value = useMemo(
     () => ({
@@ -1140,14 +1488,59 @@ export function KnowledgeSurface() {
     }),
     [selection, select, actions, nestedOpen],
   );
+  const frame = useMemo(
+    () => ({ actions: actionSlot, setCount }),
+    [actionSlot, setCount],
+  );
+  const heading = explore
+    ? "Explore"
+    : (knowledgeViews.find((entry) => entry.view === view)?.label ?? "Explore");
   return (
     <KnowledgeSelectionContext.Provider value={value}>
-      <div className="knowledge-surface" data-knowledge-view={view}>
-        <div className="knowledge-view-region">
-          <Outlet />
+      <ExploreFrameContext.Provider value={frame}>
+        <div
+          className="knowledge-surface flex min-h-0 min-w-0 flex-1 flex-col"
+          data-knowledge-view={view}
+        >
+          <Page width={framed ? "wide" : "full"}>
+            {framed ? (
+              <PageHeader
+                title={heading}
+                description="Everything this Brain knows, with the evidence behind it."
+                actions={
+                  <div
+                    ref={setActionSlot}
+                    className="flex items-center gap-2"
+                  />
+                }
+              />
+            ) : null}
+            <div
+              className={cn(
+                "flex min-w-0 flex-col",
+                framed ? "gap-4" : "min-h-0 flex-1",
+              )}
+            >
+              {framed ? (
+                <KnowledgeSwitcher
+                  view={view}
+                  explore={explore}
+                  counts={counts}
+                />
+              ) : null}
+              <div
+                className={cn(
+                  "knowledge-view-region flex min-w-0 flex-col",
+                  framed ? "gap-4" : "min-h-0 flex-1",
+                )}
+              >
+                <Outlet />
+              </div>
+            </div>
+          </Page>
         </div>
         <KnowledgeInspectorRegion view={view} />
-      </div>
+      </ExploreFrameContext.Provider>
     </KnowledgeSelectionContext.Provider>
   );
 }

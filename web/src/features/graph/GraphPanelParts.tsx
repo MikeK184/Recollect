@@ -1,24 +1,23 @@
-import { iconSize } from "../../design/tokens";
 import {
   ChartNoAxesCombined,
+  ChevronDown,
   Info,
   List,
-  MoreHorizontal,
+  Network,
   Route,
   SlidersHorizontal,
 } from "lucide-react";
-import { Network } from "lucide-react";
 import {
   Alert,
   Badge,
   Button,
   Card,
-  Group,
-  Menu,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   SegmentedControl,
-  Stack,
-  Text,
-} from "@mantine/core";
+} from "../../components/ui";
 import type { Brain } from "../../api";
 import { ClaimDialog, EvidenceDialog } from "../../ClaimsPanel";
 import { EmptyState } from "../../components/AsyncState";
@@ -37,7 +36,7 @@ export type GraphGroups = NonNullable<
 >["groups"];
 
 export function Failure({ error }: { error: Error | null }) {
-  return error ? <Alert color="red">{error.message}</Alert> : null;
+  return error ? <Alert variant="destructive">{error.message}</Alert> : null;
 }
 
 export function GraphEntityCard({
@@ -57,67 +56,66 @@ export function GraphEntityCard({
 }) {
   return (
     <Card
-      withBorder
-      p="sm"
+      className="grid min-w-0 gap-2 p-3 [overflow-wrap:anywhere]"
       data-testid={choose ? "graph-entity" : "graph-path-entity"}
     >
-      <Stack gap="xs">
-        <Group justify="space-between">
-          <Text fw={600} style={{ overflowWrap: "anywhere", minWidth: 0 }}>
-            {n.evidence.label}
-          </Text>
-          <Badge>{label(n.evidence.kind)}</Badge>
-        </Group>
-        <Text size="xs" style={{ overflowWrap: "anywhere" }}>
-          {n.key}
-        </Text>
-        {n.evidence.provenance[0]?.repository_id && (
-          <Text size="sm" style={{ overflowWrap: "anywhere" }}>
-            {repositories?.find(
-              (r) => r.id === n.evidence.provenance[0]?.repository_id,
-            )?.canonical_origin ?? n.evidence.provenance[0].repository_id}
-            {n.evidence.provenance[0].path
-              ? ` · ${n.evidence.provenance[0].path}`
-              : ""}
-          </Text>
-        )}
-        {n.evidence.provenance[0]?.revision && (
-          <Text size="xs" style={{ overflowWrap: "anywhere" }}>
-            Commit: {n.evidence.provenance[0].revision}
-          </Text>
-        )}
-        {n.evidence.claim && (
-          <Text size="xs">
-            {label(n.evidence.claim.review)} ·{" "}
-            {label(n.evidence.claim.freshness)} ·{" "}
-            {label(n.evidence.claim.operational)}
-          </Text>
-        )}
-        <Text size="xs" c="dimmed">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <p className="m-0 min-w-0 text-body font-semibold text-foreground">
+          {n.evidence.label}
+        </p>
+        <Badge>{label(n.evidence.kind)}</Badge>
+      </div>
+      <p className="mono m-0 text-caption text-muted-foreground">{n.key}</p>
+      {n.evidence.provenance[0]?.repository_id && (
+        <p className="m-0 text-label text-foreground-secondary">
+          {repositories?.find(
+            (r) => r.id === n.evidence.provenance[0]?.repository_id,
+          )?.canonical_origin ?? n.evidence.provenance[0].repository_id}
+          {n.evidence.provenance[0].path
+            ? ` · ${n.evidence.provenance[0].path}`
+            : ""}
+        </p>
+      )}
+      {n.evidence.provenance[0]?.revision && (
+        <p className="m-0 text-caption text-muted-foreground">
+          Commit:{" "}
+          <span className="mono">{n.evidence.provenance[0].revision}</span>
+        </p>
+      )}
+      {n.evidence.claim && (
+        <p className="m-0 text-caption text-foreground-secondary">
+          {label(n.evidence.claim.review)} ·{" "}
+          {label(n.evidence.claim.freshness)} ·{" "}
+          {label(n.evidence.claim.operational)}
+        </p>
+      )}
+      {!!n.evidence.qualifications.length && (
+        <p className="m-0 text-caption text-muted-foreground">
           {n.evidence.qualifications.map(label).join(" · ")}
-        </Text>
-        <Group>
-          <Button size="xs" variant="light" onClick={() => onInspect(n)}>
-            Inspect evidence
-          </Button>
-          {choose && (
-            <>
-              <Button size="xs" variant="subtle" onClick={() => onStart(n.key)}>
-                Use as start
-              </Button>
-              <Button size="xs" variant="subtle" onClick={() => onEnd(n.key)}>
-                Use as end
-              </Button>
-            </>
-          )}
-        </Group>
-      </Stack>
+        </p>
+      )}
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        <Button size="sm" variant="secondary" onClick={() => onInspect(n)}>
+          Inspect evidence
+        </Button>
+        {choose && (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => onStart(n.key)}>
+              Use as start
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onEnd(n.key)}>
+              Use as end
+            </Button>
+          </>
+        )}
+      </div>
     </Card>
   );
 }
 
-// Canvas chrome: kind selection, filters, path, insights, status and entity
-// pages live in one compact row above the canvas region.
+// Evidence perspective tools in the header card: graph kind and the
+// secondary tools menu (path, insights, status, entities). They float on the
+// canvas with the page header instead of stacking above it.
 export function GraphToolbar({
   scope,
   readable,
@@ -130,9 +128,13 @@ export function GraphToolbar({
   onOpen: (drawer: GraphDrawer) => void;
 }) {
   return (
-    <div className="feature-toolbar graph-chrome" data-graph-chrome="">
+    <div
+      className="feature-toolbar flex flex-wrap items-center gap-1.5"
+      data-graph-chrome=""
+    >
       <SegmentedControl
-        aria-label="Graph kind"
+        size="sm"
+        label="Graph kind"
         value={scope.kind}
         data={[
           { value: "knowledge", label: "Knowledge" },
@@ -141,52 +143,46 @@ export function GraphToolbar({
         ]}
         onChange={onKindChange}
       />
-      <Button
-        variant="default"
-        leftSection={<SlidersHorizontal size={iconSize.small} />}
-        onClick={() => onOpen("filters")}
-      >
-        Filters
-      </Button>
-      <Menu position="bottom-end" withinPortal>
-        <Menu.Target>
-          <Button
-            variant="subtle"
-            ml="auto"
-            leftSection={<MoreHorizontal size={iconSize.small} />}
-          >
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm">
             Graph tools
+            <ChevronDown aria-hidden="true" />
           </Button>
-        </Menu.Target>
-        <Menu.Dropdown>
-          <Menu.Item
-            leftSection={<Route size={iconSize.small} />}
-            onClick={() => onOpen("path")}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem
             disabled={!readable}
+            onSelect={() => onOpen("path")}
           >
+            <Route aria-hidden="true" />
             Find path
-          </Menu.Item>
-          <Menu.Item
-            leftSection={<ChartNoAxesCombined size={iconSize.small} />}
-            onClick={() => onOpen("insights")}
-          >
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onOpen("insights")}>
+            <ChartNoAxesCombined aria-hidden="true" />
             Insights
-          </Menu.Item>
-          <Menu.Item
-            leftSection={<Info size={iconSize.small} />}
-            onClick={() => onOpen("status")}
-          >
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onOpen("status")}>
+            <Info aria-hidden="true" />
             Graph status
-          </Menu.Item>
-          <Menu.Item
-            leftSection={<List size={iconSize.small} />}
-            onClick={() => onOpen("entities")}
-          >
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onOpen("entities")}>
+            <List aria-hidden="true" />
             Entities
-          </Menu.Item>
-        </Menu.Dropdown>
-      </Menu>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
+  );
+}
+
+/** Opens the scope editor; sits beside the applied scope it changes. */
+export function GraphFiltersButton({ onOpen }: { onOpen: () => void }) {
+  return (
+    <Button variant="secondary" size="sm" onClick={onOpen}>
+      <SlidersHorizontal aria-hidden="true" />
+      Filters
+    </Button>
   );
 }
 
@@ -198,53 +194,53 @@ export function GraphScopeSummary({
   availableGroups: GraphGroups;
 }) {
   return (
-    <div className="feature-scope graph-chrome" data-graph-chrome="">
-      <Badge variant="light" color="gray">
+    <div
+      className="feature-scope flex flex-wrap items-center gap-1.5"
+      data-graph-chrome=""
+      aria-label="Applied graph scope"
+    >
+      <Badge variant="outline">
         {scope.mode === "investigation"
           ? "Include uncertainties"
           : (evidenceModes.find((mode) => mode.value === scope.mode)?.label ??
             label(scope.mode))}
       </Badge>
-      <Text size="xs" c="dimmed">
+      <Badge variant="outline">
         {(scope.selection.repository_ids ?? []).length
           ? `${(scope.selection.repository_ids ?? []).length} selected repositories`
           : "All repositories in this Brain"}
-      </Text>
+      </Badge>
       {scope.selection.environment_id && (
-        <Badge variant="light">
+        <Badge>
           {availableGroups.find(
             (group) => group.id === scope.selection.environment_id,
           )?.name ?? "Selected environment"}
         </Badge>
       )}
       {scope.snapshot_id && (
-        <Badge variant="outline">
+        <Badge variant="outline" className="mono">
           Snapshot {scope.snapshot_id.slice(0, 8)}
         </Badge>
       )}
       {scope.manifest_revision_id && (
-        <Badge variant="outline">
+        <Badge variant="outline" className="mono">
           Manifest {scope.manifest_revision_id.slice(0, 8)}
         </Badge>
       )}
       {scope.fact_at && (
-        <Badge variant="light">
-          Fact time {new Date(scope.fact_at).toLocaleString()}
-        </Badge>
+        <Badge>Fact time {new Date(scope.fact_at).toLocaleString()}</Badge>
       )}
       {!!(scope.selection.area_ids ?? []).length && (
-        <Badge variant="light">
-          {(scope.selection.area_ids ?? []).length} areas
-        </Badge>
+        <Badge>{(scope.selection.area_ids ?? []).length} areas</Badge>
       )}
       {scope.collection_id && (
-        <Badge variant="light">
+        <Badge>
           {availableGroups.find((group) => group.id === scope.collection_id)
             ?.name ?? "Selected collection"}
         </Badge>
       )}
       {!!scope.relations.length && (
-        <Badge variant="light">{scope.relations.map(label).join(", ")}</Badge>
+        <Badge>{scope.relations.map(label).join(", ")}</Badge>
       )}
     </div>
   );

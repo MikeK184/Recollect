@@ -1,6 +1,6 @@
-import { Tabs } from "@mantine/core";
 import type { ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 export function useFeatureTab(allowed: readonly string[], fallback: string) {
   const selected = useRouterState({
@@ -21,30 +21,39 @@ export function useFeatureTab(allowed: readonly string[], fallback: string) {
   };
   return [tab, setTab] as const;
 }
+
+/** Intra-page tabs held in validated URL state (`?tab=`). */
 export function FeatureTabs({
   tabs,
   value,
   onChange,
   children,
+  actions,
 }: {
-  tabs: readonly { value: string; label: string }[];
+  tabs: readonly { value: string; label: string; count?: ReactNode }[];
   value: string;
   onChange: (value: string | null) => void;
   children: ReactNode;
+  /** Controls aligned with the tab row, at its right. */
+  actions?: ReactNode;
 }) {
   return (
-    <Tabs value={value} onChange={onChange} className="feature-tabs">
-      <Tabs.List mb="lg">
-        {tabs.map((tab) => (
-          <Tabs.Tab key={tab.value} value={tab.value}>
-            {tab.label}
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
+    <Tabs value={value} onValueChange={onChange}>
+      <div className="flex items-end gap-3 border-b border-border">
+        <TabsList className="min-w-0 flex-1 border-b-0">
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+              {tab.count}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {actions && <div className="flex shrink-0 items-center gap-2 pb-1.5">{actions}</div>}
+      </div>
       {tabs.map((tab) => (
-        <Tabs.Panel key={tab.value} value={tab.value}>
+        <TabsContent key={tab.value} value={tab.value}>
           {tab.value === value ? children : null}
-        </Tabs.Panel>
+        </TabsContent>
       ))}
     </Tabs>
   );

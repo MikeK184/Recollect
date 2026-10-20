@@ -1,9 +1,18 @@
-import { Badge, Button, Select, Switch, TextInput } from "@mantine/core";
-import { BookOpen, Pencil, Plus } from "lucide-react";
+import { BookOpen, Layers, Pencil, Plus } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Input,
+  Select,
+  StatusBadge,
+  Switch,
+  Tile,
+} from "./components/ui";
 import type { McpProfileCardProps, ProfileState } from "./McpProfileState";
 
 // The card heading (name, environment, enabled state, edit entry) and the
-// description line beneath it.
+// description line beneath it. The environment editor replaces its badge in
+// the same metadata row; it never moves into the Enabled/action area.
 export function McpProfileHeader({
   state,
   props,
@@ -30,117 +39,122 @@ export function McpProfileHeader({
   } = state;
   return (
     <>
-      <header className="mcp-tool-group-heading">
-        <div className="management-icon connection-icon">
+      <header className="flex items-start gap-3 border-b border-border px-4 py-3.5">
+        <Tile tone="muted" className="mt-0.5">
           <BookOpen aria-hidden="true" />
-        </div>
-        <div className="mcp-tool-group-identity">
+        </Tile>
+        <div className="min-w-0 flex-1">
           {editing && canManage ? (
-            <TextInput
-              size="xs"
+            <Input
+              size="sm"
               aria-label="Tool group name"
               placeholder="Tool group name"
               required
               maxLength={120}
-              className="mcp-inline-title"
+              className="max-w-[320px] font-medium"
               value={name}
               onChange={(e) =>
                 setInput({ ...input, name: e.currentTarget.value })
               }
             />
           ) : (
-            <h2>{name}</h2>
+            <h2 className="m-0 truncate text-title font-semibold text-foreground">
+              {name}
+            </h2>
           )}
-          <div className="mcp-tool-group-meta">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {editing && canManage && environments.length > 0 ? (
-              <Select
-                className="mcp-inline-environment"
-                aria-label="Tool group environment"
-                size="xs"
-                clearable
-                disabled={save.isPending || brain.archived}
-                placeholder="Brain-wide"
-                value={input.environment_id}
-                data={environments}
-                onChange={(value) =>
-                  setInput({ ...input, environment_id: value })
-                }
-              />
+              <div className="w-[220px]">
+                <Select
+                  aria-label="Tool group environment"
+                  size="sm"
+                  clearable
+                  disabled={save.isPending || brain.archived}
+                  placeholder="Brain-wide"
+                  value={input.environment_id}
+                  data={environments}
+                  onChange={(value) =>
+                    setInput({ ...input, environment_id: value })
+                  }
+                />
+              </div>
             ) : (
-              <Badge
-                className="mcp-environment-badge"
-                variant="light"
-                color="brand"
-              >
-                {environments.find(
-                  (e) =>
-                    e.value ===
-                    (editing ? input.environment_id : profile?.environment_id),
-                )?.label ?? "Brain-wide"}
+              <Badge variant="outline" className="max-w-[220px]">
+                <Layers aria-hidden="true" />
+                <span className="truncate">
+                  {environments.find(
+                    (e) =>
+                      e.value ===
+                      (editing
+                        ? input.environment_id
+                        : profile?.environment_id),
+                  )?.label ?? "Brain-wide"}
+                </span>
               </Badge>
             )}
-            <Badge
-              className="mcp-connection-count"
-              variant="light"
-              color="gray"
-            >
+            <Badge variant="default" className="mono">
               {connectionIds.length} MCP
               {connectionIds.length === 1 ? "" : "s"}
             </Badge>
           </div>
         </div>
-        {editing && canManage ? (
-          <Switch
-            size="xs"
-            label="Enabled"
-            checked={input.enabled}
-            disabled={brain.archived || save.isPending}
-            onChange={(e) =>
-              setInput({ ...input, enabled: e.currentTarget.checked })
-            }
-          />
-        ) : (
-          <Badge variant="light" color={profile?.enabled ? "brand" : "gray"}>
-            {profile?.enabled ? "Enabled" : "Disabled"}
-          </Badge>
-        )}
-        {!editing && (canManage || canShare) && (
-          <Button
-            variant="subtle"
-            size="compact-sm"
-            leftSection={<Pencil size={15} />}
-            aria-label={`Edit ${profile?.name ?? "tool group"}`}
-            disabled={brain.archived || !detail.data || !!detail.error}
-            onClick={edit}
-          >
-            Edit
-          </Button>
-        )}
+        <div className="flex shrink-0 items-center gap-2 pt-0.5">
+          {editing && canManage ? (
+            <Switch
+              label="Enabled"
+              checked={input.enabled}
+              disabled={brain.archived || save.isPending}
+              onChange={(e) =>
+                setInput({ ...input, enabled: e.currentTarget.checked })
+              }
+            />
+          ) : (
+            <StatusBadge state={profile?.enabled ? "positive" : "neutral"}>
+              {profile?.enabled ? "Enabled" : "Disabled"}
+            </StatusBadge>
+          )}
+          {!editing && (canManage || canShare) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Edit ${profile?.name ?? "tool group"}`}
+              disabled={brain.archived || !detail.data || !!detail.error}
+              onClick={edit}
+            >
+              <Pencil aria-hidden="true" />
+              Edit
+            </Button>
+          )}
+        </div>
       </header>
       {editing && canManage && (showDescription || description) ? (
-        <TextInput
-          size="xs"
-          className="mcp-tool-group-description"
-          aria-label="Tool group description"
-          placeholder="Description (optional)"
-          value={input.description}
-          maxLength={2000}
-          onChange={(e) =>
-            setInput({ ...input, description: e.currentTarget.value })
-          }
-        />
+        <div className="px-4 pt-3">
+          <Input
+            size="sm"
+            aria-label="Tool group description"
+            placeholder="Description (optional)"
+            value={input.description}
+            maxLength={2000}
+            onChange={(e) =>
+              setInput({ ...input, description: e.currentTarget.value })
+            }
+          />
+        </div>
       ) : editing && canManage ? (
-        <Button
-          className="mcp-add-description"
-          variant="subtle"
-          size="compact-xs"
-          leftSection={<Plus size={13} />}
-          onClick={() => setShowDescription(true)}
-        >
-          Add description
-        </Button>
+        <div className="px-3 pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDescription(true)}
+          >
+            <Plus aria-hidden="true" />
+            Add description
+          </Button>
+        </div>
       ) : description ? (
-        <p className="mcp-tool-group-description">{description}</p>
+        <p className="m-0 px-4 pt-3 text-label text-muted-foreground">
+          {description}
+        </p>
       ) : null}
     </>
   );

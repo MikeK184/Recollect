@@ -1,20 +1,10 @@
 import { CodeBlock } from "./components/CodeBlock";
-import { useEffect, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import type { McpCatalogue } from "./McpPanel";
-import { callLabel, activeCall } from "./McpRuntimePanel";
+import { callLabel, activeCall, CallState } from "./McpRuntimePanel";
 import { McpResolveForm } from "./McpResolveForm";
 import { useContentDeadline } from "./useContentDeadline";
 import { McpObservations } from "./McpObservations";
@@ -22,7 +12,9 @@ import {
   TerminalCard,
   type TerminalStatusTone,
 } from "./components/TerminalCard";
-import "./features/connections/call-inspection.css";
+import { DetailInspector } from "./components/DetailInspector";
+import { Alert, Badge, Button, Modal, Spinner } from "./components/ui";
+import { Disclosure, FactRows } from "./features/connections/ui";
 import { usePollInterval } from "./usePollInterval";
 type Call = components["schemas"]["McpCall"];
 type Resolution = components["schemas"]["McpResolution"];
@@ -63,20 +55,56 @@ function displayedResult(value: unknown): string {
 function ResolutionRow({ resolution: r }: { resolution: Resolution }) {
   const expired = useContentDeadline(r.explanation_expires_at);
   return (
-    <Stack gap={2}>
-      <Text size="sm">
+    <div className="grid gap-0.5 border-t border-border pt-2.5 first:border-t-0 first:pt-0">
+      <p className="m-0 text-label text-foreground">
         {r.kind.replaceAll("_", " ")} · {r.outcome} ·{" "}
-        {new Date(r.created_at).toLocaleString()}
-      </Text>
-      {r.explanation && !expired && <Text size="sm">{r.explanation}</Text>}
-      {r.source_version_id && (
-        <Text size="xs" c="dimmed">
-          Evidence version {r.source_version_id}
-        </Text>
+        <span className="mono text-caption text-muted-foreground">
+          {new Date(r.created_at).toLocaleString()}
+        </span>
+      </p>
+      {r.explanation && !expired && (
+        <p className="m-0 text-label text-foreground-secondary">
+          {r.explanation}
+        </p>
       )}
-    </Stack>
+      {r.source_version_id && (
+        <p className="m-0 text-caption text-muted-foreground">
+          Evidence version{" "}
+          <span className="mono">{r.source_version_id}</span>
+        </p>
+      )}
+    </div>
   );
 }
+
+/** A titled block inside the call record, separated by a hairline. */
+function CallSection({
+  label,
+  children,
+  aside,
+  ...props
+}: {
+  label?: string;
+  children: ReactNode;
+  aside?: ReactNode;
+  "aria-label"?: string;
+}) {
+  return (
+    <section
+      className="grid min-w-0 gap-2.5 border-t border-border pt-4"
+      {...props}
+    >
+      {label && (
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="section-label m-0">{label}</h3>
+          {aside}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
 export function McpCallDialog({
   brain,
   actor,
@@ -84,6 +112,7 @@ export function McpCallDialog({
   id,
   close,
   select,
+  overlay = false,
 }: {
   brain: Brain;
   actor: string;
@@ -91,6 +120,8 @@ export function McpCallDialog({
   id: string;
   close: () => void;
   select: (id: string) => void;
+  /** Above a modal drawer the record opens as a dialog instead of docking. */
+  overlay?: boolean;
 }) {
   const pollFast = usePollInterval("fast");
   const cache = useQueryClient();
@@ -167,233 +198,217 @@ export function McpCallDialog({
       setBusy(false);
     }
   };
-  return (
-    <Modal
-      opened
-      onClose={close}
-      title="Tool call"
-      size="xl"
-      className="mcp-call-inspection"
-      closeOnEscape={!viewingEvidence}
-      closeOnClickOutside={!viewingEvidence}
-      trapFocus={!viewingEvidence}
-    >
-      <Stack>
-        {query.isPending && <Loader size="sm" />}
-        {query.error && (
-          <Alert color="red" title="Call unavailable">
-            {query.error.message}
-            <Button onClick={() => void query.refetch()} variant="light">
+  const body = (
+    <div className="grid min-w-0 gap-4">
+      {query.isPending && <Spinner label="Loading call" />}
+      {query.error && (
+        <Alert
+          variant="destructive"
+          title="Call unavailable"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void query.refetch()}
+            >
               Refresh call
             </Button>
-          </Alert>
-        )}
-        {call && (
-          <>
-            <section className="mcp-call-summary" aria-label="Call summary">
-              <div className="mcp-call-heading">
-                <div>
-                  <h2>{call.tool_name}</h2>
-                  {(connection || profile) && (
-                    <p>
-                      {[connection?.name, profile?.name]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </div>
-                <Badge
-                  color={
-                    call.state === "succeeded"
-                      ? "teal"
-                      : call.state === "unknown"
-                        ? "yellow"
-                        : "gray"
-                  }
-                >
-                  {callLabel(call.state)}
-                </Badge>
+          }
+        >
+          {query.error.message}
+        </Alert>
+      )}
+      {call && (
+        <>
+          <section className="grid min-w-0 gap-3" aria-label="Call summary">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="mono m-0 text-title font-medium text-foreground [overflow-wrap:anywhere]">
+                  {call.tool_name}
+                </h2>
+                {(connection || profile) && (
+                  <p className="m-0 mt-0.5 text-label text-muted-foreground">
+                    {[connection?.name, profile?.name]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
-              <dl className="mcp-call-facts">
-                <div>
-                  <dt>Runs on</dt>
-                  <dd>{runnerName(call.runner_reference)}</dd>
-                </div>
-                <div>
-                  <dt>Scope</dt>
-                  <dd>
-                    {call.scope?.environment?.name ??
-                      call.environment_id ??
-                      "Brain-wide"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Requested</dt>
-                  <dd>{new Date(call.created_at).toLocaleString()}</dd>
-                </div>
-                <div>
-                  <dt>Timeout</dt>
-                  <dd>{call.timeout_seconds} seconds</dd>
-                </div>
-                {call.started_at && (
-                  <div>
-                    <dt>Started</dt>
-                    <dd>{new Date(call.started_at).toLocaleString()}</dd>
-                  </div>
-                )}
-                {call.completed_at && (
-                  <div>
-                    <dt>Finished</dt>
-                    <dd>{new Date(call.completed_at).toLocaleString()}</dd>
-                  </div>
-                )}
-                {call.code && (
-                  <div>
-                    <dt>Result</dt>
-                    <dd>{reasonName(call.code)}</dd>
-                  </div>
-                )}
-              </dl>
-              <details className="mcp-call-technical">
-                <summary>Call identifiers</summary>
-                <dl className="mcp-call-identifiers">
-                  <div>
-                    <dt>Call</dt>
-                    <dd>
-                      <code>{call.id}</code>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Runner</dt>
-                    <dd>
-                      <code>{call.runner_reference}</code>
-                    </dd>
-                  </div>
-                  {call.code && (
-                    <div>
-                      <dt>Code</dt>
-                      <dd>
-                        <code>{call.code}</code>
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </details>
-            </section>
-            {call.scope && (
-              <details className="mcp-call-section mcp-call-technical">
-                <summary>Recorded scope</summary>
-                <CodeBlock
-                  language="json"
-                  code={JSON.stringify(call.scope, null, 2)}
-                />
-              </details>
-            )}
-            {activeCall(call.state) && (
-              <Text size="sm">
-                {call.state === "queued"
-                  ? "Waiting for the selected runner. This request expires after ten minutes."
-                  : "The runner owns this attempt. A missing response can leave completion unknown."}
-              </Text>
-            )}
-            {call.cancel_requested && (
-              <Alert color="yellow">
-                Cancellation requested. This does not establish that an external
-                effect was undone.
-              </Alert>
-            )}
-            {activeCall(call.state) &&
-              (actor === call.actor_id || brain.role === "admin") && (
-                <Button
-                  color="orange"
-                  variant="light"
-                  disabled={call.cancel_requested}
-                  loading={busy}
-                  onClick={() => void action("cancel")}
-                >
-                  Request cancellation
-                </Button>
-              )}
-            {call.state === "unknown" && (
-              <Alert color="yellow" title="Completion unknown">
-                The tool may have performed its effect. A receipt lookup or
-                retained evidence can record the observed outcome; this call
-                will remain in the history.
-              </Alert>
-            )}
-            {(!canUse || call.output_access === "permission_required") && (
-              <Alert color="gray">
-                Profile Use is required to view retained output.
-              </Alert>
-            )}
-            {canUse && (expired || call.output_access === "expired") && (
-              <section
-                className="mcp-call-section mcp-call-output-state"
-                aria-label="Tool output"
-              >
-                <h3>Tool output</h3>
-                <span className="mcp-call-state-label">Expired</span>
-                <p>Retained output has expired.</p>
-              </section>
-            )}
-            {canUse && !expired && call.result != null && (
-              <section className="mcp-call-section" aria-label="Tool output">
-                <h3>Tool output</h3>
-                <TerminalCard
-                  title={`mcp.call · ${call.tool_name}`}
-                  status={{
-                    label: callLabel(call.state),
-                    tone: callStateTone(call.state),
-                  }}
-                  text={displayedResult(call.result)}
-                />
-                <details>
-                  <summary>Full response</summary>
-                  <CodeBlock
-                    language="json"
-                    code={JSON.stringify(call.result, null, 2)}
-                  />
-                </details>
-              </section>
-            )}
-            {call.reconciles_call_id && (
+              <CallState state={call.state} />
+            </div>
+            <FactRows
+              columns={overlay ? 2 : 1}
+              items={[
+                { term: "Runs on", value: runnerName(call.runner_reference) },
+                {
+                  term: "Scope",
+                  value:
+                    call.scope?.environment?.name ??
+                    call.environment_id ??
+                    "Brain-wide",
+                },
+                {
+                  term: "Requested",
+                  value: new Date(call.created_at).toLocaleString(),
+                  mono: true,
+                },
+                {
+                  term: "Timeout",
+                  value: `${call.timeout_seconds} seconds`,
+                  mono: true,
+                },
+                ...(call.started_at
+                  ? [
+                      {
+                        term: "Started",
+                        value: new Date(call.started_at).toLocaleString(),
+                        mono: true,
+                      },
+                    ]
+                  : []),
+                ...(call.completed_at
+                  ? [
+                      {
+                        term: "Finished",
+                        value: new Date(call.completed_at).toLocaleString(),
+                        mono: true,
+                      },
+                    ]
+                  : []),
+                ...(call.code
+                  ? [{ term: "Result", value: reasonName(call.code) }]
+                  : []),
+              ]}
+            />
+            <Disclosure summary="Call identifiers">
+              <FactRows
+                items={[
+                  { term: "Call", value: call.id, mono: true },
+                  { term: "Runner", value: call.runner_reference, mono: true },
+                  ...(call.code
+                    ? [{ term: "Code", value: call.code, mono: true }]
+                    : []),
+                ]}
+              />
+            </Disclosure>
+          </section>
+          {call.scope && (
+            <Disclosure summary="Recorded scope">
+              <CodeBlock
+                language="json"
+                code={JSON.stringify(call.scope, null, 2)}
+              />
+            </Disclosure>
+          )}
+          {activeCall(call.state) && (
+            <p className="m-0 text-label text-foreground-secondary">
+              {call.state === "queued"
+                ? "Waiting for the selected runner. This request expires after ten minutes."
+                : "The runner owns this attempt. A missing response can leave completion unknown."}
+            </p>
+          )}
+          {call.cancel_requested && (
+            <Alert variant="warning" role="status">
+              Cancellation requested. This does not establish that an external
+              effect was undone.
+            </Alert>
+          )}
+          {activeCall(call.state) &&
+            (actor === call.actor_id || brain.role === "admin") && (
               <Button
-                variant="light"
-                onClick={() => select(call.reconciles_call_id!)}
+                variant="destructive-outline"
+                className="justify-self-start"
+                disabled={call.cancel_requested}
+                loading={busy}
+                onClick={() => void action("cancel")}
               >
-                Inspect original call
+                Request cancellation
               </Button>
             )}
-            <section className="mcp-call-section" aria-label="Memory capture">
-              <McpObservations
-                key={call.id}
-                brain={brain}
-                call={call.id}
-                disposition={call.capture_disposition}
-                onInspectChange={setViewingEvidence}
+          {call.state === "unknown" && (
+            <Alert variant="warning" title="Completion unknown">
+              The tool may have performed its effect. A receipt lookup or
+              retained evidence can record the observed outcome; this call will
+              remain in the history.
+            </Alert>
+          )}
+          {(!canUse || call.output_access === "permission_required") && (
+            <Alert role="status">
+              Profile Use is required to view retained output.
+            </Alert>
+          )}
+          {canUse && (expired || call.output_access === "expired") && (
+            <CallSection
+              label="Tool output"
+              aria-label="Tool output"
+              aside={<Badge>Expired</Badge>}
+            >
+              <p className="m-0 text-label text-muted-foreground">
+                Retained output has expired.
+              </p>
+            </CallSection>
+          )}
+          {canUse && !expired && call.result != null && (
+            <CallSection label="Tool output" aria-label="Tool output">
+              <TerminalCard
+                title={`mcp.call · ${call.tool_name}`}
+                status={{
+                  label: callLabel(call.state),
+                  tone: callStateTone(call.state),
+                }}
+                text={displayedResult(call.result)}
               />
-            </section>
-            {canUse &&
-              call.resolutions.map((r) => (
+              <Disclosure summary="Full response">
+                <CodeBlock
+                  language="json"
+                  code={JSON.stringify(call.result, null, 2)}
+                />
+              </Disclosure>
+            </CallSection>
+          )}
+          {call.reconciles_call_id && (
+            <Button
+              variant="secondary"
+              className="justify-self-start"
+              onClick={() => select(call.reconciles_call_id!)}
+            >
+              Inspect original call
+            </Button>
+          )}
+          <CallSection aria-label="Memory capture">
+            <McpObservations
+              key={call.id}
+              brain={brain}
+              call={call.id}
+              disposition={call.capture_disposition}
+              onInspectChange={setViewingEvidence}
+            />
+          </CallSection>
+          {canUse && call.resolutions.length > 0 && (
+            <CallSection label="Recorded outcomes">
+              {call.resolutions.map((r) => (
                 <ResolutionRow key={r.id} resolution={r} />
               ))}
-            {call.state === "unknown" && canUse && !brain.archived && (
-              <Group>
-                {!call.reconciles_call_id && (
-                  <Button
-                    variant="light"
-                    loading={busy}
-                    onClick={() => void action("reconcile")}
-                  >
-                    Look up connector receipt
-                  </Button>
-                )}
-                <Button variant="light" onClick={() => setResolving(true)}>
-                  Record evidence
+            </CallSection>
+          )}
+          {call.state === "unknown" && canUse && !brain.archived && (
+            <div className="flex flex-wrap gap-2">
+              {!call.reconciles_call_id && (
+                <Button
+                  variant="secondary"
+                  loading={busy}
+                  onClick={() => void action("reconcile")}
+                >
+                  Look up connector receipt
                 </Button>
-              </Group>
-            )}
-            {resolving && canUse && (
+              )}
+              <Button variant="secondary" onClick={() => setResolving(true)}>
+                Record evidence
+              </Button>
+            </div>
+          )}
+          {resolving && canUse && (
+            <CallSection label="Reconciliation evidence">
               <McpResolveForm
                 brain={brain.id}
                 call={call.id}
@@ -402,11 +417,34 @@ export function McpCallDialog({
                   refresh();
                 }}
               />
-            )}
-          </>
-        )}
-        {error && <Alert color="red">{error}</Alert>}
-      </Stack>
-    </Modal>
+            </CallSection>
+          )}
+        </>
+      )}
+      {error && <Alert variant="destructive">{error}</Alert>}
+    </div>
+  );
+  if (overlay)
+    return (
+      <Modal
+        opened
+        onClose={close}
+        title="Tool call"
+        size="lg"
+        closeOnClickOutside={!viewingEvidence}
+        closeOnEscape={!viewingEvidence}
+      >
+        {body}
+      </Modal>
+    );
+  return (
+    <DetailInspector
+      opened
+      onClose={close}
+      title="Tool call"
+      closeOnEscape={!viewingEvidence}
+    >
+      {body}
+    </DetailInspector>
   );
 }

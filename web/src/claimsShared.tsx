@@ -1,6 +1,13 @@
-import { Alert, Badge, Button, Group, Text } from "@mantine/core";
+import { FileText } from "lucide-react";
 import type { components } from "./api-schema";
-import { StatusBadge } from "./components/StatusBadge";
+import {
+  Alert,
+  Badge,
+  Button,
+  StatusBadge,
+  type StatusState,
+} from "./components/ui";
+import type { Kind } from "./design/tokens";
 export type Content = components["schemas"]["ClaimContent"];
 export type Revision = components["schemas"]["ClaimRevision"];
 export type View = components["schemas"]["ClaimView"];
@@ -19,6 +26,30 @@ export const kindBadgeColor: Record<string, string> = {
   procedure: "violet",
   handover: "cyan",
 };
+const memoryKindChips: Record<string, { kind: Kind; label: string }> = {
+  claim: { kind: "claim", label: "Claim" },
+  decision: { kind: "decision", label: "Decision" },
+  procedure: { kind: "procedure", label: "Procedure" },
+  handover: { kind: "handover", label: "Handover" },
+};
+/** The category chip for a memory kind; unknown kinds read as claims. */
+export const memoryKindChip = (kind: string) =>
+  memoryKindChips[kind] ?? { kind: "claim" as Kind, label: label(kind) };
+/** Status tone for each separate dimension; the word always stays visible. */
+export const reviewTone = (review: string): StatusState =>
+  review === "accepted"
+    ? "positive"
+    : review === "rejected"
+      ? "negative"
+      : "neutral";
+export const freshnessTone = (freshness: string): StatusState =>
+  freshness === "current"
+    ? "positive"
+    : freshness === "needs_verification"
+      ? "attention"
+      : "neutral";
+export const operationalTone = (operational: string): StatusState =>
+  operational === "verified" ? "positive" : "neutral";
 export const freshOptions = ["current", "needs_verification", "superseded"].map(
   (value) => ({ value, label: label(value) }),
 );
@@ -30,7 +61,7 @@ export const opOptions = [
 ].map((value) => ({ value, label: label(value) }));
 export function Failure({ error }: { error: Error | null }) {
   return error ? (
-    <Alert color="red" title="Request failed">
+    <Alert variant="destructive" title="Request failed">
       {error.message}
     </Alert>
   ) : null;
@@ -47,19 +78,21 @@ export function Pages({
   onChange: (value: number) => void;
 }) {
   return total > 20 ? (
-    <Group justify="space-between">
+    <div className="flex items-center justify-between gap-3">
       <Button
-        variant="subtle"
+        variant="secondary"
+        size="sm"
         disabled={!offset}
         onClick={() => onChange(Math.max(0, offset - 20))}
       >
         Previous page
       </Button>
-      <Text size="xs">
+      <span className="mono text-caption text-muted-foreground">
         {offset + 1}–{Math.min(offset + 20, total)} of {total}
-      </Text>
+      </span>
       <Button
-        variant="subtle"
+        variant="secondary"
+        size="sm"
         disabled={
           nextOffset === null ||
           (nextOffset === undefined && offset + 20 >= total)
@@ -68,35 +101,31 @@ export function Pages({
       >
         Next page
       </Button>
-    </Group>
+    </div>
   ) : null;
 }
 export function States({ view }: { view: View }) {
   return (
-    <Group gap="xs">
-      <Badge color={view.revision.review === "accepted" ? "teal" : "gray"}>
+    <div className="flex flex-wrap gap-1.5">
+      <StatusBadge state={reviewTone(view.revision.review)}>
         Review: {label(view.revision.review)}
-      </Badge>
-      <Badge
-        color={
-          view.eligibility.effective_freshness === "current" ? "blue" : "yellow"
-        }
-      >
+      </StatusBadge>
+      <StatusBadge state={freshnessTone(view.eligibility.effective_freshness)}>
         Freshness: {label(view.eligibility.effective_freshness)}
-      </Badge>
+      </StatusBadge>
       <Badge variant="outline">
         Assessment: {label(view.revision.content.operational)}
       </Badge>
       {view.revision.lifecycle === "withdrawn" && (
-        <Badge color="orange">Withdrawn</Badge>
+        <StatusBadge state="attention">Withdrawn</StatusBadge>
       )}
       {!!view.eligibility.rule_ids?.length && (
-        <Badge color="red">Blocked by review rule</Badge>
+        <StatusBadge state="negative">Blocked by review rule</StatusBadge>
       )}
       {!!view.eligibility.conflicting_claim_ids?.length && (
-        <Badge color="yellow">Unresolved conflict</Badge>
+        <StatusBadge state="attention">Unresolved conflict</StatusBadge>
       )}
-    </Group>
+    </div>
   );
 }
 /** One composite status mark for dense list rows. The three dimensions keep
@@ -108,24 +137,84 @@ export function CompositeStatus({ view }: { view: View }) {
   if (view.eligibility.rule_ids?.length) flags.push("Blocked by review rule");
   if (view.eligibility.conflicting_claim_ids?.length)
     flags.push("Unresolved conflict");
-  const text = [
+  const words = [
     label(view.revision.review),
     ...(view.eligibility.effective_freshness === "current"
       ? []
       : [label(view.eligibility.effective_freshness)]),
     ...flags,
   ].join(" · ");
+  const text = words.charAt(0).toUpperCase() + words.slice(1);
   const full = `Review: ${label(view.revision.review)} · Freshness: ${label(view.eligibility.effective_freshness)} · Operational: ${label(view.revision.content.operational)}`;
-  const state = flags.length
+  const state: StatusState = flags.length
     ? "attention"
-    : view.revision.review === "accepted" &&
-        view.eligibility.effective_freshness === "current"
-      ? "positive"
-      : "neutral";
+    : view.eligibility.effective_freshness === "needs_verification"
+      ? "attention"
+      : view.revision.review === "rejected"
+        ? "negative"
+        : view.revision.review === "accepted" &&
+            view.eligibility.effective_freshness === "current"
+          ? "positive"
+          : "neutral";
   return (
-    <div className="memory-record-status" aria-label={full} title={full}>
-      <StatusBadge state={state}>{text}</StatusBadge>
+    <div
+      className="memory-record-status relative flex min-w-0 items-center"
+      title={full}
+    >
+      <span aria-hidden="true" className="flex min-w-0">
+        <StatusBadge state={state} className="max-w-full">
+          <span className="truncate">{text}</span>
+        </StatusBadge>
+      </span>
+      {/* Visually hidden (clipped, not overflow-hidden) full dimension text. */}
+      <span className="absolute -m-px size-px overflow-clip whitespace-nowrap border-0 p-0 [clip-path:inset(50%)]">
+        {full}
+      </span>
     </div>
+  );
+}
+/**
+ * One exact supporting evidence item as a small card. Its accessible name is
+ * the full "label · kind · availability · lines" line the card displays.
+ */
+export function EvidenceButton({
+  evidence,
+  support,
+  onOpen,
+  className,
+}: {
+  evidence: Evidence;
+  support?: Content["supports"][number];
+  onOpen: () => void;
+  className?: string;
+}) {
+  const lines = support?.line_from
+    ? ` · lines ${support.line_from}–${support.line_to}`
+    : "";
+  return (
+    <button
+      type="button"
+      aria-label={`${evidence.label} · ${label(evidence.kind)} · ${label(evidence.availability)}${lines}`}
+      className={
+        "grid w-full gap-1 rounded-md border border-border bg-card px-3 py-2.5 text-left transition-[border-color,box-shadow,transform] duration-fast ease-standard hover:-translate-y-px hover:border-border-strong hover:shadow-sm focus-visible:outline-2 focus-visible:outline-ring " +
+        (className ?? "")
+      }
+      onClick={onOpen}
+    >
+      <span className="flex min-w-0 items-center gap-1.5 text-label font-medium text-foreground">
+        <FileText
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          {evidence.label}
+        </span>
+      </span>
+      <span className="mono text-caption text-muted-foreground">
+        {label(evidence.kind)} · {label(evidence.availability)}
+        {lines}
+      </span>
+    </button>
   );
 }
 export const emptyContent = (): Content => ({

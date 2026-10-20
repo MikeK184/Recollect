@@ -1,19 +1,23 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Power, Server } from "lucide-react";
+import { client, result, type Brain } from "./api";
+import { SkeletonRows } from "./components/Skeleton";
 import {
   Alert,
   Badge,
   Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
+  StatusBadge,
   Table,
-  Text,
-  Title,
-} from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useFocusReturn } from "@mantine/hooks";
-import { client, result, type Brain } from "./api";
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+} from "./components/ui";
+import { StatusDot } from "./components/StatusDot";
+import { useFocusReturn } from "./lib/hooks";
 import type { McpCatalogue } from "./McpPanel";
 import { McpCallDialog } from "./McpCallDialog";
 import { usePollInterval } from "./usePollInterval";
@@ -31,6 +35,33 @@ export const callLabel = (state: string) =>
   })[state] ?? state;
 export const activeCall = (state: string) =>
   ["queued", "starting", "running"].includes(state);
+
+/** Call state as colour + icon + word; live states pulse only while active. */
+export function CallState({ state }: { state: string }) {
+  if (activeCall(state))
+    return (
+      <Badge variant="brand">
+        <StatusDot live size={6} className="mr-0.5" />
+        {callLabel(state)}
+      </Badge>
+    );
+  return (
+    <StatusBadge
+      state={
+        state === "succeeded"
+          ? "positive"
+          : state === "unknown"
+            ? "attention"
+            : ["tool_error", "failed"].includes(state)
+              ? "negative"
+              : "neutral"
+      }
+    >
+      {callLabel(state)}
+    </StatusBadge>
+  );
+}
+
 export function McpRuntimePanel({
   brain,
   actor,
@@ -39,6 +70,7 @@ export function McpRuntimePanel({
   select,
   session,
   released,
+  overlay = false,
 }: {
   brain: Brain;
   actor: string;
@@ -47,6 +79,8 @@ export function McpRuntimePanel({
   select: (id: string | null) => void;
   session: string;
   released: () => void;
+  /** Open calls as a dialog above a modal drawer instead of docking. */
+  overlay?: boolean;
 }) {
   const pollFast = usePollInterval("fast");
   const pollNormal = usePollInterval("normal");
@@ -104,129 +138,174 @@ export function McpRuntimePanel({
   const data = calls.error ? undefined : calls.data;
   const status = runtime.error ? undefined : runtime.data;
   return (
-    <Stack component="section" aria-label="MCP activity" mt="lg">
-      <Title order={4}>Tool calls and runners</Title>
-      <Group>
+    <section aria-label="MCP activity" className="grid min-w-0 gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="m-0 text-title font-semibold text-foreground">
+            Tool calls and runners
+          </h2>
+          <p className="m-0 mt-0.5 text-label text-muted-foreground">
+            Release this page’s idle connections. Active calls can finish.
+          </p>
+        </div>
         <Button
-          size="xs"
-          variant="light"
+          size="sm"
+          variant="secondary"
           loading={releasing}
           onClick={() => void release()}
         >
+          <Power aria-hidden="true" />
           End tool session
         </Button>
-        <Text size="xs" c="dimmed">
-          Release this page’s idle connections. Active calls can finish.
-        </Text>
-      </Group>
-      {releaseError && <Alert color="red">{releaseError}</Alert>}
+      </div>
+      {releaseError && <Alert variant="destructive">{releaseError}</Alert>}
       {(calls.error || runtime.error) && (
-        <Alert color="red" title="Activity unavailable">
+        <Alert
+          variant="destructive"
+          title="Activity unavailable"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                void calls.refetch();
+                void runtime.refetch();
+              }}
+            >
+              Refresh activity
+            </Button>
+          }
+        >
           {(calls.error || runtime.error)?.message}
-          <Button
-            variant="light"
-            size="xs"
-            onClick={() => {
-              void calls.refetch();
-              void runtime.refetch();
-            }}
-          >
-            Refresh activity
-          </Button>
         </Alert>
       )}
-      {calls.isPending && <Loader size="sm" />}
+      {calls.isPending && (
+        <div className="rounded-lg border border-border bg-card px-4 py-1">
+          <SkeletonRows rows={3} label="Loading tool calls…" />
+        </div>
+      )}
       {status && (
-        <>
+        <div className="grid gap-2">
           {status.runners.length === 0 && (
-            <Text size="sm" c="dimmed">
+            <p className="m-0 text-label text-muted-foreground">
               No configured runner targets.
-            </Text>
+            </p>
           )}
-          {status.runners.map((r) => (
-            <Group key={r.runner_reference}>
-              <Text size="sm">{r.runner_reference}</Text>
-              <Badge color={r.available ? "teal" : "yellow"}>
-                {r.available ? "Runner available" : "Runner unavailable"}
-              </Badge>
-            </Group>
-          ))}
+          {status.runners.length > 0 && (
+            <ul className="m-0 grid list-none gap-1.5 p-0">
+              {status.runners.map((r) => (
+                <li
+                  key={r.runner_reference}
+                  className="flex min-w-0 items-center gap-2.5 rounded-md border border-border bg-card px-3 py-2"
+                >
+                  <Server
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                  <span className="mono min-w-0 flex-1 truncate text-caption text-foreground">
+                    {r.runner_reference}
+                  </span>
+                  <StatusBadge state={r.available ? "positive" : "attention"}>
+                    {r.available ? "Runner available" : "Runner unavailable"}
+                  </StatusBadge>
+                </li>
+              ))}
+            </ul>
+          )}
           {status.instances.map((i) => (
-            <Card withBorder key={i.id} padding="sm">
-              <Group justify="space-between">
-                <Text size="sm">
+            <div
+              key={i.id}
+              className="grid gap-1 rounded-md border border-border bg-card px-3 py-2.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate text-label font-medium text-foreground">
                   {catalogue.connections.find((c) => c.id === i.connection_id)
                     ?.name ?? "Connection"}
-                </Text>
-                <Badge color={i.state === "ready" ? "teal" : "gray"}>
-                  {i.state === "ready" ? "Connected" : i.state}
-                </Badge>
-              </Group>
-              <Text size="xs">
+                </span>
+                {i.state === "ready" ? (
+                  <Badge variant="brand">
+                    <StatusDot live={i.active_calls > 0} size={6} />
+                    Connected
+                  </Badge>
+                ) : (
+                  <Badge>{i.state}</Badge>
+                )}
+              </div>
+              <span className="mono text-caption text-muted-foreground">
                 {i.active_calls} active calls · useful idle {i.idle_seconds}s ·{" "}
                 {i.runner_reference}
-              </Text>
-            </Card>
+              </span>
+            </div>
           ))}
-        </>
+        </div>
       )}
       {data && data.calls.length === 0 && (
-        <Text size="sm">
+        <p className="m-0 text-body text-muted-foreground">
           No tool calls yet. Open a profile’s cached tools to run an approved
           tool.
-        </Text>
+        </p>
       )}
       {data && data.calls.length > 0 && (
-        <Table striped withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Tool</Table.Th>
-              <Table.Th>State</Table.Th>
-              <Table.Th>Runner</Table.Th>
-              <Table.Th>Started</Table.Th>
-              <Table.Th>Details</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.calls.map((call) => (
-              <Table.Tr key={call.id}>
-                <Table.Td>{call.tool_name}</Table.Td>
-                <Table.Td>{callLabel(call.state)}</Table.Td>
-                <Table.Td>{call.runner_reference}</Table.Td>
-                <Table.Td>
-                  {new Date(call.created_at).toLocaleString()}
-                </Table.Td>
-                <Table.Td>
-                  <Button
-                    size="xs"
-                    variant="light"
-                    onClick={() => select(call.id)}
-                  >
-                    Inspect call
-                  </Button>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        <TableWrap>
+          <Table>
+            <TableHead>
+              <tr>
+                <TableHeader>Tool</TableHeader>
+                <TableHeader>State</TableHeader>
+                <TableHeader>Runner</TableHeader>
+                <TableHeader>Started</TableHeader>
+                <TableHeader className="text-right">Details</TableHeader>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {data.calls.map((call) => (
+                <TableRow key={call.id} selected={selected === call.id}>
+                  <TableCell primary className="mono text-label">
+                    {call.tool_name}
+                  </TableCell>
+                  <TableCell>
+                    <CallState state={call.state} />
+                  </TableCell>
+                  <TableCell className="mono max-w-[200px] truncate text-caption">
+                    {call.runner_reference}
+                  </TableCell>
+                  <TableCell className="mono text-caption">
+                    {new Date(call.created_at).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => select(call.id)}
+                    >
+                      Inspect call
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableWrap>
       )}
       {data && (cursor || data.next_cursor) && (
-        <Group>
+        <div className="flex gap-2">
           <Button
-            variant="light"
+            variant="secondary"
+            size="sm"
             disabled={!cursor}
             onClick={() => setCursor(undefined)}
           >
             Latest calls
           </Button>
           <Button
-            variant="light"
+            variant="secondary"
+            size="sm"
             disabled={!data.next_cursor}
             onClick={() => setCursor(data.next_cursor ?? undefined)}
           >
             Older calls
           </Button>
-        </Group>
+        </div>
       )}
       {selected && (
         <McpCallDialog
@@ -237,8 +316,9 @@ export function McpRuntimePanel({
           id={selected}
           close={() => select(null)}
           select={select}
+          overlay={overlay}
         />
       )}
-    </Stack>
+    </section>
   );
 }

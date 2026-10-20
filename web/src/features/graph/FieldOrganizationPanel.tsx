@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { SectionHeader } from "../../components/PageHeader";
+import { InspectorSection } from "../../components/Inspector";
 import {
   Alert,
   Badge,
   Button,
   Card,
-  Group,
-  Loader,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+  Code,
+  Spinner,
+  StatusBadge,
+} from "../../components/ui";
+import { GraphInspector } from "./GraphStage";
+import { stateTone } from "./GraphStatusDrawer";
 import { client, result, type Brain } from "../../api";
 import type { components } from "../../api-schema";
 import { ClaimDialog, EvidenceDialog } from "../../ClaimsPanel";
@@ -118,160 +119,169 @@ export function FieldOrganizationPanel({
       : undefined;
   const lower = view?.coverage.counts_are_lower_bounds;
   const number = (n: number) => `${lower ? "≥" : ""}${n}`;
+  const origins = selected
+    ? (view?.origins.filter((o) => o.evidence_key === selected.key) ?? [])
+    : [];
   const inspector = (
-    <aside
-      className="organization-inspector"
-      aria-label="Canonical field inspector"
+    <GraphInspector
+      opened={!!selected}
+      onClose={() => setChoice(null)}
+      title={selected ? words(selected.evidence.kind) : "Field inspector"}
+      label="Canonical field inspector"
+      closeLabel="Close field inspector"
     >
-      <Stack gap="sm">
-        <Title order={4}>{selected?.evidence.label ?? "Field inspector"}</Title>
-        {selected ? (
-          <>
-            <Badge variant="light" w="fit-content">
-              {words(selected.evidence.kind)}
-            </Badge>
-            {view?.origins
-              .filter((o) => o.evidence_key === selected.key)
-              .map((origin) => (
-                <Card key={origin.id} withBorder p="sm">
-                  <Text fw={600} size="sm">
-                    {
-                      view.entities.find((e) => e.id === origin.entity_id)
-                        ?.label
-                    }
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {words(origin.origin_kind)} · exact field
-                  </Text>
-                  <code>{origin.field_pointer}</code>
-                  <Text size="xs" mt="xs">
-                    Canonical name field:{" "}
-                    {
-                      view.entities.find((e) => e.id === origin.entity_id)
-                        ?.label_pointer
-                    }
-                  </Text>
-                  <Text size="xs" mt="xs">
-                    Original reference ID
-                  </Text>
-                  <code className="organization-reference-id">
-                    {origin.value}
-                  </code>
-                  <Text size="xs" mt="xs">
-                    Immutable input revision
-                  </Text>
-                  <code className="organization-reference-id">
-                    {origin.revision_id}
-                  </code>
-                </Card>
-              ))}
-            <Button onClick={() => setOpened(selected)}>
-              Open canonical evidence
-            </Button>
-          </>
-        ) : (
-          <Text size="sm" c="dimmed">
-            Select evidence to inspect its declared canonical field and original
-            identity.
-          </Text>
-        )}
-      </Stack>
-    </aside>
+      {selected && (
+        <>
+          <h3 className="m-0 text-section font-semibold">
+            {selected.evidence.label}
+          </h3>
+          {origins.length > 0 && (
+            <InspectorSection label={`Declared fields · ${origins.length}`}>
+              {origins.map((origin) => {
+                const entity = view?.entities.find(
+                  (e) => e.id === origin.entity_id,
+                );
+                return (
+                  <div key={origin.id} className="grid gap-1.5">
+                    <p className="m-0 text-body font-semibold">
+                      {entity?.label}
+                    </p>
+                    <p className="m-0 text-caption text-muted-foreground">
+                      {words(origin.origin_kind)} · exact field
+                    </p>
+                    <Code className="justify-self-start">
+                      {origin.field_pointer}
+                    </Code>
+                    <p className="m-0 text-caption text-muted-foreground">
+                      Canonical name field:{" "}
+                      <span className="mono">{entity?.label_pointer}</span>
+                    </p>
+                    <p className="m-0 text-caption text-muted-foreground">
+                      Original reference ID
+                    </p>
+                    <Code className="organization-reference-id justify-self-start [overflow-wrap:anywhere] whitespace-normal">
+                      {origin.value}
+                    </Code>
+                    <p className="m-0 text-caption text-muted-foreground">
+                      Immutable input revision
+                    </p>
+                    <Code className="organization-reference-id justify-self-start [overflow-wrap:anywhere] whitespace-normal">
+                      {origin.revision_id}
+                    </Code>
+                  </div>
+                );
+              })}
+            </InspectorSection>
+          )}
+          <Button
+            className="justify-self-start"
+            onClick={() => setOpened(selected)}
+          >
+            Open canonical evidence
+          </Button>
+        </>
+      )}
+    </GraphInspector>
   );
   const evidence = opened ? evidenceChoice(opened) : null;
   return (
     <section
       aria-label="Canonical reference organization"
       data-testid="organization-fields"
+      className="grid gap-3"
     >
-      <Group justify="space-between" mt="lg" mb="sm">
-        <Title order={3}>Canonical references</Title>
-        {entityId && (
-          <Button variant="subtle" size="xs" onClick={() => expand(null)}>
-            All canonical references
-          </Button>
-        )}
-      </Group>
-      <Text size="sm" c="dimmed" mb="sm">
-        Repository and environment IDs come from declared canonical fields.
-        Untyped claim text remains unassigned; code records keep their
-        structural meaning.
-      </Text>
+      <SectionHeader
+        title="Canonical references"
+        description="Repository and environment IDs come from declared canonical fields. Untyped claim text remains unassigned; code records keep their structural meaning."
+        actions={
+          entityId ? (
+            <Button variant="ghost" size="sm" onClick={() => expand(null)}>
+              All canonical references
+            </Button>
+          ) : undefined
+        }
+      />
       {!view ? (
-        <Group role="status">
-          <Loader size="xs" />
-          <Text size="sm">Reading qualified canonical fields…</Text>
-        </Group>
+        <p
+          role="status"
+          className="m-0 flex items-center gap-2 text-body text-foreground-secondary"
+        >
+          <Spinner />
+          Reading qualified canonical fields…
+        </p>
       ) : (
         <>
-          <Card withBorder p="sm" mb="sm">
-            <Group justify="space-between">
-              <Text size="sm">
+          <Card className="grid gap-1.5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="mono m-0 text-label">
                 {number(view.coverage.qualified_inputs)} qualified inputs ·{" "}
                 {number(view.coverage.assigned_inputs)} with typed references ·{" "}
                 {number(view.coverage.unassigned_inputs)} without typed
                 references in this read
-              </Text>
-              <Badge variant="light">
+              </p>
+              <StatusBadge state={stateTone(view.coverage.refresh_state)}>
                 {words(view.coverage.refresh_state)}
-              </Badge>
-            </Group>
+              </StatusBadge>
+            </div>
             {lower && (
-              <Text size="xs" c="dimmed" mt={4}>
+              <p className="m-0 text-caption text-muted-foreground">
                 Counts are lower bounds while this bounded read or automatic
                 refresh is incomplete.
-              </Text>
+              </p>
             )}
           </Card>
           {view.coverage.refresh_state === "blocked" && (
-            <Alert color="yellow" mb="sm">
+            <Alert variant="warning" role="status">
               Canonical field refresh awaits an authorized originating writer.
             </Alert>
           )}
           {view.entities.length === 0 && (
-            <Text size="sm" c="dimmed">
+            <p className="m-0 text-body text-muted-foreground">
               No qualified typed references in this page.
-            </Text>
+            </p>
           )}
-          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
-            {view.entities.map((entity) => (
-              <Card
-                key={entity.id}
-                withBorder
-                p="sm"
-                data-testid="organization-field-entity"
-              >
-                <Group justify="space-between">
-                  <Text fw={600}>{entity.label}</Text>
-                  <Badge variant="light">{entity.kind}</Badge>
-                </Group>
-                <Text size="xs" c="dimmed" mt="xs">
-                  {number(entity.contributor_count)} canonical contributors in
-                  this read
-                </Text>
-                <Button
-                  variant="subtle"
-                  size="compact-xs"
-                  mt="sm"
-                  onClick={() => expand(entity.id)}
-                  aria-label={`Explore canonical reference ${entity.label}`}
+          {view.entities.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {view.entities.map((entity) => (
+                <Card
+                  key={entity.id}
+                  className="grid content-start gap-2 p-3 [overflow-wrap:anywhere]"
+                  data-testid="organization-field-entity"
                 >
-                  Explore reference
-                </Button>
-              </Card>
-            ))}
-          </SimpleGrid>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="m-0 text-body font-semibold">
+                      {entity.label}
+                    </p>
+                    <Badge>{entity.kind}</Badge>
+                  </div>
+                  <p className="mono m-0 text-caption text-muted-foreground">
+                    {number(entity.contributor_count)} canonical contributors
+                    in this read
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-self-start"
+                    onClick={() => expand(entity.id)}
+                    aria-label={`Explore canonical reference ${entity.label}`}
+                  >
+                    Explore reference
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
           {entityId && view.evidence.length > 0 && (
             <section
-              className="organization-neighborhood"
+              className="organization-neighborhood grid gap-3"
               aria-label="Canonical field neighborhood"
             >
-              <Title order={3}>Canonical evidence neighborhood</Title>
-              <Text c="dimmed" size="sm" mb="sm">
-                One node per qualified evidence contributor. Field references
-                preserve the original canonical identities.
-              </Text>
-              <div className="organization-graph">
+              <SectionHeader
+                as="h3"
+                title="Canonical evidence neighborhood"
+                description="One node per qualified evidence contributor. Field references preserve the original canonical identities."
+              />
+              <div className="organization-graph flex h-[46rem] min-h-[42rem] min-w-0 overflow-hidden rounded-lg border border-border shadow-sm">
                 <GraphRenderer
                   key={requestKey}
                   nodes={view.evidence}
@@ -283,24 +293,26 @@ export function FieldOrganizationPanel({
                   inspector={inspector}
                 />
               </div>
-              <Stack mt="sm" gap="xs">
+              <ul className="m-0 grid list-none gap-0.5 p-0">
                 {view.evidence.map((node) => (
-                  <Button
-                    key={node.key}
-                    variant="subtle"
-                    justify="flex-start"
-                    onClick={() => setChoice({ kind: "node", id: node.key })}
-                  >
-                    Inspect canonical evidence {node.evidence.label}
-                  </Button>
+                  <li key={node.key}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => setChoice({ kind: "node", id: node.key })}
+                    >
+                      Inspect canonical evidence {node.evidence.label}
+                    </Button>
+                  </li>
                 ))}
-              </Stack>
+              </ul>
             </section>
           )}
-          <Group mt="sm">
+          <div className="flex flex-wrap gap-2">
             <Button
-              size="xs"
-              variant="default"
+              size="sm"
+              variant="secondary"
               disabled={!history.length}
               onClick={() => {
                 const previous = [...history];
@@ -312,8 +324,8 @@ export function FieldOrganizationPanel({
               Previous reference page
             </Button>
             <Button
-              size="xs"
-              variant="default"
+              size="sm"
+              variant="secondary"
               disabled={!view.next_cursor}
               onClick={() => {
                 setHistory((old) => [...old, cursor]);
@@ -322,7 +334,7 @@ export function FieldOrganizationPanel({
             >
               Next reference page
             </Button>
-          </Group>
+          </div>
         </>
       )}
       {opened?.evidence.kind === "claim" && (

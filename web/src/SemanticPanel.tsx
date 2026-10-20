@@ -1,19 +1,10 @@
 import { useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import { useIdempotency } from "./useIdempotency";
 import { usePollInterval } from "./usePollInterval";
+import { SkeletonRows } from "./components/Skeleton";
+import { Alert, Badge, Button, StatusBadge } from "./components/ui";
 
 const label = (text: string) => text.replaceAll("_", " ");
 type Action =
@@ -67,37 +58,46 @@ export function SemanticPanel({ brain }: { brain: Brain }) {
   const data = status.data;
   const writer = brain.role === "writer" || brain.role === "admin";
   return (
-    <Stack component="section" aria-label="Semantic search readiness" gap="sm">
-      <Group justify="space-between">
-        <Title order={3}>Semantic search</Title>
+    <section
+      aria-label="Semantic search readiness"
+      className="grid gap-3 border-t border-border pt-4"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="m-0 text-title font-semibold text-foreground">
+          Semantic search
+        </h3>
         {data && (
-          <Badge color={data.state === "ready" ? "teal" : "gray"}>
-            {label(data.state)}
-          </Badge>
+          <StatusBadge state={data.state === "ready" ? "positive" : "neutral"}>
+            <span className="capitalize">{label(data.state)}</span>
+          </StatusBadge>
         )}
-      </Group>
-      <Text size="sm">
+      </div>
+      <p className="m-0 text-body text-foreground-secondary">
         Embeddings find similar meanings. Each result still follows the Brain’s
         scope, evidence and memory rules.
-      </Text>
-      {status.isPending && <Loader aria-label="Loading semantic readiness" />}
+      </p>
+      {status.isPending && (
+        <SkeletonRows rows={2} label="Loading semantic readiness" />
+      )}
       {(status.error || action.error) && (
-        <Alert color="red">{(status.error ?? action.error)?.message}</Alert>
+        <Alert variant="destructive">
+          {(status.error ?? action.error)?.message}
+        </Alert>
       )}
       {data && (
         <>
-          <Text size="sm">
+          <p className="m-0 text-body text-foreground-secondary">
             {data.enabled
               ? "Automatic indexing is enabled for approved content."
               : "Automatic indexing is off. An administrator can enable it in the model policy."}
-          </Text>
+          </p>
           {data.profile && (
-            <Text size="xs" c="dimmed">
+            <p className="m-0 mono text-caption text-muted-foreground">
               {data.profile.model} · {data.profile.dimensions.toLocaleString()}{" "}
               dimensions
-            </Text>
+            </p>
           )}
-          <Text size="sm">
+          <p className="m-0 mono text-label text-foreground-secondary">
             {data.counts.ready.toLocaleString()} represented ·{" "}
             {(
               data.counts.pending +
@@ -107,128 +107,143 @@ export function SemanticPanel({ brain }: { brain: Brain }) {
             pending ·{" "}
             {(data.counts.blocked + data.counts.failed).toLocaleString()}{" "}
             blocked or failed · {data.counts.removed.toLocaleString()} removed
-          </Text>
+          </p>
           {data.coverage.length > 0 && (
-            <Alert title="Index coverage" color="yellow">
-              <Stack gap={4}>
+            <Alert title="Index coverage" variant="warning">
+              <div className="grid gap-1">
                 {data.coverage.map((reason) => (
-                  <Text size="sm" key={reason}>
+                  <p className="first-letter:uppercase" key={reason}>
                     {label(reason)}
-                  </Text>
+                  </p>
                 ))}
-              </Stack>
+              </div>
             </Alert>
           )}
           {data.state === "profile_mismatch" && (
-            <Alert color="yellow">
+            <Alert variant="warning">
               The existing index uses a different model or representation.
               Select compatible models in AI permissions, then Save and rebuild.
             </Alert>
           )}
           {brain.role === "admin" && !brain.archived && (
-            <>
-              <Button
-                variant="light"
-                w="fit-content"
-                loading={
-                  action.isPending && action.variables?.kind === "reindex"
-                }
-                disabled={
-                  !data.enabled || data.state === "disabled" || action.isPending
-                }
-                onClick={() =>
-                  action.mutate({
-                    kind: "reindex",
-                    base_profile: data.profile?.id ?? null,
-                  })
-                }
-              >
-                Rebuild semantic index
-              </Button>
-              <Text size="xs" c="dimmed">
+            <div className="grid gap-1.5">
+              <div>
+                <Button
+                  variant="secondary"
+                  loading={
+                    action.isPending && action.variables?.kind === "reindex"
+                  }
+                  disabled={
+                    !data.enabled ||
+                    data.state === "disabled" ||
+                    action.isPending
+                  }
+                  onClick={() =>
+                    action.mutate({
+                      kind: "reindex",
+                      base_profile: data.profile?.id ?? null,
+                    })
+                  }
+                >
+                  Rebuild semantic index
+                </Button>
+              </div>
+              <p className="m-0 text-caption text-muted-foreground">
                 Rebuilding replaces the current index and queues new embedding
                 requests under this Brain’s model budget. Search coverage grows
                 as batches finish.
-              </Text>
-            </>
+              </p>
+            </div>
           )}
           {data.batches.length > 0 && (
-            <Text fw={600} size="sm">
+            <h4 className="m-0 mt-1 text-label font-semibold text-foreground">
               Recent embedding batches
-            </Text>
+            </h4>
           )}
-          {data.batches.map((batch) => (
-            <Card withBorder padding="sm" key={batch.id}>
-              <Group justify="space-between">
-                <Text size="sm">
-                  {batch.input_count} input{batch.input_count === 1 ? "" : "s"}{" "}
-                  · {new Date(batch.created_at).toLocaleString()}
-                </Text>
-                <Badge>{label(batch.state)}</Badge>
-              </Group>
-              {batch.error_code && (
-                <Text size="sm" c="dimmed">
-                  {label(batch.error_code)}
-                </Text>
-              )}
-              {batch.automatic_attempt > 0 && (
-                <Text size="xs">
-                  Automatic replacement {batch.automatic_attempt} of 2
-                </Text>
-              )}
-              {writer &&
-                !brain.archived &&
-                data.enabled &&
-                !["disabled", "profile_mismatch"].includes(data.state) &&
-                batch.can_retry && (
-                  <Group mt="xs">
-                    <Button
-                      size="xs"
-                      variant="light"
-                      loading={
-                        action.isPending &&
-                        action.variables?.kind === "retry" &&
-                        action.variables.batch === batch.id
-                      }
-                      disabled={action.isPending}
-                      onClick={() =>
-                        action.mutate({ kind: "retry", batch: batch.id })
-                      }
-                    >
-                      Start new embedding attempt
-                    </Button>
-                    <Text size="xs" c="dimmed">
-                      Remaining eligible inputs only. A new attempt may incur
-                      provider usage.
-                    </Text>
-                  </Group>
-                )}
-            </Card>
-          ))}
+          {data.batches.length > 0 && (
+            <div className="overflow-hidden rounded-lg border border-border">
+              {data.batches.map((batch) => (
+                <div
+                  key={batch.id}
+                  className="grid gap-1 border-b border-border px-3.5 py-2.5 last:border-b-0"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-label text-foreground">
+                      <span className="mono">{batch.input_count}</span> input
+                      {batch.input_count === 1 ? "" : "s"} ·{" "}
+                      <span className="mono text-muted-foreground">
+                        {new Date(batch.created_at).toLocaleString()}
+                      </span>
+                    </span>
+                    <Badge className="capitalize">{label(batch.state)}</Badge>
+                  </div>
+                  {batch.error_code && (
+                    <p className="m-0 text-caption text-muted-foreground">
+                      {label(batch.error_code)}
+                    </p>
+                  )}
+                  {batch.automatic_attempt > 0 && (
+                    <p className="m-0 text-caption text-foreground-secondary">
+                      Automatic replacement {batch.automatic_attempt} of 2
+                    </p>
+                  )}
+                  {writer &&
+                    !brain.archived &&
+                    data.enabled &&
+                    !["disabled", "profile_mismatch"].includes(data.state) &&
+                    batch.can_retry && (
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={
+                            action.isPending &&
+                            action.variables?.kind === "retry" &&
+                            action.variables.batch === batch.id
+                          }
+                          disabled={action.isPending}
+                          onClick={() =>
+                            action.mutate({ kind: "retry", batch: batch.id })
+                          }
+                        >
+                          Start new embedding attempt
+                        </Button>
+                        <span className="text-caption text-muted-foreground">
+                          Remaining eligible inputs only. A new attempt may
+                          incur provider usage.
+                        </span>
+                      </div>
+                    )}
+                </div>
+              ))}
+            </div>
+          )}
           {data.total_batches > 20 && (
-            <Group>
+            <div className="flex items-center gap-2">
               <Button
-                variant="subtle"
+                variant="ghost"
+                size="sm"
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - 20))}
               >
                 Previous batches
               </Button>
-              <Text size="xs">
+              <span className="mono text-caption text-muted-foreground">
                 {offset + 1}–{Math.min(offset + 20, data.total_batches)} of{" "}
                 {data.total_batches}
-              </Text>
+              </span>
               <Button
-                variant="subtle"
+                variant="ghost"
+                size="sm"
                 disabled={offset + 20 >= data.total_batches}
                 onClick={() => setOffset(offset + 20)}
               >
                 Next batches
               </Button>
-            </Group>
+            </div>
           )}
         </>
       )}
-    </Stack>
+    </section>
   );
 }

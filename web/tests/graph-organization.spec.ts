@@ -782,7 +782,8 @@ test("default topic cards expand actual evidence in3D and2D with overlapping mem
     path: "../.cache/ui/organization-expanded-wide.png",
     fullPage: true,
   });
-  await page.setViewportSize({ width: 1120, height: 900 });
+  // ADR 0025: 1440×900 is the smallest supported layout (16-inch laptops).
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(
     () =>
       new Promise((resolve) =>
@@ -1319,7 +1320,8 @@ test("canonical field pointers remain distinct from source spans and failures cl
     .click();
   await expect(canvas).toHaveAttribute("data-layout-ready", "true");
   await mkdir("../.cache/ui", { recursive: true });
-  for (const width of [1440, 1120]) {
+  // ADR 0025 review sizes; below 1440 the inspector is a modal sheet.
+  for (const width of [1728, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     await canvas.scrollIntoViewIfNeeded();
     await expect(canvas).toHaveAttribute("data-layout-ready", "true");
@@ -1395,7 +1397,8 @@ test("source-only native groups page exact contributors and use source rename/ex
     .click();
   await expect(canvas).toHaveAttribute("data-layout-ready", "true");
   await mkdir("../.cache/ui", { recursive: true });
-  for (const width of [1440, 1120]) {
+  // ADR 0025 review sizes; below 1440 the inspector is a modal sheet.
+  for (const width of [1728, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     await canvas.scrollIntoViewIfNeeded();
     await expect(canvas).toHaveAttribute("data-layout-ready", "true");
@@ -1571,7 +1574,8 @@ test("manual overlays keep their identity and versioned source editor distinct i
   await expect(editor).toBeVisible();
   await expect(editor).toContainText("Changes apply to this manual group.");
   await mkdir("../.cache/ui", { recursive: true });
-  for (const width of [1440, 1120]) {
+  // ADR 0025 review sizes; below 1440 the inspector is a modal sheet.
+  for (const width of [1728, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     await page.screenshot({
       path: `../.cache/ui/organization-manual-overlay-${width}.png`,

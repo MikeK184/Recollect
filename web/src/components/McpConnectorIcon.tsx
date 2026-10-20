@@ -19,10 +19,15 @@ export function McpConnectorIcon({
   )?.icon_png;
   return (
     <div
-      className={`management-icon connection-icon${size ? " mcp-icon-small" : ""}`}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-muted text-muted-foreground ${size ? "size-7 [&_svg]:size-3.5" : "size-9 [&_svg]:size-4"}`}
     >
       {icon?.startsWith("data:image/png;base64,") && failed !== icon ? (
-        <img src={icon} alt="" onError={() => setFailed(icon)} />
+        <img
+          src={icon}
+          alt=""
+          className="size-full object-contain p-1"
+          onError={() => setFailed(icon)}
+        />
       ) : (
         <Box aria-hidden="true" />
       )}

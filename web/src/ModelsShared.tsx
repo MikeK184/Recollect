@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Text } from "@mantine/core";
+import { Alert, Button } from "./components/ui";
 
 export const label = (s: string) =>
   (
@@ -25,7 +25,7 @@ export const label = (s: string) =>
   )[s] ?? s.replaceAll("_", " ");
 export const time = (s: string) => new Date(s).toLocaleString();
 export function Failure({ error }: { error: Error | null }) {
-  return error ? <Alert color="red">{error.message}</Alert> : null;
+  return error ? <Alert variant="destructive">{error.message}</Alert> : null;
 }
 export function Pages({
   offset,
@@ -37,24 +37,26 @@ export function Pages({
   change: (v: number) => void;
 }) {
   return total > 20 ? (
-    <Group>
+    <div className="flex items-center gap-2">
       <Button
-        variant="subtle"
+        variant="ghost"
+        size="sm"
         disabled={!offset}
         onClick={() => change(Math.max(0, offset - 20))}
       >
         Previous
       </Button>
-      <Text size="xs">
+      <span className="mono text-caption text-muted-foreground">
         {offset + 1}–{Math.min(total, offset + 20)} of {total}
-      </Text>
+      </span>
       <Button
-        variant="subtle"
+        variant="ghost"
+        size="sm"
         disabled={offset + 20 >= total}
         onClick={() => change(offset + 20)}
       >
         Next
       </Button>
-    </Group>
+    </div>
   ) : null;
 }

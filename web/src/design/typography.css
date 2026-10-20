@@ -1,28 +1,25 @@
+/* Self-hosted families (ADR 0025): Mona Sans for the interface, JetBrains Mono
+   for machine text and Newsreader for answers, the Ask hero and the wordmark.
+   Files, hashes and OFL notices are pinned in public/fonts/manifest.json. */
+@font-face {
+  font-family: "Mona Sans";
+  src: url("/fonts/mona-sans-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 900;
+  font-stretch: 75% 125%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+}
 @font-face {
   font-family: Newsreader;
   src: url("/fonts/newsreader-variable.ttf") format("truetype");
   font-style: normal;
   font-weight: 200 800;
-  font-display: swap;
-}
-@font-face {
-  font-family: Manrope;
-  src: url("/fonts/manrope-variable.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 200 800;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DM Mono";
-  src: url("/fonts/dm-mono-regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DM Mono";
-  src: url("/fonts/dm-mono-medium.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 500;
   font-display: swap;
 }

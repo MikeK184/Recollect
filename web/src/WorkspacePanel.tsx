@@ -1,7 +1,20 @@
-import { iconSize } from "./design/tokens";
-import { useEffect, useState } from "react";
-import "./features/feature-views.css";
-import "./features/guided-controls.css";
+import { useEffect, useId, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  FolderGit2,
+  GitBranch,
+  Plus,
+} from "lucide-react";
+import { client, result, type Brain } from "./api";
+import type { components } from "./api-schema";
+import { RepositoryDialog } from "./PublicationPanel";
+import { usePollInterval } from "./usePollInterval";
+import { useWorkspaceCatalogue } from "./catalogueQueries";
+import { PropList } from "./components/Inspector";
+import { Skeleton } from "./components/Skeleton";
 import {
   Alert,
   Badge,
@@ -9,33 +22,17 @@ import {
   Card,
   Code,
   CopyButton,
-  Divider,
-  Group,
-  Loader,
   Modal,
   MultiSelect,
   Select,
-  Stack,
+  Separator,
   Tabs,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Check,
-  Copy,
-  FolderGit2,
-  GitBranch,
-  Plus,
-  RefreshCw,
-} from "lucide-react";
-import { client, result, type Brain } from "./api";
-import type { components } from "./api-schema";
-import { RepositoryDialog } from "./PublicationPanel";
-import { McpAgentSetup } from "./McpAgentSetup";
-import { usePollInterval } from "./usePollInterval";
-import { useWorkspaceCatalogue } from "./catalogueQueries";
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TextField,
+  Tile,
+} from "./components/ui";
 
 type Catalogue = components["schemas"]["WorkspaceCatalogue"];
 type Task = components["schemas"]["WorkspaceTask"];
@@ -50,28 +47,41 @@ const empty: Selection = {
 };
 function Failure({ error }: { error: Error | null }) {
   return error ? (
-    <Alert color="red" title="Request failed">
+    <Alert variant="destructive" title="Request failed">
       {error.message}
     </Alert>
   ) : null;
 }
+function Loading() {
+  return (
+    <div className="grid gap-2" role="status">
+      <Skeleton height={14} width="40%" />
+      <Skeleton height={44} className="rounded-md" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
 function ScopeView({ scope }: { scope: Snapshot }) {
   return (
-    <Stack gap="xs" className="scope-view">
-      <Text size="sm">
-        <strong>Repositories:</strong>{" "}
-        {scope.repositories.map((v) => v.name).join(", ") ||
-          "All in this Brain"}
-      </Text>
-      <Text size="sm">
-        <strong>Areas:</strong>{" "}
-        {scope.areas.map((v) => v.name).join(", ") || "All in this Brain"}
-      </Text>
-      <Text size="sm">
-        <strong>Environment:</strong>{" "}
-        {scope.environment?.name || "All in this Brain"}
-      </Text>
-    </Stack>
+    <PropList
+      items={[
+        {
+          term: "Repositories",
+          value:
+            scope.repositories.map((v) => v.name).join(", ") ||
+            "All in this Brain",
+        },
+        {
+          term: "Areas",
+          value:
+            scope.areas.map((v) => v.name).join(", ") || "All in this Brain",
+        },
+        {
+          term: "Environment",
+          value: scope.environment?.name || "All in this Brain",
+        },
+      ]}
+    />
   );
 }
 function Pages({
@@ -87,27 +97,32 @@ function Pages({
 }) {
   if (total <= size) return null;
   return (
-    <Group justify="space-between">
+    <div className="flex items-center gap-2">
       <Button
-        variant="subtle"
+        variant="secondary"
+        size="sm"
         disabled={!offset}
         onClick={() => setOffset(Math.max(0, offset - size))}
       >
         Previous
       </Button>
-      <Text size="xs">
+      <span className="mono mx-auto text-caption text-muted-foreground">
         {offset + 1}–{Math.min(offset + size, total)} of {total}
-      </Text>
+      </span>
       <Button
-        variant="subtle"
+        variant="secondary"
+        size="sm"
         disabled={offset + size >= total}
         onClick={() => setOffset(offset + size)}
       >
         Next
       </Button>
-    </Group>
+    </div>
   );
 }
+/** One compact row: icon tile, name and one detail line, trailing status. */
+const rowClass =
+  "flex w-full items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-[border-color,background-color] duration-fast ease-standard hover:border-border-strong hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 export function WorkspacePanel({
   brain,
@@ -130,7 +145,7 @@ export function WorkspacePanel({
 }) {
   const cache = useQueryClient();
   const [workspace, setWorkspace] = useState<string | null>(null);
-  const [tab, setTab] = useState<string | null>(
+  const [tab, setTab] = useState<string>(
     checkoutOnly
       ? "checkouts"
       : section === "repositories"
@@ -181,98 +196,105 @@ export function WorkspacePanel({
   };
   if (catalogue.error)
     return (
-      <Card withBorder p="xl" mt="xl">
+      <Card className="mt-6 grid gap-3 p-6">
         <Failure error={catalogue.error} />
-        <Button mt="md" onClick={() => void catalogue.refetch()}>
-          Retry workspace
-        </Button>
+        <div>
+          <Button onClick={() => void catalogue.refetch()}>
+            Retry workspace
+          </Button>
+        </div>
       </Card>
     );
   const data = catalogue.data;
   return (
-    <section className="feature-view workspace-panel">
-      <div className="feature-toolbar">
-        <div className="feature-search">
-          <Text size="sm" c="dimmed">
-            {section === "repositories"
-              ? "Shared repository identities and published snapshots. Your local checkout paths remain private."
-              : "Your agent manages these contexts automatically."}
-          </Text>
-        </div>
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="m-0 min-w-60 flex-1 text-body text-muted-foreground">
+          {section === "repositories"
+            ? "Shared repository identities and published snapshots. Your local checkout paths remain private."
+            : "Your agent manages these contexts automatically."}
+        </p>
         {section === "repositories" ? (
-          <Button variant="default" onClick={() => setPublishing(true)}>
+          <Button variant="secondary" onClick={() => setPublishing(true)}>
             Publish from your host
           </Button>
         ) : !diagnosticsOnly ? (
           <Button
-            variant="default"
-            leftSection={<Plus size={iconSize.small} />}
+            variant="secondary"
             disabled={brain.archived || !data}
             onClick={() => setForm({})}
           >
+            <Plus aria-hidden="true" />
             New task scope
           </Button>
         ) : null}
       </div>
       {!checkoutOnly && (
-        <Text size="xs" c="dimmed" mb="md">
+        <p className="mono m-0 text-caption text-muted-foreground">
           {catalogue.dataUpdatedAt
             ? `Catalogue checked ${new Date(catalogue.dataUpdatedAt).toLocaleTimeString()}`
             : "Loading catalogue…"}
           . Native workspace discovery runs on your connected devices.
-        </Text>
+        </p>
       )}
       {handoff && (
         <Alert
-          mb="lg"
-          withCloseButton
-          onClose={() => setHandoff(false)}
+          role="status"
           title="Fresh context required"
+          actions={
+            <Button variant="ghost" size="sm" onClick={() => setHandoff(false)}>
+              Dismiss
+            </Button>
+          }
         >
           The new scope applies to future operations. Refresh context before
           continuing this task. Use Recall memory with the new selection.
         </Alert>
       )}
       {catalogue.isPending ? (
-        <Loader size="sm" />
+        <Loading />
       ) : (
         data && (
-          <Tabs value={tab} onChange={setTab} keepMounted={false}>
+          <Tabs value={tab} onValueChange={setTab}>
             {!checkoutOnly && (
-              <Tabs.List>
+              <TabsList>
                 {section === "tasks" && (
-                  <Tabs.Tab value="tasks">Work contexts</Tabs.Tab>
+                  <TabsTrigger value="tasks">Work contexts</TabsTrigger>
                 )}
                 {section === "repositories" && (
-                  <Tabs.Tab value="repositories">
+                  <TabsTrigger value="repositories">
                     Published repositories
-                  </Tabs.Tab>
+                  </TabsTrigger>
                 )}
-                {diagnosticsOnly && <Tabs.Tab value="checkouts">Local folders</Tabs.Tab>}
-              </Tabs.List>
+                {diagnosticsOnly && (
+                  <TabsTrigger value="checkouts">Local folders</TabsTrigger>
+                )}
+              </TabsList>
             )}
-            <Tabs.Panel value="tasks" pt="lg">
-              <Stack gap="sm">
+            <TabsContent value="tasks">
+              <div className="grid gap-2">
                 {data.tasks.length === 0 && (
-                  <Text size="sm" c="dimmed">
+                  <p className="m-0 text-body text-muted-foreground">
                     No recorded task scopes. Your connected agents manage them
                     automatically.
-                  </Text>
+                  </p>
                 )}
                 {data.tasks.map((task) => (
                   <button
                     type="button"
                     key={task.id}
-                    className="context-row"
+                    className={rowClass}
                     data-testid="workspace-task"
                     onClick={() => setSelected(task.id)}
                   >
-                    <span className="control-icon">
-                      <GitBranch size={18} />
-                    </span>
-                    <span className="context-row-main">
-                      <strong>{task.label}</strong>
-                      <small>
+                    <Tile size="sm">
+                      <GitBranch aria-hidden="true" />
+                    </Tile>
+                    <span className="grid min-w-0 flex-1 gap-0.5">
+                      <span className="truncate text-body font-medium text-foreground">
+                        {task.label}
+                      </span>
+                      <span className="truncate text-caption text-muted-foreground">
                         {task.parent_task_id ? "Child context · " : ""}
                         {[
                           task.scope.repositories.length
@@ -287,15 +309,15 @@ export function WorkspacePanel({
                         ]
                           .filter(Boolean)
                           .join(" · ") || "Whole Brain"}
-                      </small>
+                      </span>
                     </span>
                     <Badge
-                      color={
+                      variant={
                         task.closed
-                          ? "gray"
+                          ? "default"
                           : task.scope_valid
                             ? "brand"
-                            : "orange"
+                            : "warning"
                       }
                     >
                       {task.closed
@@ -312,16 +334,16 @@ export function WorkspacePanel({
                   size={20}
                   setOffset={setTaskOffset}
                 />
-              </Stack>
-            </Tabs.Panel>
-            <Tabs.Panel value="repositories" pt="lg">
-              <Stack gap="md">
+              </div>
+            </TabsContent>
+            <TabsContent value="repositories">
+              <div className="grid gap-3">
                 {data.repositories.length === 0 && (
-                  <Text size="sm" c="dimmed">
+                  <p className="m-0 text-body text-muted-foreground">
                     No repositories registered. Start your coding host in the
                     workspace; the Recollect plugin discovers its local
                     checkouts.
-                  </Text>
+                  </p>
                 )}
                 {data.repositories.map((repo) => {
                   const extraOrigins = repo.origins.filter(
@@ -330,109 +352,119 @@ export function WorkspacePanel({
                   return (
                     <Card
                       key={repo.id}
-                      withBorder
-                      p="md"
+                      className="grid gap-2 p-4"
                       data-testid="repository-card"
+                      data-selected={selectedId === repo.id || undefined}
                     >
                       {/* Dense card: the canonical origin is the primary
                           identifier; extra origins overflow into an explicit
                           expansion and the UUID moves to a copyable field. */}
-                      <Group justify="space-between" align="start">
-                        <div className="workspace-repository">
-                          <Button
-                            variant="subtle"
-                            px={0}
-                            h="auto"
-                            className="repository-card-name"
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="grid min-w-0 gap-1">
+                          <button
+                            type="button"
+                            className="mono w-fit text-left text-label font-medium text-foreground [overflow-wrap:anywhere] hover:text-brand-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             onClick={() => onSelectedIdChange?.(repo.id)}
                           >
                             {repo.canonical_origin}
-                          </Button>
+                          </button>
                           {extraOrigins.length > 0 && (
-                            <details className="record-identity">
-                              <summary>
+                            <details className="group/origins">
+                              <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-caption text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
                                 {extraOrigins.length} more origin
                                 {extraOrigins.length === 1 ? "" : "s"}
+                                <ChevronDown
+                                  aria-hidden="true"
+                                  className="size-3 transition-transform duration-fast group-open/origins:rotate-180"
+                                />
                               </summary>
                               {extraOrigins.map((origin) => (
-                                <Text
+                                <p
                                   key={origin}
-                                  size="xs"
-                                  className="workspace-path"
+                                  className="mono m-0 mt-1 text-caption text-muted-foreground [overflow-wrap:anywhere]"
                                 >
                                   Also known as {origin}
-                                </Text>
+                                </p>
                               ))}
                             </details>
                           )}
                         </div>
-                        <Group gap="xs">
+                        <div className="flex shrink-0 gap-1.5">
                           <Button
-                            size="xs"
-                            variant="light"
+                            size="sm"
+                            variant="secondary"
                             onClick={() => setPublication(repo)}
                           >
                             Snapshots
                           </Button>
                           {brain.role === "admin" && !brain.archived && (
                             <Button
-                              size="xs"
-                              variant="light"
+                              size="sm"
+                              variant="secondary"
                               onClick={() => setAlias(repo)}
                             >
                               Add origin
                             </Button>
                           )}
-                        </Group>
-                      </Group>
+                        </div>
+                      </div>
                       {/* Machine identifiers stay out of the row; the
                           copyable field offers them instead. */}
-                      <details className="record-identity">
-                        <summary>Repository identifier</summary>
-                        <CopyButton value={repo.id}>
-                          {({ copied, copy }) => (
-                            <Button
-                              size="xs"
-                              variant="default"
-                              onClick={copy}
-                              leftSection={
-                                copied ? (
-                                  <Check size={14} />
+                      <details className="group/identity">
+                        <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-caption text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+                          Repository identifier
+                          <ChevronDown
+                            aria-hidden="true"
+                            className="size-3 transition-transform duration-fast group-open/identity:rotate-180"
+                          />
+                        </summary>
+                        <div className="pt-2">
+                          <CopyButton value={repo.id}>
+                            {({ copied, copy }) => (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={copy}
+                              >
+                                {copied ? (
+                                  <Check
+                                    aria-hidden="true"
+                                    className="text-brand-text"
+                                  />
                                 ) : (
-                                  <Copy size={14} />
-                                )
-                              }
-                            >
-                              {copied ? "Copied" : "Copy repository ID"}
-                            </Button>
-                          )}
-                        </CopyButton>
+                                  <Copy aria-hidden="true" />
+                                )}
+                                {copied ? "Copied" : "Copy repository ID"}
+                              </Button>
+                            )}
+                          </CopyButton>
+                        </div>
                       </details>
                     </Card>
                   );
                 })}
-              </Stack>
-            </Tabs.Panel>
-            <Tabs.Panel value="checkouts" pt="lg">
-              <Stack gap="md">
-                <Text size="sm" c="dimmed">
+              </div>
+            </TabsContent>
+            <TabsContent value="checkouts">
+              <div className="grid gap-3">
+                <p className="m-0 text-body text-muted-foreground">
                   Repositories hold shared identities and published evidence.
                   These folders are private observations from your devices;
                   their contents stay local.
-                </Text>
+                </p>
                 {data.workspaces.length === 0 ? (
-                  <Stack gap="xs">
-                    <Text size="sm">
+                  <div className="grid gap-2">
+                    <p className="m-0 text-body text-foreground">
                       Place this selector in{" "}
                       <Code>.recollect/workspace.toml</Code> at your workspace
                       root:
-                    </Text>
+                    </p>
                     <Code block>{`brain = "${brain.id}"`}</Code>
-                    <Text size="sm">
+                    <p className="m-0 text-body text-foreground">
                       Then start your coding host there — the Recollect plugin
                       reports the workspace automatically.
-                    </Text>
-                  </Stack>
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <Select
@@ -451,65 +483,71 @@ export function WorkspacePanel({
                     {data.workspaces
                       .filter((w) => w.id === data.selected_workspace)
                       .map((w) => (
-                        <div key={w.id}>
-                          <Group mb="xs">
-                            <Badge color={w.complete ? "teal" : "yellow"}>
+                        <div key={w.id} className="grid gap-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={w.complete ? "brand" : "warning"}>
                               {w.complete ? "Full refresh" : "Partial refresh"}
                             </Badge>
-                            <Text size="xs" c="dimmed">
+                            <span className="mono text-caption text-muted-foreground">
                               {timestamp(w.refreshed_at)}
-                            </Text>
-                          </Group>
+                            </span>
+                          </div>
                           {w.notes.map((note, index) => (
-                            <Text key={index} size="xs" c="dimmed">
+                            <p
+                              key={index}
+                              className="m-0 text-caption text-muted-foreground"
+                            >
                               {note}
-                            </Text>
+                            </p>
                           ))}
                         </div>
                       ))}
                     {data.checkouts.length === 0 && (
-                      <Text size="sm" c="dimmed">
+                      <p className="m-0 text-body text-muted-foreground">
                         No checkouts were reported for this workspace.
-                      </Text>
+                      </p>
                     )}
                     {data.checkouts.map((c) => (
-                      <details key={c.id} className="checkout-record">
-                        <summary className="context-row">
-                          <span className="control-icon">
-                            <FolderGit2 size={18} />
-                          </span>
-                          <span className="context-row-main">
-                            <strong>
+                      <details
+                        key={c.id}
+                        className="group/checkout rounded-lg border border-border bg-card"
+                      >
+                        <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                          <Tile size="sm">
+                            <FolderGit2 aria-hidden="true" />
+                          </Tile>
+                          <span className="grid min-w-0 flex-1 gap-0.5">
+                            <span className="truncate text-body font-medium text-foreground">
                               {c.observation.local_path
                                 .split(/[\\/]/)
                                 .filter(Boolean)
                                 .at(-1) || c.observation.local_path}
-                            </strong>
-                            <small>
+                            </span>
+                            <span className="mono truncate text-caption text-muted-foreground">
                               {c.observation.origin || "Origin not reported"}
-                            </small>
+                            </span>
                           </span>
-                          <span className="checkout-status">
+                          <span className="grid shrink-0 justify-items-end gap-0.5">
                             <Badge
-                              color={
+                              variant={
                                 !c.present ||
                                 c.observation.status === "git_unavailable"
-                                  ? "yellow"
-                                  : "gray"
+                                  ? "warning"
+                                  : "default"
                               }
                             >
                               {!c.present
                                 ? "Not seen"
                                 : c.observation.status.replaceAll("_", " ")}
                             </Badge>
-                            <small>Observed {timestamp(c.observed_at)}</small>
+                            <span className="mono text-caption text-muted-foreground">
+                              Observed {timestamp(c.observed_at)}
+                            </span>
                           </span>
                         </summary>
-                        <Stack gap="xs" className="checkout-details">
-                          <Code block className="workspace-path">
-                            {c.observation.local_path}
-                          </Code>
-                          <Text size="xs" c="dimmed">
+                        <div className="grid gap-2 border-t border-border p-3">
+                          <Code block>{c.observation.local_path}</Code>
+                          <p className="m-0 text-caption text-muted-foreground">
                             {c.observation.branch || "No branch reported"} ·{" "}
                             {c.observation.head
                               ? `HEAD ${c.observation.head.slice(0, 12)}`
@@ -520,8 +558,8 @@ export function WorkspacePanel({
                               : c.observation.dirty === false
                                 ? "Clean when observed"
                                 : "Working tree state unknown"}
-                          </Text>
-                        </Stack>
+                          </p>
+                        </div>
                       </details>
                     ))}
                     <Pages
@@ -532,8 +570,8 @@ export function WorkspacePanel({
                     />
                   </>
                 )}
-              </Stack>
-            </Tabs.Panel>
+              </div>
+            </TabsContent>
           </Tabs>
         )
       )}
@@ -543,19 +581,19 @@ export function WorkspacePanel({
         title="Publish from your host"
         size="lg"
       >
-        <Stack>
-          <Text>
+        <div className="grid gap-3">
+          <p className="m-0 text-body text-foreground">
             Ask your agent, from a task scoped to this repository, to publish
             the checkout. The Recollect plugin runs the publication for it.
             Recollect publishes the selected committed tree, not uncommitted
             working files.
-          </Text>
-          <Text size="sm" c="dimmed">
+          </p>
+          <p className="m-0 text-label text-muted-foreground">
             Replace the identifiers with your repository and task scope. File
             text stays local unless explicitly selected with --retain-file and
             permitted in Settings. This browser cannot scan your checkout.
-          </Text>
-        </Stack>
+          </p>
+        </div>
       </Modal>
       {data && form && (
         <TaskForm
@@ -620,6 +658,7 @@ function TaskForm({
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
+  const formId = useId();
   const scope = task?.scope ?? parent?.scope;
   const initial = scope?.selection ?? empty;
   const [label, setLabel] = useState("");
@@ -683,90 +722,94 @@ function TaskForm({
             : "Start task"
       }
       size="lg"
-      centered
+      footer={
+        <Button type="submit" form={formId} loading={save.isPending}>
+          {task ? "Save scope" : "Start task"}
+        </Button>
+      }
     >
       <form
+        id={formId}
+        className="grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
           save.mutate();
         }}
       >
-        <Stack>
-          {task ? (
-            <Text fw={600}>{task.label}</Text>
-          ) : (
-            <TextInput
-              required
-              label="Task name"
-              value={label}
-              onChange={(event) => setLabel(event.currentTarget.value)}
-              maxLength={120}
-            />
-          )}
-          {parent && (
-            <Text size="sm">
-              Parent: {parent.label}. This child keeps its own scope.
-            </Text>
-          )}
-          {!task && (
-            <Select
-              label="Workspace registration (optional)"
-              data={catalogue.workspaces.map((w) => ({
-                value: w.id,
-                label: `${w.root} · ${w.device_id.slice(0, 8)}`,
-              }))}
-              value={workspace}
-              onChange={setWorkspace}
-              clearable
-              searchable
-            />
-          )}
-          <MultiSelect
-            label="Repositories"
-            placeholder="All repositories in this Brain"
-            searchable
-            clearable
-            data={choices(
-              catalogue.repositories.map((r) => ({
-                id: r.id,
-                name: r.canonical_origin,
-              })),
-              scope?.repositories,
-            )}
-            value={repositories}
-            onChange={setRepositories}
+        {task ? (
+          <p className="m-0 text-title font-semibold text-foreground">
+            {task.label}
+          </p>
+        ) : (
+          <TextField
+            required
+            label="Task name"
+            value={label}
+            onChange={(event) => setLabel(event.currentTarget.value)}
+            maxLength={120}
           />
-          <MultiSelect
-            label="Areas"
-            placeholder="All areas in this Brain"
-            searchable
-            clearable
-            data={choices(catalogue.areas, scope?.areas)}
-            value={areas}
-            onChange={setAreas}
-          />
+        )}
+        {parent && (
+          <p className="m-0 text-body text-foreground-secondary">
+            Parent: {parent.label}. This child keeps its own scope.
+          </p>
+        )}
+        {!task && (
           <Select
-            label="Environment"
-            placeholder="All environments in this Brain"
-            searchable
+            label="Workspace registration (optional)"
+            data={catalogue.workspaces.map((w) => ({
+              value: w.id,
+              label: `${w.root} · ${w.device_id.slice(0, 8)}`,
+            }))}
+            value={workspace}
+            onChange={setWorkspace}
             clearable
-            data={choices(
-              catalogue.environments,
-              scope?.environment ? [scope.environment] : [],
-            )}
-            value={environment}
-            onChange={setEnvironment}
+            searchable
           />
-          <Text size="xs" c="dimmed">
-            Leaving a dimension empty includes the whole Brain for that
-            dimension. Existing operations and other tasks keep their recorded
-            scopes.
-          </Text>
-          <Failure error={save.error} />
-          <Button type="submit" loading={save.isPending}>
-            {task ? "Save scope" : "Start task"}
-          </Button>
-        </Stack>
+        )}
+        <MultiSelect
+          inputClassName="relative"
+          label="Repositories"
+          placeholder="All repositories in this Brain"
+          searchable
+          clearable
+          data={choices(
+            catalogue.repositories.map((r) => ({
+              id: r.id,
+              name: r.canonical_origin,
+            })),
+            scope?.repositories,
+          )}
+          value={repositories}
+          onChange={setRepositories}
+        />
+        <MultiSelect
+          inputClassName="relative"
+          label="Areas"
+          placeholder="All areas in this Brain"
+          searchable
+          clearable
+          data={choices(catalogue.areas, scope?.areas)}
+          value={areas}
+          onChange={setAreas}
+        />
+        <Select
+          label="Environment"
+          placeholder="All environments in this Brain"
+          searchable
+          clearable
+          data={choices(
+            catalogue.environments,
+            scope?.environment ? [scope.environment] : [],
+          )}
+          value={environment}
+          onChange={setEnvironment}
+        />
+        <p className="m-0 text-caption text-muted-foreground">
+          Leaving a dimension empty includes the whole Brain for that dimension.
+          Existing operations and other tasks keep their recorded scopes.
+        </p>
+        <Failure error={save.error} />
       </form>
     </Modal>
   );
@@ -841,92 +884,92 @@ function TaskDialog({
   });
   const data = details.error ? undefined : details.data;
   return (
-    <Modal opened onClose={onClose} title="Task context" size="lg" centered>
-      <Stack>
+    <Modal opened onClose={onClose} title="Task context" size="lg">
+      <div className="grid gap-4">
         <Failure error={details.error} />
         {details.error && (
-          <Button variant="light" onClick={() => void details.refetch()}>
-            Retry task
-          </Button>
+          <div>
+            <Button variant="secondary" onClick={() => void details.refetch()}>
+              Retry task
+            </Button>
+          </div>
         )}
-        {details.isPending && <Loader size="sm" />}
+        {details.isPending && <Loading />}
         {data && (
           <>
-            <Group justify="space-between">
-              <Title order={3}>{data.task.label}</Title>
-              <Badge color={data.task.closed ? "gray" : "teal"}>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="m-0 min-w-0 text-section font-semibold text-foreground [overflow-wrap:anywhere]">
+                {data.task.label}
+              </h3>
+              <Badge variant={data.task.closed ? "default" : "brand"}>
                 {data.task.closed ? "Closed" : "Open"}
               </Badge>
-            </Group>
-            <Text size="xs" className="workspace-path" c="dimmed">
-              Task {data.task.id}
-            </Text>
-            {data.task.parent_task_id && (
-              <Text size="xs" className="workspace-path" c="dimmed">
-                Parent {data.task.parent_task_id}
-              </Text>
-            )}
+            </div>
+            <div className="mono grid gap-0.5 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+              <span>Task {data.task.id}</span>
+              {data.task.parent_task_id && (
+                <span>Parent {data.task.parent_task_id}</span>
+              )}
+            </div>
             {!data.task.scope_valid && (
-              <Alert color="yellow" title="Scope unavailable">
+              <Alert variant="warning" title="Scope unavailable">
                 A selected view was removed. Change this task’s scope before
                 starting another operation.
               </Alert>
             )}
             <ScopeView scope={data.task.scope} />
-            <Text size="xs" className="workspace-path" c="dimmed">
+            <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
               Current scope {data.task.scope.id}
-            </Text>
+            </p>
             {!data.task.closed && !brain.archived && (
-              <Group>
-                <Button variant="default" onClick={() => onEdit(data.task)}>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => onEdit(data.task)}>
                   Change selection
                 </Button>
                 {!diagnosticsOnly && (
-                  <Button
-                    variant="light"
-                    leftSection={<GitBranch size={iconSize.small} />}
-                    onClick={() => onFork(data.task)}
-                  >
+                  <Button variant="secondary" onClick={() => onFork(data.task)}>
+                    <GitBranch aria-hidden="true" />
                     Create child scope
                   </Button>
                 )}
-                <Button
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => setClosing(true)}
-                >
+                <Button variant="ghost" onClick={() => setClosing(true)}>
                   Close task
                 </Button>
-              </Group>
+              </div>
             )}
             {closing && (
-              <Alert title="Close this task?" color="yellow">
-                <Text size="sm" mb="sm">
+              <Alert
+                variant="warning"
+                title="Close this task?"
+                actions={
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => close.mutate()}
+                      loading={close.isPending}
+                    >
+                      Confirm close
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setClosing(false)}
+                    >
+                      Keep open
+                    </Button>
+                  </>
+                }
+              >
+                <p>
                   New operations will stop. History and child tasks remain
                   available.
-                </Text>
-                <Group>
-                  <Button
-                    size="xs"
-                    onClick={() => close.mutate()}
-                    loading={close.isPending}
-                  >
-                    Confirm close
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    onClick={() => setClosing(false)}
-                  >
-                    Keep open
-                  </Button>
-                </Group>
+                </p>
                 <Failure error={close.error} />
               </Alert>
             )}
-            <Divider />
+            <Separator />
             {!diagnosticsOnly && !data.task.closed && !brain.archived && (
-              <>
+              <div className="grid gap-2">
                 <Select
                   label="Operation purpose"
                   value={purpose}
@@ -943,113 +986,117 @@ function TaskDialog({
                     { value: "tool", label: "Tool" },
                   ]}
                 />
-                <Text size="xs" c="dimmed">
+                <p className="m-0 text-caption text-muted-foreground">
                   Record a fixed scope for a later operation. A binding does not
                   execute a tool or retrieve evidence.
-                </Text>
-                <Button
-                  variant="light"
-                  disabled={!data.task.scope_valid}
-                  loading={begin.isPending}
-                  onClick={() => begin.mutate()}
-                >
-                  Bind operation
-                </Button>
-                <Failure error={begin.error} />
-              </>
-            )}
-            <Text fw={600} size="sm">
-              Recorded operations
-            </Text>
-            {data.operations.length === 0 && (
-              <Text c="dimmed" size="sm">
-                No operation bindings yet.
-              </Text>
-            )}
-            {data.operations.map((op) => (
-              <Card
-                key={op.id}
-                withBorder
-                p="sm"
-                data-testid="operation-binding"
-              >
-                <Group justify="space-between">
-                  <Text size="sm" tt="capitalize">
-                    {op.kind} binding
-                  </Text>
+                </p>
+                <div>
                   <Button
-                    size="xs"
-                    variant="subtle"
-                    onClick={() => setInspect(op.scope)}
+                    variant="secondary"
+                    disabled={!data.task.scope_valid}
+                    loading={begin.isPending}
+                    onClick={() => begin.mutate()}
                   >
-                    Inspect scope
+                    Bind operation
                   </Button>
-                </Group>
-                <Text size="xs" c="dimmed">
-                  {timestamp(op.created_at)} ·{" "}
-                  {op.scope.id === data.task.scope.id
-                    ? "Current scope"
-                    : "Earlier scope"}
-                </Text>
-                <Text size="xs" className="workspace-path" c="dimmed">
-                  {op.id}
-                </Text>
-              </Card>
-            ))}
-            <Pages
-              offset={operationOffset}
-              total={data.operation_total}
-              size={20}
-              setOffset={setOperationOffset}
-            />
-            <Divider />
-            <Text fw={600} size="sm">
-              Scope history
-            </Text>
-            {data.scopes.map((scope) => (
-              <Group key={scope.id} justify="space-between">
-                <Text size="xs">
-                  {timestamp(scope.created_at)} ·{" "}
-                  {scope.id === data.task.scope.id ? "Current" : "Earlier"}
-                </Text>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  onClick={() => setInspect(scope)}
+                </div>
+                <Failure error={begin.error} />
+              </div>
+            )}
+            <div className="grid gap-2">
+              <h4 className="section-label m-0">Recorded operations</h4>
+              {data.operations.length === 0 && (
+                <p className="m-0 text-body text-muted-foreground">
+                  No operation bindings yet.
+                </p>
+              )}
+              {data.operations.map((op) => (
+                <Card
+                  key={op.id}
+                  className="grid gap-1 p-3"
+                  data-testid="operation-binding"
                 >
-                  View scope
-                </Button>
-              </Group>
-            ))}
-            <Pages
-              offset={scopeOffset}
-              total={data.scope_total}
-              size={20}
-              setOffset={setScopeOffset}
-            />
-            {inspect && (
-              <Card withBorder p="md">
-                <Group justify="space-between" mb="sm">
-                  <Text fw={600} size="sm">
-                    Recorded scope
-                  </Text>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="m-0 text-body font-medium capitalize text-foreground">
+                      {op.kind} binding
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setInspect(op.scope)}
+                    >
+                      Inspect scope
+                    </Button>
+                  </div>
+                  <p className="mono m-0 text-caption text-muted-foreground">
+                    {timestamp(op.created_at)} ·{" "}
+                    {op.scope.id === data.task.scope.id
+                      ? "Current scope"
+                      : "Earlier scope"}
+                  </p>
+                  <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+                    {op.id}
+                  </p>
+                </Card>
+              ))}
+              <Pages
+                offset={operationOffset}
+                total={data.operation_total}
+                size={20}
+                setOffset={setOperationOffset}
+              />
+            </div>
+            <Separator />
+            <div className="grid gap-2">
+              <h4 className="section-label m-0">Scope history</h4>
+              {data.scopes.map((scope) => (
+                <div
+                  key={scope.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span className="mono text-caption text-foreground-secondary">
+                    {timestamp(scope.created_at)} ·{" "}
+                    {scope.id === data.task.scope.id ? "Current" : "Earlier"}
+                  </span>
                   <Button
-                    size="xs"
-                    variant="subtle"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setInspect(scope)}
+                  >
+                    View scope
+                  </Button>
+                </div>
+              ))}
+              <Pages
+                offset={scopeOffset}
+                total={data.scope_total}
+                size={20}
+                setOffset={setScopeOffset}
+              />
+            </div>
+            {inspect && (
+              <Card className="grid gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="m-0 text-body font-semibold text-foreground">
+                    Recorded scope
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     onClick={() => setInspect(null)}
                   >
                     Hide
                   </Button>
-                </Group>
+                </div>
                 <ScopeView scope={inspect} />
-                <Text size="xs" mt="sm" className="workspace-path" c="dimmed">
+                <p className="mono m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
                   {inspect.id}
-                </Text>
+                </p>
               </Card>
             )}
           </>
         )}
-      </Stack>
+      </div>
     </Modal>
   );
 }
@@ -1065,6 +1112,7 @@ export function AliasDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const formId = useId();
   const [origin, setOrigin] = useState("");
   const save = useMutation({
     mutationFn: async () =>
@@ -1080,33 +1128,44 @@ export function AliasDialog({
     onSuccess: onSaved,
   });
   return (
-    <Modal opened onClose={onClose} title="Add repository origin" centered>
+    <Modal
+      opened
+      onClose={onClose}
+      title="Add repository origin"
+      footer={
+        <Button type="submit" form={formId} loading={save.isPending}>
+          Attach origin
+        </Button>
+      }
+    >
       <form
+        id={formId}
+        className="grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
           save.mutate();
         }}
       >
-        <Stack>
-          <Text size="sm" className="workspace-path">
-            Attach an alias or moved origin to {repository.canonical_origin}.
-          </Text>
-          <TextInput
-            label="Repository origin"
-            required
-            value={origin}
-            onChange={(event) => setOrigin(event.currentTarget.value)}
-            maxLength={2000}
-          />
-          <Text size="xs" c="dimmed">
-            Use this only when both origins identify the same repository. Its
-            UUID and recorded scopes are preserved.
-          </Text>
-          <Failure error={save.error} />
-          <Button type="submit" loading={save.isPending}>
-            Attach origin
-          </Button>
-        </Stack>
+        <p className="m-0 text-body text-foreground-secondary [overflow-wrap:anywhere]">
+          Attach an alias or moved origin to{" "}
+          <span className="mono text-label text-foreground">
+            {repository.canonical_origin}
+          </span>
+          .
+        </p>
+        <TextField
+          label="Repository origin"
+          required
+          inputClassName="mono"
+          value={origin}
+          onChange={(event) => setOrigin(event.currentTarget.value)}
+          maxLength={2000}
+        />
+        <p className="m-0 text-caption text-muted-foreground">
+          Use this only when both origins identify the same repository. Its UUID
+          and recorded scopes are preserved.
+        </p>
+        <Failure error={save.error} />
       </form>
     </Modal>
   );

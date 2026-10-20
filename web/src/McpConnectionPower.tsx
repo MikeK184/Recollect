@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Group, Modal, Stack, Text } from "@mantine/core";
+import { Button, Modal } from "./components/ui";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
@@ -42,7 +42,6 @@ export function ConnectionPowerDialog(props: Props) {
         summary?.enabled ? "Pause connection use" : "Enable connection use"
       }
       size="md"
-      centered
     >
       {query.error ? (
         <ErrorState error={query.error} />
@@ -106,20 +105,22 @@ function PowerForm({
     return () => onPending(false);
   }, [save.isPending, onPending]);
   return (
-    <Stack gap="lg">
-      <Text fw={600}>{original.summary.name}</Text>
-      <Text size="sm">
+    <div className="grid gap-3">
+      <p className="m-0 text-body font-semibold text-foreground">
+        {original.summary.name}
+      </p>
+      <p className="m-0 text-body text-foreground-secondary">
         {enabled
           ? "Allows future authorized calls. The session opens on demand; this does not start or test the server."
           : "Blocks future calls through this connection. Already dispatched calls may finish. A remote server stays running independently."}
-      </Text>
-      <Text size="xs" c="dimmed">
+      </p>
+      <p className="m-0 text-caption text-muted-foreground">
         Applies to all tool groups using this connection in this Brain.
-      </Text>
+      </p>
       <ErrorState error={save.error} />
-      <Group justify="flex-end">
+      <div className="-mx-5 -mb-5 mt-2 flex justify-end gap-2 border-t border-border bg-muted px-5 py-3">
         <Button
-          variant="default"
+          variant="secondary"
           disabled={save.isPending}
           onClick={props.close}
         >
@@ -134,7 +135,7 @@ function PowerForm({
         >
           {enabled ? "Enable use" : "Pause use"}
         </Button>
-      </Group>
-    </Stack>
+      </div>
+    </div>
   );
 }

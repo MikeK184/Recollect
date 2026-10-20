@@ -1,8 +1,8 @@
-import { Alert, Button, Group, Text } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result } from "../../api";
 import type { components } from "../../api-schema";
 import { usePollInterval } from "../../usePollInterval";
+import { Alert, Button } from "../../components/ui";
 type Receipt = components["schemas"]["BrainDeletionResult"];
 export const deletionReceiptKey = ["last-brain-deletion"];
 
@@ -53,15 +53,13 @@ function Progress({
     refetchInterval: (query) => query.state.data?.state === "complete" ? false : pollFast,
   });
   const state = query.data;
+  const failed = query.isError || state.state === "error";
   return (
     <Alert
-      mb="lg"
-      color={
-        query.isError || state.state === "error"
-          ? "red"
-          : state.state === "complete"
-            ? "teal"
-            : "yellow"
+      className="mb-6"
+      role="status"
+      variant={
+        failed ? "destructive" : state.state === "complete" ? "brand" : "warning"
       }
       title={
         query.isError
@@ -72,29 +70,36 @@ function Progress({
               ? "Brain deleted · cleanup needs attention"
               : "Deletion in progress"
       }
+      actions={
+        <>
+          {query.isError && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void query.refetch()}
+            >
+              Retry cleanup status
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={dismiss}>
+            Dismiss deletion status
+          </Button>
+        </>
+      }
     >
-      <Text size="sm">The Brain is absent from listings and recall.</Text>
-      {query.isError ? (
-        <Button variant="subtle" size="xs" onClick={() => void query.refetch()}>
-          Retry cleanup status
-        </Button>
-      ) : (
-        <Text size="sm">
+      <p>The Brain is absent from listings and recall.</p>
+      {!query.isError && (
+        <p className="mono text-label">
           {state.state === "complete"
             ? "Central cleanup is complete."
             : `${state.pending_artifacts} files pending · journal ${state.journaled ? "saved" : "pending"} · graph cleanup ${state.graph_pending ? "pending" : "complete"}.`}
-        </Text>
+        </p>
       )}
-      <Text size="xs" mt="xs">
-        Managed backups can retain earlier copies for up to{" "}
-        {receipt.backup_days} days. Offline host copies require check-in;
-        central completion does not prove their removal.
-      </Text>
-      <Group justify="flex-end">
-        <Button variant="subtle" size="xs" onClick={dismiss}>
-          Dismiss deletion status
-        </Button>
-      </Group>
+      <p className="mt-1 text-caption text-muted-foreground">
+        Managed backups can retain earlier copies for up to {receipt.backup_days}{" "}
+        days. Offline host copies require check-in; central completion does not
+        prove their removal.
+      </p>
     </Alert>
   );
 }

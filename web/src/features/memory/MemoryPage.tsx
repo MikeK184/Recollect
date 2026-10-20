@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react";
-import { Button, Drawer } from "@mantine/core";
-import { History } from "lucide-react";
 import { ClaimsPanel } from "../../ClaimsPanel";
 import { HandoversPanel } from "../../HandoversPanel";
 import { useBrain } from "../../app/context";
 import { useBrainSearch } from "../../app/useBrainSearch";
-import { PageHeader } from "../../components/PageHeader";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "../../components/ui";
 import { useKnowledgeSelection } from "../knowledge/selection";
-import "../knowledge/explore.css";
 const kinds = ["claim", "decision", "procedure", "handover"];
-export function MemoryPage({ embedded = false }: { embedded?: boolean }) {
+
+/**
+ * The Memory browser. The Knowledge surface supplies the Explore header and
+ * view switcher, so this page renders only its toolbar, table and secondary
+ * handover tools. `embedded` is kept for the Explore route's call site.
+ */
+export function MemoryPage(_props: { embedded?: boolean }) {
   const brain = useBrain();
   const [search, patch] = useBrainSearch();
   const { select } = useKnowledgeSelection();
@@ -35,28 +45,37 @@ export function MemoryPage({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => () => select(null), [select]);
   return (
     <>
-      {!embedded && <PageHeader title="Memory" />}
-      <ClaimsPanel key={brain.id} brain={brain} />
-      <div className="explore-secondary-actions">
-        <Button
-          variant="subtle"
-          size="xs"
-          leftSection={<History size={14} />}
-          onClick={() => setHandovers(true)}
-        >
-          Handover tools &amp; history
-        </Button>
-      </div>
-      <Drawer
-        opened={handovers}
-        onClose={() => setHandovers(false)}
-        title="Handover tools & history"
-        closeButtonProps={{ "aria-label": "Close handover history" }}
-        position="right"
-        size="xl"
-      >
-        {handovers && <HandoversPanel key={brain.id} brain={brain} />}
-      </Drawer>
+      <ClaimsPanel
+        key={brain.id}
+        brain={brain}
+        onOpenHandovers={() => setHandovers(true)}
+      />
+      {/* Handover tools are secondary tooling, not record inspection: they
+          open in a side sheet rather than the docked inspector. */}
+      <Sheet open={handovers} onOpenChange={setHandovers}>
+        <SheetContent width={640} closeLabel="Close handover history">
+          <SheetHeader>
+            <SheetTitle>Handover tools &amp; history</SheetTitle>
+            <SheetDescription>
+              Generated handovers and their contributing memory.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetBody>
+            {handovers && (
+              <HandoversPanel
+                key={brain.id}
+                brain={brain}
+                onInspect={(claim) => {
+                  // The record opens in the page's docked inspector, which a
+                  // modal sheet would cover, so the tools close first.
+                  setHandovers(false);
+                  patch({ claim, revision: null, detail: "record" });
+                }}
+              />
+            )}
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

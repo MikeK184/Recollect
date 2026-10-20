@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Button, Text } from "@mantine/core";
+import { Button } from "../../components/ui";
 import { GraphSelectionPanel } from "../../GraphSelectionPanel";
 import { label } from "./graphExplorerShared";
 import type { ExplorerSceneState } from "./useExplorerScene";
@@ -41,22 +41,22 @@ export function GraphExplorerSelection({
         chosenNode ? (
           <>
             {chosenNode.evidence.claim && (
-              <Text size="xs" c="dimmed">
+              <p className="m-0 text-caption text-muted-foreground">
                 Review: {label(chosenNode.evidence.claim.review)} · Freshness:{" "}
                 {label(chosenNode.evidence.claim.freshness)} · Operational:{" "}
                 {label(chosenNode.evidence.claim.operational)}
-              </Text>
+              </p>
             )}
             {chosenNode.evidence.kind !== "claim" && (
-              <Text size="xs" c="dimmed">
+              <p className="m-0 text-caption text-muted-foreground">
                 Recorded evidence in this qualified selection.
-              </Text>
+              </p>
             )}
             {!!(
               chosenNode.evidence.qualifications.length ||
               chosenNode.evidence.claim?.conflicting_claim_ids.length
             ) && (
-              <Text size="xs" c="orange.9">
+              <p className="m-0 text-caption text-warning-text">
                 {[
                   ...(chosenNode.evidence.claim?.conflicting_claim_ids.length
                     ? ["Unresolved conflict"]
@@ -74,20 +74,20 @@ export function GraphExplorerSelection({
                       ) === index,
                   )
                   .join(" · ")}
-              </Text>
+              </p>
             )}
           </>
         ) : (
-          <Text size="xs" c="dimmed">
-            {chosenEdge!.family === "provenance"
+          <p className="m-0 text-caption text-muted-foreground">
+            {chosenEdge?.family === "provenance"
               ? "Recorded evidence contribution; acceptance is separate."
               : "Recorded dependency or reference; runtime impact is not established."}
-          </Text>
+          </p>
         )
       }
       actions={
         <Button
-          size="xs"
+          size="sm"
           disabled={
             !!chosenNode &&
             chosenNode.evidence.kind !== "claim" &&

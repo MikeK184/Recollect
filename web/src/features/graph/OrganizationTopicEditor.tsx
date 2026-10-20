@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Button,
-  Checkbox,
-  Group,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { Button, Checkbox, Select, TextField } from "../../components/ui";
 import type { SemanticCard, TopicChange, View } from "./organizationModel";
 
 export function TopicEditor({
@@ -58,15 +50,15 @@ export function TopicEditor({
     new TextEncoder().encode(name.trim()).length <= maximumNameBytes &&
     !/[\u0000-\u001f\u007f]/.test(name);
   return (
-    <Stack gap="md">
-      <Text size="sm">
+    <div className="grid gap-4">
+      <p className="m-0 text-body text-foreground-secondary">
         Changes apply to this{" "}
         {topic.topic_kind === "manual_overlay"
           ? "manual group"
           : "automatic topic"}
         . Source evidence and manual collections keep their own identities.
-      </Text>
-      <TextInput
+      </p>
+      <TextField
         label="Topic name"
         value={name}
         onChange={(event) => setName(event.currentTarget.value)}
@@ -84,7 +76,7 @@ export function TopicEditor({
         }))}
         disabled={busy}
       />
-      <Group>
+      <div className="flex flex-wrap gap-2">
         <Button
           disabled={busy || !basis || !validName}
           onClick={() =>
@@ -99,43 +91,51 @@ export function TopicEditor({
           Save topic name
         </Button>
         <Button
-          variant="default"
+          variant="secondary"
           disabled={busy}
           onClick={() => onChange({ action: "pin", pinned: !topic.pinned })}
         >
           {topic.pinned ? "Unpin topic" : "Pin topic"}
         </Button>
-      </Group>
-      <Text fw={600} size="sm">
-        Source memberships in this read
-      </Text>
-      {inputs.length === 0 && (
-        <Text size="sm" c="dimmed">
-          This page has no editable membership rows. Explore the topic and read
-          the next organization page to load its eligible source memberships.
-        </Text>
-      )}
-      <Checkbox.Group value={selected} onChange={setSelected}>
-        <Stack gap="xs">
-          {inputs.map((item) => (
-            <Checkbox
-              key={item.id}
-              value={item.id}
-              label={inputLabel(item)}
-              disabled={busy}
-            />
-          ))}
-        </Stack>
-      </Checkbox.Group>
+      </div>
+      <fieldset className="m-0 grid gap-2 border-0 border-t border-border p-0 pt-4">
+        <legend className="mb-2 p-0 text-label font-semibold">
+          Source memberships in this read
+        </legend>
+        {inputs.length === 0 && (
+          <p className="m-0 text-body text-muted-foreground">
+            This page has no editable membership rows. Explore the topic and
+            read the next organization page to load its eligible source
+            memberships.
+          </p>
+        )}
+        {inputs.map((item) => (
+          <Checkbox
+            key={item.id}
+            value={item.id}
+            label={inputLabel(item)}
+            disabled={busy}
+            checked={selected.includes(item.id)}
+            onChange={(event) => {
+              const checked = event.currentTarget.checked;
+              setSelected((old) =>
+                checked
+                  ? [...old.filter((id) => id !== item.id), item.id]
+                  : old.filter((id) => id !== item.id),
+              );
+            }}
+          />
+        ))}
+      </fieldset>
       {view.coverage.counts_are_lower_bounds && (
-        <Text size="xs" c="dimmed">
+        <p className="m-0 text-caption text-muted-foreground">
           This read is partial. Only the selected, currently eligible source
           memberships change.
-        </Text>
+        </p>
       )}
-      <Group>
+      <div className="flex flex-wrap gap-2">
         <Button
-          variant="default"
+          variant="secondary"
           disabled={busy || !selected.length}
           onClick={() =>
             onChange({
@@ -148,7 +148,7 @@ export function TopicEditor({
           Exclude selected sources
         </Button>
         <Button
-          variant="light"
+          variant="secondary"
           disabled={busy || !selected.length}
           onClick={() =>
             onChange({
@@ -159,12 +159,12 @@ export function TopicEditor({
         >
           Split selected into topic
         </Button>
-      </Group>
-      <Text size="xs" c="dimmed">
+      </div>
+      <p className="m-0 text-caption text-muted-foreground">
         Exclusion removes membership from this group. Splitting moves the
         selected memberships into a separate topic; neither action erases source
         evidence.
-      </Text>
-    </Stack>
+      </p>
+    </div>
   );
 }

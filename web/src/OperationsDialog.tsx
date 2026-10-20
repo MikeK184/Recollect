@@ -1,22 +1,12 @@
 import { useState } from "react";
-import {
-  Alert,
-  ActionIcon,
-  Button,
-  Group,
-  Loader,
-  Drawer,
-  Paper,
-  SimpleGrid,
-  Stack,
-  Text,
-  Tooltip,
-} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Database, Network, Server } from "lucide-react";
-import "./features/workspace/control-panel.css";
 import { client, result } from "./api";
 import { usePollInterval } from "./usePollInterval";
+import { Alert } from "./components/ui/alert";
+import { Button, IconButton } from "./components/ui/button";
+import { Drawer } from "./components/ui/sheet";
+import { Spinner } from "./components/ui/spinner";
 
 export function OperationsDialog() {
   const [opened, setOpened] = useState(false);
@@ -44,177 +34,151 @@ export function OperationsDialog() {
     !opened || query.error || query.dataUpdatedAt < openedAt
       ? undefined
       : query.data;
+  const metric = (label: string, value: number) => (
+    <div key={label} className="rounded-lg border border-border bg-card px-3 py-2.5">
+      <p className="m-0 text-caption text-muted-foreground">{label}</p>
+      <p className="mono m-0 mt-1 text-section font-semibold text-foreground">
+        {value.toLocaleString()}
+      </p>
+    </div>
+  );
+  const total = Math.max(
+    1,
+    data?.http.response_header_latency_ms.at(-1)?.count ?? 0,
+  );
   return (
     <>
-      <Tooltip label="Runtime diagnostics">
-        <ActionIcon
-          variant="subtle"
-          size="lg"
-          color="teal"
-          aria-label="Runtime diagnostics"
-          onClick={() => {
-            setOpenedAt(Date.now());
-            setOpened(true);
-          }}
-        >
-          <Activity size={19} aria-hidden="true" />
-        </ActionIcon>
-      </Tooltip>
+      <IconButton
+        label="Runtime diagnostics"
+        size="icon-sm"
+        onClick={() => {
+          setOpenedAt(Date.now());
+          setOpened(true);
+        }}
+      >
+        <Activity aria-hidden="true" />
+      </IconButton>
       <Drawer
         opened={opened}
         onClose={() => setOpened(false)}
         title="Runtime diagnostics"
-        size="xl"
-        position="right"
-        className="control-drawer"
+        description="Checked while open · refreshes every 10 seconds"
+        size={560}
       >
-        <Stack gap="lg">
-          <Text size="xs" c="dimmed">
-            Checked while open · refreshes every 10 seconds
-          </Text>
+        <div className="grid gap-5">
           {health.isError ? (
-            <Alert color="gray">Core store checks unavailable.</Alert>
+            <Alert role="status">Core store checks unavailable.</Alert>
           ) : (
             opened &&
             health.dataUpdatedAt >= openedAt &&
             health.data && (
-              <div className="control-surface">
-                <div className="diagnostic-map">
-                  <div className="diagnostic-service">
-                    <Server size={21} />
-                    <div>
-                      <strong>Recollect API</strong>
-                      <small>Response received</small>
-                    </div>
+              <div className="grid grid-cols-[auto_24px_minmax(0,1fr)] items-center gap-y-2 rounded-lg border border-border p-4 dot-grid">
+                <div className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 shadow-xs">
+                  <Server className="size-4 text-brand-text" aria-hidden="true" />
+                  <div>
+                    <strong className="block text-label font-semibold">Recollect API</strong>
+                    <small className="block text-caption text-muted-foreground">Response received</small>
                   </div>
-                  <div className="diagnostic-join" />
-                  <Stack gap="sm">
-                    {health.data.dependencies.map((dependency) => (
-                      <div key={dependency.name} className="diagnostic-service">
-                        {dependency.name.toLowerCase().includes("neo4j") ? (
-                          <Network size={21} />
-                        ) : (
-                          <Database size={21} />
-                        )}
-                        <div>
-                          <strong>{dependency.name}</strong>
-                          <small>
-                            {dependency.connected ? "Reachable" : "Unavailable"}{" "}
-                            · {dependency.detail}
+                </div>
+                <span aria-hidden="true" className="h-px bg-brand/50" />
+                <div className="grid gap-2">
+                  {health.data.dependencies.map((dependency) => {
+                    const Icon = dependency.name.toLowerCase().includes("neo4j")
+                      ? Network
+                      : Database;
+                    return (
+                      <div
+                        key={dependency.name}
+                        className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 shadow-xs"
+                      >
+                        <Icon
+                          className={dependency.connected ? "size-4 text-brand-text" : "size-4 text-destructive-text"}
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0">
+                          <strong className="block text-label font-semibold">{dependency.name}</strong>
+                          <small className="block truncate text-caption text-muted-foreground">
+                            {dependency.connected ? "Reachable" : "Unavailable"} · {dependency.detail}
                           </small>
                         </div>
                       </div>
-                    ))}
-                  </Stack>
+                    );
+                  })}
                 </div>
               </div>
             )
           )}
-          <Text size="xs" c="dimmed">
+          <p className="m-0 text-caption text-muted-foreground">
             These checks cover core stores. Model providers and agent presence
             are not checked here.
-          </Text>
-          <Text size="sm" c="dimmed">
+          </p>
+          <p className="m-0 text-label text-muted-foreground">
             Request counters reset when the API restarts. Job counts cover only
             Brains you can access.
-          </Text>
+          </p>
           {(query.isPending || (query.isFetching && !data)) && (
-            <Loader
-              size="sm"
-              role="status"
-              aria-label="Loading runtime diagnostics"
-            />
+            <Spinner label="Loading runtime diagnostics" />
           )}
           {query.error && (
-            <Alert color="red" title="Diagnostics unavailable">
-              <Text size="sm">{query.error.message}</Text>
-              <Button
-                size="xs"
-                variant="light"
-                mt="sm"
-                onClick={() => void query.refetch()}
-              >
-                Retry
-              </Button>
+            <Alert
+              variant="destructive"
+              title="Diagnostics unavailable"
+              actions={
+                <Button size="sm" variant="secondary" onClick={() => void query.refetch()}>
+                  Retry
+                </Button>
+              }
+            >
+              {query.error.message}
             </Alert>
           )}
           {data && (
             <>
-              <SimpleGrid cols={3}>
-                {(
-                  [
-                    ["Requests started", data.http.requests_started],
-                    ["Active requests", data.http.in_flight],
-                    [
-                      "Server errors",
-                      data.http.responses_by_status_class[5] ?? 0,
-                    ],
-                    ["Queued jobs", data.jobs_queued],
-                    ["Running jobs", data.jobs_running],
-                    ["Failed jobs", data.jobs_failed],
-                  ] as const
-                ).map(([label, value]) => (
-                  <Paper
-                    key={label}
-                    p="sm"
-                    withBorder
-                    className="diagnostic-metric"
-                  >
-                    <Text size="xs" c="dimmed">
-                      {label}
-                    </Text>
-                    <Text size="xl" fw={600}>
-                      {value.toLocaleString()}
-                    </Text>
-                  </Paper>
-                ))}
-              </SimpleGrid>
-              <Group justify="space-between">
-                <Text size="sm">
-                  API uptime: {Math.floor(data.http.uptime_seconds / 60)}{" "}
-                  minutes
-                </Text>
-                <Text size="sm">
-                  Database connections: {data.database_pool_size} ·{" "}
-                  {data.database_pool_idle} idle
-                </Text>
-              </Group>
-              <Text size="sm" fw={600}>
-                Time until response headers
-              </Text>
+              <div className="grid grid-cols-3 gap-2">
+                {metric("Requests started", data.http.requests_started)}
+                {metric("Active requests", data.http.in_flight)}
+                {metric("Server errors", data.http.responses_by_status_class[5] ?? 0)}
+                {metric("Queued jobs", data.jobs_queued)}
+                {metric("Running jobs", data.jobs_running)}
+                {metric("Failed jobs", data.jobs_failed)}
+              </div>
+              <div className="mono flex justify-between gap-4 text-caption text-foreground-secondary">
+                <span>API uptime: {Math.floor(data.http.uptime_seconds / 60)} minutes</span>
+                <span>
+                  Database connections: {data.database_pool_size} · {data.database_pool_idle} idle
+                </span>
+              </div>
+              <h3 className="m-0 text-label font-semibold">Time until response headers</h3>
               <div
-                className="control-surface diagnostic-cdf"
+                className="grid gap-1.5 rounded-lg border border-border p-3"
                 aria-label="Cumulative response header latency"
               >
                 {data.http.response_header_latency_ms.map((bucket) => (
                   <div
-                    className="diagnostic-bar-row"
+                    className="mono grid grid-cols-[96px_minmax(0,1fr)_64px] items-center gap-3 text-caption text-muted-foreground"
                     key={bucket.upper_bound_ms ?? "all"}
                   >
                     <span>
-                      {bucket.upper_bound_ms == null
-                        ? "Any duration"
-                        : `≤ ${bucket.upper_bound_ms} ms`}
+                      {bucket.upper_bound_ms == null ? "Any duration" : `≤ ${bucket.upper_bound_ms} ms`}
                     </span>
-                    <div className="diagnostic-bar">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
                       <span
-                        style={{
-                          width: `${(100 * bucket.count) / Math.max(1, data.http.response_header_latency_ms.at(-1)?.count ?? 0)}%`,
-                        }}
+                        className="block h-full rounded-full bg-chart-1 transition-[width] duration-slow ease-out"
+                        style={{ width: `${(100 * bucket.count) / total}%` }}
                       />
                     </div>
-                    <span>{bucket.count.toLocaleString()}</span>
+                    <span className="text-right text-foreground-secondary">{bucket.count.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
-              <Text size="xs" c="dimmed">
+              <p className="m-0 text-caption text-muted-foreground">
                 Counts are cumulative across API requests. Interrupted requests:{" "}
                 {data.http.interrupted}. These observations do not replace Brain
                 activity history.
-              </Text>
+              </p>
             </>
           )}
-        </Stack>
+        </div>
       </Drawer>
     </>
   );

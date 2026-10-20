@@ -13,7 +13,7 @@ pending foundation documents as accepted authority.
 
 - [0001: Repository governance](0001-repository-governance.md)
 - [0002: Local CodeGraph navigation](0002-local-codegraph-navigation.md) (superseded by the [development tooling runbook](../runbooks/development-tooling.md))
-- [0003: Product runtime](0003-product-runtime.md) (password-hashing allowance superseded by [0024](0024-local-password-hashing.md))
+- [0003: Product runtime](0003-product-runtime.md) (password-hashing allowance superseded by [0024](0024-local-password-hashing.md); Mantine replaced by [0025](0025-two-theme-desktop-redesign.md))
 - [0004: Committed repository publication](0004-committed-repository-publication.md)
 - [0005: Canonical claims and time](0005-canonical-claims-and-time.md)
 - [0006: Autonomous memory](0006-autonomous-memory.md)
@@ -24,10 +24,10 @@ pending foundation documents as accepted authority.
 - [0011: Personal and shared installation](0011-local-and-shared-installation.md)
 - [0012: Managed tool observations](0012-managed-tool-observations.md)
 - [0013: Consistent encrypted backup and recovery](0013-backup-and-recovery.md)
-- [0014: Contextual desktop experience and evidence-backed answers](0014-desktop-experience-and-answers.md)
+- [0014: Contextual desktop experience and evidence-backed answers](0014-desktop-experience-and-answers.md) (stack, themes and typography amended by [0025](0025-two-theme-desktop-redesign.md))
 - [0015: Direct plugin and MCP user authentication without a CLI download](0015-direct-plugin-user-auth.md)
 - [0016: Irreversible Brain deletion through the canonical erasure path](0016-brain-deletion.md)
-- [0017: One knowledge surface, primary Ask and separated wiring](0017-desktop-knowledge-and-ask-experience.md)
+- [0017: One knowledge surface, primary Ask and separated wiring](0017-desktop-knowledge-and-ask-experience.md) (Ask silhouette and inspector amended by [0025](0025-two-theme-desktop-redesign.md))
 
 - [0018: Plugin-managed automatic agent memory](0018-plugin-managed-agent-memory.md)
 - [0019: Rust semantic navigation and Graft developer context](0019-rust-semantic-developer-navigation.md) (superseded by the [development tooling runbook](../runbooks/development-tooling.md))
@@ -37,3 +37,4 @@ pending foundation documents as accepted authority.
 - [0022: Brain-managed skills and shared guidance](0022-brain-managed-skills.md)
 - [0023: Brain-scoped agent-to-agent coordination](0023-agent-to-agent-coordination.md)
 - [0024: Local password hashing and strict credential-file reads](0024-local-password-hashing.md)
+- [0025: Two-theme desktop redesign on Tailwind and shadcn/ui](0025-two-theme-desktop-redesign.md)

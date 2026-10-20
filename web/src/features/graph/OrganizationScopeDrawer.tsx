@@ -3,12 +3,9 @@ import {
   Alert,
   Button,
   Drawer,
-  Group,
   MultiSelect,
   Select,
-  Stack,
-  Text,
-} from "@mantine/core";
+} from "../../components/ui";
 import { useWorkspaceCatalogue, useEvidenceList } from "../../catalogueQueries";
 import type { Scope } from "./organizationModel";
 
@@ -39,16 +36,35 @@ export function OrganizationScopeDrawer({
       opened={opened}
       onClose={onClose}
       title="Organization scope"
-      position="right"
-      size="md"
+      description="Choose which source evidence may contribute names, memberships and counts."
+      size={480}
+      bodyClassName="grid content-start gap-4"
+      footer={
+        <>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              setDraft({
+                ...scope,
+                collection_id: null,
+                manifest_revision_id: null,
+                fact_at: null,
+                selection: {
+                  repository_ids: [],
+                  area_ids: [],
+                  environment_id: null,
+                },
+              })
+            }
+          >
+            Clear scope
+          </Button>
+          <Button onClick={onApply}>Apply organization scope</Button>
+        </>
+      }
     >
-      <Stack>
-        <Text size="sm" c="dimmed">
-          Choose which source evidence may contribute names, memberships and
-          counts.
-        </Text>
         {(catalogue.error || manual.error) && (
-          <Alert color="red">
+          <Alert variant="destructive">
             Scope choices could not be refreshed. Existing semantic results do
             not supply scope labels.
           </Alert>
@@ -56,7 +72,7 @@ export function OrganizationScopeDrawer({
         <MultiSelect
           label="Organization repositories"
           searchable
-          value={draft.selection.repository_ids}
+          value={draft.selection.repository_ids ?? []}
           data={(!catalogue.isError
             ? (catalogue.data?.repositories ?? [])
             : []
@@ -74,7 +90,7 @@ export function OrganizationScopeDrawer({
         <MultiSelect
           label="Organization areas"
           searchable
-          value={draft.selection.area_ids}
+          value={draft.selection.area_ids ?? []}
           data={manualGroups
             .filter((group) => group.kind === "area")
             .map((group) => ({ value: group.id, label: group.name }))}
@@ -110,28 +126,6 @@ export function OrganizationScopeDrawer({
             setDraft((old) => ({ ...old, collection_id }))
           }
         />
-        <Group>
-          <Button onClick={onApply}>Apply organization scope</Button>
-          <Button
-            variant="subtle"
-            onClick={() =>
-              setDraft({
-                ...scope,
-                collection_id: null,
-                manifest_revision_id: null,
-                fact_at: null,
-                selection: {
-                  repository_ids: [],
-                  area_ids: [],
-                  environment_id: null,
-                },
-              })
-            }
-          >
-            Clear scope
-          </Button>
-        </Group>
-      </Stack>
     </Drawer>
   );
 }

@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createRootRoute,
@@ -12,16 +11,14 @@ import {
   redirect,
   RouterProvider,
 } from "@tanstack/react-router";
-import "@mantine/core/styles.css";
-import "./styles.css";
-import "./features/brain-pages.css";
-import "./features/management.css";
-import "./design/typography.css";
+import { MotionConfig } from "motion/react";
+import "./index.css";
 import { App } from "./App";
 import { BrainLayout } from "./app/BrainLayout";
 import { validateBrainSearch } from "./app/useBrainSearch";
-import { theme, cssVariablesResolver } from "./design/theme";
 import { PageFailure } from "./components/PageFailure";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { useThemeSync } from "./design/theme-mode";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -218,6 +215,8 @@ const devices = createRoute({
 });
 const router = createRouter({
   defaultErrorComponent: PageFailure,
+  // Pages scroll inside the main panel, not the window.
+  scrollToTopSelectors: ["#main-scroll"],
   routeTree: root.addChildren([
     home,
     brain.addChildren([
@@ -260,16 +259,21 @@ declare module "@tanstack/react-router" {
     router: typeof router;
   }
 }
+function Root() {
+  useThemeSync();
+  return (
+    <MotionConfig reducedMotion="user">
+      <TooltipProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </TooltipProvider>
+    </MotionConfig>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider
-      theme={theme}
-      cssVariablesResolver={cssVariablesResolver}
-      forceColorScheme="light"
-    >
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </MantineProvider>
+    <Root />
   </React.StrictMode>,
 );

@@ -1,36 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActionIcon,
-  TextInput,
-  Tooltip,
-  Alert,
-  Button,
-  Card,
-  Checkbox,
-  Code,
-  CopyButton,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   Copy,
+  Fingerprint,
   History,
-  Laptop,
-  Search,
+  KeyRound,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import type { components } from "./api-schema";
 import { client, result } from "./api";
-import { StatusBadge } from "./components/StatusBadge";
 import { HostIcon } from "./components/HostIcon";
-import "./features/agents/access-tokens.css";
+import { EmptyState } from "./components/AsyncState";
+import { SkeletonRows } from "./components/Skeleton";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  CopyButton,
+  Count,
+  Modal,
+  SearchInput,
+  StatusBadge,
+  Tile,
+  Tooltip,
+} from "./components/ui";
 import { usePollInterval } from "./usePollInterval";
 
 const date = (value: string) =>
@@ -77,6 +73,25 @@ const order: Record<string, number> = {
   Expired: 2,
   Revoked: 3,
 };
+
+/** Subsection title with a small count, inside the Access tokens sheet. */
+function ListHeading({
+  icon,
+  title,
+  count,
+}: {
+  icon?: ReactNode;
+  title: string;
+  count: number;
+}) {
+  return (
+    <h3 className="m-0 flex items-center gap-2 text-body font-semibold text-foreground [&_svg]:size-4 [&_svg]:text-muted-foreground">
+      {icon}
+      {title}
+      <Count>{count}</Count>
+    </h3>
+  );
+}
 
 export function AgentAccessPanel({ code }: { code?: string }) {
   const pollNormal = usePollInterval("normal");
@@ -146,165 +161,182 @@ export function AgentAccessPanel({ code }: { code?: string }) {
   }, [devices.data]);
   const visibleCurrent = rows.current.filter(matches);
   const visibleHistory = rows.history.filter(matches);
+  const onRevoke = (target: Device) => {
+    revoke.reset();
+    setSelected(target);
+  };
   return (
-    <Stack gap="xl">
+    <div className="flex flex-col gap-6 text-body">
       {code && <PairingApproval key={code} code={code} />}
       {devices.error && (
-        <Alert color="red" title="Connections could not be loaded">
+        <Alert
+          variant="destructive"
+          title="Connections could not be loaded"
+          actions={
+            <Button
+              variant="destructive-ghost"
+              size="sm"
+              onClick={() => void devices.refetch()}
+            >
+              Try again
+            </Button>
+          }
+        >
           {devices.error.message}
-          <Button variant="subtle" onClick={() => void devices.refetch()}>
-            Try again
-          </Button>
         </Alert>
       )}
       {devices.isPending ? (
-        <Loader />
+        <SkeletonRows rows={4} label="Loading access tokens…" />
       ) : (
         !devices.error && (
-          <Stack gap="lg">
-            <Text fw={600}>
-              Your access tokens{" "}
-              <span className="count-pill">{devices.data?.length ?? 0}</span>
-            </Text>
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-3">
+              <ListHeading
+                title="Your access tokens"
+                count={devices.data?.length ?? 0}
+              />
+              {!!devices.data?.length && (
+                <span className="mono ml-auto whitespace-nowrap text-caption text-muted-foreground">
+                  {rows.current.length} enabled · {rows.history.length} in
+                  history
+                </span>
+              )}
+            </div>
             {!devices.data?.length ? (
-              <Card withBorder className="empty-state">
-                <div className="empty-icon">
-                  <Laptop size={26} />
-                </div>
-                <Title order={3}>No access tokens yet</Title>
-                <Text c="dimmed" size="sm" ta="center">
-                  Connect an agent from a Brain&apos;s Agents page.
-                </Text>
-              </Card>
+              <div className="rounded-lg border border-border">
+                <EmptyState
+                  icon={KeyRound}
+                  title="No access tokens yet"
+                  description="Connect an agent from a Brain's Agents page."
+                />
+              </div>
             ) : (
               <>
-                <Group align="flex-start" justify="space-between" gap="md">
+                <div className="flex flex-col gap-3">
+                  <SearchInput
+                    placeholder="Find an access token"
+                    aria-label="Find an access token"
+                    value={search}
+                    onChange={(event) => setSearch(event.currentTarget.value)}
+                  />
                   <Checkbox
-                    maw={520}
-                    style={{ minWidth: 0 }}
                     checked={showHistory}
                     onChange={(event) =>
                       setShowHistory(event.currentTarget.checked)
                     }
-                    label="Include revoked and expired"
+                    label="Show revoked and expired devices"
                   />
-                  <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                    {rows.current.length} enabled credentials ·{" "}
-                    {rows.history.length} in history
-                  </Text>
-                </Group>
-                <TextInput
-                  placeholder="Find an access token…"
-                  aria-label="Find an access token"
-                  value={search}
-                  onChange={(event) => setSearch(event.currentTarget.value)}
-                  leftSection={<Search size={16} />}
-                />
-                <Stack gap="xs">
-                  <Text fw={600}>
-                    Enabled credentials{" "}
-                    <span className="count-pill">{rows.current.length}</span>
-                  </Text>
-                  {visibleCurrent
-                    .map((device) => (
-                      <DeviceCard
-                        device={device}
-                        key={device.id}
-                        onRevoke={(target) => {
-                          revoke.reset();
-                          setSelected(target);
-                        }}
-                      />
-                    ))}
+                </div>
+                <section className="flex flex-col gap-2">
+                  <ListHeading
+                    title="Enabled credentials"
+                    count={rows.current.length}
+                  />
+                  {!!visibleCurrent.length && (
+                    <ul className="m-0 list-none rounded-lg border border-border bg-card px-3 py-0">
+                      {visibleCurrent.map((device) => (
+                        <DeviceCard
+                          device={device}
+                          key={device.id}
+                          onRevoke={onRevoke}
+                        />
+                      ))}
+                    </ul>
+                  )}
                   {!rows.current.length && (
-                    <Card withBorder className="empty-state">
-                      <div className="empty-icon">
-                        <Laptop size={26} />
-                      </div>
-                      <Title order={3}>No enabled device credentials</Title>
-                      <Text c="dimmed" size="sm" ta="center">
-                        Every device is revoked or expired and belongs to the
-                        history section below.
-                      </Text>
-                    </Card>
+                    <div className="rounded-lg border border-border">
+                      <EmptyState
+                        icon={KeyRound}
+                        title="No enabled device credentials"
+                        description="Every device is revoked or expired and belongs to the history section below."
+                      />
+                    </div>
                   )}
                   {!!rows.current.length && !visibleCurrent.length && (
-                    <Text size="sm" c="dimmed">No enabled access tokens match your search.</Text>
+                    <p className="m-0 text-body text-muted-foreground">
+                      No enabled access tokens match your search.
+                    </p>
                   )}
-                </Stack>
+                </section>
                 {!!rows.history.length && (
-                  <Stack gap="md">
-                    <Group gap="xs">
-                      <History size={16} />
-                      <Text fw={600}>Revoked and expired</Text>
-                      <span className="count-pill">{rows.history.length}</span>
-                    </Group>
+                  <section className="flex flex-col gap-2">
+                    <ListHeading
+                      icon={<History aria-hidden="true" />}
+                      title="Revoked and expired"
+                      count={rows.history.length}
+                    />
                     {showHistory ? (
-                      visibleHistory
-                        .map((device) => (
-                          <DeviceCard
-                            device={device}
-                            key={device.id}
-                            onRevoke={(target) => {
-                              revoke.reset();
-                              setSelected(target);
-                            }}
-                          />
-                        ))
+                      !!visibleHistory.length && (
+                        <ul className="m-0 list-none rounded-lg border border-border bg-card px-3 py-0">
+                          {visibleHistory.map((device) => (
+                            <DeviceCard
+                              device={device}
+                              key={device.id}
+                              onRevoke={onRevoke}
+                            />
+                          ))}
+                        </ul>
+                      )
                     ) : (
-                      <Text size="xs" c="dimmed">
+                      <p className="m-0 text-caption text-muted-foreground">
                         {rows.history.length}{" "}
                         {rows.history.length === 1
                           ? "record is"
                           : "records are"}{" "}
-                        collapsed. Use “Include revoked and expired” above
-                        to list them.
-                      </Text>
+                        collapsed. Turn on “Show revoked and expired devices”
+                        above to list them.
+                      </p>
                     )}
-                  </Stack>
+                  </section>
                 )}
               </>
             )}
-          </Stack>
+          </div>
         )
       )}
       <Modal
         opened={!!selected}
         onClose={() => !revoke.isPending && setSelected(null)}
         title="Revoke device access"
-        centered
-      >
-        <Stack>
-          <Text size="sm">
-            This revokes <strong>{selected?.name}</strong>&apos;s keycard from{" "}
-            <b>all Brains</b>. Its token stops working at once; captured history
-            stays in place.
-          </Text>
-          {revoke.error && <Alert color="red">{revoke.error.message}</Alert>}
-          <Group justify="flex-end">
+        size="sm"
+        footer={
+          <>
             <Button
-              variant="default"
+              variant="secondary"
               disabled={revoke.isPending}
               onClick={() => setSelected(null)}
             >
               Keep device
             </Button>
             <Button
-              color="red"
+              variant="destructive"
               loading={revoke.isPending}
               onClick={() => selected && revoke.mutate(selected.id)}
             >
               Revoke device
             </Button>
-          </Group>
-        </Stack>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="m-0 text-body text-foreground-secondary">
+            This revokes{" "}
+            <strong className="text-foreground">{selected?.name}</strong>
+            &apos;s keycard from{" "}
+            <strong className="text-foreground">all Brains</strong>. Its token
+            stops working at once; captured history stays in place.
+          </p>
+          {revoke.error && (
+            <Alert variant="destructive">{revoke.error.message}</Alert>
+          )}
+        </div>
       </Modal>
-    </Stack>
+    </div>
   );
 }
 
 /** One device row: name, a text status mark, human dates, and the machine
- * identifier only as a copyable field in the detail region below the row. */
+ * identifier only as a copyable field behind the row's identifier control. */
 function DeviceCard({
   device,
   onRevoke,
@@ -314,78 +346,100 @@ function DeviceCard({
 }) {
   const status = statusOf(device);
   return (
-    <div className="access-token-row" data-testid="device-card">
-      <div className="access-token-identity">
-        <div className="access-token-icon">
-          <HostIcon host={device.host_kind} size={20} />
-        </div>
-        <div>
-          <Text fw={600} size="sm" data-testid="device-row-name">
+    <li
+      className="flex items-start gap-3 border-b border-border py-3 last:border-b-0"
+      data-testid="device-card"
+    >
+      <Tile>
+        <HostIcon host={device.host_kind} size={18} />
+      </Tile>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span
+            className="min-w-0 text-body font-medium text-foreground [overflow-wrap:anywhere]"
+            data-testid="device-row-name"
+          >
             {device.name}
-          </Text>
-          <Text size="xs" c="dimmed">
-            {(device.observed_hosts?.length
-              ? device.observed_hosts
-              : [device.host_kind ?? ""]
-            )
-              .map((host) => hostLabels[host])
-              .filter(Boolean)
-              .join(" · ") || "Host unreported"}
-            {" · "}
-            {device.integration === "plugin"
-              ? "Recollect plugin"
-              : device.integration === "mcp"
-                ? "MCP token"
-                : "Integration unreported"}
-          </Text>
-          <StatusBadge state={status.mark}>
-            {status.label === "Credential enabled" ? "Enabled" : status.label}
-          </StatusBadge>
+          </span>
+          <StatusBadge state={status.mark}>{status.label}</StatusBadge>
         </div>
+        <span className="text-caption text-muted-foreground">
+          {(device.observed_hosts?.length
+            ? device.observed_hosts
+            : [device.host_kind ?? ""]
+          )
+            .map((host) => hostLabels[host])
+            .filter(Boolean)
+            .join(" · ") || "Host unreported"}
+          {" · "}
+          {device.integration === "plugin"
+            ? "Recollect plugin"
+            : device.integration === "mcp"
+              ? "MCP token"
+              : "Integration unreported"}
+        </span>
+        <span className="flex flex-wrap gap-x-3 text-caption text-muted-foreground">
+          <span>
+            {device.last_used_at ? (
+              <>
+                Last used{" "}
+                <span className="mono text-foreground-secondary">
+                  {date(device.last_used_at)}
+                </span>
+              </>
+            ) : (
+              "Not used yet"
+            )}
+          </span>
+          <Tooltip
+            label={`Paired ${new Date(device.created_at).toLocaleString()}`}
+          >
+            <span>
+              {device.revoked_at ? "Revoked " : "Expires "}
+              <span className="mono">
+                {date(device.revoked_at ?? device.expires_at)}
+              </span>
+            </span>
+          </Tooltip>
+        </span>
       </div>
-      <div className="access-token-dates">
-        <Text size="xs" c="dimmed">
-          Last used
-        </Text>
-        <Text size="xs">
-          {device.last_used_at ? date(device.last_used_at) : "Not used yet"}
-        </Text>
-        <Tooltip
-          label={`Paired ${new Date(device.created_at).toLocaleString()}`}
-        >
-          <Text size="xs" c="dimmed">
-            {device.revoked_at
-              ? `Revoked ${date(device.revoked_at)}`
-              : `Expires ${date(device.expires_at)}`}
-          </Text>
-        </Tooltip>
-      </div>
-      <Group gap={4} wrap="nowrap">
-        <CopyButton value={device.id}>
-          {({ copied, copy }) => (
-            <Tooltip label={copied ? "Copied" : "Copy device ID"}>
-              <ActionIcon
-                variant="subtle"
-                aria-label="Copy device ID"
-                onClick={copy}
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </CopyButton>
+      <div className="flex shrink-0 items-center gap-1 self-center">
+        <details className="relative">
+          <summary
+            title="Device identifier"
+            className="grid size-7 cursor-pointer list-none place-items-center rounded-sm text-muted-foreground transition-colors duration-fast hover:bg-accent hover:text-foreground [&::-webkit-details-marker]:hidden"
+          >
+            <Fingerprint className="size-3.5" aria-hidden="true" />
+            <span className="absolute size-px whitespace-nowrap [clip-path:inset(50%)]">
+              Device identifier
+            </span>
+          </summary>
+          <div className="absolute right-0 top-full z-10 mt-1 animate-pop rounded-md border border-border bg-popover p-1 shadow-md">
+            <CopyButton value={device.id}>
+              {({ copied, copy }) => (
+                <Button size="sm" variant="ghost" onClick={copy}>
+                  {copied ? (
+                    <Check className="text-brand-text" aria-hidden="true" />
+                  ) : (
+                    <Copy aria-hidden="true" />
+                  )}
+                  {copied ? "Copied" : "Copy device ID"}
+                </Button>
+              )}
+            </CopyButton>
+          </div>
+        </details>
         {!device.revoked_at && (
           <Button
-            size="compact-xs"
-            color="red"
-            variant="subtle"
+            size="sm"
+            variant="destructive-ghost"
             onClick={() => onRevoke(device)}
           >
             Revoke
           </Button>
         )}
-      </Group>
-    </div>
+      </div>
+    </li>
   );
 }
 
@@ -421,100 +475,104 @@ function PairingApproval({ code }: { code: string }) {
       void cache.invalidateQueries({ queryKey: ["brain-agents"] });
     },
   });
+  const done =
+    pairing.data?.state === "approved" || pairing.data?.state === "claimed";
   return (
-    <Card withBorder p="xl" style={{ borderColor: "var(--rc-accent)" }}>
-      <Stack>
-        <Group>
-          <ShieldCheck size={22} />
-          <Title order={2} fz={22}>
-            Approve this host
-          </Title>
-        </Group>
-        {pairing.isPending ? (
-          <Loader />
-        ) : pairing.error ? (
-          <Alert color="red">{pairing.error.message}</Alert>
-        ) : (
-          pairing.data && (
-            <>
-              <Text>
-                <strong>{pairing.data.name}</strong> is requesting access as
-                your account.
-              </Text>
-              <Group justify="space-between">
-                <Code fz={26} fw={600} style={{ letterSpacing: "0.15em" }}>
-                  {pairing.data.user_code}
-                </Code>
-                <Text size="xs" c="dimmed">
-                  Expires {date(pairing.data.expires_at)}
-                </Text>
-              </Group>
-              {pairing.data.state === "pending" ? (
-                <>
-                  <Text size="sm" c="dimmed">
-                    Check that this code matches the host you just started on
-                    your own computer.
-                  </Text>
-                  {pairing.data.reuses_device && (
-                    <Alert color="yellow">
-                      You already have a device named{" "}
-                      <strong>{pairing.data.reuses_device}</strong>. Approving
-                      replaces its token, so the host using it signs out.
-                    </Alert>
-                  )}
-                  <Group>
-                    <Button
-                      leftSection={<Check size={16} />}
-                      loading={
-                        decision.isPending && decision.variables === true
-                      }
-                      disabled={decision.isPending}
-                      onClick={() => decision.mutate(true)}
-                    >
-                      {pairing.data.reuses_device
-                        ? "Replace and approve"
-                        : "Approve device"}
-                    </Button>
-                    <Button
-                      variant="default"
-                      disabled={decision.isPending}
-                      onClick={() => decision.mutate(false)}
-                    >
-                      Decline
-                    </Button>
-                  </Group>
-                </>
-              ) : (
-                <Alert
-                  color={
-                    pairing.data.state === "approved" ||
-                    pairing.data.state === "claimed"
-                      ? "teal"
-                      : "gray"
-                  }
-                >
-                  {pairing.data.state === "approved"
-                    ? "Approved. Waiting for your host to finish pairing."
-                    : pairing.data.state === "claimed"
-                      ? "Pairing complete. Credential enabled."
-                      : "This pairing was declined or cancelled. Start a new request to try again."}
-                </Alert>
-              )}
-            </>
-          )
-        )}
-        {decision.error && <Alert color="red">{decision.error.message}</Alert>}
-        <Button
-          onClick={() =>
-            void navigate({ to: "/agents", search: { access: true } })
-          }
-          variant="subtle"
-          size="xs"
-          style={{ alignSelf: "flex-start" }}
+    <section
+      aria-labelledby="pairing-approval-title"
+      className="flex animate-enter flex-col gap-4 rounded-lg border border-border-strong bg-card p-5 shadow-sm"
+    >
+      <div className="flex items-center gap-3">
+        <Tile tone="warning">
+          <ShieldCheck aria-hidden="true" />
+        </Tile>
+        <h2
+          id="pairing-approval-title"
+          className="m-0 text-section font-semibold text-foreground"
         >
-          Close pairing request
-        </Button>
-      </Stack>
-    </Card>
+          Approve this host
+        </h2>
+      </div>
+      {pairing.isPending ? (
+        <SkeletonRows rows={2} label="Loading pairing request…" />
+      ) : pairing.error ? (
+        <Alert variant="destructive">{pairing.error.message}</Alert>
+      ) : (
+        pairing.data && (
+          <>
+            <p className="m-0 text-body text-foreground-secondary">
+              <strong className="text-foreground">{pairing.data.name}</strong>{" "}
+              is requesting access as your account.
+            </p>
+            <div className="flex items-center justify-between gap-4 rounded-md bg-muted px-4 py-3">
+              <span className="mono text-[26px] font-semibold leading-8 tracking-[0.15em] text-foreground">
+                {pairing.data.user_code}
+              </span>
+              <span className="mono text-caption text-muted-foreground">
+                Expires {date(pairing.data.expires_at)}
+              </span>
+            </div>
+            {pairing.data.state === "pending" ? (
+              <>
+                <p className="m-0 text-label text-muted-foreground">
+                  Check that this code matches the host you just started on your
+                  own computer.
+                </p>
+                {pairing.data.reuses_device && (
+                  <Alert variant="warning">
+                    You already have a device named{" "}
+                    <strong>{pairing.data.reuses_device}</strong>. Approving
+                    replaces its token, so the host using it signs out.
+                  </Alert>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    loading={decision.isPending && decision.variables === true}
+                    disabled={decision.isPending}
+                    onClick={() => decision.mutate(true)}
+                  >
+                    {!(decision.isPending && decision.variables === true) && (
+                      <Check aria-hidden="true" />
+                    )}
+                    {pairing.data.reuses_device
+                      ? "Replace and approve"
+                      : "Approve device"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={decision.isPending}
+                    onClick={() => decision.mutate(false)}
+                  >
+                    <X aria-hidden="true" />
+                    Decline
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Alert variant={done ? "brand" : "default"} role="status">
+                {pairing.data.state === "approved"
+                  ? "Approved. Waiting for your host to finish pairing."
+                  : pairing.data.state === "claimed"
+                    ? "Pairing complete. Credential enabled."
+                    : "This pairing was declined or cancelled. Start a new request to try again."}
+              </Alert>
+            )}
+          </>
+        )
+      )}
+      {decision.error && (
+        <Alert variant="destructive">{decision.error.message}</Alert>
+      )}
+      <Button
+        onClick={() =>
+          void navigate({ to: "/agents", search: { access: true } })
+        }
+        variant="ghost"
+        size="sm"
+        className="self-start"
+      >
+        Close pairing request
+      </Button>
+    </section>
   );
 }

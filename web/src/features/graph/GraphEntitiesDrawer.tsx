@@ -1,13 +1,5 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import {
-  Button,
-  Drawer,
-  Group,
-  Loader,
-  SimpleGrid,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Button, Drawer, Spinner } from "../../components/ui";
 import type { components } from "../../api-schema";
 import type { GraphNodeView } from "./graphScope";
 import { Failure } from "./GraphPanelParts";
@@ -39,53 +31,56 @@ export function GraphEntitiesDrawer({
 }) {
   return (
     <Drawer
-      className="feature-drawer"
       opened={opened}
       onClose={onClose}
-      position="right"
       title="Entities"
-      size="lg"
+      size={640}
+      bodyClassName="grid content-start gap-4"
     >
       {isError && <Failure error={error} />}
-      {readable && isPending && <Loader size="sm" />}
+      {readable && isPending && <Spinner label="Loading entities" />}
       {(!readable || expired) && (
-        <Text size="sm" c="dimmed">
+        <p className="m-0 text-body text-muted-foreground">
           Reload the graph to inspect current eligible entities.
-        </Text>
+        </p>
       )}
       {readable &&
         !expired &&
         !isError &&
         data &&
         data.memory_epoch === memoryEpoch && (
-          <Stack>
-            <Text size="xs" c="dimmed">
+          <div className="grid gap-3">
+            <p className="m-0 text-caption text-muted-foreground">
               All eligible entities in the selected scope. Paging does not
               replace the displayed canvas.
-            </Text>
-            <SimpleGrid cols={{ base: 1, md: 2 }}>
+            </p>
+            <div className="grid gap-2 md:grid-cols-2">
               {data.nodes.map((n) => renderNode(n, true))}
-            </SimpleGrid>
+            </div>
             {(data.next_offset != null || data.offset > 0) && (
-              <Group>
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={!data.offset}
                   onClick={() => setEntityOffset(data.offset - 100)}
                 >
                   Previous entities
                 </Button>
-                <Text size="sm">
+                <p className="mono m-0 text-caption text-muted-foreground">
                   {data.nodes.length} eligible entities in this page
-                </Text>
+                </p>
                 <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={data.next_offset == null}
                   onClick={() => setEntityOffset(data.next_offset!)}
                 >
                   More entities
                 </Button>
-              </Group>
+              </div>
             )}
-          </Stack>
+          </div>
         )}
     </Drawer>
   );

@@ -4,7 +4,6 @@ import { once } from "node:events";
 import { createServer } from "node:net";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { palette } from "../src/design/tokens";
 
 let vite: ChildProcess;
 let origin: string;
@@ -65,9 +64,6 @@ async function fixture(page: Page, large = false, fallback = false) {
   const reactPath = rendererSource.match(
     /from "([^"\n]*\/react\.js[^"\n]*)"/,
   )![1];
-  const mantinePath = rendererSource.match(
-    /from "([^"\n]*@mantine_core[^"\n]*)"/,
-  )![1];
   const domPath = appSource.match(
     /from "([^"\n]*react-dom_client[^"\n]*)"/,
   )![1];
@@ -78,11 +74,8 @@ async function fixture(page: Page, large = false, fallback = false) {
 import React from '${reactPath}';
 import ReactDOM from '${domPath}';
 const {createRoot}=ReactDOM;
-import { MantineProvider } from '${mantinePath}';
-import '/node_modules/@mantine/core/styles.css';
-import '/src/styles.css';
-import '/src/features/graph/graph.css';
-import { theme, cssVariablesResolver } from '/src/design/theme.ts';
+import '/src/index.css';
+import { readGraphColors } from '/src/features/graph/graphColors.ts';
 import { GraphRenderer } from '/src/GraphRenderer.tsx';
 const h=React.createElement;
 const count=${large ? 500 : 4};
@@ -92,7 +85,8 @@ const groups=${large ? "Array.from({length:8},(_,i)=>({id:'topic:'+i,label:'Qual
 window.fixtureInputs=JSON.stringify({nodes,edges,groups});
 function Fixture(){const [choice,choose]=React.useState(null); const [hidden,hide]=React.useState(false); const [cleared,clear]=React.useState(false); const [mounted,mount]=React.useState(true); window.fixtureChoose=choose; window.fixtureClear=()=>{clear(true);choose(null)};window.fixtureMount=mount;window.fixtureHide=hide; return h('main',null,h('h1',null,'Qualified evidence graph'),h('div',{style:{height:'760px',display:hidden?'none':'flex'}},mounted&&h(GraphRenderer,{nodes:cleared?[]:nodes,edges:cleared?[]:edges,displayGroups:cleared?[]:groups,choice,onChoose:choose,pathNodes:cleared?[]:['qualified:0','qualified:1'],pathEdges:cleared?[]:['forward'],inspector:h('aside',{'aria-label':'Selected evidence'},choice?choice.kind+':'+choice.id:'No selection')})),h('output',{'data-testid':'chosen'},choice?choice.kind+':'+choice.id:'No selection'));}
 window.fixtureData=()=>JSON.stringify({nodes,edges,groups});
-createRoot(document.getElementById('root')).render(h(MantineProvider,{theme,cssVariablesResolver},h(Fixture)));
+window.graphColors=readGraphColors();
+createRoot(document.getElementById('root')).render(h(Fixture));
 </script></body></html>`,
     }),
   );
@@ -288,16 +282,27 @@ test("qualified 3D preserves identities, parallel/reverse/loop edges, isolates a
     "parallel",
     "reverse",
   ]);
+  // Renderers take resolved theme tokens (ADR 0025): the path uses brand,
+  // a claim its kind colour and rest edges border-strong.
+  const colors = await page.evaluate(
+    () =>
+      (window as unknown as { graphColors: Record<string, unknown> })
+        .graphColors as {
+        brand: string;
+        edge: string;
+        kinds: Record<string, string>;
+      },
+  );
   for (const id of ["qualified:0", "qualified:1"])
     expect(geometry.nodes.find((node) => node.id === id)?.color).toBe(
-      palette.sageDark.slice(1),
+      colors.brand.slice(1),
     );
   expect(geometry.nodes.find((node) => node.id === "qualified:2")?.color).toBe(
-    palette.amber.slice(1),
+    colors.kinds.memory.slice(1),
   );
   for (const link of geometry.links) {
     expect(link.color).toBe(
-      (link.id === "forward" ? palette.sageDark : palette.lineDark).slice(1),
+      (link.id === "forward" ? colors.brand : colors.edge).slice(1),
     );
     expect(link.radius).toBeCloseTo(link.id === "forward" ? 0.9 : 0.3);
   }

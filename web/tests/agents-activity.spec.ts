@@ -115,13 +115,16 @@ test("agent inspector keeps the roster visible, expands individual evidence and 
   );
   await page.goto(`/brains/${brain}/agents`);
   await page.getByRole("button", { name: "Clean agent", exact: true }).click();
-  const inspector = page.getByRole("complementary", {
+  // ADR 0025: the agent opens in the shared inspector, a non-modal dialog
+  // docked beside the roster; no modal dialog covers the page.
+  const inspector = page.getByRole("dialog", {
     name: "Agent activity",
     exact: true,
   });
   await expect(inspector).toBeVisible();
+  await expect(inspector).toHaveAttribute("aria-modal", "false");
   await expect(page.getByTestId("brain-agent-roster")).toBeVisible();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(
     inspector.getByText("Credential enabled", { exact: true }),
   ).toBeVisible();

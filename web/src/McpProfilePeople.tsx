@@ -1,8 +1,16 @@
-import { useEffect, useState } from "react";
-import { Button, Group, Popover, Select, TextInput } from "@mantine/core";
+import { useEffect, useState, type ReactNode } from "react";
 import { Plus, Users } from "lucide-react";
 import type { components } from "./api-schema";
 import type { McpRights } from "./McpPanel";
+import {
+  Badge,
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Select,
+  TextField,
+} from "./components/ui";
 import { McpPermissionIcons } from "./components/McpPermissionIcons";
 import {
   inheritedIndicators,
@@ -15,6 +23,24 @@ import {
   type McpProfileCardProps,
   type ProfileState,
 } from "./McpProfileState";
+
+const rowClass =
+  "flex min-h-11 items-center gap-2.5 border-b border-border py-1.5 last:border-b-0";
+const nameClass =
+  "min-w-0 flex-1 text-label font-medium text-foreground [overflow-wrap:anywhere]";
+const sourceClass =
+  "inline-flex h-[22px] shrink-0 items-center rounded-full border border-border px-2 text-caption text-muted-foreground";
+
+function Avatar({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="grid size-[26px] shrink-0 place-items-center rounded-full bg-secondary text-caption font-medium text-foreground-secondary [&_svg]:size-3.5"
+      aria-hidden="true"
+    >
+      {children}
+    </span>
+  );
+}
 
 // The people and groups with access to a tool group, the staged grant edits and
 // the add-person form.
@@ -52,32 +78,34 @@ export function McpProfilePeople({
     canManage,
   } = state;
   return (
-    <section aria-label="People and groups">
+    <section aria-label="People and groups" className="min-w-0 px-4 py-3">
       {editing && (
-        <div className="mcp-card-section-heading">
-          <h3>People</h3>
-          {editing && (canShare || savedId === "new") && (
+        <div className="flex min-h-7 items-center justify-between gap-2">
+          <h3 className="section-label m-0">People</h3>
+          {(canShare || savedId === "new") && (
             <Button
-              variant="subtle"
-              size="compact-xs"
-              leftSection={<Plus size={14} />}
+              variant="ghost"
+              size="sm"
               disabled={save.isPending}
+              aria-expanded={adding}
               onClick={() => setAdding(!adding)}
             >
+              <Plus aria-hidden="true" />
               Add person
             </Button>
           )}
         </div>
       )}
       {editing && (
-        <div className="mcp-permission-legend" aria-hidden="true">
-          <span>Use</span>
-          <span>Manage</span>
-          <span>Share</span>
-        </div>
+        <p
+          className="m-0 pb-1 text-right text-caption text-muted-foreground"
+          aria-hidden="true"
+        >
+          Use · Manage · Share
+        </p>
       )}
       {detail.isPending && savedId !== "new" && (
-        <p className="management-muted" role="status">
+        <p className="m-0 py-2 text-label text-muted-foreground" role="status">
           Loading permissions…
         </p>
       )}
@@ -100,24 +128,19 @@ export function McpProfilePeople({
         />
       ))}
       {!effective.length && profile && !canShare && (
-        <div className="mcp-card-person" data-testid="mcp-own-permissions">
-          <span className="mcp-person-avatar" aria-hidden="true">
-            Y
-          </span>
-          <strong>You</strong>
+        <div className={rowClass} data-testid="mcp-own-permissions">
+          <Avatar>Y</Avatar>
+          <strong className={nameClass}>You</strong>
           <McpPermissionIcons subject="you" rights={profile.rights} />
         </div>
       )}
       {groups.map((grant) => (
-        <div className="mcp-card-person" key={grant.id} data-testid="mcp-grant">
-          <span className="mcp-person-avatar" aria-hidden="true">
-            <Users size={15} />
-          </span>
-          <strong>{grant.group_name}</strong>
-          <small
-            className="mcp-access-source"
-            title={grant.issuer ?? undefined}
-          >
+        <div className={rowClass} key={grant.id} data-testid="mcp-grant">
+          <Avatar>
+            <Users />
+          </Avatar>
+          <strong className={nameClass}>{grant.group_name}</strong>
+          <small className={sourceClass} title={grant.issuer ?? undefined}>
             Group
           </small>
           <McpPermissionIcons
@@ -145,16 +168,18 @@ export function McpProfilePeople({
         !brain.archived &&
         (canShare || (savedId === "new" && canManage)) &&
         addedPeople.map((grant) => (
-          <div className="mcp-card-person" key={grantKey(grant)}>
-            <span className="mcp-person-avatar" aria-hidden="true">
+          <div className={`${rowClass} animate-enter`} key={grantKey(grant)}>
+            <Avatar>
               {grant.username ? (
                 grant.username.slice(0, 1).toUpperCase()
               ) : (
-                <Users size={15} />
+                <Users />
               )}
-            </span>
-            <strong>{grant.username ?? grant.group_name}</strong>
-            <small className="mcp-pending-grant">Pending</small>
+            </Avatar>
+            <strong className={nameClass}>
+              {grant.username ?? grant.group_name}
+            </strong>
+            <Badge variant="warning">Pending</Badge>
             <McpPermissionIcons
               subject={grant.username ?? grant.group_name!}
               rights={grant.rights}
@@ -168,12 +193,14 @@ export function McpProfilePeople({
         !addedPeople.length &&
         (!profile || canShare) &&
         !detail.isPending && (
-          <p className="management-muted">No people visible.</p>
+          <p className="m-0 py-2 text-label text-muted-foreground">
+            No people visible.
+          </p>
         )}
       {adding && editing && (canShare || savedId === "new") && (
-        <div className="mcp-add-person">
+        <div className="mt-3 grid animate-enter gap-2.5 rounded-md border border-border bg-muted p-3">
           <Select
-            size="xs"
+            size="sm"
             aria-label="Recipient type"
             disabled={save.isPending || brain.archived}
             value={subjectKind}
@@ -190,21 +217,21 @@ export function McpProfilePeople({
               setSubject("");
             }}
           />
-          <TextInput
-            size="xs"
+          <TextField
+            size="sm"
             label={subjectKind === "account" ? "Username" : "Group name"}
             value={subject}
             maxLength={subjectKind === "account" ? 120 : 200}
             onChange={(e) => setSubject(e.currentTarget.value)}
           />
-          <Group justify="space-between">
+          <div className="flex items-center justify-between gap-2">
             <McpPermissionIcons
               subject={subject || "new person"}
               rights={newRights}
               onChange={setNewRights}
             />
             <Button
-              size="compact-sm"
+              size="sm"
               disabled={
                 !subject.trim() ||
                 save.isPending ||
@@ -222,7 +249,7 @@ export function McpProfilePeople({
             >
               Add
             </Button>
-          </Group>
+          </div>
         </div>
       )}
     </section>
@@ -268,76 +295,70 @@ function MemberPermissions({
           ? "Group"
           : "Direct";
   useEffect(() => setOpened(false), [editing, disabled]);
+  const facts: { term: string; value: ReactNode }[] = [
+    { term: "Brain access", value: member.brain_role ?? "None" },
+    ...(!member.enabled ? [{ term: "Account", value: "Disabled" }] : []),
+    ...(member.brain_role === "admin"
+      ? [{ term: "Admin grants", value: "Manage · Share" }]
+      : []),
+    ...(member.groups.length > 0
+      ? [{ term: "Groups", value: member.groups.join(", ") }]
+      : []),
+    ...(member.membership_until
+      ? [
+          {
+            term: "Membership until",
+            value: (
+              <span className="mono">
+                {new Date(member.membership_until).toLocaleString()}
+              </span>
+            ),
+          },
+        ]
+      : []),
+  ];
   return (
-    <div className="mcp-card-person" data-testid="mcp-effective-member">
-      <span className="mcp-person-avatar" aria-hidden="true">
-        {member.username.slice(0, 1).toUpperCase()}
-      </span>
-      <strong>
+    <div className={rowClass} data-testid="mcp-effective-member">
+      <Avatar>{member.username.slice(0, 1).toUpperCase()}</Avatar>
+      <strong className={nameClass}>
         {member.username}
-        {member.account_id === actor && <small> (you)</small>}
+        {member.account_id === actor && (
+          <small className="font-normal text-muted-foreground"> (you)</small>
+        )}
       </strong>
-      <Popover
-        opened={opened}
-        onDismiss={() => setOpened(false)}
-        width={270}
-        position="bottom-end"
-        withArrow
-        trapFocus
-        returnFocus
-        classNames={{ dropdown: "mcp-access-popover" }}
-      >
-        <Popover.Target>
+      <Popover open={opened} onOpenChange={setOpened}>
+        <PopoverTrigger asChild>
           <button
             type="button"
-            className="mcp-access-source"
+            className={`${sourceClass} cursor-pointer transition-colors duration-fast hover:border-border-strong hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-60`}
             aria-label={`Access sources for ${member.username}`}
-            onClick={() => setOpened(!opened)}
             disabled={disabled}
           >
             {source}
           </button>
-        </Popover.Target>
-        <Popover.Dropdown>
-          <strong>{member.username}</strong>
-          <dl>
-            <div>
-              <dt>Brain access</dt>
-              <dd>{member.brain_role ?? "None"}</dd>
-            </div>
-            {!member.enabled && (
-              <div>
-                <dt>Account</dt>
-                <dd>Disabled</dd>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="grid w-[280px] gap-3">
+          <strong className="text-label font-semibold text-foreground">
+            {member.username}
+          </strong>
+          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-label">
+            {facts.map((fact) => (
+              <div key={fact.term} className="contents">
+                <dt className="text-muted-foreground">{fact.term}</dt>
+                <dd className="m-0 text-right text-foreground [overflow-wrap:anywhere]">
+                  {fact.value}
+                </dd>
               </div>
-            )}
-            {member.brain_role === "admin" && (
-              <div>
-                <dt>Admin grants</dt>
-                <dd>Manage · Share</dd>
-              </div>
-            )}
-            {member.groups.length > 0 && (
-              <div>
-                <dt>Groups</dt>
-                <dd>{member.groups.join(", ")}</dd>
-              </div>
-            )}
-            {member.membership_until && (
-              <div>
-                <dt>Membership until</dt>
-                <dd>{new Date(member.membership_until).toLocaleString()}</dd>
-              </div>
-            )}
+            ))}
           </dl>
           {projected.ambiguousGroups.length > 0 && (
-            <p className="management-muted">
+            <p className="m-0 text-caption text-muted-foreground">
               Multiple providers for {projected.ambiguousGroups.join(", ")}.
               Current access is shown; edit direct grants below.
             </p>
           )}
-          <div className="mcp-source-direct">
-            <span>Direct grant</span>
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3 text-label">
+            <span className="text-foreground-secondary">Direct grant</span>
             <McpPermissionIcons
               subject={`${member.username} direct`}
               rights={projected.direct}
@@ -347,16 +368,16 @@ function MemberPermissions({
           </div>
           {editing && Object.values(projected.direct).some(Boolean) && (
             <Button
-              variant="subtle"
-              size="compact-xs"
-              color="red"
+              variant="destructive-ghost"
+              size="sm"
+              className="justify-self-start"
               disabled={disabled}
               onClick={() => change(denied())}
             >
               Clear direct grant
             </Button>
           )}
-        </Popover.Dropdown>
+        </PopoverContent>
       </Popover>
       <McpPermissionIcons
         subject={member.username}

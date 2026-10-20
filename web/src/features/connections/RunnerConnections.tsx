@@ -1,7 +1,7 @@
-import { Badge, Button, Loader } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, Layers } from "lucide-react";
+import { Badge, Button, Spinner } from "../../components/ui";
 import type { MouseEvent } from "react";
 import { client, result, RequestError, type Brain } from "../../api";
 import type { components } from "../../api-schema";
@@ -51,25 +51,25 @@ export function RunnerConnections({
   );
   return (
     <section
-      className="private-runner-connections"
+      className="grid gap-2 px-4 py-3"
       aria-label="Assigned connections"
     >
-      <header className="private-runner-connections-heading">
-        <h4>
+      <header className="flex items-center gap-2">
+        <h4 className="section-label m-0">
           {data?.can_configure ? "Assigned connections" : "Visible connections"}
         </h4>
         {data && !missingBinding && (
-          <Badge variant="light" color="gray">
+          <Badge className="mono">
             {assigned.length} MCP{assigned.length === 1 ? "" : "s"}
           </Badge>
         )}
       </header>
       {catalogue.error ? (
-        <div className="private-runner-metadata-notice" role="alert">
+        <div className={notice} role="alert">
           Connections unavailable.
           <Button
-            size="xs"
-            variant="subtle"
+            size="sm"
+            variant="ghost"
             disabled={disabled || catalogue.isFetching}
             onClick={() => void catalogue.refetch()}
           >
@@ -77,56 +77,58 @@ export function RunnerConnections({
           </Button>
         </div>
       ) : !data ? (
-        <p className="private-runner-metadata-notice" role="status">
-          <Loader size="xs" /> Loading connections…
+        <p className={notice} role="status">
+          <Spinner size={12} /> Loading connections…
         </p>
       ) : missingBinding ? (
-        <p className="private-runner-metadata-notice">
+        <p className={notice}>
           Runner assignments are unavailable from this server.
         </p>
       ) : !assigned.length ? (
-        <p className="private-runner-metadata-notice">
+        <p className={notice}>
           {data.can_configure
             ? "No assigned connections."
             : "No connections visible to you."}
         </p>
       ) : (
-        assigned.map((connection) => (
-          <RunnerConnection
-            key={connection.id}
-            brain={brain}
-            connection={connection}
-            groups={data.profiles.filter((p) =>
-              p.connection_ids.includes(connection.id),
-            )}
-            definition={data.definitions.find(
-              (d) => d.key === connection.definition_key,
-            )}
-            canConfigure={data.can_configure}
-            metadataRevision={data.connections
-              .map((c) => `${c.id}:${c.revision}`)
-              .join(",")}
-            disabled={disabled}
-            scope={
-              !connection.environment_id
-                ? "Brain-wide"
-                : workspace.error
-                  ? "Environment unavailable"
-                  : workspace.isPending
-                    ? "Loading environment…"
-                    : (workspace.data?.environments.find(
-                        (e) => e.id === connection.environment_id,
-                      )?.name ?? "Environment unavailable")
-            }
-          />
-        ))
+        <div className="grid gap-2">
+          {assigned.map((connection) => (
+            <RunnerConnection
+              key={connection.id}
+              brain={brain}
+              connection={connection}
+              groups={data.profiles.filter((p) =>
+                p.connection_ids.includes(connection.id),
+              )}
+              definition={data.definitions.find(
+                (d) => d.key === connection.definition_key,
+              )}
+              canConfigure={data.can_configure}
+              metadataRevision={data.connections
+                .map((c) => `${c.id}:${c.revision}`)
+                .join(",")}
+              disabled={disabled}
+              scope={
+                !connection.environment_id
+                  ? "Brain-wide"
+                  : workspace.error
+                    ? "Environment unavailable"
+                    : workspace.isPending
+                      ? "Loading environment…"
+                      : (workspace.data?.environments.find(
+                          (e) => e.id === connection.environment_id,
+                        )?.name ?? "Environment unavailable")
+              }
+            />
+          ))}
+        </div>
       )}
       {!!assigned.some((c) => c.environment_id) && workspace.error && (
-        <div className="private-runner-metadata-notice" role="alert">
+        <div className={notice} role="alert">
           Environments unavailable.
           <Button
-            size="xs"
-            variant="subtle"
+            size="sm"
+            variant="ghost"
             disabled={disabled || workspace.isFetching}
             onClick={() => void workspace.refetch()}
           >
@@ -137,6 +139,11 @@ export function RunnerConnections({
     </section>
   );
 }
+
+const notice =
+  "m-0 flex flex-wrap items-center gap-2 text-label text-muted-foreground";
+const linkClass =
+  "inline-flex w-fit items-center gap-1 rounded-sm text-label font-medium text-foreground-secondary transition-colors duration-fast hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-3.5";
 
 function RunnerConnection({
   brain,
@@ -276,32 +283,31 @@ function RunnerConnection({
     },
   };
   return (
-    <div className="private-runner-assignment">
-      <div className="private-runner-assignment-main">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(200px,0.45fr)] overflow-hidden rounded-md border border-border">
+      <div className="flex min-w-0 gap-3 p-3">
         <McpConnectorIcon definition={definition} size="small" />
-        <div className="private-runner-assignment-content">
-          <div className="private-runner-assignment-title">
-            <strong>{connection.name}</strong>
-            <Badge variant="light" color="teal">
+        <div className="grid min-w-0 flex-1 gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <strong className="mr-1 min-w-0 truncate text-label font-semibold text-foreground">
+              {connection.name}
+            </strong>
+            <Badge variant="outline">
+              <Layers aria-hidden="true" />
               {scope}
             </Badge>
             {names && (
-              <Badge variant="light" color="gray">
+              <Badge className="mono">
                 {names.length} approved tool{names.length === 1 ? "" : "s"}
               </Badge>
             )}
-            {!connection.enabled && (
-              <Badge variant="light" color="gray">
-                Disabled
-              </Badge>
-            )}
+            {!connection.enabled && <Badge>Disabled</Badge>}
           </div>
           {(tools.error || unavailable) && enabled ? (
-            <p className="private-runner-metadata-notice" role="alert">
+            <p className={notice} role="alert">
               Tool metadata unavailable.
               <Button
-                size="xs"
-                variant="subtle"
+                size="sm"
+                variant="ghost"
                 disabled={disabled || tools.isFetching}
                 onClick={() => void tools.refetch()}
               >
@@ -309,17 +315,22 @@ function RunnerConnection({
               </Button>
             </p>
           ) : !enabled ? (
-            <p className="private-runner-metadata-notice">{blocked}</p>
+            <p className={notice}>{blocked}</p>
           ) : !names ? (
-            <p className="private-runner-metadata-notice" role="status">
-              <Loader size="xs" /> Loading approved tools…
+            <p className={notice} role="status">
+              <Spinner size={12} /> Loading approved tools…
             </p>
           ) : !names.length ? (
-            <p className="private-runner-metadata-notice">No approved tools.</p>
+            <p className={notice}>No approved tools.</p>
           ) : (
-            <div className="private-runner-tool-chips">
+            <div className="flex flex-wrap gap-1.5">
               {names.map((name) => (
-                <code key={name}>{name}</code>
+                <code
+                  key={name}
+                  className="mono inline-flex h-[22px] items-center rounded-sm border border-border bg-muted px-1.5 text-caption text-foreground-secondary"
+                >
+                  {name}
+                </code>
               ))}
             </div>
           )}
@@ -328,13 +339,15 @@ function RunnerConnection({
             to="/brains/$brainId/connections"
             params={{ brainId: brain.id }}
             search={{ connection: connection.id }}
+            className={linkClass}
           >
-            Inspect connection →
+            Inspect connection
+            <ArrowRight aria-hidden="true" />
           </Link>
         </div>
       </div>
-      <div className="private-runner-groups">
-        <h4>Tool groups</h4>
+      <div className="grid content-start gap-1 border-l border-border bg-muted/50 p-3">
+        <h4 className="section-label m-0">Tool groups</h4>
         {groups.length ? (
           groups.map((p) => (
             <Link
@@ -343,16 +356,20 @@ function RunnerConnection({
               to="/brains/$brainId/connections"
               params={{ brainId: brain.id }}
               search={{ tab: "profiles", profile: p.id }}
-              className="private-runner-group-link"
+              className={`${linkClass} min-w-0 py-0.5`}
             >
-              <BookOpen size={16} aria-hidden="true" />
-              <span>{p.name}</span>
-              {!p.enabled && <small>Disabled</small>}
-              <span aria-hidden="true">→</span>
+              <BookOpen aria-hidden="true" />
+              <span className="truncate">{p.name}</span>
+              {!p.enabled && (
+                <small className="text-caption text-muted-foreground">
+                  Disabled
+                </small>
+              )}
+              <ArrowRight aria-hidden="true" />
             </Link>
           ))
         ) : (
-          <p className="private-runner-metadata-notice">
+          <p className={notice}>
             {canConfigure
               ? "No tool groups."
               : "No tool groups visible to you."}

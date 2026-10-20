@@ -1,6 +1,7 @@
-import { Button, Loader, Stack } from "@mantine/core";
 import { ActionMenu } from "./components/ActionMenu";
 import { DetailInspector } from "./components/DetailInspector";
+import { InspectorSection } from "./components/Inspector";
+import { Button } from "./components/ui";
 import { ClaimEditor } from "./ClaimEditor";
 import { ClaimDetailBody, ClaimHistorySection } from "./ClaimDetailBody";
 import { EvidenceDialog } from "./ClaimEvidenceDialog";
@@ -15,6 +16,26 @@ import {
 
 export type { ClaimDialogProps };
 
+function Loading() {
+  return (
+    <p
+      role="status"
+      className="m-0 flex items-center gap-2 text-label text-muted-foreground"
+    >
+      <span
+        aria-hidden="true"
+        className="size-3.5 animate-spin rounded-full border-2 border-border-strong border-t-transparent"
+      />
+      Loading memory…
+    </p>
+  );
+}
+
+/**
+ * A memory's full record and knowledge history in the shared inspector. Its
+ * drill-ins (editor, review, exact evidence, a contributing memory) replace
+ * it while open, so only one record surface is ever shown.
+ */
 export function ClaimDialog(props: ClaimDialogProps) {
   const { brain, id, catalogue, onKnowledgeChange, onClose, onSaved } = props;
   const state = useClaimDialogData(props);
@@ -34,19 +55,20 @@ export function ClaimDialog(props: ClaimDialogProps) {
   if (query.isError || exactError)
     return (
       <DetailInspector
-        className="feature-drawer"
-        position="right"
         opened
         onClose={onClose}
-        size="min(44rem, 90vw)"
         title="Claim and knowledge history"
       >
-        <Stack>
+        <div className="grid gap-3">
           <Failure error={query.error ?? exactError} />
-          <Button variant="light" onClick={() => void query.refetch()}>
+          <Button
+            variant="secondary"
+            className="w-fit"
+            onClick={() => void query.refetch()}
+          >
             Try again
           </Button>
-        </Stack>
+        </div>
       </DetailInspector>
     );
   if (view && contribution)
@@ -102,15 +124,16 @@ export function ClaimDialog(props: ClaimDialogProps) {
     );
   return (
     <DetailInspector
-      className="feature-drawer"
-      position="right"
       opened
       onClose={onClose}
-      size="min(44rem, 90vw)"
       title="Claim and knowledge history"
     >
-      <Stack className="claims-panel">
-        {query.isPending && <Loader />}
+      <div className="grid min-w-0">
+        {query.isPending && (
+          <InspectorSection>
+            <Loading />
+          </InspectorSection>
+        )}
         {query.data && (
           <ClaimHistorySection
             data={query.data}
@@ -126,7 +149,7 @@ export function ClaimDialog(props: ClaimDialogProps) {
           </>
         )}
         {query.data && (
-          <>
+          <InspectorSection>
             <ActionMenu label="More memory actions">
               <EraseAction
                 brain={brain.id}
@@ -135,9 +158,9 @@ export function ClaimDialog(props: ClaimDialogProps) {
                 name={view?.revision.content.subject ?? "Claim history"}
               />
             </ActionMenu>
-          </>
+          </InspectorSection>
         )}
-      </Stack>
+      </div>
     </DetailInspector>
   );
 }

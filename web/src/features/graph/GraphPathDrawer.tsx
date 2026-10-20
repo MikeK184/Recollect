@@ -1,17 +1,11 @@
 import type { ReactNode } from "react";
 import {
-  Alert,
   Button,
-  Card,
   Drawer,
-  NumberInput,
+  NumberField,
   Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+  TextField,
+} from "../../components/ui";
 import type { components } from "../../api-schema";
 import { label, meanings, type GraphNodeView } from "./graphScope";
 import { Failure } from "./GraphPanelParts";
@@ -55,22 +49,21 @@ export function GraphPathDrawer({
 }) {
   return (
     <Drawer
-      className="feature-drawer"
       opened={opened}
       onClose={onClose}
-      position="right"
       title="Find an evidence path"
-      size="lg"
+      size={560}
+      bodyClassName="grid content-start gap-4"
     >
       {readable ? (
-        <Stack>
-          <SimpleGrid cols={{ base: 1, sm: 2 }}>
-            <TextInput
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
               label="Path start"
               value={start}
               onChange={(e) => onStartChange(e.currentTarget.value)}
             />
-            <TextInput
+            <TextField
               label="Path end"
               value={end}
               onChange={(e) => onEndChange(e.currentTarget.value)}
@@ -81,15 +74,16 @@ export function GraphPathDrawer({
               data={["outgoing", "incoming", "both"]}
               onChange={(value) => onDirectionChange(value ?? "outgoing")}
             />
-            <NumberInput
+            <NumberField
               label="Maximum path hops"
               min={1}
               max={8}
               value={hops}
               onChange={(n) => onHopsChange(Number(n) || 1)}
             />
-          </SimpleGrid>
+          </div>
           <Button
+            className="justify-self-start"
             onClick={onFind}
             loading={isFetching}
             disabled={!start || !end}
@@ -98,23 +92,23 @@ export function GraphPathDrawer({
           </Button>
           <Failure error={error} />
           {submitted && data && !error && (
-            <Card withBorder p="md">
-              <Stack>
-                <Title order={4}>
-                  {data.status === "path"
-                    ? `${data.edges.length} hops in the eligible graph`
-                    : "No path within the selected hop bound"}
-                </Title>
+            <section className="grid gap-3 border-t border-border pt-4">
+              <h3 className="m-0 text-title font-semibold">
+                {data.status === "path"
+                  ? `${data.edges.length} hops in the eligible graph`
+                  : "No path within the selected hop bound"}
+              </h3>
+              <ol className="m-0 grid list-none gap-2 p-0">
                 {data.nodes.map((n, i) => (
-                  <Stack key={`${n.key}-${i}`} gap="xs">
+                  <li key={`${n.key}-${i}`} className="grid gap-2">
                     {renderNode(n, false)}
                     {data.edges[i] && (
-                      <Alert color="blue">
-                        <Text fw={600}>
+                      <div className="ml-4 grid gap-1 border-l-2 border-brand/50 py-1 pl-3 [overflow-wrap:anywhere]">
+                        <p className="m-0 text-label font-semibold text-foreground">
                           {label(data.edges[i].relation)} ·{" "}
                           {label(data.edges[i].family)}
-                        </Text>
-                        <Text size="sm" style={{ overflowWrap: "anywhere" }}>
+                        </p>
+                        <p className="m-0 text-label text-foreground-secondary">
                           Recorded direction:{" "}
                           {
                             data.nodes.find(
@@ -127,26 +121,28 @@ export function GraphPathDrawer({
                               (node) => node.key === data.edges[i].to,
                             )?.evidence.label
                           }
-                        </Text>
+                        </p>
                         {data.edges[i].from !== n.key && (
-                          <Text size="sm">
+                          <p className="m-0 text-label text-warning-text">
                             Followed in reverse for this path.
-                          </Text>
+                          </p>
                         )}
-                        <Text size="sm">
+                        <p className="m-0 text-label text-muted-foreground">
                           {meanings[data.edges[i].relation] ??
                             `A static ${label(data.edges[i].relation)} relationship in the selected direction.`}
-                        </Text>
-                      </Alert>
+                        </p>
+                      </div>
                     )}
-                  </Stack>
+                  </li>
                 ))}
-              </Stack>
-            </Card>
+              </ol>
+            </section>
           )}
-        </Stack>
+        </>
       ) : (
-        <Text>Load a graph view first, then choose its path endpoints.</Text>
+        <p className="m-0 text-body text-muted-foreground">
+          Load a graph view first, then choose its path endpoints.
+        </p>
       )}
     </Drawer>
   );

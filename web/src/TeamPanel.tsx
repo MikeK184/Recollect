@@ -1,36 +1,71 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Info, Mail, UserPlus } from "lucide-react";
+import { client, result } from "./api";
+import { useWorkspace } from "./app/context";
+import { EmptyState, ErrorState } from "./components/AsyncState";
+import { Page } from "./components/Page";
+import { PageHeader } from "./components/PageHeader";
+import { SkeletonRows } from "./components/Skeleton";
+import { staggerStyle } from "./components/Motion";
 import {
   Alert,
   Badge,
   Button,
-  Card,
-  Divider,
-  Group,
-  Loader,
+  Count,
   Drawer,
-  Tabs,
+  Field,
   Select,
-  Stack,
-  Text,
+  StatusBadge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Users } from "lucide-react";
-import { client, result } from "./api";
-import "./features/workspace/control-panel.css";
-import { ErrorState } from "./components/AsyncState";
+  TextField,
+} from "./components/ui";
+import { cn } from "./lib/utils";
 import { usePollInterval } from "./usePollInterval";
+
+const timestamp = (value: string) => new Date(value).toLocaleString();
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-7 shrink-0 place-items-center rounded-full bg-kind-claim-soft text-[11px] font-semibold leading-none text-kind-claim"
+    >
+      {name.slice(0, 2).toUpperCase()}
+    </span>
+  );
+}
 
 export function TeamPanel() {
   const pollNormal = usePollInterval("normal");
+  const session = useWorkspace();
   const cache = useQueryClient();
+  const formId = `team-invite-${useId()}`;
+  const [tab, setTab] = useState("accounts");
   const [opened, setOpened] = useState(false);
   const [username, setUsername] = useState("");
   const [kind, setKind] = useState("local");
   const [subject, setSubject] = useState("");
   const [link, setLink] = useState("");
+  const usernameInput = useRef<HTMLInputElement>(null);
+  // Focus the username once the sheet has mounted; the sheet then returns
+  // focus to Add teammate when it closes.
+  useEffect(() => {
+    if (!opened) return;
+    const timer = setTimeout(() => usernameInput.current?.focus(), 0);
+    return () => clearTimeout(timer);
+  }, [opened]);
   const team = useQuery({
     queryKey: ["team"],
     queryFn: async ({ signal }) =>
@@ -114,274 +149,401 @@ export function TeamPanel() {
       setLink("");
     }
   }, [team.isError]);
-  if (team.isError)
-    return <ErrorState error={team.error} retry={() => void team.refetch()} />;
-  return (
-    <Stack gap="xl">
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">PEOPLE AND PERMISSIONS</span>
-          <Title order={1}>Team</Title>
-          <Text c="dimmed" mt="xs">
-            Invite people, manage their sign-in and keep access current.
-          </Text>
-        </div>
-        <Button
-          leftSection={<Plus size={17} />}
-          onClick={() => {
-            invite.reset();
-            setOpened(true);
-          }}
-        >
-          Add teammate
-        </Button>
-      </div>
-      <Alert icon={<Users size={18} />} color="teal">
-        Accounts sign in to this installation. Share each Brain separately from
-        its Access panel.
-      </Alert>
-      {(team.error || action.error) && (
-        <Alert color="red" title="Team action failed">
-          {(team.error || action.error)?.message}
-          <Button variant="subtle" onClick={() => void team.refetch()}>
-            Refresh
+  const header = (withAction: boolean) => (
+    <PageHeader
+      meta={<Badge variant="outline">People and permissions</Badge>}
+      title="Team"
+      description="Invite people, manage their sign-in and keep access current."
+      actions={
+        withAction && (
+          <Button
+            onClick={() => {
+              invite.reset();
+              setOpened(true);
+            }}
+          >
+            <UserPlus aria-hidden="true" />
+            Add teammate
           </Button>
+        )
+      }
+    />
+  );
+  if (team.isError)
+    return (
+      <Page className="text-body">
+        {header(false)}
+        <ErrorState error={team.error} retry={() => void team.refetch()} />
+      </Page>
+    );
+  const accounts = team.data?.accounts ?? [];
+  const invitations = team.data?.invitations ?? [];
+  return (
+    <Page className="text-body">
+      {header(true)}
+      {action.error && (
+        <Alert
+          variant="destructive"
+          title="Team action failed"
+          actions={
+            <Button
+              variant="destructive-ghost"
+              size="sm"
+              onClick={() => void team.refetch()}
+            >
+              Refresh
+            </Button>
+          }
+        >
+          {action.error.message}
         </Alert>
       )}
-      <Tabs defaultValue="accounts">
-        <Tabs.List mb="lg">
-          <Tabs.Tab value="accounts">Accounts</Tabs.Tab>
-          <Tabs.Tab value="invitations">Invitations</Tabs.Tab>
-          <Tabs.Tab value="activity">Account activity</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="accounts">
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
+        <TabsList aria-label="Team sections">
+          <TabsTrigger value="accounts">
+            Accounts
+            {team.data && <Count aria-hidden="true">{accounts.length}</Count>}
+          </TabsTrigger>
+          <TabsTrigger value="invitations">
+            Invitations
+            {team.data && (
+              <Count aria-hidden="true">{invitations.length}</Count>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="activity">Account activity</TabsTrigger>
+        </TabsList>
+        <TabsContent value="accounts">
           {team.isPending ? (
-            <Loader />
+            <TableWrap className="px-3">
+              <SkeletonRows rows={3} label="Loading accounts…" />
+            </TableWrap>
           ) : (
-            !team.error && (
-              <Stack gap="sm">
-                {team.data?.accounts.map((account) => (
-                  <Card
-                    withBorder
-                    key={account.id}
-                    className="control-account-row"
-                  >
-                    <Group justify="space-between" wrap="wrap">
-                      <div>
-                        <Group gap="xs">
-                          <span className="control-initial">
-                            {account.username.slice(0, 2).toUpperCase()}
-                          </span>
-                          <Text fw={600}>{account.username}</Text>
-                          <Badge color={account.enabled ? "teal" : "gray"}>
-                            {account.enabled ? "Enabled" : "Disabled"}
-                          </Badge>
-                        </Group>
-                        <Text size="xs" c="dimmed" mt={4}>
-                          {account.installation_owner
-                            ? "Installation owner"
-                            : account.auth_kind === "oidc"
-                              ? "Organization identity"
-                              : "Local account"}
-                        </Text>
-                      </div>
-                      {!account.installation_owner && (
-                        <Group gap="xs">
-                          <Button
-                            variant="default"
-                            size="xs"
-                            loading={
-                              action.isPending &&
-                              action.variables?.id === account.id
-                            }
-                            onClick={() =>
-                              action.mutate({
-                                id: account.id,
-                                kind: "status",
-                                enabled: !account.enabled,
-                              })
-                            }
-                          >
-                            {account.enabled ? "Disable" : "Enable"}
-                          </Button>
-                          {account.auth_kind === "local" && (
+            <TableWrap>
+              <Table>
+                <TableHead>
+                  <tr>
+                    <TableHeader>Account</TableHeader>
+                    <TableHeader className="w-[140px]">Status</TableHeader>
+                    <TableHeader className="w-[240px]" aria-label="Actions" />
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {accounts.map((account, index) => (
+                    <TableRow
+                      key={account.id}
+                      data-slot="card"
+                      className="animate-enter"
+                      style={staggerStyle(index)}
+                    >
+                      <TableCell className="py-2.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={account.username} />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate font-medium text-foreground">
+                                {account.username}
+                              </span>
+                              {account.id === session.user.id && (
+                                <Badge variant="outline" className="h-5">
+                                  You
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="block text-caption text-muted-foreground">
+                              {account.installation_owner
+                                ? "Installation owner"
+                                : account.auth_kind === "oidc"
+                                  ? "Organization identity"
+                                  : "Local account"}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          state={account.enabled ? "positive" : "neutral"}
+                        >
+                          {account.enabled ? "Enabled" : "Disabled"}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell>
+                        {!account.installation_owner && (
+                          <div className="flex items-center justify-end gap-1.5">
                             <Button
-                              variant="light"
-                              size="xs"
+                              variant="ghost"
+                              size="sm"
+                              loading={
+                                action.isPending &&
+                                action.variables?.id === account.id &&
+                                action.variables.kind === "status"
+                              }
                               disabled={action.isPending}
                               onClick={() =>
-                                action.mutate({ id: account.id, kind: "reset" })
+                                action.mutate({
+                                  id: account.id,
+                                  kind: "status",
+                                  enabled: !account.enabled,
+                                })
                               }
                             >
-                              Reset sign-in
+                              {account.enabled ? "Disable" : "Enable"}
                             </Button>
-                          )}
-                        </Group>
-                      )}
-                    </Group>
-                  </Card>
-                ))}
-              </Stack>
-            )
-          )}
-        </Tabs.Panel>
-        <Tabs.Panel value="invitations">
-          <section>
-            <Title order={3} mb="md">
-              Invitations
-            </Title>
-            {team.data?.invitations.length === 0 ? (
-              <Text c="dimmed" size="sm">
-                No invitations yet.
-              </Text>
-            ) : (
-              <Stack gap="xs">
-                {team.data?.invitations.map((invite) => (
-                  <Card key={invite.id} withBorder padding="md">
-                    <Group justify="space-between">
-                      <div>
-                        <Text fw={500} size="sm">
-                          {invite.username}
-                        </Text>
-                        <Text c="dimmed" size="xs">
-                          Expires {new Date(invite.expires_at).toLocaleString()}
-                        </Text>
-                      </div>
-                      <Group>
-                        <Badge
-                          variant="light"
-                          color={invite.state === "pending" ? "teal" : "gray"}
-                        >
-                          {invite.state}
-                        </Badge>
-                        {invite.state === "pending" && (
-                          <Button
-                            size="xs"
-                            variant="subtle"
-                            color="red"
-                            disabled={action.isPending}
-                            onClick={() =>
-                              action.mutate({ id: invite.id, kind: "revoke" })
-                            }
-                          >
-                            Revoke invitation
-                          </Button>
+                            {account.auth_kind === "local" && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={action.isPending}
+                                onClick={() =>
+                                  action.mutate({
+                                    id: account.id,
+                                    kind: "reset",
+                                  })
+                                }
+                              >
+                                Reset sign-in
+                              </Button>
+                            )}
+                          </div>
                         )}
-                      </Group>
-                    </Group>
-                  </Card>
-                ))}
-              </Stack>
-            )}
-          </section>
-        </Tabs.Panel>
-        <Tabs.Panel value="activity">
-          <section>
-            <Title order={3} mb="md">
-              Account activity
-            </Title>
-            {history.error ? (
-              <Alert color="red">{history.error.message}</Alert>
-            ) : (
-              <Card withBorder>
-                {history.data?.slice(0, 12).map((event) => (
-                  <Group key={event.id} justify="space-between" py="xs">
-                    <Text size="sm">
-                      {event.action.replaceAll(".", " ").replaceAll("_", " ")} ·{" "}
-                      {event.disposition.replaceAll("_", " ")}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {new Date(event.created_at).toLocaleString()}
-                    </Text>
-                  </Group>
-                ))}
-              </Card>
-            )}
-          </section>
-        </Tabs.Panel>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableWrap>
+          )}
+        </TabsContent>
+        <TabsContent value="invitations">
+          {team.isPending ? (
+            <TableWrap className="px-3">
+              <SkeletonRows rows={2} label="Loading invitations…" />
+            </TableWrap>
+          ) : invitations.length === 0 ? (
+            <div className="rounded-lg border border-border bg-card">
+              <EmptyState
+                icon={Mail}
+                title="No invitations yet"
+                description="Add a teammate to create a private, single-use invitation link."
+              />
+            </div>
+          ) : (
+            <TableWrap>
+              <Table>
+                <TableHead>
+                  <tr>
+                    <TableHeader>Invitation</TableHeader>
+                    <TableHeader className="w-[140px]">State</TableHeader>
+                    <TableHeader className="w-[220px]">Expires</TableHeader>
+                    <TableHeader className="w-[180px]" aria-label="Actions" />
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {invitations.map((invitation, index) => (
+                    <TableRow
+                      key={invitation.id}
+                      className="animate-enter"
+                      style={staggerStyle(index)}
+                    >
+                      <TableCell primary>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={invitation.username} />
+                          <span className="truncate">
+                            {invitation.username}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          state={
+                            invitation.state === "pending"
+                              ? "attention"
+                              : invitation.state === "accepted"
+                                ? "positive"
+                                : "neutral"
+                          }
+                        >
+                          {invitation.state.charAt(0).toUpperCase() +
+                            invitation.state.slice(1)}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="mono text-caption text-muted-foreground">
+                          {timestamp(invitation.expires_at)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {invitation.state === "pending" && (
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="destructive-ghost"
+                              disabled={action.isPending}
+                              onClick={() =>
+                                action.mutate({
+                                  id: invitation.id,
+                                  kind: "revoke",
+                                })
+                              }
+                            >
+                              Revoke invitation
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableWrap>
+          )}
+        </TabsContent>
+        <TabsContent value="activity">
+          {history.error ? (
+            <Alert variant="destructive">{history.error.message}</Alert>
+          ) : history.isPending ? (
+            <TableWrap className="px-3">
+              <SkeletonRows rows={4} label="Loading account activity…" />
+            </TableWrap>
+          ) : !history.data?.length ? (
+            <div className="rounded-lg border border-border bg-card">
+              <EmptyState
+                title="No account activity yet"
+                description="Sign-in, invitation and account changes appear here."
+              />
+            </div>
+          ) : (
+            <TableWrap>
+              <Table>
+                <TableHead>
+                  <tr>
+                    <TableHeader>Event</TableHeader>
+                    <TableHeader className="w-[220px]">Time</TableHeader>
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {history.data.slice(0, 12).map((event, index) => (
+                    <TableRow
+                      key={event.id}
+                      className="animate-enter"
+                      style={staggerStyle(index)}
+                    >
+                      <TableCell>
+                        <span className="mono text-label text-foreground-secondary">
+                          {event.action
+                            .replaceAll(".", " ")
+                            .replaceAll("_", " ")}{" "}
+                          · {event.disposition.replaceAll("_", " ")}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="mono text-caption text-muted-foreground">
+                          {timestamp(event.created_at)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableWrap>
+          )}
+        </TabsContent>
       </Tabs>
+      <Alert
+        variant="info"
+        role="note"
+        icon={<Info aria-hidden="true" />}
+        title="Accounts sign in to this installation."
+      >
+        Share each Brain separately from its Access panel.
+      </Alert>
       <Drawer
         opened={opened}
         onClose={() => setOpened(false)}
         title="Add a teammate"
-        position="right"
-        size="lg"
-        className="control-drawer"
+        description="Create a private invitation or enroll an organization identity."
+        size={480}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOpened(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={formId} loading={invite.isPending}>
+              {kind === "oidc" ? "Enroll identity" : "Create invitation"}
+            </Button>
+          </>
+        }
       >
         <form
+          id={formId}
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             invite.mutate();
           }}
         >
-          <Stack>
-            <TextInput
-              label="Teammate username"
-              value={username}
+          <TextField
+            label="Teammate username"
+            value={username}
+            required
+            maxLength={120}
+            ref={usernameInput}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <Select
+            label="Sign-in method"
+            value={kind}
+            onChange={(v) => setKind(v ?? "local")}
+            data={[
+              { value: "local", label: "Local invitation" },
+              ...(options.data?.oidc_configured
+                ? [{ value: "oidc", label: "Organization identity" }]
+                : []),
+            ]}
+          />
+          {kind === "oidc" ? (
+            <TextField
+              label="Provider subject"
+              description="Use the exact stable subject from your configured identity provider."
+              value={subject}
               required
-              maxLength={120}
-              onChange={(e) => setUsername(e.target.value)}
+              maxLength={255}
+              onChange={(e) => setSubject(e.target.value)}
             />
-            <Select
-              label="Sign-in method"
-              value={kind}
-              onChange={(v) => setKind(v ?? "local")}
-              data={[
-                { value: "local", label: "Local invitation" },
-                ...(options.data?.oidc_configured
-                  ? [{ value: "oidc", label: "Organization identity" }]
-                  : []),
-              ]}
-            />
-            {kind === "oidc" ? (
-              <TextInput
-                label="Provider subject"
-                description="Use the exact stable subject from your configured identity provider."
-                value={subject}
-                required
-                maxLength={255}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-            ) : (
-              <Text size="sm" c="dimmed">
-                You will receive a private invitation link to share. It expires
-                after 24 hours and can be used once.
-              </Text>
-            )}
-            {invite.error && <Alert color="red">{invite.error.message}</Alert>}
-            <Button type="submit" loading={invite.isPending}>
-              {kind === "oidc" ? "Enroll identity" : "Create invitation"}
-            </Button>
-          </Stack>
+          ) : (
+            <p className="m-0 rounded-md bg-muted px-3 py-2.5 text-label text-muted-foreground">
+              You will receive a private invitation link to share. It expires
+              after 24 hours and can be used once.
+            </p>
+          )}
+          {invite.error && (
+            <Alert variant="destructive">{invite.error.message}</Alert>
+          )}
         </form>
       </Drawer>
       <Drawer
         opened={!!link}
         onClose={() => setLink("")}
         title="Your invitation is ready"
-        position="right"
-        size="lg"
-        className="control-drawer"
+        description="Share this link privately with your teammate. It is shown here once."
+        size={480}
+        footer={<Button onClick={() => setLink("")}>Done</Button>}
       >
-        <Stack>
-          <Text size="sm">
-            Share this link privately with your teammate. It is shown here once.
-          </Text>
-          <Textarea
-            label="Invitation link"
-            value={link}
-            readOnly
-            autosize
-            minRows={3}
-          />
-          <Divider />
-          <Text c="dimmed" size="xs">
+        <div className="flex flex-col gap-4">
+          <Field label="Invitation link">
+            <Textarea
+              value={link}
+              readOnly
+              autosize
+              minRows={3}
+              className={cn("mono text-label")}
+            />
+          </Field>
+          <p className="m-0 border-t border-border pt-4 text-caption text-muted-foreground">
             Resetting sign-in revokes existing sessions and requires a new
             invitation acceptance.
-          </Text>
-          <Button onClick={() => setLink("")}>Done</Button>
-        </Stack>
+          </p>
+        </div>
       </Drawer>
-    </Stack>
+    </Page>
   );
 }

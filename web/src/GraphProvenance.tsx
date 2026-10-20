@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useDebouncedValue } from "@mantine/hooks";
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Select,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { useDebouncedValue } from "./lib/hooks";
+import { Alert, Badge, Button, Input, Select } from "./components/ui";
+import { cn } from "./lib/utils";
+import { ChromeSlot, chromeCard } from "./features/graph/GraphStage";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import { useBrainSearch } from "./app/useBrainSearch";
@@ -26,6 +20,8 @@ import type {
 import { SnapshotDialog } from "./PublicationPanel";
 import { origin } from "./features/activity/pipelineModel";
 import { usePollInterval } from "./usePollInterval";
+
+const noKeys: string[] = [];
 
 type Observation = {
   title: string;
@@ -376,22 +372,31 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
   const selected = choice ? graph.observations.get(choice.id) : undefined;
   return (
     <section
-      className="graph-provenance"
+      className="graph-provenance relative flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label="Recorded contribution graph"
     >
-      <div className="feature-toolbar graph-chrome">
-        <TextInput
-          aria-label="Find repository for publication graph"
-          placeholder="Find repository…"
-          value={text}
-          maxLength={200}
-          leftSection={<Search size={16} />}
-          onChange={(event) => {
-            setText(event.currentTarget.value);
-            setRepositoryOffset(0);
-          }}
-        />
+      <ChromeSlot
+        zone="header-extra"
+        order={0}
+        className="flex flex-wrap items-center gap-1.5"
+      >
+        <div className="w-44">
+          <Input
+            size="sm"
+            aria-label="Find repository for publication graph"
+            placeholder="Find repository…"
+            value={text}
+            maxLength={200}
+            leading={<Search />}
+            onChange={(event) => {
+              setText(event.currentTarget.value);
+              setRepositoryOffset(0);
+            }}
+          />
+        </div>
         <Select
+          size="sm"
+          className="w-60"
           aria-label="Published repository"
           placeholder={
             selectedRepository.isError
@@ -414,6 +419,8 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
         />
         {route.repository && (
           <Select
+            size="sm"
+            className="w-56"
             aria-label="Exact publication snapshot"
             placeholder={
               snapshots.isPending
@@ -450,8 +457,8 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
         )}
         {repositoryOffset > 0 && (
           <Button
-            variant="subtle"
-            size="xs"
+            variant="ghost"
+            size="sm"
             onClick={() =>
               setRepositoryOffset(Math.max(0, repositoryOffset - 50))
             }
@@ -461,8 +468,8 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
         )}
         {repositories.data?.next_offset != null && !repositories.isError && (
           <Button
-            variant="subtle"
-            size="xs"
+            variant="ghost"
+            size="sm"
             onClick={() => setRepositoryOffset(repositories.data!.next_offset!)}
           >
             More repositories
@@ -470,8 +477,8 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
         )}
         {snapshotOffset > 0 && (
           <Button
-            variant="subtle"
-            size="xs"
+            variant="ghost"
+            size="sm"
             onClick={() => setSnapshotOffset(Math.max(0, snapshotOffset - 20))}
           >
             Previous snapshots
@@ -481,172 +488,201 @@ export function GraphProvenance({ brain }: { brain: Brain }) {
           !snapshots.isError &&
           snapshotOffset + 20 < snapshots.data.total && (
             <Button
-              variant="subtle"
-              size="xs"
+              variant="ghost"
+              size="sm"
               onClick={() => setSnapshotOffset(snapshotOffset + 20)}
             >
               More snapshots
             </Button>
           )}
-      </div>
-      {(feedQuery.isError || expired) && (
-        <Alert color="gray" title="Recorded activity unavailable">
-          {feedQuery.isError
-            ? feedQuery.error.message
-            : "The last read expired."}
-          <Button
-            variant="subtle"
-            size="xs"
-            onClick={() => void feedQuery.refetch()}
-          >
-            Refresh
-          </Button>
-        </Alert>
-      )}
-      {(repositories.isError ||
-        selectedRepository.isError ||
-        snapshots.isError ||
-        publication.isError) && (
-        <Alert color="gray">
-          {repositories.error?.message ??
-            selectedRepository.error?.message ??
-            snapshots.error?.message ??
-            publication.error?.message}
-        </Alert>
-      )}
-      {publicationMismatch && (
-        <Alert
-          color="gray"
-          title="Snapshot does not match the selected repository"
-        >
-          Choose the repository and an exact snapshot that belong together.
-        </Alert>
-      )}
-      {feedQuery.isPending && (
-        <LoadingState label="Reading recorded contributions…" />
-      )}
+      </ChromeSlot>
       {feed && (
         <>
-          <Group gap="xs">
-            <Badge variant="light">Recent recorded activity</Badge>
-            <Text size="xs" c="dimmed">
+          <ChromeSlot
+            zone="header-meta"
+            order={0}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <Badge>Recent recorded activity</Badge>
+            <span className="mono text-caption text-muted-foreground">
               {feed.items.length} inputs
               {feed.has_more ? " · More activity exists" : ""}
-            </Text>
-            {published && (
-              <Text size="xs" c="dimmed">
-                {published.contributors.length} of {published.contributor_total}{" "}
-                publications for this snapshot
-              </Text>
-            )}
-            {published && contributorOffset > 0 && (
-              <Button
-                variant="subtle"
-                size="xs"
-                onClick={() =>
-                  setContributorOffset(Math.max(0, contributorOffset - 20))
-                }
-              >
-                Previous publications
-              </Button>
-            )}
-            {published &&
-              contributorOffset + 20 < published.contributor_total && (
+            </span>
+          </ChromeSlot>
+          {published && (
+            <ChromeSlot
+              zone="header-extra"
+              order={1}
+              className="flex flex-wrap items-center gap-1.5"
+            >
+              <span className="mono text-caption text-muted-foreground">
+                {published.contributors.length} of{" "}
+                {published.contributor_total} publications for this snapshot
+              </span>
+              {contributorOffset > 0 && (
                 <Button
-                  variant="subtle"
-                  size="xs"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setContributorOffset(Math.max(0, contributorOffset - 20))
+                  }
+                >
+                  Previous publications
+                </Button>
+              )}
+              {contributorOffset + 20 < published.contributor_total && (
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setContributorOffset(contributorOffset + 20)}
                 >
                   More publications
                 </Button>
               )}
-          </Group>
-          <Text size="xs" c="dimmed">
-            Recorded contributions only; agent presence and later memory
-            authorship are not inferred.
-          </Text>
-          {graph.nodes.length ? (
-            <div className="graph-stage-area">
-              <GraphRenderer
-                key={`${brain.id}:${route.repository ?? "none"}:${route.snapshot ?? "recent"}:${contributorOffset}`}
-                inspector={
-                  choice && selected ? (
-                    <GraphSelectionPanel
-                      nodes={graph.nodes}
-                      edges={graph.edges}
-                      choice={choice}
-                      onChoose={setChoice}
-                      onFocus={() => setFocusRequest((value) => value + 1)}
-                      description={
-                        <Text size="xs" c="dimmed">
-                          {selected.description}
-                        </Text>
-                      }
-                      actions={
-                        <>
-                          {selected.source && (
-                            <Button
-                              size="xs"
-                              onClick={() => {
-                                select({
-                                  kind: "source",
-                                  id: selected.source!.id,
-                                  version: selected.source!.version,
-                                });
-                              }}
-                            >
-                              Open evidence
-                            </Button>
-                          )}
-                          {selected.repository && (
-                            <Button
-                              size="xs"
-                              onClick={() => {
-                                select({
-                                  kind: "repository",
-                                  id: selected.repository!,
-                                });
-                              }}
-                            >
-                              Open repository
-                            </Button>
-                          )}
-                          {selected.snapshot && (
-                            <Button
-                              size="xs"
-                              onClick={() => setDetails(selected.snapshot!)}
-                            >
-                              Open snapshot
-                            </Button>
-                          )}
-                        </>
-                      }
-                      details={
-                        <Text size="xs" className="graph-exact-identity">
-                          Recorded identity: {choice.id}
-                        </Text>
-                      }
-                    />
-                  ) : null
-                }
+            </ChromeSlot>
+          )}
+          <ChromeSlot zone="bottom-right" order={10}>
+            <p
+              className={cn(
+                chromeCard,
+                "m-0 max-w-[26rem] px-2.5 py-1.5 text-caption text-muted-foreground",
+              )}
+            >
+              Recorded contributions only; agent presence and later memory
+              authorship are not inferred.
+            </p>
+          </ChromeSlot>
+        </>
+      )}
+      {(feedQuery.isError || expired) && (
+        <ChromeSlot zone="top-left" order={10} className="w-[26rem] rounded-lg shadow-md">
+          <Alert
+            variant="default"
+            title="Recorded activity unavailable"
+            actions={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void feedQuery.refetch()}
+              >
+                Refresh
+              </Button>
+            }
+          >
+            {feedQuery.isError
+              ? feedQuery.error.message
+              : "The last read expired."}
+          </Alert>
+        </ChromeSlot>
+      )}
+      {(repositories.isError ||
+        selectedRepository.isError ||
+        snapshots.isError ||
+        publication.isError) && (
+        <ChromeSlot zone="top-left" order={11} className="w-[26rem] rounded-lg shadow-md">
+          <Alert variant="default">
+            {repositories.error?.message ??
+              selectedRepository.error?.message ??
+              snapshots.error?.message ??
+              publication.error?.message}
+          </Alert>
+        </ChromeSlot>
+      )}
+      {publicationMismatch && (
+        <ChromeSlot zone="top-left" order={12} className="w-[26rem] rounded-lg shadow-md">
+          <Alert
+            variant="default"
+            title="Snapshot does not match the selected repository"
+          >
+            Choose the repository and an exact snapshot that belong together.
+          </Alert>
+        </ChromeSlot>
+      )}
+      {feedQuery.isPending && (
+        <div className="grid min-h-0 flex-1 place-items-center p-6">
+          <LoadingState label="Reading recorded contributions…" />
+        </div>
+      )}
+      {feed &&
+        (graph.nodes.length ? (
+          <GraphRenderer
+            key={`${brain.id}:${route.repository ?? "none"}:${route.snapshot ?? "recent"}:${contributorOffset}`}
+            inspector={
+              <GraphSelectionPanel
                 nodes={graph.nodes}
                 edges={graph.edges}
-                choice={choice}
-                focusRequest={focusRequest}
+                choice={choice && selected ? choice : null}
                 onChoose={setChoice}
-                pathNodes={[]}
-                pathEdges={[]}
+                onFocus={() => setFocusRequest((value) => value + 1)}
+                description={
+                  <p className="m-0 text-label text-foreground-secondary">
+                    {selected?.description}
+                  </p>
+                }
+                actions={
+                  <>
+                    {selected?.source && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          select({
+                            kind: "source",
+                            id: selected.source!.id,
+                            version: selected.source!.version,
+                          });
+                        }}
+                      >
+                        Open evidence
+                      </Button>
+                    )}
+                    {selected?.repository && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          select({
+                            kind: "repository",
+                            id: selected.repository!,
+                          });
+                        }}
+                      >
+                        Open repository
+                      </Button>
+                    )}
+                    {selected?.snapshot && (
+                      <Button
+                        size="sm"
+                        onClick={() => setDetails(selected.snapshot!)}
+                      >
+                        Open snapshot
+                      </Button>
+                    )}
+                  </>
+                }
+                details={
+                  <p className="m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+                    Recorded identity:{" "}
+                    <span className="mono">{choice?.id}</span>
+                  </p>
+                }
               />
-            </div>
-          ) : (
+            }
+            nodes={graph.nodes}
+            edges={graph.edges}
+            choice={choice}
+            focusRequest={focusRequest}
+            onChoose={setChoice}
+            pathNodes={noKeys}
+            pathEdges={noKeys}
+          />
+        ) : (
+          <div className="grid min-h-0 flex-1 place-items-center p-6">
             <EmptyState
               icon={Network}
               title="No recorded contributions"
               description="Permitted source activity and explicitly selected publications appear here."
             />
-          )}
-        </>
-      )}
+          </div>
+        ))}
       {details && feed && (
         <SnapshotDialog
           brain={brain}

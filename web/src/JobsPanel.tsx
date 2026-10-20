@@ -1,19 +1,21 @@
 import { useEffect, useRef } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  Group,
-  Progress,
-  Stack,
-  Text,
-  Alert,
-} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Cog } from "lucide-react";
 import { client, result } from "./api";
 import { SkeletonRows } from "./components/Skeleton";
 import { StatusDot } from "./components/StatusDot";
-import { staggerStyle } from "./components/Motion";
+import { EmptyState } from "./components/AsyncState";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardBar,
+  Progress,
+  StatusBadge,
+} from "./components/ui";
+import { cn } from "./lib/utils";
+import { useFirstLoadStagger } from "./features/activity/firstLoad";
 import { usePollInterval } from "./usePollInterval";
 
 const stateLabels: Record<string, string> = {
@@ -38,6 +40,29 @@ const errorLabels: Record<string, string> = {
   lease_expired: "The worker stopped before completing this job.",
   cancelled_by_admin: "An administrator cancelled this job.",
 };
+const kindLabels: Record<string, string> = {
+  "brain.refresh": "Update Brain details",
+  "source.learn": "Learn from source",
+  "handover.generate": "Generate handover",
+  "source.process": "Process source text",
+  "repository.process": "Process repository snapshot",
+};
+
+/** Overall processing state: status colour always pairs with an icon and a word. */
+function ProcessingState({ state }: { state: string }) {
+  if (state === "current")
+    return <StatusBadge state="positive">{stateLabels[state]}</StatusBadge>;
+  if (state === "failed")
+    return <StatusBadge state="negative">{stateLabels[state]}</StatusBadge>;
+  if (state === "queued" || state === "running")
+    return (
+      <Badge variant="brand">
+        <StatusDot tone="accent" live size={6} />
+        {stateLabels[state]}
+      </Badge>
+    );
+  return <StatusBadge state="neutral">{stateLabels[state] ?? state}</StatusBadge>;
+}
 
 export function JobsPanel({
   id,
@@ -92,156 +117,163 @@ export function JobsPanel({
     },
   });
   const error = processing.error ?? jobs.error ?? action.error;
+  const stagger = useFirstLoadStagger(jobs.data?.map((job) => job.id));
   useEffect(() => {
     if (selectedJob && jobs.data)
       focused.current?.scrollIntoView({ block: "center" });
   }, [selectedJob, jobs.data]);
   return (
     <Card
-      component="section"
+      role="region"
       aria-label="Background processing"
-      withBorder
-      p="lg"
-      className="feature-view"
+      className="overflow-hidden p-0"
     >
-      <Group justify="space-between" mb="sm">
-        <Text fw={600}>Processing</Text>
-        {!processing.error && processing.data && (
-          <Badge
-            color={
-              processing.data.state === "current"
-                ? "teal"
-                : processing.data.state === "failed"
-                  ? "red"
-                  : "gray"
-            }
-            variant="light"
-          >
-            {stateLabels[processing.data.state]}
-          </Badge>
-        )}
-      </Group>
-      <Text size="sm" c="dimmed" mb="lg">
-        Your changes are saved immediately. Background work updates the views
-        that use them.
-      </Text>
+      <CardBar>
+        <h2>Processing</h2>
+        <span className="truncate text-caption text-muted-foreground">
+          Your changes are saved immediately. Background work updates the views
+          that use them.
+        </span>
+        <span className="ml-auto">
+          {!processing.error && processing.data && (
+            <ProcessingState state={processing.data.state} />
+          )}
+        </span>
+      </CardBar>
       {error && (
-        <Alert color="red" mb="md">
-          {error.message}
-          <Button
-            size="xs"
-            variant="subtle"
-            onClick={() => {
-              void processing.refetch();
-              void jobs.refetch();
-            }}
+        <div className="px-4 pt-4">
+          <Alert
+            variant="destructive"
+            actions={
+              <Button
+                size="sm"
+                variant="destructive-ghost"
+                onClick={() => {
+                  void processing.refetch();
+                  void jobs.refetch();
+                }}
+              >
+                Refresh processing
+              </Button>
+            }
           >
-            Refresh processing
-          </Button>
-        </Alert>
+            {error.message}
+          </Alert>
+        </div>
       )}
       {jobs.isPending ? (
-        <SkeletonRows label="Loading processing…" rows={3} />
+        <div className="px-4 py-2">
+          <SkeletonRows label="Loading processing…" rows={3} />
+        </div>
       ) : jobs.error || processing.error ? null : !jobs.data?.length ? (
-        <Text c="dimmed" size="sm">
-          No background work yet.
-        </Text>
+        <EmptyState
+          icon={Cog}
+          title="No background work yet"
+          description="Background work appears here when a change needs processing."
+          className="py-10"
+        />
       ) : (
-        <Stack gap="md">
-          {jobs.data.map((job, index) => (
-            <div
-              className={`job-row rc-enter${job.id === selectedJob ? " activity-selected" : ""}`}
-              style={staggerStyle(index)}
-              key={job.id}
-              ref={job.id === selectedJob ? focused : undefined}
-              data-testid={job.id === selectedJob ? "selected-job" : undefined}
-            >
-              <div className="job-info">
-                <Text size="sm" fw={500}>
-                  {job.kind === "brain.refresh"
-                    ? "Update Brain details"
-                    : job.kind === "source.learn"
-                      ? "Learn from source"
-                      : job.kind === "handover.generate"
-                        ? "Generate handover"
-                        : job.kind === "source.process"
-                          ? "Process source text"
-                          : job.kind === "repository.process"
-                            ? "Process repository snapshot"
-                            : job.kind}
-                </Text>
-                <Group gap={6}>
-                  {["queued", "running"].includes(job.state) && (
+        <div className="grid">
+          {jobs.data.map((job, index) => {
+            const live = ["queued", "running"].includes(job.state);
+            const entrance = stagger(job.id, index);
+            const selected = job.id === selectedJob;
+            return (
+              <div
+                className={cn(
+                  // border-t-0/pt override the legacy .job-row rule (legacy layer).
+                  "job-row grid min-h-11 grid-cols-[minmax(0,1fr)_220px_104px] items-center gap-x-4 border-b border-t-0 border-border px-4 py-2 last:border-b-0",
+                  selected &&
+                    "relative bg-brand-soft/60 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand",
+                  entrance.className,
+                )}
+                style={entrance.style}
+                key={job.id}
+                ref={selected ? focused : undefined}
+                data-testid={selected ? "selected-job" : undefined}
+              >
+                <div className="grid min-w-0 gap-1">
+                  <span className="truncate text-body font-medium text-foreground">
+                    {kindLabels[job.kind] ?? (
+                      <span className="mono text-label">{job.kind}</span>
+                    )}
+                  </span>
+                  {job.state === "running" && (
+                    <Progress
+                      label="Job progress"
+                      value={job.progress}
+                      className="max-w-[420px]"
+                    />
+                  )}
+                  {job.error_code && (
+                    <span
+                      className={cn(
+                        "text-caption",
+                        job.state === "failed"
+                          ? "text-destructive-text"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {errorLabels[job.error_code] ??
+                        "Processing did not complete."}
+                    </span>
+                  )}
+                </div>
+                <span className="flex items-center gap-2 text-caption text-muted-foreground">
+                  {live && (
                     <StatusDot tone="accent" live size={7} label="Processing" />
                   )}
-                  <Text size="xs" c="dimmed">
-                    {stateLabels[job.state]} · Attempt {job.attempts} of{" "}
-                    {job.max_attempts}
-                  </Text>
-                </Group>
-                {job.state === "running" && (
-                  <Progress
-                    aria-label="Job progress"
-                    value={job.progress}
-                    size="xs"
-                    mt="sm"
-                    animated
-                  />
-                )}
-                {job.error_code && (
-                  <Text
-                    size="xs"
-                    c={job.state === "failed" ? "red" : "dimmed"}
-                    mt={4}
+                  {/* One text run, so the row never repeats the overall state badge. */}
+                  <span
+                    className={cn(
+                      job.state === "failed" &&
+                        "font-medium text-destructive-text",
+                    )}
                   >
-                    {errorLabels[job.error_code] ??
-                      "Processing did not complete."}
-                  </Text>
-                )}
+                    {stateLabels[job.state]}
+                    {" · "}
+                    <span className="mono">
+                      Attempt {job.attempts} of {job.max_attempts}
+                    </span>
+                  </span>
+                </span>
+                <div className="flex justify-end">
+                {admin &&
+                  ["queued", "running", "failed", "cancelled"].includes(
+                    job.state,
+                  ) && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={
+                        action.isPending && action.variables?.job === job.id
+                      }
+                      disabled={
+                        action.isPending ||
+                        job.error_code === "content_removed" ||
+                        (["failed", "cancelled"].includes(job.state) &&
+                          [
+                            "source.learn",
+                            "handover.generate",
+                            "semantic.generate",
+                            "graph.analyze",
+                          ].includes(job.kind))
+                      }
+                      onClick={() =>
+                        action.mutate({
+                          job: job.id,
+                          action: live ? "cancel" : "retry",
+                        })
+                      }
+                    >
+                      {live ? "Cancel job" : "Retry job"}
+                    </Button>
+                  )}
+                </div>
               </div>
-              {admin &&
-                ["queued", "running", "failed", "cancelled"].includes(
-                  job.state,
-                ) && (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color={
-                      ["queued", "running"].includes(job.state)
-                        ? "gray"
-                        : "teal"
-                    }
-                    loading={
-                      action.isPending && action.variables?.job === job.id
-                    }
-                    disabled={
-                      action.isPending ||
-                      job.error_code === "content_removed" ||
-                      (["failed", "cancelled"].includes(job.state) &&
-                        [
-                          "source.learn",
-                          "handover.generate",
-                          "semantic.generate",
-                          "graph.analyze",
-                        ].includes(job.kind))
-                    }
-                    onClick={() =>
-                      action.mutate({
-                        job: job.id,
-                        action: ["queued", "running"].includes(job.state)
-                          ? "cancel"
-                          : "retry",
-                      })
-                    }
-                  >
-                    {["queued", "running"].includes(job.state)
-                      ? "Cancel job"
-                      : "Retry job"}
-                  </Button>
-                )}
-            </div>
-          ))}
-        </Stack>
+            );
+          })}
+        </div>
       )}
     </Card>
   );

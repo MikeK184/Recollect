@@ -1,4 +1,4 @@
-import { Alert, Button, Group } from "@mantine/core";
+import { Alert, Button } from "./components/ui";
 import {
   profileInput,
   type McpProfileCardProps,
@@ -8,35 +8,41 @@ import {
 // The stale-configuration and partial-save notices under the sections.
 export function McpProfileNotices({ state }: { state: ProfileState }) {
   const { stale, save, detail, baseline, setInput, progress } = state;
+  if (!stale && !save.error) return null;
   return (
-    <>
+    <div className="grid gap-2 px-4 pb-3">
       {stale && (
-        <Alert color="yellow" title="Configuration changed">
+        <Alert
+          variant="warning"
+          title="Configuration changed"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={save.isPending}
+              onClick={() => {
+                if (detail.data) {
+                  baseline.current = profileInput(detail.data.profile);
+                  setInput(baseline.current);
+                  save.reset();
+                }
+              }}
+            >
+              Reload settings
+            </Button>
+          }
+        >
           Your draft is retained. Reload replaces the draft with current
           settings.
-          <Button
-            variant="subtle"
-            size="xs"
-            disabled={save.isPending}
-            onClick={() => {
-              if (detail.data) {
-                baseline.current = profileInput(detail.data.profile);
-                setInput(baseline.current);
-                save.reset();
-              }
-            }}
-          >
-            Reload settings
-          </Button>
         </Alert>
       )}
       {save.error && (
         <Alert
-          color="red"
+          variant="destructive"
           title={progress.length ? "Some changes saved" : "Changes not saved"}
         >
           {progress.length > 0 && (
-            <ul>
+            <ul className="m-0 mb-1 grid gap-0.5 pl-4">
               {progress.map((item) => (
                 <li key={item}>{item}</li>
               ))}
@@ -45,7 +51,7 @@ export function McpProfileNotices({ state }: { state: ProfileState }) {
           {save.error.message} Remaining edits are retained.
         </Alert>
       )}
-    </>
+    </div>
   );
 }
 
@@ -69,39 +75,36 @@ export function McpProfileFooter({
     compatible,
     progress,
   } = state;
+  if (!editing) return null;
   return (
-    <footer className="mcp-tool-group-footer">
-      {editing ? (
-        <Group gap="xs">
-          <Button
-            variant="default"
-            size="xs"
-            disabled={save.isPending}
-            onClick={cancel}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="xs"
-            loading={save.isPending}
-            disabled={
-              brain.archived ||
-              !!detail.error ||
-              (!canManage && !canShare) ||
-              (canManage &&
-                (!input.name.trim() ||
-                  input.connection_ids.some(
-                    (c) => !compatible.some((p) => p.id === c),
-                  )))
-            }
-            onClick={() => save.mutate()}
-          >
-            {save.error && progress.length
-              ? "Retry remaining changes"
-              : "Save changes"}
-          </Button>
-        </Group>
-      ) : null}
+    <footer className="flex items-center justify-end gap-2 border-t border-border bg-muted px-4 py-2.5">
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={save.isPending}
+        onClick={cancel}
+      >
+        Cancel
+      </Button>
+      <Button
+        size="sm"
+        loading={save.isPending}
+        disabled={
+          brain.archived ||
+          !!detail.error ||
+          (!canManage && !canShare) ||
+          (canManage &&
+            (!input.name.trim() ||
+              input.connection_ids.some(
+                (c) => !compatible.some((p) => p.id === c),
+              )))
+        }
+        onClick={() => save.mutate()}
+      >
+        {save.error && progress.length
+          ? "Retry remaining changes"
+          : "Save changes"}
+      </Button>
     </footer>
   );
 }

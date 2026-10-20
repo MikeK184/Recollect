@@ -1,37 +1,38 @@
-import { useEffect, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-  ActionIcon,
-} from "@mantine/core";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Archive,
+  CircleCheck,
+  GitBranch,
+  Layers,
   Pencil,
+  Plus,
   RotateCcw,
   Trash2,
-  GitBranch,
-  Plus,
 } from "lucide-react";
 import { client, result, RequestError, type Brain } from "../../api";
 import type { components } from "../../api-schema";
-import "./brain-deletion.css";
-import "./general-settings.css";
 import { useBrainSearch } from "../../app/useBrainSearch";
 import { useBrain, useWorkspace } from "../../app/context";
 import { useIdempotency } from "../../useIdempotency";
 import { PageHeader } from "../../components/PageHeader";
 import { FeatureTabs, useFeatureTab } from "../../components/FeatureTabs";
-import { SettingsSection } from "../../components/SettingsSection";
 import { ErrorState } from "../../components/AsyncState";
+import { Page } from "../../components/Page";
+import { SkeletonRows } from "../../components/Skeleton";
+import {
+  Alert,
+  Badge,
+  Button,
+  IconButton,
+  Modal,
+  Spinner,
+  StatusBadge,
+  TextField,
+  Tile,
+} from "../../components/ui";
+import { cn } from "../../lib/utils";
 import { BrainIcon } from "../../components/BrainIcon";
 import { BrainForm } from "../../components/BrainForm";
 import { AccessPanel } from "../../AccessPanel";
@@ -39,7 +40,6 @@ import { ModelsPanel } from "../../ModelsPanel";
 
 import { PrivacyOverview } from "./PrivacyOverview";
 import { deletionReceiptKey } from "./DeletionNotice";
-import { usePollInterval } from "../../usePollInterval";
 import { useWorkspaceCatalogue } from "../../catalogueQueries";
 type DeletionResult = components["schemas"]["BrainDeletionResult"];
 // Carries the API error code so the confirmation flow can tell a mismatched
@@ -78,28 +78,68 @@ export function SettingsPage() {
     "general",
   );
   return (
-    <div className="settings-management-page">
+    <Page>
       <PageHeader
         title="Settings"
         description="Keep this Brain working the way you want."
       />
       <FeatureTabs tabs={tabs} value={tab} onChange={setTab}>
         {tab === "general" && <GeneralSettings />}
-        {tab === "access" && (
-          <section className="settings-members">
-            {brain.role === "admin" ? (
-              <AccessPanel brain={brain} actor={session.user.id} embedded />
-            ) : (
-              <Alert color="gray">
-                A Brain administrator can manage its members and roles.
-              </Alert>
-            )}
-          </section>
-        )}
+        {tab === "access" &&
+          (brain.role === "admin" ? (
+            <AccessPanel brain={brain} actor={session.user.id} embedded />
+          ) : (
+            <Alert role="status">
+              A Brain administrator can manage its members and roles.
+            </Alert>
+          ))}
         {tab === "ai" && <ModelsPanel brain={brain} section="settings" />}
         {tab === "privacy" && <PrivacyOverview brain={brain} />}
       </FeatureTabs>
-    </div>
+    </Page>
+  );
+}
+
+/**
+ * One General settings group (board: Settings · General): title and
+ * description in a 240px column, its value and actions beside them.
+ */
+function SettingsCard({
+  title,
+  description,
+  label,
+  id,
+  danger = false,
+  children,
+}: {
+  title: string;
+  description: string;
+  label?: string;
+  id?: string;
+  danger?: boolean;
+  children: ReactNode;
+}) {
+  const heading = `settings-${title.toLowerCase().replaceAll(" ", "-")}`;
+  return (
+    <section
+      id={id}
+      aria-label={label}
+      aria-labelledby={label ? undefined : heading}
+      className={cn(
+        "grid scroll-mt-6 grid-cols-[240px_minmax(0,1fr)] gap-8 rounded-lg border bg-card px-6 py-5",
+        danger ? "border-destructive/45" : "border-border",
+      )}
+    >
+      <div className="min-w-0">
+        <h2 id={heading} className="m-0 text-title font-semibold text-foreground">
+          {title}
+        </h2>
+        <p className="m-0 mt-1 text-body text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </section>
   );
 }
 function GeneralSettings() {
@@ -135,149 +175,147 @@ function GeneralSettings() {
       void cache.invalidateQueries({ queryKey: ["brains"] });
     },
   });
+  const busy = editing || environmentEditing || archive.isPending;
   return (
-    <>
-      <div className="general-settings-layout">
-        <div className="general-settings-main">
-          <section
-            className="general-settings-card general-brain-details"
-            aria-label="Brain details"
-          >
-            <header className="general-card-heading">
-              <h2>Brain details</h2>
-              {admin && !editing && (
+    <div className="grid gap-4">
+      <SettingsCard
+        title="Brain details"
+        label="Brain details"
+        description="How this Brain is named and described for your team."
+      >
+        {editing && admin ? (
+          <BrainForm
+            key={brain.id}
+            brain={brain}
+            opened
+            inline
+            disabled={!admin}
+            close={() => setEditing(false)}
+            saved={() => {
+              setEditing(false);
+              void cache.invalidateQueries({
+                queryKey: ["brain", brain.id],
+              });
+              void cache.invalidateQueries({ queryKey: ["brains"] });
+            }}
+          />
+        ) : (
+          <div className="grid gap-4">
+            <div className="flex items-start gap-3.5">
+              <BrainIcon
+                id={brain.id}
+                revision={brain.icon_revision}
+                size={40}
+              />
+              <dl className="m-0 grid min-w-0 flex-1 gap-3">
+                <div className="grid gap-0.5">
+                  <dt className="text-caption text-muted-foreground">Name</dt>
+                  <dd className="m-0 truncate text-body font-medium text-foreground">
+                    {brain.name}
+                  </dd>
+                </div>
+                <div className="grid gap-0.5">
+                  <dt className="text-caption text-muted-foreground">
+                    Description
+                  </dt>
+                  <dd
+                    className={cn(
+                      "m-0 max-w-[68ch] text-body",
+                      brain.description
+                        ? "text-foreground-secondary"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {brain.description || "No description yet."}
+                  </dd>
+                </div>
+              </dl>
+              {admin && (
                 <Button
-                  variant="default"
-                  size="sm"
+                  variant="secondary"
                   aria-label="Edit Brain"
-                  leftSection={<Pencil size={16} />}
                   disabled={environmentEditing || archive.isPending}
                   onClick={() => setEditing(true)}
                 >
+                  <Pencil aria-hidden="true" />
                   Edit
                 </Button>
               )}
-            </header>
-            {editing && admin ? (
-              <BrainForm
-                key={brain.id}
-                brain={brain}
-                opened
-                inline
-                disabled={!admin}
-                close={() => setEditing(false)}
-                saved={() => {
-                  setEditing(false);
-                  void cache.invalidateQueries({
-                    queryKey: ["brain", brain.id],
-                  });
-                  void cache.invalidateQueries({ queryKey: ["brains"] });
-                }}
-              />
-            ) : (
-              <>
-                <div className="general-brain-identity">
-                  <BrainIcon
-                    id={brain.id}
-                    revision={brain.icon_revision}
-                    size={56}
-                  />
-                  <strong>{brain.name}</strong>
-                  <Badge
-                    variant="light"
-                    color={brain.archived ? "gray" : "brand"}
-                  >
-                    {brain.archived ? "Archived" : "Active"}
-                  </Badge>
-                </div>
-                <dl className="general-brain-fields">
-                  <div>
-                    <dt>Name</dt>
-                    <dd>{brain.name}</dd>
-                  </div>
-                  <div>
-                    <dt>Description</dt>
-                    <dd className={!brain.description ? "is-empty" : undefined}>
-                      {brain.description || "No description yet."}
-                    </dd>
-                  </div>
-                </dl>
-              </>
-            )}
-            <p className="general-created">
-              Created {new Date(brain.created_at).toLocaleDateString()}
+            </div>
+            <p className="m-0 flex items-center gap-2 border-t border-border pt-3 text-caption text-muted-foreground">
+              Created
+              <span className="mono text-foreground-secondary">
+                {new Date(brain.created_at).toLocaleDateString()}
+              </span>
             </p>
-          </section>
-          <EnvironmentsSettings
-            key={brain.id}
-            brain={brain}
-            blocked={editing || archive.isPending}
-            onEditingChange={setEnvironmentEditing}
-          />
-        </div>
-        <aside
-          className="general-settings-side"
-          aria-label="Brain status and permanent deletion"
-        >
-          <section
-            className="general-settings-card general-brain-status"
-            aria-label="Brain status"
-          >
-            <h2>Brain status</h2>
-            <Badge variant="light" color={brain.archived ? "gray" : "brand"}>
-              {brain.archived ? "Archived" : "Active"}
+          </div>
+        )}
+      </SettingsCard>
+      <EnvironmentsSettings
+        key={brain.id}
+        brain={brain}
+        blocked={editing || archive.isPending}
+        onEditingChange={setEnvironmentEditing}
+      />
+      <SettingsCard
+        title="Status"
+        label="Brain status"
+        description="Whether this Brain is active or archived."
+      >
+        <div className="flex min-h-8 items-center gap-3">
+          {brain.archived ? (
+            <StatusBadge state="neutral">Archived</StatusBadge>
+          ) : (
+            <Badge variant="brand">
+              <CircleCheck aria-hidden="true" />
+              Active
             </Badge>
-            {admin && (
-              <Button
-                fullWidth
-                variant="default"
-                disabled={editing || environmentEditing || archive.isPending}
-                leftSection={
-                  brain.archived ? (
-                    <RotateCcw size={16} />
-                  ) : (
-                    <Archive size={16} />
-                  )
-                }
-                onClick={() => {
-                  archive.reset();
-                  setConfirming(true);
-                }}
-              >
-                {brain.archived ? "Reopen Brain" : "Archive Brain"}
-              </Button>
-            )}
-            <p>
-              {brain.archived
-                ? "Content and history are preserved. Reopen to resume work."
-                : "Content and history are preserved when archived."}
-            </p>
-          </section>
-          {admin && (
-            <fieldset
-              className="general-deletion-card"
-              disabled={editing || environmentEditing || archive.isPending}
-            >
-              <DeleteBrainSection brain={brain} />
-            </fieldset>
           )}
-        </aside>
-      </div>
+          <span className="min-w-0 flex-1 text-caption text-muted-foreground">
+            {brain.archived
+              ? "Content and history are preserved. Reopen to resume work."
+              : "Content and history are preserved when archived."}
+          </span>
+          {admin && (
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                archive.reset();
+                setConfirming(true);
+              }}
+            >
+              {brain.archived ? (
+                <RotateCcw aria-hidden="true" />
+              ) : (
+                <Archive aria-hidden="true" />
+              )}
+              {brain.archived ? "Reopen Brain" : "Archive Brain"}
+            </Button>
+          )}
+        </div>
+      </SettingsCard>
+      {admin && (
+        <SettingsCard
+          title="Danger zone"
+          label="Permanent deletion"
+          description="These actions can't be undone."
+          danger
+        >
+          <fieldset disabled={busy} className="m-0 min-w-0 border-0 p-0">
+            <DeleteBrainSection brain={brain} />
+          </fieldset>
+        </SettingsCard>
+      )}
       <Modal
         opened={confirming && admin}
         onClose={() => !archive.isPending && setConfirming(false)}
         title={brain.archived ? "Reopen Brain" : "Archive Brain"}
-      >
-        <Stack>
-          <Text>
-            {brain.archived
-              ? `Resume work in ${brain.name}?`
-              : `Archive ${brain.name}? Its content remains available, while new work is paused.`}
-          </Text>
-          <ErrorState error={archive.error} />
-          <Group justify="flex-end">
+        size="sm"
+        footer={
+          <>
             <Button
-              variant="default"
+              variant="secondary"
               onClick={() => setConfirming(false)}
               disabled={archive.isPending}
             >
@@ -289,10 +327,19 @@ function GeneralSettings() {
             >
               {brain.archived ? "Reopen Brain" : "Archive Brain"}
             </Button>
-          </Group>
-        </Stack>
+          </>
+        }
+      >
+        <div className="grid gap-3">
+          <p className="m-0 text-body text-foreground-secondary">
+            {brain.archived
+              ? `Resume work in ${brain.name}?`
+              : `Archive ${brain.name}? Its content remains available, while new work is paused.`}
+          </p>
+          <ErrorState error={archive.error} />
+        </div>
       </Modal>
-    </>
+    </div>
   );
 }
 // Delete is a separate, irreversible command: it previews the dependent
@@ -384,109 +431,128 @@ function DeleteBrainSection({ brain }: { brain: Brain }) {
     ? Object.entries(preview.data.counts).filter(([, n]) => n > 0)
     : [];
   const total = counts.reduce((sum, [, n]) => sum + n, 0);
+  const ready = !deletion.data && !preview.isPending && !preview.error && !!preview.data;
   return (
     <>
-      <SettingsSection
-        title="Delete this Brain"
-        description="Permanent removal of the Brain and everything derived from it. Archiving keeps its content; deleting erases it."
-      >
-        <Button
-          color="red"
-          variant="light"
-          leftSection={<Trash2 size={16} />}
-          onClick={openDialog}
-        >
+      <div className="flex items-center gap-6">
+        <div className="min-w-0 flex-1">
+          <h3 className="m-0 text-body font-semibold text-foreground">
+            Delete this Brain
+          </h3>
+          <p className="m-0 mt-0.5 text-body text-muted-foreground">
+            Permanent removal of the Brain and everything derived from it.
+            Archiving keeps its content; deleting erases it.
+          </p>
+        </div>
+        <Button variant="destructive-outline" onClick={openDialog}>
+          <Trash2 aria-hidden="true" />
           Delete Brain
         </Button>
-      </SettingsSection>
+      </div>
       <Modal
         opened={open}
         onClose={closeDialog}
         title="Delete this Brain"
         size="lg"
+        footer={
+          deletion.data ? undefined : preview.error ? (
+            <>
+              <Button variant="secondary" onClick={() => void preview.mutate()}>
+                Retry preview
+              </Button>
+              <Button onClick={closeDialog}>Close</Button>
+            </>
+          ) : ready ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={closeDialog}
+                disabled={deletion.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                loading={deletion.isPending}
+                // Stay disabled while a fresh preview is in flight so the
+                // DELETE never carries a counter the re-preview supersedes.
+                disabled={typed !== preview.data!.name || preview.isPending}
+                onClick={() =>
+                  deletion.mutate({
+                    closure: preview.data!.closure,
+                    confirmation: typed,
+                  })
+                }
+              >
+                <Trash2 aria-hidden="true" />
+                Delete Brain
+              </Button>
+            </>
+          ) : undefined
+        }
       >
-        <Stack>
+        <div className="grid gap-4">
           {deletion.data ? (
             <DeletionOutcome name={brain.name} result={deletion.data} />
           ) : preview.isPending ? (
-            <Group justify="center" py="xl">
-              <Loader size="sm" />
-              <Text c="dimmed">Preparing the deletion summary…</Text>
-            </Group>
+            <div className="flex items-center justify-center gap-2 py-8">
+              <Spinner />
+              <span className="text-body text-muted-foreground">
+                Preparing the deletion summary…
+              </span>
+            </div>
           ) : preview.error ? (
-            <>
-              <Alert color="red">{preview.error.message}</Alert>
-              <Group justify="flex-end">
-                <Button variant="default" onClick={() => void preview.mutate()}>
-                  Retry preview
-                </Button>
-                <Button onClick={closeDialog}>Close</Button>
-              </Group>
-            </>
+            <Alert variant="destructive">{preview.error.message}</Alert>
           ) : preview.data ? (
             <>
-              <Alert color="red" title="This cannot be undone">
+              <Alert variant="destructive" title="This cannot be undone">
                 Deleting {preview.data.name} removes the Brain and everything
                 derived from it. There is no undo, recycle bin or restore.
               </Alert>
-              <Text size="sm">
+              <p className="m-0 text-body text-foreground">
                 {counts.length === 0
                   ? "No dependent records — this Brain is empty."
                   : `${total} dependent record${total === 1 ? "" : "s"} across ${counts.length} class${counts.length === 1 ? "" : "es"} will be removed.`}
-              </Text>
+              </p>
               {counts.length > 0 && (
-                <div className="brain-deletion-counts">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-2">
                   {counts.map(([key, value]) => (
-                    <div key={key} className="brain-deletion-count">
-                      <span>{countLabel(key)}</span>
-                      <strong>{value}</strong>
+                    <div
+                      key={key}
+                      className="flex items-baseline justify-between gap-3 rounded-md border border-border bg-muted/50 px-2.5 py-1.5"
+                    >
+                      <span className="text-label text-muted-foreground">
+                        {countLabel(key)}
+                      </span>
+                      <strong className="mono text-label font-semibold text-foreground">
+                        {value}
+                      </strong>
                     </div>
                   ))}
                 </div>
               )}
-              <Text size="sm" c="dimmed">
+              <p className="m-0 text-caption text-muted-foreground">
                 Retained copies in managed backups can remain for up to{" "}
                 {preview.data.backup_days} days.
                 {preview.data.pending_work > 0 &&
                   ` ${preview.data.pending_work} queued or running job${preview.data.pending_work === 1 ? "" : "s"} will be fenced.`}
-              </Text>
-              <TextInput
+              </p>
+              <TextField
                 label="Exact Brain name"
                 description={`Type "${preview.data.name}" exactly to enable deletion.`}
                 value={typed}
                 onChange={(e) => setTyped(e.target.value)}
                 disabled={deletion.isPending}
+                autoComplete="off"
               />
               {deletion.error && (
-                <Alert color="red">{deletionMessage(deletion.error)}</Alert>
+                <Alert variant="destructive">
+                  {deletionMessage(deletion.error)}
+                </Alert>
               )}
-              <Group justify="flex-end">
-                <Button
-                  variant="default"
-                  onClick={closeDialog}
-                  disabled={deletion.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  color="red"
-                  loading={deletion.isPending}
-                  // Stay disabled while a fresh preview is in flight so the
-                  // DELETE never carries a counter the re-preview supersedes.
-                  disabled={typed !== preview.data.name || preview.isPending}
-                  onClick={() =>
-                    deletion.mutate({
-                      closure: preview.data.closure,
-                      confirmation: typed,
-                    })
-                  }
-                >
-                  Delete Brain
-                </Button>
-              </Group>
             </>
           ) : null}
-        </Stack>
+        </div>
       </Modal>
     </>
   );
@@ -516,19 +582,19 @@ function DeletionOutcome({
 }) {
   const status = result.request;
   return (
-    <Stack gap="sm">
+    <div className="grid gap-2">
       {status.state === "complete" ? (
-        <Alert color="teal" title="Deletion complete">
+        <Alert variant="brand" title="Deletion complete" role="status">
           {name} is gone from this installation.
         </Alert>
       ) : status.state === "error" ? (
-        <Alert color="red" title="Deletion committed — cleanup failed">
+        <Alert variant="destructive" title="Deletion committed — cleanup failed">
           {name} is absent from listings and recall, but physical cleanup hit an
           error. It stays pending and will not report complete until the cleanup
           succeeds.
         </Alert>
       ) : (
-        <Alert color="orange" title="Deletion in progress">
+        <Alert variant="warning" title="Deletion in progress" role="status">
           {name} is already absent from listings and recall. Physical cleanup is
           pending: {status.pending_artifacts} file
           {status.pending_artifacts === 1 ? "" : "s"} remaining, journal{" "}
@@ -536,12 +602,12 @@ function DeletionOutcome({
           {status.graph_pending ? "cleanup pending" : "cleanup complete"}.
         </Alert>
       )}
-      <Text size="xs" c="dimmed">
+      <p className="m-0 text-caption text-muted-foreground">
         Retained copies in managed backups can remain for up to{" "}
         {result.backup_days} days. Offline host copies are removed on their next
         check-in.
-      </Text>
-    </Stack>
+      </p>
+    </div>
   );
 }
 
@@ -632,7 +698,10 @@ function EnvironmentsSettings({
   };
   const editor = (creating: boolean) => (
     <form
-      className={`general-environment-editor${creating ? " is-new" : ""}`}
+      className={cn(
+        "grid animate-enter gap-3 rounded-lg border border-border-strong bg-card p-3.5 shadow-xs",
+        creating && "mt-3",
+      )}
       role="region"
       aria-label={creating ? "Add environment" : "Rename environment"}
       onSubmit={(event) => {
@@ -641,8 +710,10 @@ function EnvironmentsSettings({
           save.mutate();
       }}
     >
-      <h3>{creating ? "New environment" : `Rename ${originalName}`}</h3>
-      <TextInput
+      <h3 className="m-0 text-body font-semibold text-foreground">
+        {creating ? "New environment" : `Rename ${originalName}`}
+      </h3>
+      <TextField
         label="Environment name"
         placeholder="Staging"
         required
@@ -653,13 +724,13 @@ function EnvironmentsSettings({
         onChange={(event) => setName(event.currentTarget.value)}
       />
       {missing && (
-        <Alert color="orange">
+        <Alert variant="warning">
           This environment is no longer available. Cancel and reload settings.
         </Alert>
       )}
       <ErrorState error={save.error} />
-      <Group justify="flex-end">
-        <Button variant="default" disabled={save.isPending} onClick={cancel}>
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" disabled={save.isPending} onClick={cancel}>
           Cancel
         </Button>
         <Button
@@ -669,102 +740,108 @@ function EnvironmentsSettings({
         >
           Save environment
         </Button>
-      </Group>
+      </div>
     </form>
   );
-  return (
-    <section
-      id="environments"
-      className="general-settings-card general-environments"
-      aria-label="Environments"
+  const addButton = canEdit && (
+    <Button
+      variant="secondary"
+      disabled={
+        !!workspace.error || !workspace.data || !!editing || save.isPending
+      }
+      onClick={() => {
+        setName("");
+        save.reset();
+        command.reset();
+        setOriginalName("");
+        setEditing("new");
+      }}
     >
-      <header className="general-card-heading">
-        <div>
-          <h2>Environments</h2>
-          <p>Optional scopes for this Brain.</p>
-        </div>
-        {canEdit && (
-          <Button
-            variant="filled"
-            size="sm"
-            leftSection={<Plus size={16} />}
-            disabled={
-              !!workspace.error ||
-              !workspace.data ||
-              !!editing ||
-              save.isPending
-            }
-            onClick={() => {
-              setName("");
-              save.reset();
-              command.reset();
-              setOriginalName("");
-              setEditing("new");
-            }}
-          >
-            Add environment
-          </Button>
+      <Plus aria-hidden="true" />
+      Add environment
+    </Button>
+  );
+  const empty =
+    !workspace.error && workspace.data?.environments.length === 0 && !editing;
+  return (
+    <SettingsCard
+      id="environments"
+      title="Environments"
+      label="Environments"
+      description="Optional scopes for this Brain."
+    >
+      <div className="grid gap-3">
+        <ErrorState
+          error={workspace.error}
+          retry={() => void workspace.refetch()}
+        />
+        {workspace.isPending && (
+          <SkeletonRows rows={2} label="Loading environments…" />
         )}
-      </header>
-      <ErrorState
-        error={workspace.error}
-        retry={() => void workspace.refetch()}
-      />
-      {workspace.isPending && (
-        <Group py="md">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed">
-            Loading environments…
-          </Text>
-        </Group>
-      )}
-      <div className="general-environment-list">
-        {environments.map((e) => (
-          <div
-            key={e.id}
-            className={`general-environment-row${editing === e.id ? " is-editing" : ""}`}
-            data-testid="general-environment-row"
-          >
-            <span className="general-environment-icon">
-              <GitBranch size={20} />
-            </span>
-            <div className="general-environment-content">
-              {editing === e.id && canEdit ? (
-                editor(false)
-              ) : (
-                <span>{e.name}</span>
-              )}
+        {empty && (
+          <div className="flex items-center gap-3.5">
+            <Tile size="md" className="size-10">
+              <Layers aria-hidden="true" />
+            </Tile>
+            <div className="min-w-0 flex-1">
+              <p className="m-0 text-body font-semibold text-foreground">
+                No environments yet
+              </p>
+              <p className="m-0 text-body text-muted-foreground">
+                Your agents can work Brain-wide.
+              </p>
             </div>
-            {canEdit && editing !== e.id && (
-              <ActionIcon
-                variant="subtle"
-                size="md"
-                aria-label={`Rename ${e.name}`}
-                title={`Rename ${e.name}`}
-                disabled={!!editing || save.isPending}
-                onClick={() => {
-                  setName(e.name);
-                  setOriginalName(e.name);
-                  save.reset();
-                  command.reset();
-                  setEditing(e.id);
-                }}
-              >
-                <Pencil size={17} />
-              </ActionIcon>
-            )}
+            {addButton}
           </div>
-        ))}
-      </div>
-      {!workspace.error &&
-        workspace.data?.environments.length === 0 &&
-        !editing && (
-          <p className="general-environments-empty">
-            No environments yet. Your agents can work Brain-wide.
-          </p>
         )}
-      {editing === "new" && canEdit && !workspace.error && editor(true)}
-      {missing && canEdit && editor(false)}
-    </section>
+        {environments.length > 0 && (
+          <div className="overflow-hidden rounded-lg border border-border">
+            {environments.map((e) => (
+              <div
+                key={e.id}
+                className={cn(
+                  "flex min-h-12 items-center gap-3 border-b border-border px-3 py-2 last:border-b-0",
+                  editing === e.id && "bg-muted/40",
+                )}
+                data-testid="general-environment-row"
+              >
+                <Tile size="sm">
+                  <GitBranch aria-hidden="true" />
+                </Tile>
+                <div className="min-w-0 flex-1">
+                  {editing === e.id && canEdit ? (
+                    editor(false)
+                  ) : (
+                    <span className="text-body font-medium text-foreground">
+                      {e.name}
+                    </span>
+                  )}
+                </div>
+                {canEdit && editing !== e.id && (
+                  <IconButton
+                    label={`Rename ${e.name}`}
+                    disabled={!!editing || save.isPending}
+                    onClick={() => {
+                      setName(e.name);
+                      setOriginalName(e.name);
+                      save.reset();
+                      command.reset();
+                      setEditing(e.id);
+                    }}
+                  >
+                    <Pencil aria-hidden="true" />
+                  </IconButton>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {!empty && environments.length > 0 && !editing && (
+          <div className="flex justify-end">{addButton}</div>
+        )}
+        {editing === "new" && canEdit && !workspace.error && editor(true)}
+        {missing && canEdit && editor(false)}
+      </div>
+    </SettingsCard>
   );
 }

@@ -1,18 +1,14 @@
+import type { ReactNode } from "react";
+import { Eye, Plus, X } from "lucide-react";
+import type { Brain } from "./api";
 import {
   Button,
-  Card,
-  Divider,
-  Group,
-  Loader,
   MultiSelect,
-  NumberInput,
+  NumberField,
   Select,
-  Stack,
-  Text,
-  Textarea,
-  TextInput,
-} from "@mantine/core";
-import type { Brain } from "./api";
+  TextField,
+  TextareaField,
+} from "./components/ui";
 import {
   Failure,
   Pages,
@@ -26,6 +22,22 @@ import {
 } from "./claimsShared";
 import { MemoryFormFields, kindContent, memoryKinds } from "./MemoryForms";
 import type { ClaimEditorState } from "./useClaimEditorState";
+
+/** A hairline group heading inside the editor form. */
+export function EditorGroup({
+  label: text,
+  children,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid min-w-0 gap-4 border-t border-border pt-4">
+      <h3 className="section-label m-0">{text}</h3>
+      {children}
+    </section>
+  );
+}
 
 export function ClaimStatementSection({
   brain,
@@ -43,23 +55,25 @@ export function ClaimStatementSection({
         value={content.kind}
         onChange={(v) => patch(kindContent(v ?? "claim"))}
       />
-      <TextInput
-        label="Subject"
-        placeholder="Production Vault"
-        required
-        maxLength={256}
-        value={content.subject}
-        onChange={(e) => patch({ subject: e.target.value })}
-      />
-      <TextInput
-        label="Property or relationship"
-        placeholder="authentication method"
-        required
-        maxLength={128}
-        value={content.predicate}
-        onChange={(e) => patch({ predicate: e.target.value })}
-      />
-      <Textarea
+      <div className="grid grid-cols-2 gap-4">
+        <TextField
+          label="Subject"
+          placeholder="Production Vault"
+          required
+          maxLength={256}
+          value={content.subject}
+          onChange={(e) => patch({ subject: e.target.value })}
+        />
+        <TextField
+          label="Property or relationship"
+          placeholder="authentication method"
+          required
+          maxLength={128}
+          value={content.predicate}
+          onChange={(e) => patch({ predicate: e.target.value })}
+        />
+      </div>
+      <TextareaField
         label="Claim value"
         required
         autosize
@@ -68,7 +82,7 @@ export function ClaimStatementSection({
         value={content.value}
         onChange={(e) => patch({ value: e.target.value })}
       />
-      <Textarea
+      <TextareaField
         label="Rationale"
         autosize
         minRows={2}
@@ -104,9 +118,9 @@ export function ClaimApplicabilitySection({
     setManifestOffset,
   } = state;
   return (
-    <>
-      <Divider label="Applicability" />
+    <EditorGroup label="Applicability">
       <MultiSelect
+        inputClassName="relative"
         label="Repositories"
         searchable
         data={repositories}
@@ -115,39 +129,42 @@ export function ClaimApplicabilitySection({
           patch({ selection: { ...content.selection, repository_ids } })
         }
       />
-      <MultiSelect
-        label="Areas"
-        searchable
-        data={
-          catalogue?.areas.map((a) => ({ value: a.id, label: a.name })) ?? []
-        }
-        value={content.selection.area_ids ?? []}
-        onChange={(area_ids) =>
-          patch({ selection: { ...content.selection, area_ids } })
-        }
-      />
-      <Select
-        label="Claim environment"
-        clearable
-        data={
-          catalogue?.environments.map((a) => ({
-            value: a.id,
-            label: a.name,
-          })) ?? []
-        }
-        value={content.selection.environment_id}
-        onChange={(environment_id) => {
-          patch({
-            selection: { ...content.selection, environment_id },
-            manifest_revision_id: null,
-          });
-          setManifestOffset(0);
-        }}
-      />
-      <Text size="xs" c="dimmed">
+      <div className="grid grid-cols-2 gap-4">
+        <MultiSelect
+          inputClassName="relative"
+          label="Areas"
+          searchable
+          data={
+            catalogue?.areas.map((a) => ({ value: a.id, label: a.name })) ?? []
+          }
+          value={content.selection.area_ids ?? []}
+          onChange={(area_ids) =>
+            patch({ selection: { ...content.selection, area_ids } })
+          }
+        />
+        <Select
+          label="Claim environment"
+          clearable
+          data={
+            catalogue?.environments.map((a) => ({
+              value: a.id,
+              label: a.name,
+            })) ?? []
+          }
+          value={content.selection.environment_id}
+          onChange={(environment_id) => {
+            patch({
+              selection: { ...content.selection, environment_id },
+              manifest_revision_id: null,
+            });
+            setManifestOffset(0);
+          }}
+        />
+      </div>
+      <p className="m-0 -mt-2 text-caption text-muted-foreground">
         Empty applicability applies throughout this Brain. Evidence from a
         repository requires selecting that repository.
-      </Text>
+      </p>
       <Select
         label="Exact manifest selection"
         clearable
@@ -175,15 +192,14 @@ export function ClaimApplicabilitySection({
         total={manifests.data?.total ?? 0}
         onChange={setManifestOffset}
       />
-    </>
+    </EditorGroup>
   );
 }
 
 export function ClaimValiditySection({ state }: { state: ClaimEditorState }) {
   const { content, patch } = state;
   return (
-    <>
-      <Divider label="Fact validity" />
+    <EditorGroup label="Fact validity">
       <Select
         label="Validity kind"
         data={[
@@ -204,10 +220,11 @@ export function ClaimValiditySection({ state }: { state: ClaimEditorState }) {
         }
       />
       {content.validity.kind !== "unknown" && (
-        <>
-          <TextInput
+        <div className="grid grid-cols-2 gap-4">
+          <TextField
             type="datetime-local"
             step="1"
+            inputClassName="mono"
             label={
               content.validity.kind === "point"
                 ? "Observed fact time (UTC)"
@@ -225,9 +242,10 @@ export function ClaimValiditySection({ state }: { state: ClaimEditorState }) {
             }
           />
           {content.validity.kind === "interval" ? (
-            <TextInput
+            <TextField
               type="datetime-local"
               step="1"
+              inputClassName="mono"
               label="Valid until (UTC; exclusive, blank means unknown)"
               value={utc(content.validity.to)}
               onChange={(e) =>
@@ -254,17 +272,18 @@ export function ClaimValiditySection({ state }: { state: ClaimEditorState }) {
               }
             />
           )}
-        </>
+        </div>
       )}
-    </>
+    </EditorGroup>
   );
 }
 
 export function ClaimFreshnessSection({ state }: { state: ClaimEditorState }) {
   const { content, patch } = state;
+  const observed = ["deployed", "verified"].includes(content.operational);
   return (
-    <>
-      <Group grow align="start">
+    <EditorGroup label="Freshness and outcome">
+      <div className="grid grid-cols-2 gap-4">
         <Select
           label="Recorded freshness"
           data={freshOptions}
@@ -277,103 +296,117 @@ export function ClaimFreshnessSection({ state }: { state: ClaimEditorState }) {
           value={content.operational}
           onChange={(v) => patch({ operational: v ?? "declared" })}
         />
-      </Group>
-      <TextInput
+      </div>
+      <TextField
         type="datetime-local"
         step="1"
+        inputClassName="mono"
         label="Outcome observed at (UTC)"
-        required={["deployed", "verified"].includes(content.operational)}
+        required={observed}
         value={utc(content.observed_at)}
         onChange={(e) => patch({ observed_at: instant(e.target.value) })}
       />
-      <Textarea
+      <TextareaField
         label="Observed outcome"
         maxLength={2000}
-        required={["deployed", "verified"].includes(content.operational)}
+        required={observed}
         value={content.observation}
         onChange={(e) => patch({ observation: e.target.value })}
       />
-    </>
+    </EditorGroup>
   );
 }
 
 export function ClaimSupportsSection({ state }: { state: ClaimEditorState }) {
   const { content, patch, known, setPreview } = state;
   return (
-    <>
-      <Divider label={`Supporting evidence (${content.supports.length}/20)`} />
+    <EditorGroup
+      label={
+        <>
+          Supporting evidence{" "}
+          <span className="mono">({content.supports.length}/20)</span>
+        </>
+      }
+    >
+      {!content.supports.length && (
+        <p className="m-0 text-label text-muted-foreground">
+          Choose at least one exact piece of evidence below.
+        </p>
+      )}
       {content.supports.map((support, index) => {
         const item = known.find(
           (e) => e.id === support.id && e.kind === support.kind,
         );
         return (
-          <Card key={`${support.kind}:${support.id}`} withBorder>
-            <Stack gap="xs">
-              <Group justify="space-between">
-                <Text size="sm" className="claim-wrap">
-                  {item?.label ?? support.id}
-                </Text>
-                <Group gap="xs">
-                  {item && (
-                    <Button
-                      size="compact-xs"
-                      variant="subtle"
-                      onClick={() => setPreview(item)}
-                    >
-                      Inspect
-                    </Button>
-                  )}
+          <div
+            key={`${support.kind}:${support.id}`}
+            className="grid gap-3 rounded-lg border border-border bg-card p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="min-w-0 text-label font-medium text-foreground [overflow-wrap:anywhere]">
+                {item?.label ?? (
+                  <span className="mono text-caption">{support.id}</span>
+                )}
+              </span>
+              <div className="flex shrink-0 gap-1">
+                {item && (
                   <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    color="gray"
-                    onClick={() =>
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPreview(item)}
+                  >
+                    <Eye aria-hidden="true" />
+                    Inspect
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    patch({
+                      supports: content.supports.filter((_, i) => i !== index),
+                    })
+                  }
+                >
+                  <X aria-hidden="true" />
+                  Remove support
+                </Button>
+              </div>
+            </div>
+            {support.kind === "source_version" && (
+              <div className="grid grid-cols-2 gap-3">
+                {(["line_from", "line_to"] as const).map((key) => (
+                  <NumberField
+                    key={key}
+                    label={
+                      key === "line_from"
+                        ? "First supporting line (optional)"
+                        : "Last supporting line (inclusive)"
+                    }
+                    min={1}
+                    max={1000000}
+                    allowDecimal={false}
+                    value={support[key] ?? ""}
+                    onChange={(v) =>
                       patch({
-                        supports: content.supports.filter(
-                          (_, i) => i !== index,
+                        supports: content.supports.map((s, i) =>
+                          i === index
+                            ? {
+                                ...s,
+                                [key]: typeof v === "number" ? v : null,
+                              }
+                            : s,
                         ),
                       })
                     }
-                  >
-                    Remove support
-                  </Button>
-                </Group>
-              </Group>
-              {support.kind === "source_version" && (
-                <Group grow>
-                  {(["line_from", "line_to"] as const).map((key) => (
-                    <NumberInput
-                      key={key}
-                      label={
-                        key === "line_from"
-                          ? "First supporting line (optional)"
-                          : "Last supporting line (inclusive)"
-                      }
-                      min={1}
-                      max={1000000}
-                      allowDecimal={false}
-                      value={support[key] ?? ""}
-                      onChange={(v) =>
-                        patch({
-                          supports: content.supports.map((s, i) =>
-                            i === index
-                              ? {
-                                  ...s,
-                                  [key]: typeof v === "number" ? v : null,
-                                }
-                              : s,
-                          ),
-                        })
-                      }
-                    />
-                  ))}
-                </Group>
-              )}
-            </Stack>
-          </Card>
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         );
       })}
-    </>
+    </EditorGroup>
   );
 }
 
@@ -391,8 +424,8 @@ export function ClaimEvidencePicker({ state }: { state: ClaimEditorState }) {
     choices,
   } = state;
   return (
-    <>
-      <Group grow>
+    <EditorGroup label="Evidence search">
+      <div className="grid grid-cols-2 gap-4">
         <Select
           label="Evidence kind"
           data={[
@@ -406,7 +439,7 @@ export function ClaimEvidencePicker({ state }: { state: ClaimEditorState }) {
             setOffset(0);
           }}
         />
-        <TextInput
+        <TextField
           label="Find evidence"
           value={search}
           onChange={(e) => {
@@ -414,72 +447,88 @@ export function ClaimEvidencePicker({ state }: { state: ClaimEditorState }) {
             setOffset(0);
           }}
         />
-      </Group>
+      </div>
       <Failure error={choices.error} />
-      {choices.isPending && <Loader size="sm" />}
+      {choices.isPending && (
+        <p
+          role="status"
+          className="m-0 flex items-center gap-2 text-label text-muted-foreground"
+        >
+          <span
+            aria-hidden="true"
+            className="size-3.5 animate-spin rounded-full border-2 border-border-strong border-t-transparent"
+          />
+          Loading evidence…
+        </p>
+      )}
       {choices.data?.items.length === 0 && (
-        <Text c="dimmed" size="sm">
+        <p className="m-0 text-label text-muted-foreground">
           No evidence matches. Import a source or publish a repository snapshot
           first.
-        </Text>
+        </p>
       )}
-      {choices.data?.items.map((item) => (
-        <Group
-          key={`${item.kind}:${item.id}`}
-          justify="space-between"
-          wrap="nowrap"
-        >
-          <div className="claim-wrap">
-            <Text size="sm" fw={500}>
-              {item.label}
-            </Text>
-            <Text size="xs" c="dimmed">
-              {time(item.created_at)} · {label(item.availability)}
-              {item.revision ? ` · ${item.revision.slice(0, 12)}` : ""}
-            </Text>
-          </div>
-          <Button
-            size="compact-xs"
-            variant="light"
-            disabled={
-              ["expired", "erased"].includes(item.availability) ||
-              content.supports.length >= 20 ||
-              content.supports.some(
-                (s) => s.id === item.id && s.kind === item.kind,
-              )
-            }
-            onClick={() => {
-              setKnown((k) => [...k.filter((e) => e.id !== item.id), item]);
-              const repos = content.selection.repository_ids ?? [];
-              patch({
-                supports: [
-                  ...content.supports,
-                  {
-                    kind: item.kind,
-                    id: item.id,
-                    line_from: null,
-                    line_to: null,
-                  },
-                ],
-                selection: {
-                  ...content.selection,
-                  repository_ids:
-                    item.repository_id && !repos.includes(item.repository_id)
-                      ? [...repos, item.repository_id]
-                      : repos,
-                },
-              });
-            }}
-          >
-            Use evidence
-          </Button>
-        </Group>
-      ))}
+      {!!choices.data?.items.length && (
+        <ul className="m-0 grid list-none overflow-hidden rounded-lg border border-border p-0">
+          {choices.data.items.map((item) => (
+            <li
+              key={`${item.kind}:${item.id}`}
+              className="flex items-center justify-between gap-3 border-b border-border px-3 py-2 last:border-b-0"
+            >
+              <div className="grid min-w-0 gap-0.5">
+                <span className="text-label font-medium text-foreground [overflow-wrap:anywhere]">
+                  {item.label}
+                </span>
+                <span className="mono text-caption text-muted-foreground">
+                  {time(item.created_at)} · {label(item.availability)}
+                  {item.revision ? ` · ${item.revision.slice(0, 12)}` : ""}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={
+                  ["expired", "erased"].includes(item.availability) ||
+                  content.supports.length >= 20 ||
+                  content.supports.some(
+                    (s) => s.id === item.id && s.kind === item.kind,
+                  )
+                }
+                onClick={() => {
+                  setKnown((k) => [...k.filter((e) => e.id !== item.id), item]);
+                  const repos = content.selection.repository_ids ?? [];
+                  patch({
+                    supports: [
+                      ...content.supports,
+                      {
+                        kind: item.kind,
+                        id: item.id,
+                        line_from: null,
+                        line_to: null,
+                      },
+                    ],
+                    selection: {
+                      ...content.selection,
+                      repository_ids:
+                        item.repository_id &&
+                        !repos.includes(item.repository_id)
+                          ? [...repos, item.repository_id]
+                          : repos,
+                    },
+                  });
+                }}
+              >
+                <Plus aria-hidden="true" />
+                Use evidence
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
       <Pages
         offset={offset}
         total={choices.data?.total ?? 0}
         onChange={setOffset}
       />
-    </>
+    </EditorGroup>
   );
 }

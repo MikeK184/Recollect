@@ -2,18 +2,23 @@ import {
   Component,
   lazy,
   Suspense,
+  useContext,
   useMemo,
   useRef,
   type MutableRefObject,
   useState,
   type ReactNode,
 } from "react";
-import { Alert, Loader, SegmentedControl } from "@mantine/core";
+import { SegmentedControl, Spinner } from "./components/ui";
+import { cn } from "./lib/utils";
 import { spatialTopology, type SpatialSession } from "./graph-3d-model";
 import type { GraphCanvasProps } from "./GraphCanvas";
-import "./features/feature-views.css";
-import "./features/graph/graph-canvas.css";
-import "./features/graph/graph-3d.css";
+import {
+  ChromeSlot,
+  EnsureGraphStage,
+  GraphDockContext,
+  chromeCard,
+} from "./features/graph/GraphStage";
 
 const Canvas2D = lazy(() => import("./GraphCanvas"));
 const Canvas3D = lazy(() => import("./GraphCanvas3D"));
@@ -43,6 +48,11 @@ class SpatialGraphBoundary extends Component<
   }
 }
 
+/**
+ * The lazy 2D (Cytoscape) / 3D (three.js) graph renderer on a full-bleed
+ * canvas stage. Its chrome floats on the canvas; the record inspector docks
+ * beside the canvas on the Graph page and sits in a column elsewhere.
+ */
 export function GraphRenderer({
   inspector,
   displayGroups = emptyGroups,
@@ -54,6 +64,7 @@ export function GraphRenderer({
   /** Owned by the caller when the renderer may remount without losing its camera. */
   session?: MutableRefObject<SpatialSession>;
 }) {
+  const docked = useContext(GraphDockContext);
   const ownSession = useRef<SpatialSession>({
     value: null,
     invalid: false,
@@ -68,7 +79,7 @@ export function GraphRenderer({
     spatialSession.current.value?.topology !== topology
   )
     spatialSession.current.value = null;
-  const [dimension, setDimension] = useState("3d");
+  const [dimension, setDimension] = useState<"2d" | "3d">("3d");
   const [failed, setFailed] = useState(false);
   const nodeKeys = useMemo(
     () => new Set(props.nodes.map((node) => node.key)),
@@ -79,51 +90,67 @@ export function GraphRenderer({
     setFailed(true);
     setDimension("2d");
   };
+  const leading = (
+    <SegmentedControl
+      size="sm"
+      label="Graph dimension"
+      value={dimension}
+      onChange={setDimension}
+      data={[
+        { value: "2d", label: "2D" },
+        { value: "3d", label: "3D", disabled: failed },
+      ]}
+    />
+  );
   return (
     <div
-      className="graph-renderer rc-graph-renderer"
+      className="graph-renderer flex min-h-0 min-w-0 flex-1"
       data-has-inspector={!!inspector}
     >
-      <div className="graph-renderer-canvas">
-        <div className="graph-renderer-dimensions" data-graph-chrome="">
-          <SegmentedControl
-            size="xs"
-            aria-label="Graph dimension"
-            value={dimension}
-            onChange={setDimension}
-            data={[
-              { value: "2d", label: "2D" },
-              { value: "3d", label: "3D", disabled: failed },
-            ]}
-          />
-          {failed && (
-            <Alert
-              variant="light"
+      <EnsureGraphStage className="min-h-[420px]">
+        {failed && (
+          <ChromeSlot zone="top-right" order={2}>
+            <p
               role="status"
-              className="graph-renderer-fallback"
+              className={cn(
+                chromeCard,
+                "m-0 max-w-[22rem] px-3 py-2 text-caption text-foreground-secondary",
+              )}
+              data-graph-chrome=""
             >
               3D is unavailable. The 2D graph supports the same evidence
               inspection.
-            </Alert>
-          )}
-        </div>
+            </p>
+          </ChromeSlot>
+        )}
         {displayGroups.length > 0 && (
-          <div
-            className="graph-canvas-viewbar graph-spatial-groups"
-            aria-label="Loaded topic memberships"
-          >
-            {displayGroups.map((group) => (
-              <span className="graph-spatial-group" key={group.id}>
-                {group.label} ·{" "}
-                {group.nodeKeys.filter((key) => nodeKeys.has(key)).length}
-              </span>
-            ))}
-          </div>
+          <ChromeSlot zone="bottom-left" order={1}>
+            <div
+              aria-label="Loaded topic memberships"
+              className="flex max-w-[640px] flex-wrap gap-1.5"
+              data-graph-chrome=""
+            >
+              {displayGroups.map((group) => (
+                <span
+                  className={cn(
+                    chromeCard,
+                    "inline-flex h-7 items-center gap-1.5 px-2.5 text-caption font-medium",
+                  )}
+                  key={group.id}
+                >
+                  {group.label} ·{" "}
+                  <span className="mono text-muted-foreground">
+                    {group.nodeKeys.filter((key) => nodeKeys.has(key)).length}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </ChromeSlot>
         )}
         <Suspense
           fallback={
-            <div className="graph-renderer-loading">
-              <Loader aria-label="Loading graph renderer" />
+            <div className="grid min-h-0 flex-1 place-items-center">
+              <Spinner label="Loading graph renderer" size={20} />
             </div>
           }
         >
@@ -131,6 +158,7 @@ export function GraphRenderer({
             <SpatialGraphBoundary onFailure={fallback}>
               <Canvas3D
                 {...props}
+                leading={leading}
                 displayGroups={displayGroups}
                 topology={topology}
                 session={spatialSession}
@@ -138,11 +166,17 @@ export function GraphRenderer({
               />
             </SpatialGraphBoundary>
           ) : (
-            <Canvas2D {...props} />
+            <Canvas2D {...props} leading={leading} />
           )}
         </Suspense>
-      </div>
-      {inspector && <div className="graph-renderer-inspector">{inspector}</div>}
+      </EnsureGraphStage>
+      {docked ? (
+        inspector
+      ) : (
+        <div className="graph-renderer-inspector w-[19rem] min-w-0 shrink-0 overflow-auto border-l border-border bg-card empty:hidden">
+          {inspector}
+        </div>
+      )}
     </div>
   );
 }

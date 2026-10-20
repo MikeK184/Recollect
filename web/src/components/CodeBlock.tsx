@@ -103,14 +103,15 @@ export function CodeBlock({
     }
   }
   return (
-    <div className="markdown-code">
-      <div className="markdown-code-toolbar">
+    <div className="markdown-code my-3 max-w-full overflow-hidden rounded-lg border border-border bg-card">
+      <div className="mono flex h-10 items-center gap-2 border-b border-border bg-muted pl-3.5 pr-1.5 text-caption text-muted-foreground">
         <span>{language ?? "Code"}</span>
-        <div className="markdown-code-actions">
+        <div className="ml-auto flex items-center gap-0.5">
           {formatted !== null && (
             <button
               type="button"
               aria-label={compact ? "Format JSON" : "Compact JSON"}
+              className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 font-sans text-caption font-medium text-foreground-secondary transition-colors hover:bg-accent hover:text-foreground"
               onClick={() => {
                 setCompact(!compact);
                 setCopied(false);
@@ -123,19 +124,28 @@ export function CodeBlock({
             type="button"
             onClick={() => void copy()}
             aria-label={copyLabel}
+            className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 font-sans text-caption font-medium text-foreground-secondary transition-colors hover:bg-accent hover:text-foreground"
           >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? (
+              <Check size={14} className="text-brand-text" aria-hidden="true" />
+            ) : (
+              <Copy size={14} aria-hidden="true" />
+            )}
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
       </div>
-      <pre tabIndex={0} aria-label={`${language ?? "Plain text"} code`}>
-        <code>
+      <pre
+        tabIndex={0}
+        aria-label={`${language ?? "Plain text"} code`}
+        className="mono m-0 max-h-[420px] max-w-full overflow-auto p-3.5 text-label leading-5 text-foreground scrollbar-thin"
+      >
+        <code className="block whitespace-pre">
           <CodeSyntax code={displayed} language={language} />
         </code>
       </pre>
       {copyError && (
-        <span role="status" className="markdown-copy-error">
+        <span role="status" className="block px-3 py-1.5 text-caption text-foreground-secondary">
           Code could not be copied.
         </span>
       )}

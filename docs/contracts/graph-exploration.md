@@ -158,7 +158,9 @@ The user explicitly rejected the delivered 3D spheres. Use the existing lazy
 Cytoscape 2D renderer for both Evidence and Contributions, with no dimension
 toggle, Three.js dependency or WebGL path. Preserve selection, explicit
 neighbourhood focus, layouts, pan/zoom, canonical paths and all validity gates.
-The cream/ink/sage theme remains. This supersedes only the 3D renderer choice;
+The cream/ink/sage theme remained then; since the 2026-10-19 redesign
+([ADR 0025](../adr/0025-two-theme-desktop-redesign.md)) the graph takes its
+colours from the Light and Ink design tokens. This supersedes only the 3D renderer choice;
 it changes no graph data, algorithms, permissions or contribution meaning.
 
 ## Compact graph interactions — 2026-10-03

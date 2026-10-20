@@ -1,103 +1,67 @@
-// Atlas primitives are deliberately centralized; features consume semantic roles.
-// Original light cream, dark ink and sage palette; motion and category accents
-// remain shared across the desktop, pipeline, terminal cards and ambient view.
-export const palette = {
-  ink: "#101b2a",
-  inkSoft: "#2f3d4f",
-  paper: "#f7f4ec",
-  paperDeep: "#eee9de",
-  paperLight: "#fffdf8",
-  line: "#d7d0c2",
-  lineDark: "#a9a192",
-  sage: "#8fb7a2",
-  sageDark: "#3d6b59",
-  amber: "#e8b861",
-  amberSoft: "#f4e2bd",
-  rose: "#d98272",
-  blue: "#7f9fc6",
-  violet: "#a58fbd",
-  cyan: "#7ab5b2",
-  field: "#857c6b",
-  selection: "#e8f0e9",
-  danger: "#9b3f31",
-  dangerSoft: "#f8e5df",
-  muted: "#59636a",
-  terminal: "#fffdf8",
-  terminalBar: "#eee9de",
-  trafficRed: "#ff5f57",
-  trafficYellow: "#febc2e",
-  trafficGreen: "#28c840",
-} as const;
+// Recollect design tokens for script consumers (ADR 0025). The CSS custom
+// properties in tokens.css are the source of truth for both themes. Canvas,
+// WebGL and graph renderers cannot read var(); they call resolveColor() and
+// re-read on useThemeMode().resolved changes. Styles use the utilities.
 
-export const tokens = {
-  canvas: palette.paper,
-  surface: palette.paperLight,
-  sidebar: palette.paperDeep,
-  ink: palette.ink,
-  secondary: palette.inkSoft,
-  muted: palette.muted,
-  border: palette.line,
-  field: palette.field,
-  accent: palette.sageDark,
-  selection: palette.selection,
-  danger: palette.danger,
-  dangerSoft: palette.dangerSoft,
-  attention: palette.amberSoft,
-  focus: palette.sageDark,
-  amber: "#805817",
-  terminal: palette.terminal,
-  terminalBar: palette.terminalBar,
-} as const;
+/** Read the current computed value of one token, e.g. readToken("brand"). */
+export function readToken(name: string): string {
+  if (typeof document === "undefined") return "";
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(`--${name}`)
+    .trim();
+}
 
-// Per-category accents for memory kinds and related record categories. Each
-// accent carries a low-alpha tint (~12–16%) for badges, glows and selection.
-export const categories = {
-  claim: { color: "#365f8c", tint: "rgba(127, 159, 198, 0.14)" },
-  decision: { color: "#805817", tint: "rgba(232, 184, 97, 0.14)" },
-  procedure: { color: "#715389", tint: "rgba(165, 143, 189, 0.14)" },
-  handover: { color: "#286963", tint: "rgba(122, 181, 178, 0.14)" },
-  source: { color: palette.sageDark, tint: "rgba(143, 183, 162, 0.14)" },
-  graphNode: { color: "#326747", tint: "rgba(143, 183, 162, 0.14)" },
-  toolCall: { color: "#884568", tint: "rgba(189, 143, 165, 0.14)" },
-} as const;
+/**
+ * Resolve a token to a concrete sRGB colour string for renderers that do not
+ * parse oklch() (Cytoscape, three.js). Falls back to the computed token text.
+ */
+export function resolveColor(name: string): string {
+  const value = readToken(name);
+  if (typeof document === "undefined" || !value) return value;
+  const probe = document.createElement("canvas").getContext("2d");
+  if (!probe) return value;
+  probe.fillStyle = value;
+  probe.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = probe.getImageData(0, 0, 1, 1).data;
+  return a === 255 ? `rgb(${r} ${g} ${b})` : `rgb(${r} ${g} ${b} / ${a / 255})`;
+}
 
-// Terminal ANSI colors retain their meaning with readable light-theme shades.
-// White/bright-white map to ink so captured output stays visible on paper.
+const token = (name: string) => `var(--${name})`;
+
+export const kinds = [
+  "claim",
+  "decision",
+  "procedure",
+  "handover",
+  "source",
+  "entity",
+  "tool",
+] as const;
+export type Kind = (typeof kinds)[number];
+
+// Terminal ANSI foregrounds on the fixed dark terminal surface (both themes).
 export const ansiForeground: Record<number, string> = {
-  30: palette.ink,
-  31: palette.danger,
-  32: categories.graphNode.color,
-  33: categories.decision.color,
-  34: categories.claim.color,
-  35: categories.procedure.color,
-  36: categories.handover.color,
-  37: palette.inkSoft,
-  90: palette.muted,
-  91: palette.danger,
-  92: categories.graphNode.color,
-  93: categories.decision.color,
-  94: categories.claim.color,
-  95: categories.procedure.color,
-  96: categories.handover.color,
-  97: palette.ink,
+  30: token("terminal-muted"),
+  31: token("ansi-red"),
+  32: token("ansi-green"),
+  33: token("ansi-yellow"),
+  34: token("ansi-blue"),
+  35: token("ansi-magenta"),
+  36: token("ansi-cyan"),
+  37: token("terminal-foreground"),
+  90: token("terminal-muted"),
+  91: token("ansi-red"),
+  92: token("ansi-green"),
+  93: token("ansi-yellow"),
+  94: token("ansi-blue"),
+  95: token("ansi-magenta"),
+  96: token("ansi-cyan"),
+  97: token("terminal-foreground"),
 };
 
-// Motion system: durations, easings and the stagger step for entrances.
-export const motion = {
-  fast: "150ms",
-  base: "250ms",
-  slow: "450ms",
-  ambient: "1200ms",
-  standard: "cubic-bezier(0.2, 0, 0, 1)",
-  emphasized: "cubic-bezier(0.16, 1, 0.3, 1)",
-  staggerStep: "40ms",
-} as const;
-
+// Concrete family stacks for canvas text, which cannot read CSS variables.
 export const fonts = {
-  display: 'Newsreader, Georgia, "Times New Roman", serif',
-  ui: 'Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  mono: '"DM Mono", ui-monospace, SFMono-Regular, monospace',
+  display: 'Newsreader, ui-serif, Georgia, serif',
+  ui: '"Mona Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+  mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
 };
-
-export const iconSize = { small: 16, navigation: 18, action: 20 } as const;
-export const iconStroke = 1.6;

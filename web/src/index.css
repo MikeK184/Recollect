@@ -1,0 +1,395 @@
+/* Recollect web styles (ADR 0025): one token stylesheet read by Tailwind CSS
+   v4 utilities and the shadcn/ui components in src/components/ui. */
+@import "./design/tokens.css";
+@import "./design/typography.css";
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-*: initial;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-elevated: var(--elevated);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-thumb: var(--thumb);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-success: var(--success);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-text: var(--destructive-text);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-text: var(--warning-text);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-kind-claim: var(--kind-claim);
+  --color-kind-claim-soft: var(--kind-claim-soft);
+  --color-kind-decision: var(--kind-decision);
+  --color-kind-decision-soft: var(--kind-decision-soft);
+  --color-kind-procedure: var(--kind-procedure);
+  --color-kind-procedure-soft: var(--kind-procedure-soft);
+  --color-kind-handover: var(--kind-handover);
+  --color-kind-handover-soft: var(--kind-handover-soft);
+  --color-kind-source: var(--kind-source);
+  --color-kind-source-soft: var(--kind-source-soft);
+  --color-kind-entity: var(--kind-entity);
+  --color-kind-entity-soft: var(--kind-entity-soft);
+  --color-kind-tool: var(--kind-tool);
+  --color-kind-tool-soft: var(--kind-tool-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-terminal: var(--terminal);
+  --color-terminal-bar: var(--terminal-bar);
+  --color-terminal-border: var(--terminal-border);
+  --color-terminal-foreground: var(--terminal-foreground);
+  --color-terminal-muted: var(--terminal-muted);
+  --color-ansi-red: var(--ansi-red);
+  --color-ansi-green: var(--ansi-green);
+  --color-ansi-yellow: var(--ansi-yellow);
+  --color-ansi-blue: var(--ansi-blue);
+  --color-ansi-magenta: var(--ansi-magenta);
+  --color-ansi-cyan: var(--ansi-cyan);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-jade: var(--brand-jade);
+  --color-brand-sage: var(--brand-sage);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-paper: var(--brand-paper);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-focus: var(--shadow-focus);
+  --shadow-glow: var(--shadow-glow);
+
+  --ease-standard: var(--ease-standard);
+  --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
+  --ease-bounce: var(--ease-bounce);
+
+  --blur-overlay: var(--blur-overlay);
+  --blur-chrome: var(--blur-chrome);
+}
+
+/* Type scale from the desktop contract: page 28/34, section 20/28, card and
+   dialog 16/24, body 14/20, label 13/18, caption 12/16, answer 17/28, hero
+   40/46. Use text-page, text-section, text-title, text-body, text-label,
+   text-caption, text-answer, text-hero. */
+@theme {
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-title: 16px;
+  --text-title--line-height: 24px;
+  --text-title--letter-spacing: -0.011em;
+  --text-answer: 17px;
+  --text-answer--line-height: 28px;
+  --text-section: 20px;
+  --text-section--line-height: 28px;
+  --text-section--letter-spacing: -0.017em;
+  --text-page: 28px;
+  --text-page--line-height: 34px;
+  --text-page--letter-spacing: -0.025em;
+  --text-hero: 40px;
+  --text-hero--line-height: 46px;
+  --text-hero--letter-spacing: -0.02em;
+
+  --animate-pop: rc-pop var(--motion-fast) var(--ease-out) both;
+  --animate-dialog-in: rc-dialog-in var(--motion-base) var(--ease-out) both;
+  --animate-pane-in: rc-pane-in var(--motion-slow) var(--ease-out) both;
+  --animate-toast-in: rc-toast-in var(--motion-base) var(--ease-out) both;
+  --animate-row-in: rc-row-in var(--motion-base) var(--ease-out) both;
+  --animate-enter: rc-enter var(--motion-base) var(--ease-out) both;
+  --animate-reveal: rc-reveal var(--motion-slow) var(--ease-out) both;
+  --animate-learned: rc-learned 1200ms var(--ease-standard) both;
+  --animate-ping: rc-ping var(--motion-ambient) var(--ease-standard) infinite;
+  --animate-shimmer: rc-shimmer var(--motion-ambient) linear infinite;
+  --animate-sweep: rc-sweep var(--motion-ambient) var(--ease-standard) infinite;
+  --animate-flow-dash: rc-flow-dash 0.8s linear infinite;
+  --animate-indeterminate: rc-indeterminate var(--motion-ambient)
+    var(--ease-standard) infinite;
+  --animate-blink: rc-blink 1.1s steps(1) infinite;
+
+  @keyframes rc-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-2px);
+    }
+  }
+  @keyframes rc-dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes rc-pane-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes rc-toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+  }
+  @keyframes rc-row-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes rc-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  @keyframes rc-reveal {
+    from {
+      opacity: 0;
+      filter: blur(4px);
+    }
+  }
+  @keyframes rc-learned {
+    from {
+      background-color: var(--brand-soft);
+    }
+  }
+  @keyframes rc-ping {
+    0% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    75%,
+    100% {
+      transform: scale(2.6);
+      opacity: 0;
+    }
+  }
+  @keyframes rc-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -150% 0;
+    }
+  }
+  @keyframes rc-sweep {
+    from {
+      background-position:
+        -100% 0,
+        0 0;
+    }
+    to {
+      background-position:
+        200% 0,
+        0 0;
+    }
+  }
+  @keyframes rc-flow-dash {
+    to {
+      stroke-dashoffset: -20;
+    }
+  }
+  @keyframes rc-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+  @keyframes rc-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+/* Motion durations as utilities: duration-fast, duration-base, … */
+@utility duration-instant {
+  transition-duration: var(--motion-instant);
+}
+@utility duration-fast {
+  transition-duration: var(--motion-fast);
+}
+@utility duration-base {
+  transition-duration: var(--motion-base);
+}
+@utility duration-slow {
+  transition-duration: var(--motion-slow);
+}
+
+/* Machine text: JetBrains Mono with tabular figures. */
+@utility mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loud-enough section labels inside cards and inspectors. */
+@utility section-label {
+  color: var(--muted-foreground);
+  font: 500 11px/16px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* AI "gathering" line: brand-to-warning highlight sweeping across muted text. */
+@utility shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--brand) 50%,
+    var(--warning) 58%,
+    var(--muted-foreground) 70%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: var(--animate-shimmer);
+}
+
+/* Skeleton sweep over a muted block. */
+@utility skeleton-sweep {
+  background:
+    linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)
+      0 0 / 50% 100% no-repeat,
+    var(--muted);
+  animation: var(--animate-sweep);
+}
+
+/* Dotted canvas behind pipelines and graph previews. */
+@utility dot-grid {
+  background-color: var(--background);
+  background-image: radial-gradient(
+    var(--border-strong) 1px,
+    transparent 1.2px
+  );
+  background-size: 16px 16px;
+}
+
+/* Thin, theme-aware scrollbars for panes. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html {
+    background: var(--background);
+  }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  svg.lucide {
+    stroke-width: var(--icon-stroke);
+    flex-shrink: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

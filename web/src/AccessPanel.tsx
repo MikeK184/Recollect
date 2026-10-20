@@ -1,24 +1,27 @@
 import { useEffect, useState } from "react";
-import "./features/feature-views.css";
-import "./features/guided-controls.css";
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Loader,
-  Menu,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
-import { MoreHorizontal, Plus, Users } from "lucide-react";
+import { MoreHorizontal, Plus, Users, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import { usePollInterval } from "./usePollInterval";
+import { SkeletonRows } from "./components/Skeleton";
+import {
+  Alert,
+  Badge,
+  Button,
+  CardBar,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  IconButton,
+  Modal,
+  Select,
+  TextField,
+} from "./components/ui";
+import { cn } from "./lib/utils";
+import { useFirstLoadStagger } from "./features/activity/firstLoad";
 const roles = ["reader", "writer", "admin"];
 type Action = {
   kind: "grant" | "remove" | "group" | "ungroup" | "owner";
@@ -125,33 +128,34 @@ export function AccessPanel({
     (m) => m.account.id === editor?.target,
   );
   const editingSelf = editor?.kind === "remove" && editor.target === actor;
+  const destructive = editor?.kind === "remove" || editor?.kind === "ungroup";
+  const stagger = useFirstLoadStagger(
+    access.data?.members.map((m) => m.account.id),
+  );
   const content = (
-    <Stack gap="lg">
-      <Group justify="space-between">
-        <Text fw={600}>
-          Members{" "}
-          {access.data && !access.error && (
-            <Text component="span" c="dimmed" size="sm">
-              · {access.data.members.length}
-            </Text>
-          )}
-        </Text>
-        <Group gap="sm">
+    <div className="grid">
+      <CardBar className={cn(!embedded && "border-b-0 px-0")}>
+        <h3>Members</h3>
+        {access.data && !access.error && (
+          <span className="mono text-caption text-muted-foreground">
+            {access.data.members.length}
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-2">
           {canEdit && options.data?.oidc_configured && (
             <Button
-              variant="default"
+              variant="secondary"
               size="sm"
-              leftSection={<Users size={16} />}
               disabled={!access.data || !!access.error}
               onClick={() => edit({ kind: "group" })}
             >
+              <Users aria-hidden="true" />
               Add group
             </Button>
           )}
           {canEdit && (
             <Button
               size="sm"
-              leftSection={<Plus size={16} />}
               disabled={!access.data || !!access.error}
               onClick={() => {
                 setUsername("");
@@ -159,176 +163,222 @@ export function AccessPanel({
                 edit({ kind: "grant" });
               }}
             >
+              <Plus aria-hidden="true" />
               Add member
             </Button>
           )}
-        </Group>
-      </Group>
-      {access.error && (
-        <Alert color="red">
-          {access.error.message}
-          <Button
-            variant="subtle"
-            size="xs"
-            onClick={() => void access.refetch()}
-          >
-            Retry members
-          </Button>
-        </Alert>
-      )}
-      {message && (
-        <Alert color="brand" withCloseButton onClose={() => setMessage("")}>
-          {message}
-        </Alert>
+        </div>
+      </CardBar>
+      {(access.error || message) && (
+        <div className={cn("grid gap-2 pt-3", embedded && "px-4")}>
+          {access.error && (
+            <Alert
+              variant="destructive"
+              actions={
+                <Button
+                  variant="destructive-ghost"
+                  size="sm"
+                  onClick={() => void access.refetch()}
+                >
+                  Retry members
+                </Button>
+              }
+            >
+              {access.error.message}
+            </Alert>
+          )}
+          {message && (
+            <Alert
+              variant="brand"
+              role="status"
+              icon={false}
+              className="items-center"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span>{message}</span>
+                <IconButton
+                  label="Dismiss"
+                  size="icon-sm"
+                  onClick={() => setMessage("")}
+                >
+                  <X aria-hidden="true" />
+                </IconButton>
+              </div>
+            </Alert>
+          )}
+        </div>
       )}
       {access.isPending ? (
-        <Loader />
+        <div className={cn(embedded && "px-4")}>
+          <SkeletonRows rows={3} label="Loading members…" />
+        </div>
       ) : (
         !access.error && (
-          <div className="member-list">
-            {access.data?.members.map((m) => (
+          <div className="grid">
+            {access.data?.members.map((m, index) => (
               <div
-                className="member-row"
+                className={cn(
+                  "flex items-center gap-3 border-b border-border py-2.5 last:border-b-0",
+                  embedded && "px-4",
+                  stagger(m.account.id, index).className,
+                )}
+                style={stagger(m.account.id, index).style}
                 key={m.account.id}
                 data-testid="brain-member"
               >
-                <div className="member-identity">
-                  <span className="member-avatar" aria-hidden>
-                    {m.account.username.slice(0, 2).toUpperCase()}
+                <span
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-caption font-semibold text-foreground-secondary"
+                  aria-hidden
+                >
+                  {m.account.username.slice(0, 2).toUpperCase()}
+                </span>
+                <div className="grid min-w-0 flex-1">
+                  <span className="truncate text-body font-medium text-foreground">
+                    {m.account.username}
+                    {m.account.id === actor ? " (you)" : ""}
                   </span>
-                  <div>
-                    <Text fw={600}>
-                      {m.account.username}
-                      {m.account.id === actor ? " (you)" : ""}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {m.owner
-                        ? "Owner"
-                        : m.direct_role
-                          ? "Direct access"
-                          : "Group access"}
-                      {!m.account.enabled ? " · Account disabled" : ""}
-                    </Text>
-                  </div>
+                  <span className="text-caption text-muted-foreground">
+                    {m.owner
+                      ? "Owner"
+                      : m.direct_role
+                        ? "Direct access"
+                        : "Group access"}
+                    {!m.account.enabled ? " · Account disabled" : ""}
+                  </span>
                 </div>
-                <Badge color={m.effective_role ? "brand" : "gray"}>
+                <Badge
+                  variant={m.effective_role ? "default" : "outline"}
+                  className="capitalize"
+                >
                   {m.effective_role ?? "No access"}
                 </Badge>
-                <Menu position="bottom-end">
-                  <Menu.Target>
-                    <ActionIcon
-                      variant="subtle"
-                      aria-label={`Manage ${m.account.username}`}
-                    >
-                      <MoreHorizontal size={18} />
-                    </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <IconButton label={`Manage ${m.account.username}`}>
+                      <MoreHorizontal aria-hidden="true" />
+                    </IconButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>
                       {m.owner ? "Owner" : "Member"}
                       {m.direct_role
                         ? ` · Direct ${m.direct_role}`
                         : " · No direct grant"}
-                    </Menu.Label>
+                    </DropdownMenuLabel>
                     {m.groups.map((g) => (
-                      <Menu.Label key={g}>Group: {g}</Menu.Label>
+                      <DropdownMenuLabel key={g}>Group: {g}</DropdownMenuLabel>
                     ))}
                     {m.membership_until && (
-                      <Menu.Label>
+                      <DropdownMenuLabel>
                         Valid until{" "}
-                        {new Date(m.membership_until).toLocaleString()}
-                      </Menu.Label>
+                        <span className="mono">
+                          {new Date(m.membership_until).toLocaleString()}
+                        </span>
+                      </DropdownMenuLabel>
                     )}
+                    {canEdit && <DropdownMenuSeparator />}
                     {canEdit && (
-                      <Menu.Item
-                        onClick={() => {
+                      <DropdownMenuItem
+                        onSelect={() => {
                           setUsername(m.account.username);
                           setRole(m.direct_role ?? "reader");
                           edit({ kind: "grant", target: m.account.id });
                         }}
                       >
                         Edit direct role
-                      </Menu.Item>
-                    )}
-                    {canEdit && m.direct_role && (
-                      <Menu.Item
-                        color="red"
-                        onClick={() =>
-                          edit({ kind: "remove", target: m.account.id })
-                        }
-                      >
-                        Remove direct grant
-                      </Menu.Item>
+                      </DropdownMenuItem>
                     )}
                     {canEdit &&
                       brain.owner_id === actor &&
                       m.account.enabled &&
                       m.account.id !== actor && (
-                        <Menu.Item
-                          onClick={() => {
+                        <DropdownMenuItem
+                          onSelect={() => {
                             setNextOwner(m.account.id);
                             edit({ kind: "owner" });
                           }}
                         >
                           Transfer ownership
-                        </Menu.Item>
+                        </DropdownMenuItem>
                       )}
-                  </Menu.Dropdown>
-                </Menu>
+                    {canEdit && m.direct_role && (
+                      <DropdownMenuItem
+                        destructive
+                        onSelect={() =>
+                          edit({ kind: "remove", target: m.account.id })
+                        }
+                      >
+                        Remove direct grant
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
           </div>
         )
       )}
       {!access.error && !!access.data?.group_grants.length && (
-        <Stack gap="xs">
-          <Text fw={600} size="sm">
+        <div className={cn("grid gap-1 border-t border-border py-3", embedded && "px-4")}>
+          <span className="text-label font-semibold text-foreground">
             Organization groups
-          </Text>
+          </span>
           {access.data.group_grants.map((g) => (
-            <Group key={g.id} justify="space-between">
-              <Text size="sm">
-                {g.group_name} · {g.role}
-              </Text>
+            <div
+              key={g.id}
+              className="flex items-center justify-between gap-3 py-1"
+            >
+              <span className="text-body text-foreground-secondary">
+                {g.group_name} · <span className="capitalize">{g.role}</span>
+              </span>
               {canEdit && (
                 <Button
-                  variant="subtle"
-                  size="xs"
-                  color="red"
+                  variant="destructive-ghost"
+                  size="sm"
                   onClick={() => edit({ kind: "ungroup", target: g.id })}
                 >
                   Remove group mapping
                 </Button>
               )}
-            </Group>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
-      <Text size="xs" c="dimmed">
+      <p
+        className={cn(
+          "m-0 border-t border-border py-2.5 text-caption text-muted-foreground",
+          embedded && "bg-muted/50 px-4",
+        )}
+      >
         Tool-use permissions are managed in Connections → Tool access.
-      </Text>
-    </Stack>
+      </p>
+    </div>
   );
   return (
     <>
       {embedded ? (
-        <section className="feature-setting" aria-label="Brain access">
+        <section
+          className="overflow-hidden rounded-lg border border-border bg-card"
+          aria-label="Brain access"
+        >
           {content}
         </section>
       ) : (
         <>
-          <Button mt="md" variant="light" onClick={() => setOpened(true)}>
+          <Button
+            className="mt-4"
+            variant="secondary"
+            onClick={() => setOpened(true)}
+          >
             Manage access
           </Button>
           <Modal
             opened={opened}
             onClose={() => !editor && setOpened(false)}
-            trapFocus={!editor}
             closeOnEscape={!editor}
             closeOnClickOutside={!editor}
             title="Brain access"
             size="lg"
-            centered
           >
             {content}
           </Modal>
@@ -356,122 +406,117 @@ export function AccessPanel({
           closeOnClickOutside={!action.isPending}
         >
           <form
+            className="grid gap-4"
             onSubmit={(e) => {
               e.preventDefault();
               action.mutate(editor);
             }}
           >
-            <Stack>
-              {editor.kind === "grant" && (
-                <>
-                  <TextInput
-                    label="Account username"
-                    value={username}
-                    disabled={!!editor.target || action.isPending}
-                    onChange={(e) => setUsername(e.currentTarget.value)}
-                    required
-                    maxLength={120}
-                  />
-                  <Select
-                    label="Direct role"
-                    value={role}
-                    data={roles}
-                    onChange={(v) => setRole(v ?? "reader")}
-                    disabled={action.isPending}
-                  />
-                  {member?.groups.length ? (
-                    <Text size="xs" c="dimmed">
-                      Group access remains independent of this role.
-                    </Text>
-                  ) : null}
-                </>
-              )}
-              {editor.kind === "group" && (
-                <>
-                  <TextInput
-                    label="Group name or ID"
-                    value={group}
-                    onChange={(e) => setGroup(e.currentTarget.value)}
-                    required
-                    maxLength={200}
-                  />
-                  <Select
-                    label="Group role"
-                    value={groupRole}
-                    data={roles}
-                    onChange={(v) => setGroupRole(v ?? "reader")}
-                  />
-                </>
-              )}
-              {editor.kind === "remove" && (
-                <Text>
-                  Remove the direct grant for {member?.account.username}?{" "}
-                  {member?.owner || member?.groups.length
-                    ? "Owner or group permissions will still apply."
-                    : "This removes their direct Brain access."}
-                  {editingSelf && " You may lose your own access."}
-                </Text>
-              )}
-              {editor.kind === "ungroup" && (
-                <Text>
-                  Remove this organization's grant to the Brain? Direct grants
-                  remain.
-                </Text>
-              )}
-              {editor.kind === "owner" && (
-                <>
-                  <Select
-                    label="New owner"
-                    value={nextOwner}
-                    onChange={setNextOwner}
-                    data={
-                      access.data?.members
-                        .filter(
-                          (m) => m.account.enabled && m.account.id !== actor,
-                        )
-                        .map((m) => ({
-                          value: m.account.id,
-                          label: m.account.username,
-                        })) ?? []
-                    }
-                  />
-                  <Text size="sm">
-                    Your access will depend on your remaining direct or group
-                    grants.
-                  </Text>
-                </>
-              )}
-              {action.error && (
-                <Alert color="red">{action.error.message}</Alert>
-              )}
-              <Group justify="flex-end">
-                <Button
-                  variant="default"
+            {editor.kind === "grant" && (
+              <>
+                <TextField
+                  label="Account username"
+                  value={username}
+                  disabled={!!editor.target || action.isPending}
+                  onChange={(e) => setUsername(e.currentTarget.value)}
+                  required
+                  maxLength={120}
+                />
+                <Select
+                  label="Direct role"
+                  value={role}
+                  data={roles}
+                  onChange={(v) => setRole(v ?? "reader")}
                   disabled={action.isPending}
-                  onClick={() => setEditor(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  loading={action.isPending}
-                  color={
-                    editor.kind === "remove" || editor.kind === "ungroup"
-                      ? "red"
-                      : undefined
+                />
+                {member?.groups.length ? (
+                  <p className="m-0 text-caption text-muted-foreground">
+                    Group access remains independent of this role.
+                  </p>
+                ) : null}
+              </>
+            )}
+            {editor.kind === "group" && (
+              <>
+                <TextField
+                  label="Group name or ID"
+                  value={group}
+                  onChange={(e) => setGroup(e.currentTarget.value)}
+                  required
+                  maxLength={200}
+                />
+                <Select
+                  label="Group role"
+                  value={groupRole}
+                  data={roles}
+                  onChange={(v) => setGroupRole(v ?? "reader")}
+                />
+              </>
+            )}
+            {editor.kind === "remove" && (
+              <p className="m-0 text-body text-foreground">
+                Remove the direct grant for {member?.account.username}?{" "}
+                {member?.owner || member?.groups.length
+                  ? "Owner or group permissions will still apply."
+                  : "This removes their direct Brain access."}
+                {editingSelf && " You may lose your own access."}
+              </p>
+            )}
+            {editor.kind === "ungroup" && (
+              <p className="m-0 text-body text-foreground">
+                Remove this organization's grant to the Brain? Direct grants
+                remain.
+              </p>
+            )}
+            {editor.kind === "owner" && (
+              <>
+                <Select
+                  label="New owner"
+                  value={nextOwner}
+                  onChange={setNextOwner}
+                  data={
+                    access.data?.members
+                      .filter(
+                        (m) => m.account.enabled && m.account.id !== actor,
+                      )
+                      .map((m) => ({
+                        value: m.account.id,
+                        label: m.account.username,
+                      })) ?? []
                   }
-                  disabled={editor.kind === "owner" && !nextOwner}
-                >
-                  {editor.kind === "grant"
-                    ? "Save direct grant"
-                    : editor.kind === "group"
-                      ? "Save group mapping"
-                      : editor.kind === "owner"
-                        ? "Transfer ownership"
-                        : "Remove grant"}
-                </Button>
-              </Group>
-            </Stack>
+                />
+                <p className="m-0 text-body text-foreground-secondary">
+                  Your access will depend on your remaining direct or group
+                  grants.
+                </p>
+              </>
+            )}
+            {action.error && (
+              <Alert variant="destructive">{action.error.message}</Alert>
+            )}
+            <div className="-mx-5 -mb-5 flex justify-end gap-2 border-t border-border bg-muted px-5 py-3">
+              <Button
+                variant="secondary"
+                disabled={action.isPending}
+                onClick={() => setEditor(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                loading={action.isPending}
+                variant={destructive ? "destructive" : "default"}
+                disabled={editor.kind === "owner" && !nextOwner}
+              >
+                {editor.kind === "grant"
+                  ? "Save direct grant"
+                  : editor.kind === "group"
+                    ? "Save group mapping"
+                    : editor.kind === "owner"
+                      ? "Transfer ownership"
+                      : "Remove grant"}
+              </Button>
+            </div>
           </form>
         </Modal>
       )}

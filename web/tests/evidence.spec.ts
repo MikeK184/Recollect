@@ -170,7 +170,7 @@ test("import evidence, preserve history and share one source across collection v
   await dialog.getByRole("textbox", { name: "View kind", exact: true }).click();
   await page.getByRole("option", { name: "Collection", exact: true }).click();
   const runbooks = dialog
-    .locator(".mantine-Card-root")
+    .locator("[data-slot='card']")
     .filter({ has: page.getByText("Runbooks", { exact: true }) });
   await runbooks
     .getByRole("button", { name: "Remove view", exact: true })

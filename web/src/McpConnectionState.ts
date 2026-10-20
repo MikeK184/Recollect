@@ -36,6 +36,8 @@ export type Props = {
   stale: (message: string) => void;
   manageRunners?: () => void;
   initialDraft?: ServerDraft;
+  /** Approved connector preselected for a new connection. */
+  initialDefinition?: string;
   inline?: boolean;
   nameMount?: HTMLElement | null;
 };
@@ -65,7 +67,8 @@ export function useConnectionState(
   const [input, setInput] = useState<Input>(() => ({
     name: detail?.summary.name ?? props.initialDraft?.name ?? "",
     description: detail?.summary.description ?? "",
-    definition_key: detail?.summary.definition_key ?? "",
+    definition_key:
+      detail?.summary.definition_key ?? props.initialDefinition ?? "",
     target:
       detail?.target ??
       (props.initialDraft?.target || props.initialDraft?.name || ""),

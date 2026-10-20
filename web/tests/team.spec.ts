@@ -103,7 +103,7 @@ test("invite a teammate and revoke shared Brain access through the browser", asy
   await page.keyboard.press("Escape");
   await page.goto("/team");
   const account = page
-    .locator(".mantine-Card-root")
+    .locator("[data-slot='card']")
     .filter({ has: page.getByText(username, { exact: true }) })
     .filter({
       has: page.getByRole("button", { name: "Disable", exact: true }),

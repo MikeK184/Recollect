@@ -1,7 +1,8 @@
 # Desktop design
 
-The accepted [design system](../../foundation/design-system.md) specifies the light cream/ink/sage
-palette, typography, motion, layout and management presentation. The
+The accepted [design system](../../foundation/design-system.md) specifies the version 2
+Light and Ink tokens, typography, motion, layout and management presentation
+([ADR 0025](../../adr/0025-two-theme-desktop-redesign.md)). The
 [desktop contract](../../contracts/desktop-experience.md) and
 [Knowledge surface contract](../../contracts/desktop-knowledge-surface.md)
 govern behavior. Use the [desktop runbook](../../runbooks/desktop-experience.md)

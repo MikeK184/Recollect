@@ -1,12 +1,13 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ArrowUpRight, Check, CircleDashed, TriangleAlert } from "lucide-react";
-import { Button } from "@mantine/core";
+import { ArrowRight, ArrowUpRight, Check, CircleDashed, TriangleAlert } from "lucide-react";
 import { client, result } from "../../api";
 import { useBrain } from "../../app/context";
 import type { BrainSearch } from "../../app/useBrainSearch";
-import "./assurance.css";
+import { Alert, Button, Tile } from "../../components/ui";
+import { cn } from "../../lib/utils";
+import { staggerStyle } from "../../components/Motion";
 import { usePollInterval } from "../../usePollInterval";
 
 type Exception = {
@@ -356,196 +357,258 @@ function AssuranceBand() {
       ? CircleDashed
       : Check;
   return (
-    <section
-      className={`assurance-band${attention ? " assurance-attention" : ""}`}
-      aria-label="Brain assurance"
-    >
-      <Icon size={18} aria-hidden />
-      <div className="assurance-position">
-        <strong>{title}</strong>
-        <span>
-          {first ? (
-            <>
-              {first.detail}
-              {data.blockers.length > 1 &&
-                ` · ${data.blockers.length - 1} other current blocker${data.blockers.length > 2 ? "s" : ""}`}
-            </>
-          ) : data.latest ? (
-            <>
-              Latest completed learning run · {data.latest.accepted} learned
-              {data.latest.revised !== undefined && (
-                <> · {data.latest.revised} revised</>
-              )}
-              {data.latest.retired !== undefined && (
-                <> · {data.latest.retired} retired</>
-              )}
-            </>
-          ) : data.pending ? (
-            "Reading permitted activity…"
-          ) : data.failed.length ? (
-            "Unavailable figures are omitted."
-          ) : !data.enabled ? (
-            "An administrator can enable autonomous memory in Settings."
-          ) : data.empty ? (
-            "Connect an agent. Recollect handles the memory work."
-          ) : (
-            "Recent authorized activity; no individual memory approvals."
-          )}
-        </span>
-      </div>
-      {!attention && (
-        <div className="assurance-counts">
-          {data.captured !== undefined && (
-            <span>
-              <strong>{data.captured}</strong> captured events{" "}
-              <small>Brain total</small>
-            </span>
-          )}
-          {!!data.pendingJobs && <span>{data.pendingJobs} jobs pending</span>}
-        </div>
-      )}
-      <Link
-        to={
-          first && data.blockers.length === 1
-            ? `/brains/$brainId/${first.section}`
-            : "/brains/$brainId/activity"
-        }
-        params={{ brainId: data.brain.id }}
-        search={
-          first && data.blockers.length === 1
-            ? first.search
-            : { tab: "attention" }
-        }
-        className="assurance-link"
+    <div className="mx-auto w-full max-w-[1248px] px-6 pt-6">
+      <section
+        className={`flex animate-enter items-center gap-3 rounded-lg px-4 py-3 ${attention ? "assurance-attention bg-warning-soft" : "border border-border bg-muted"}`}
+        aria-label="Brain assurance"
       >
-        {first && data.blockers.length === 1
-          ? "Inspect problem"
-          : "View activity"}{" "}
-        <ArrowUpRight size={15} aria-hidden />
-      </Link>
-    </section>
+        <Icon
+          size={18}
+          aria-hidden
+          className={attention ? "shrink-0 text-warning-text" : waiting ? "shrink-0 text-muted-foreground" : "shrink-0 text-brand-text"}
+        />
+        <div className="grid min-w-0 flex-1">
+          <strong className="text-body font-medium text-foreground">{title}</strong>
+          <span className="truncate text-label text-foreground-secondary">
+            {first ? (
+              <>
+                {first.detail}
+                {data.blockers.length > 1 &&
+                  ` · ${data.blockers.length - 1} other current blocker${data.blockers.length > 2 ? "s" : ""}`}
+              </>
+            ) : data.latest ? (
+              <>
+                Latest completed learning run · {data.latest.accepted} learned
+                {data.latest.revised !== undefined && (
+                  <> · {data.latest.revised} revised</>
+                )}
+                {data.latest.retired !== undefined && (
+                  <> · {data.latest.retired} retired</>
+                )}
+              </>
+            ) : data.pending ? (
+              <span className="shimmer-text">Reading permitted activity…</span>
+            ) : data.failed.length ? (
+              "Unavailable figures are omitted."
+            ) : !data.enabled ? (
+              "An administrator can enable autonomous memory in Settings."
+            ) : data.empty ? (
+              "Connect an agent. Recollect handles the memory work."
+            ) : (
+              "Recent authorized activity; no individual memory approvals."
+            )}
+          </span>
+        </div>
+        {!attention && (
+          <div className="mono flex shrink-0 items-center gap-3 text-caption text-muted-foreground">
+            {data.captured !== undefined && (
+              <span>
+                <strong className="text-label font-semibold text-foreground">{data.captured}</strong>{" "}
+                captured events <small>Brain total</small>
+              </span>
+            )}
+            {!!data.pendingJobs && <span>{data.pendingJobs} jobs pending</span>}
+          </div>
+        )}
+        <Link
+          to={
+            first && data.blockers.length === 1
+              ? `/brains/$brainId/${first.section}`
+              : "/brains/$brainId/activity"
+          }
+          params={{ brainId: data.brain.id }}
+          search={
+            first && data.blockers.length === 1
+              ? first.search
+              : { tab: "attention" }
+          }
+          className="inline-flex shrink-0 items-center gap-1 text-label font-medium text-brand-text no-underline hover:underline"
+        >
+          {first && data.blockers.length === 1
+            ? "Inspect problem"
+            : "View activity"}{" "}
+          <ArrowUpRight size={15} aria-hidden />
+        </Link>
+      </section>
+    </div>
+  );
+}
+
+/** One exception: the whole row links to its canonical detail. */
+function ExceptionLink({
+  item,
+  brain,
+  index,
+}: {
+  item: Exception;
+  brain: string;
+  index: number;
+}) {
+  return (
+    <Link
+      className="group flex animate-enter items-center gap-3.5 border-b border-border px-4 py-3 text-foreground no-underline transition-colors duration-fast last:border-b-0 hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+      style={staggerStyle(index)}
+      to={`/brains/$brainId/${item.section}`}
+      params={{ brainId: brain }}
+      search={item.search}
+    >
+      <Tile size="sm" tone={item.blocking ? "warning" : "muted"} className="size-8">
+        {item.blocking ? (
+          <TriangleAlert aria-hidden />
+        ) : (
+          <CircleDashed aria-hidden />
+        )}
+      </Tile>
+      <div className="grid min-w-0 flex-1 gap-0.5">
+        <strong className="text-body font-medium">{item.title}</strong>
+        <p className="m-0 text-caption text-muted-foreground">{item.detail}</p>
+      </div>
+      <ArrowUpRight
+        size={16}
+        aria-hidden
+        className="shrink-0 text-muted-foreground transition-transform duration-fast group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-foreground"
+      />
+    </Link>
   );
 }
 
 export function AssuranceActivity() {
   const data = useAssurance();
+  const quiet = !data.pending && !data.failed.length && !data.blockers.length;
   return (
     <section
-      className="assurance-activity"
+      className="grid gap-4"
       aria-label="Attention and autonomous activity"
     >
-      <div className="assurance-heading">
-        <h2>
+      <div className="grid gap-0.5">
+        <h2 className="m-0 text-section font-semibold text-foreground">
           {data.blockers.length ? "Current blockers" : "Your memory, at work"}
         </h2>
-        <p>
+        <p className="m-0 text-body text-muted-foreground">
           {data.enabled
             ? "Recent authorized activity. Recollect learns, revises and retires memory automatically."
             : "Recent authorized activity. Autonomous memory can be enabled in Settings."}
         </p>
       </div>
       {data.failed.length > 0 && (
-        <div className="assurance-incomplete" role="status">
-          <strong>Some activity could not be checked</strong>
-          <p>
-            {data.failed.map((feed) => feed.name).join(", ")} unavailable. This
-            is not a successful health check.
-          </p>
-          <Button
-            variant="subtle"
-            size="xs"
-            onClick={() => {
-              for (const feed of data.failed) void feed.query.refetch();
-            }}
-          >
-            Retry unavailable activity
-          </Button>
+        <Alert
+          variant="warning"
+          role="status"
+          title="Some activity could not be checked"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                for (const feed of data.failed) void feed.query.refetch();
+              }}
+            >
+              Retry unavailable activity
+            </Button>
+          }
+        >
+          {data.failed.map((feed) => feed.name).join(", ")} unavailable. This
+          is not a successful health check.
+        </Alert>
+      )}
+      {data.pending && (
+        <p role="status" className="m-0 text-body">
+          <span className="shimmer-text">Checking recent activity…</span>
+        </p>
+      )}
+      {data.blockers.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-warning/50 bg-card">
+          {data.blockers.map((item, index) => (
+            <ExceptionLink
+              key={item.id}
+              item={item}
+              brain={data.brain.id}
+              index={index}
+            />
+          ))}
         </div>
       )}
-      {data.pending && <p role="status">Checking recent activity…</p>}
-      {data.blockers.map((item) => (
-        <Link
-          key={item.id}
-          className="assurance-exception"
-          to={`/brains/$brainId/${item.section}`}
-          params={{ brainId: data.brain.id }}
-          search={item.search}
-        >
-          <TriangleAlert size={18} aria-hidden />
-          <div>
-            <strong>{item.title}</strong>
-            <p>{item.detail}</p>
-          </div>
-          <ArrowUpRight size={18} aria-hidden />
-        </Link>
-      ))}
-      {!data.pending && !data.failed.length && !data.blockers.length && (
-        <div className="assurance-quiet">
-          <Check size={24} aria-hidden />
-          <div>
-            <h3>
+      {quiet && (
+        <div className="flex animate-enter items-start gap-4 rounded-lg border border-border bg-card px-5 py-6">
+          <Tile size="lg" tone={data.enabled ? "brand" : "muted"}>
+            {data.enabled ? <Check aria-hidden /> : <CircleDashed aria-hidden />}
+          </Tile>
+          <div className="grid min-w-0 gap-1">
+            <h3 className="m-0 text-title font-semibold text-foreground">
               {data.empty
                 ? "No activity yet"
                 : data.enabled
                   ? "No action required"
                   : "Connect once, then let memory grow"}
             </h3>
-            <p>
+            <p className="m-0 max-w-[68ch] text-body text-muted-foreground">
               {data.enabled
                 ? "Nothing in the recent activity checked needs you. You can inspect or correct memory whenever you choose."
                 : "An administrator can enable autonomous memory once in Settings. Individual memories do not need approval."}
             </p>
-            <Link
-              to={
-                data.enabled
-                  ? "/brains/$brainId/agents"
-                  : "/brains/$brainId/settings"
-              }
-              params={{ brainId: data.brain.id }}
-              search={data.enabled ? { tab: "setup" } : { tab: "ai" }}
-            >
-              {data.enabled ? "Connect an agent" : "Autonomous memory settings"}
-            </Link>
+            <div className="mt-2">
+              <Button variant="secondary" size="sm" asChild>
+                <Link
+                  to={
+                    data.enabled
+                      ? "/brains/$brainId/agents"
+                      : "/brains/$brainId/settings"
+                  }
+                  params={{ brainId: data.brain.id }}
+                  search={data.enabled ? { tab: "setup" } : { tab: "ai" }}
+                >
+                  {data.enabled
+                    ? "Connect an agent"
+                    : "Autonomous memory settings"}
+                  <ArrowRight aria-hidden />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       )}
       {data.history.length > 0 && (
-        <section aria-label="Activity history and pending work">
-          <h3>History and pending work</h3>
-          <p className="assurance-footnote">
-            These records do not establish a current blocker. Past failures
-            remain available for inspection.
-          </p>
-          {data.history.map((item) => (
-            <Link
-              key={item.id}
-              className="assurance-exception"
-              to={`/brains/$brainId/${item.section}`}
-              params={{ brainId: data.brain.id }}
-              search={item.search}
-            >
-              <CircleDashed size={18} aria-hidden />
-              <div>
-                <strong>{item.title}</strong>
-                <p>{item.detail}</p>
-              </div>
-              <ArrowUpRight size={18} aria-hidden />
-            </Link>
-          ))}
+        <section
+          aria-label="Activity history and pending work"
+          className="grid gap-2"
+        >
+          <div className="grid gap-0.5">
+            <h3 className="m-0 text-title font-semibold text-foreground">
+              History and pending work
+            </h3>
+            <p className="m-0 text-caption text-muted-foreground">
+              These records do not establish a current blocker. Past failures
+              remain available for inspection.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            {data.history.map((item, index) => (
+              <ExceptionLink
+                key={item.id}
+                item={item}
+                brain={data.brain.id}
+                index={index}
+              />
+            ))}
+          </div>
         </section>
       )}
-      {data.latest && (
-        <p className="assurance-footnote">
-          Learning figures describe one completed run, recorded{" "}
-          {new Date(data.latest.at).toLocaleString()}. They are not lifetime
-          totals.
+      <div className={cn("grid gap-1 border-t border-border pt-3")}>
+        {data.latest && (
+          <p className="m-0 text-caption text-muted-foreground">
+            Learning figures describe one completed run, recorded{" "}
+            <span className="mono">
+              {new Date(data.latest.at).toLocaleString()}
+            </span>
+            . They are not lifetime totals.
+          </p>
+        )}
+        <p className="m-0 max-w-[88ch] text-caption text-muted-foreground">
+          Checks cover the latest 100 jobs, 20 learning runs and permitted
+          capture, tool and removal pages. Independent events may overlap.
+          Offline device coverage and external copies cannot be confirmed here.
         </p>
-      )}
-      <p className="assurance-footnote">
-        Checks cover the latest 100 jobs, 20 learning runs and permitted
-        capture, tool and removal pages. Independent events may overlap. Offline
-        device coverage and external copies cannot be confirmed here.
-      </p>
+      </div>
     </section>
   );
 }

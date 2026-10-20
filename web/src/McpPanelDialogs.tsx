@@ -29,6 +29,8 @@ export function McpDialogStack({
   setConnection,
   importedDraft,
   setImportedDraft,
+  presetDefinition,
+  setPresetDefinition,
   discover,
   setDiscover,
   discoverConnection,
@@ -56,6 +58,9 @@ export function McpDialogStack({
   setConnection: Setter<string | null>;
   importedDraft: ServerDraft | undefined;
   setImportedDraft: Setter<ServerDraft | undefined>;
+  /** An approved connector chosen from the empty-state list. */
+  presetDefinition?: string;
+  setPresetDefinition?: Setter<string | undefined>;
   discover: string | null;
   setDiscover: Setter<string | null>;
   discoverConnection: string | null;
@@ -115,6 +120,7 @@ export function McpDialogStack({
       {data && connection === "new" && !workspaceFailed && (
         <McpConnectionDialog
           initialDraft={importedDraft}
+          initialDefinition={presetDefinition}
           key={connection}
           brain={brain}
           id={connection}
@@ -125,6 +131,7 @@ export function McpDialogStack({
               ? () => {
                   setConnection(null);
                   setImportedDraft(undefined);
+                  setPresetDefinition?.(undefined);
                   onManageRunners();
                 }
               : undefined
@@ -132,11 +139,13 @@ export function McpDialogStack({
           close={() => {
             setConnection(null);
             setImportedDraft(undefined);
+            setPresetDefinition?.(undefined);
           }}
           saved={() => {
             setSetupSaved(connection === "new");
             setConnection(null);
             setImportedDraft(undefined);
+            setPresetDefinition?.(undefined);
             refresh();
           }}
           stale={clear}

@@ -1,19 +1,18 @@
+import { Link } from "@tanstack/react-router";
+import { ArrowRight, Layers } from "lucide-react";
 import {
   Alert,
   Button,
   Checkbox,
-  Group,
   JsonInput,
-  Loader,
-  Select,
-  Stack,
-  PasswordInput,
+  PasswordField,
   SegmentedControl,
-  Text,
-  TextInput,
-} from "@mantine/core";
-import { Link } from "@tanstack/react-router";
+  Select,
+  Spinner,
+  TextField,
+} from "./components/ui";
 import { CodeBlock } from "./components/CodeBlock";
+import { Disclosure, SectionLabel } from "./features/connections/ui";
 import {
   placementText,
   type ConnectionState,
@@ -30,14 +29,14 @@ function ConnectorFields({ form, props }: SectionProps) {
   const { input, patch } = form;
   return (
     <>
-      <TextInput
+      <TextField
         label="Connection name"
         required
         maxLength={120}
         value={input.name}
         onChange={(e) => patch({ name: e.currentTarget.value })}
       />
-      <TextInput
+      <TextField
         label="Connection description"
         maxLength={2000}
         value={input.description}
@@ -75,15 +74,13 @@ function TargetFields({
         data={props.environments}
         onChange={(v) => patch({ environment_id: v })}
       />
-      <Button
-        variant="subtle"
-        size="xs"
-        component="a"
-        href={`/brains/${props.brain.id}/settings?tab=general#environments`}
-      >
-        Manage optional environments
+      <Button variant="ghost" size="sm" className="-ml-2.5 justify-self-start" asChild>
+        <a href={`/brains/${props.brain.id}/settings?tab=general#environments`}>
+          <Layers aria-hidden="true" />
+          Manage optional environments
+        </a>
       </Button>
-      <TextInput
+      <TextField
         label={
           def.summary.transport === "streamable_http"
             ? "MCP target URL"
@@ -103,15 +100,23 @@ function PrivateRunnerFields({ form, props }: SectionProps) {
   return (
     <>
       {privateRunners.error && (
-        <Alert color="red">
+        <Alert
+          variant="destructive"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void privateRunners.refetch()}
+            >
+              Refresh private runners
+            </Button>
+          }
+        >
           {privateRunners.error.message}
-          <Button size="xs" onClick={() => void privateRunners.refetch()}>
-            Refresh private runners
-          </Button>
         </Alert>
       )}
       {!privateRunners.error && privateRunners.data?.length === 0 && (
-        <Alert color="yellow">
+        <Alert variant="warning" role="status">
           This Brain has no private runner. Register one for a paired device on
           the Private Runners tab first; until then this target has nothing that
           can reach it.
@@ -145,19 +150,23 @@ function PrivateRunnerFields({ form, props }: SectionProps) {
         ]}
         onChange={(value) => patch({ runner_reference: value })}
       />
-      <Text size="sm" c="dimmed">
+      <p className="m-0 text-label text-muted-foreground">
         Offline runners keep calls queued until the runner connects or the queue
         deadline expires. A registration is metadata: it proves nothing until a
         call succeeds there.
-      </Text>
-      <Text size="sm" c="dimmed">
+      </p>
+      <p className="m-0 text-label text-muted-foreground">
         Each runner is bound to one paired device. Register or rename it in
         execution administration, and manage the device itself in{" "}
-        <Link to="/brains/$brainId/agents" params={{ brainId: props.brain.id }}>
+        <Link
+          to="/brains/$brainId/agents"
+          params={{ brainId: props.brain.id }}
+          className="text-brand-text underline-offset-[3px] hover:underline"
+        >
           this Brain&apos;s Agents list
         </Link>
         .
-      </Text>
+      </p>
     </>
   );
 }
@@ -187,12 +196,18 @@ function PlacementFields({
         }
       />
       {props.manageRunners && input.placement === "private" && (
-        <Button variant="subtle" onClick={props.manageRunners}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2.5 justify-self-start"
+          onClick={props.manageRunners}
+        >
           Manage private-network execution
+          <ArrowRight aria-hidden="true" />
         </Button>
       )}
       {input.placement === "local" && (
-        <TextInput
+        <TextField
           label="Runner reference"
           description="Name the runner on your paired device. Offline devices apply nothing."
           required
@@ -213,8 +228,8 @@ function SecretFields({ form, def }: DefinitionSectionProps) {
   return (
     <>
       {!secrets.length && (
-        <Group grow>
-          <TextInput
+        <div className="grid">
+          <TextField
             label={
               def.summary.transport === "stdio"
                 ? "Environment variable"
@@ -238,11 +253,11 @@ function SecretFields({ form, def }: DefinitionSectionProps) {
               ])
             }
           />
-        </Group>
+        </div>
       )}
       {secrets.map((secret, i) => (
-        <Group key={i} grow align="start">
-          <TextInput
+        <div key={i} className="grid grid-cols-2 items-start gap-3">
+          <TextField
             label={
               secret.kind === "header" ? "Header name" : "Environment variable"
             }
@@ -256,7 +271,7 @@ function SecretFields({ form, def }: DefinitionSectionProps) {
               );
             }}
           />
-          <PasswordInput
+          <PasswordField
             label={secret.prefix ? "Bearer token" : "Secret value"}
             value={secret.value}
             onChange={(e) => {
@@ -266,12 +281,12 @@ function SecretFields({ form, def }: DefinitionSectionProps) {
               );
             }}
           />
-        </Group>
+        </div>
       ))}
-      <Text size="xs" c="dimmed">
+      <p className="m-0 text-caption text-muted-foreground">
         Values are saved separately in the installation-local development
         credential file. They are never stored in this connection’s settings.
-      </Text>
+      </p>
     </>
   );
 }
@@ -290,13 +305,13 @@ function AuthenticationFields({ form, def }: DefinitionSectionProps) {
   } = form;
   return (
     <>
-      <Text fw={600} size="sm">
-        Authentication
-      </Text>
+      <SectionLabel className="mt-2">Authentication</SectionLabel>
       {owner &&
         input.placement === "central" &&
         def.credential_aliases.length > 0 && (
           <SegmentedControl
+            label="Authentication"
+            className="justify-self-start"
             value={authMode}
             onChange={(v) => {
               setAuthMode(v);
@@ -331,13 +346,12 @@ function AuthenticationFields({ form, def }: DefinitionSectionProps) {
         autosize
         minRows={4}
       />
-      <details>
-        <summary>Approved settings schema</summary>
+      <Disclosure summary="Approved settings schema">
         <CodeBlock
           language="json"
           code={JSON.stringify(def.configuration_schema, null, 2)}
         />
-      </details>
+      </Disclosure>
     </>
   );
 }
@@ -352,16 +366,19 @@ function DefinitionSections({
   const { input, patch } = form;
   return (
     <>
-      <Text size="sm">
-        {def.summary.description} · {def.summary.transport}
-      </Text>
+      <p className="m-0 rounded-md border border-border bg-muted px-3 py-2 text-label text-foreground-secondary">
+        {def.summary.description} ·{" "}
+        <span className="mono text-caption">{def.summary.transport}</span>
+      </p>
       {!def.summary.enabled && (
-        <Alert color="yellow">
+        <Alert variant="warning" role="status">
           This definition is disabled. Enablement cannot be saved until an
           approved definition is selected.
         </Alert>
       )}
+      <SectionLabel className="mt-2">Target</SectionLabel>
       <TargetFields form={form} props={props} def={def} />
+      <SectionLabel className="mt-2">Execution</SectionLabel>
       <PlacementFields form={form} props={props} def={def} />
       <AuthenticationFields form={form} def={def} />
       <Checkbox
@@ -377,8 +394,8 @@ function DefinitionSections({
 function StandardFooter({ form, props }: SectionProps) {
   const { save, input, authMode, secrets, validateStep } = form;
   return (
-    <Group justify="end" className="connection-setup-footer">
-      <Button variant="default" onClick={props.close}>
+    <div className="sticky -bottom-5 z-[2] -mx-5 -mb-5 mt-2 flex justify-end gap-2 border-t border-border bg-muted px-5 py-3">
+      <Button variant="secondary" onClick={props.close}>
         Close
       </Button>
       <Button
@@ -396,7 +413,7 @@ function StandardFooter({ form, props }: SectionProps) {
       >
         {"Save connection"}
       </Button>
-    </Group>
+    </div>
   );
 }
 
@@ -420,38 +437,41 @@ export function StandardConnectionForm({
         save.mutate();
       }}
     >
-      <Stack className="connection-edit-form">
+      <div className="grid gap-3">
         {stepError && (
-          <Alert color="red" title="Complete this connection">
+          <Alert variant="destructive" title="Complete this connection">
             {stepError}
           </Alert>
         )}
-        <Text size="sm" c="dimmed">
+        <p className="m-0 text-body text-muted-foreground">
           Choose an approved connector, its target and execution location.
           Saving does not call a tool.
-        </Text>
+        </p>
         {detail && detail.profile_ids.length > 0 && (
-          <Alert color="yellow">
+          <Alert variant="warning" role="status">
             This connection is used by {detail.profile_ids.length}{" "}
             {detail.profile_ids.length === 1 ? "profile" : "profiles"}. Changes
             affect their subsequent discovery and calls.
           </Alert>
         )}
+        <SectionLabel className="mt-1">Connector</SectionLabel>
         <ConnectorFields form={form} props={props} />
-        {definition.isFetching && !definition.data && <Loader size="xs" />}
+        {definition.isFetching && !definition.data && (
+          <Spinner label="Loading connector" />
+        )}
         {definition.error && (
-          <Alert color="red">{definition.error.message}</Alert>
+          <Alert variant="destructive">{definition.error.message}</Alert>
         )}
         {definition.data && !definition.error && (
           <DefinitionSections form={form} props={props} def={definition.data} />
         )}
         {save.error && (
-          <Alert color="red" title="Connection not saved">
+          <Alert variant="destructive" title="Connection not saved">
             {save.error.message}
           </Alert>
         )}
         <StandardFooter form={form} props={props} />
-      </Stack>
+      </div>
     </form>
   );
 }

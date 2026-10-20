@@ -1,55 +1,71 @@
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { motion } from "motion/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowRight,
+  Check,
+  CircleAlert,
+  CircleDashed,
+  FileText,
+  FolderOpen,
+  Layers,
+  Link2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  SlidersHorizontal,
+  Upload,
+} from "lucide-react";
 import { useStableRows } from "./components/useStableRows";
 import { FilterBar } from "./components/FilterBar";
 import { ScopeSummary } from "./components/ScopeSummary";
-import { DetailInspector } from "./components/DetailInspector";
+import {
+  DetailInspector,
+  InspectorSection,
+  PropList,
+} from "./components/Inspector";
 import { ActionMenu } from "./components/ActionMenu";
-import { iconSize } from "./design/tokens";
-import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import { useBrainSearch } from "./app/useBrainSearch";
-import { useDebouncedValue } from "@mantine/hooks";
 import { EmptyState } from "./components/AsyncState";
-import { SkeletonRows } from "./components/Skeleton";
-import { staggerStyle } from "./components/Motion";
+import { Skeleton, SkeletonRows } from "./components/Skeleton";
 import { StatusDot } from "./components/StatusDot";
-import { StatusBadge } from "./components/StatusBadge";
-import { useContentDeadline } from "./useContentDeadline";
-import "./features/feature-views.css";
-import { EraseAction, ExcerptAction } from "./RetentionPanel";
-import { LearningAction } from "./ModelsPanel";
 import {
   Alert,
   Badge,
   Button,
   Card,
   Checkbox,
-  Divider,
+  Count,
   Drawer,
+  Field,
   FileButton,
-  Group,
-  Loader,
   Modal,
   MultiSelect,
+  SearchInput,
   Select,
-  Stack,
-  Text,
+  Separator,
+  Spinner,
+  StatusBadge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
   Textarea,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BookOpen,
-  FileText,
-  FolderOpen,
-  Plus,
-  RefreshCw,
-  Settings2,
-  Search,
-  SlidersHorizontal,
-  Info,
-  Upload,
-} from "lucide-react";
+  TextareaField,
+  TextField,
+  Tile,
+  type StatusState,
+} from "./components/ui";
+import { cn } from "./lib/utils";
+import { useDebouncedValue } from "./lib/hooks";
+import { listItem } from "./design/motion";
+import { useBrainSearch } from "./app/useBrainSearch";
+import { useContentDeadline } from "./useContentDeadline";
+import { EraseAction, ExcerptAction } from "./RetentionPanel";
+import { LearningAction } from "./ModelsPanel";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 import { useIdempotency } from "./useIdempotency";
@@ -59,8 +75,10 @@ import {
 } from "./features/knowledge/selection";
 import { usePollInterval } from "./usePollInterval";
 import { useEvidenceList } from "./catalogueQueries";
+import { useExploreCount } from "./features/knowledge/frame";
 
 type Source = components["schemas"]["SourceSummary"];
+type Version = Source["version"];
 type View = components["schemas"]["EvidenceGroup"];
 type Content = components["schemas"]["SourceContent"];
 const kinds = [
@@ -83,12 +101,39 @@ const labels: Record<string, string> = {
   erased: "Erased",
 };
 const timestamp = (value: string) => new Date(value).toLocaleString();
-const stateLabel = (version: Source["version"]) =>
+/** Compact list time: date and minutes, full value in the title. */
+const shortTime = (value: string) =>
+  new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+const words = (value: string) => {
+  const text = value.replaceAll("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+const stateLabel = (version: Version) =>
   labels[
     version.availability === "retained"
       ? version.processing
       : version.availability
   ] ?? version.processing;
+const kindLabel = (version: Version) =>
+  version.availability === "reference_only"
+    ? "Reference"
+    : words(version.retention_class ?? "document");
+/** One composite status: colour, icon and word together. */
+const statusState = (version: Version): StatusState =>
+  version.processing === "ready" && version.availability === "retained"
+    ? "positive"
+    : ["failed", "missing", "unavailable", "unreadable"].includes(
+          version.processing,
+        ) ||
+        ["missing", "unavailable", "unreadable"].includes(version.availability)
+      ? "negative"
+      : "neutral";
 const groupOptions = (views: View[]) =>
   kinds.map((kind) => ({
     group: kind.label,
@@ -96,6 +141,22 @@ const groupOptions = (views: View[]) =>
       .filter((v) => v.kind === kind.value)
       .map((v) => ({ value: v.id, label: v.name })),
   }));
+
+/** Processing state as one badge; live work shows a jade live dot. */
+function SourceStatus({ version }: { version: Version }) {
+  if (version.processing === "running" && version.availability === "retained")
+    return (
+      <Badge variant="brand">
+        <StatusDot tone="accent" live size={6} />
+        {stateLabel(version)}
+      </Badge>
+    );
+  return (
+    <StatusBadge state={statusState(version)}>
+      {stateLabel(version)}
+    </StatusBadge>
+  );
+}
 
 export function EvidencePanel({ brain }: { brain: Brain }) {
   const pollNormal = usePollInterval("normal");
@@ -201,34 +262,54 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
     !!selectedSourceId,
     (row) => row.id,
   );
+  // Rows stagger in on the first load only; later mounts (refetch, paging,
+  // new rows) appear in place.
+  const settled = useRef(false);
+  const firstLoad = !settled.current;
+  useEffect(() => {
+    if (stable.rows.length) settled.current = true;
+  });
+  const active = Object.values(filters).filter(Boolean) as string[];
+  const total = catalogue.data?.total ?? 0;
+  // The switcher tab shows the Brain's source count, not a filtered count.
+  useExploreCount(
+    "sources",
+    !query && !active.length && !catalogue.isError
+      ? catalogue.data?.total
+      : null,
+  );
   if (catalogue.error)
     return (
-      <Card withBorder p="xl">
-        <Alert color="red" title="Evidence could not be loaded">
-          {catalogue.error.message}
-          <Group mt="md">
-            <Button variant="subtle" onClick={() => void catalogue.refetch()}>
+      <Alert
+        variant="destructive"
+        title="Evidence could not be loaded"
+        className="animate-enter"
+        actions={
+          <>
+            <Button
+              variant="destructive-ghost"
+              size="sm"
+              onClick={() => void catalogue.refetch()}
+            >
               Try again
             </Button>
-            <Button variant="subtle" onClick={clear}>
+            <Button variant="ghost" size="sm" onClick={clear}>
               Clear filters
             </Button>
-          </Group>
-        </Alert>
-      </Card>
+          </>
+        }
+      >
+        {catalogue.error.message}
+      </Alert>
     );
   return (
-    <section
-      className="feature-view evidence-panel rc-enter"
-      aria-label="Knowledge sources"
-    >
-      <Stack gap="lg">
-        <FilterBar>
-          <TextInput
-            className="feature-search"
+    <section className="flex flex-col gap-4" aria-label="Knowledge sources">
+      <FilterBar>
+        <div className="min-w-0 flex-[0_1_280px]">
+          <SearchInput
+            size="sm"
             aria-label="Search source titles"
             placeholder="Search source titles…"
-            leftSection={<Search size={iconSize.navigation} />}
             maxLength={200}
             value={search}
             onChange={(event) => {
@@ -236,215 +317,253 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
               setOffset(0);
             }}
           />
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setFiltering(true)}>
+          <SlidersHorizontal aria-hidden="true" />
+          Filters
+          {active.length > 0 && <Count>{active.length}</Count>}
+        </Button>
+        {(writable || brain.role === "admin") && (
           <Button
-            variant="default"
-            leftSection={<SlidersHorizontal size={iconSize.small} />}
-            onClick={() => setFiltering(true)}
+            variant="ghost"
+            size="sm"
+            disabled={catalogue.isPending}
+            onClick={() => setManage(true)}
           >
-            Filters
-            {Object.values(filters).some(Boolean)
-              ? ` · ${Object.values(filters).filter(Boolean).length}`
-              : ""}
+            <Layers aria-hidden="true" />
+            Organize
           </Button>
-          {(writable || brain.role === "admin") && (
-            <Button
-              variant="subtle"
-              leftSection={<Settings2 size={iconSize.small} />}
-              disabled={catalogue.isPending}
-              onClick={() => setManage(true)}
-            >
-              Organize
-            </Button>
-          )}
-          {writable && (
-            <Button
-              leftSection={<Plus size={iconSize.small} />}
-              disabled={catalogue.isPending}
-              onClick={() => setImporting(true)}
-            >
-              Add source
-            </Button>
-          )}
-        </FilterBar>
-        <Drawer
-          className="feature-drawer"
-          opened={filtering}
-          onClose={() => setFiltering(false)}
-          position="right"
-          title="Filter sources"
-          size="md"
+        )}
+        <span
+          className="mono ml-auto shrink-0 whitespace-nowrap text-caption text-muted-foreground"
+          aria-live="polite"
         >
-          <Stack>
-            <Text size="sm" c="dimmed">
-              Collections, areas and environments organize the same evidence.
-              Selected filters intersect.
-            </Text>
-            <Stack gap="md">
-              {kinds.map((kind) => (
-                <Select
-                  key={kind.value}
-                  label={kind.label}
-                  placeholder="All"
-                  clearable
-                  searchable
-                  value={filters[kind.value]}
-                  onChange={(value) => {
-                    setFilters({ ...filters, [kind.value]: value });
-                    setOffset(0);
-                  }}
-                  data={groups
-                    .filter((v) => v.kind === kind.value)
-                    .map((v) => ({ value: v.id, label: v.name }))}
-                />
-              ))}
-            </Stack>
-            <Button variant="default" onClick={clear}>
+          {catalogue.data
+            ? `${catalogue.data.total} source${catalogue.data.total === 1 ? "" : "s"}`
+            : "Loading sources"}
+          {query ? " · matching source titles" : ""}
+        </span>
+        {writable && (
+          <Button
+            size="sm"
+            disabled={catalogue.isPending}
+            onClick={() => setImporting(true)}
+          >
+            <Plus aria-hidden="true" />
+            Add source
+          </Button>
+        )}
+      </FilterBar>
+      {active.length > 0 && (
+        <ScopeSummary>
+          <span>Showing</span>
+          {active.map((id) => {
+            const group = groups.find((entry) => entry.id === id);
+            return (
+              <Badge variant="outline" key={id}>
+                {group
+                  ? `${words(group.kind)} · ${group.name}`
+                  : "Selected view"}
+              </Badge>
+            );
+          })}
+          <Button variant="ghost" size="sm" onClick={clear}>
+            Clear filters
+          </Button>
+        </ScopeSummary>
+      )}
+      <Drawer
+        opened={filtering}
+        onClose={() => setFiltering(false)}
+        title="Filter sources"
+        description="Collections, areas and environments organize the same evidence. Selected filters intersect."
+        footer={
+          <>
+            <Button variant="secondary" onClick={clear}>
               Clear source filters
             </Button>
             <Button onClick={() => setFiltering(false)}>Show sources</Button>
-          </Stack>
-        </Drawer>
-        <Group justify="space-between">
-          <Text size="xs" c="dimmed">
-            {catalogue.data
-              ? `${catalogue.data.total} source${catalogue.data.total === 1 ? "" : "s"}`
-              : "Loading sources"}
-            {query ? " · matching source titles" : ""}
-          </Text>
-          {Object.values(filters).some(Boolean) && (
-            <Button variant="subtle" size="compact-sm" onClick={clear}>
-              Clear filters
-            </Button>
-          )}
-        </Group>
-        {Object.values(filters).some(Boolean) && (
-          <ScopeSummary>
-            {Object.values(filters)
-              .filter(Boolean)
-              .map((id) => (
-                <Badge variant="light" key={id}>
-                  {groups.find((group) => group.id === id)?.name ??
-                    "Selected view"}
-                </Badge>
-              ))}
-          </ScopeSummary>
-        )}
-        {catalogue.isPending ? (
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          {kinds.map((kind) => (
+            <Select
+              key={kind.value}
+              label={kind.label}
+              placeholder="All"
+              clearable
+              searchable
+              value={filters[kind.value]}
+              onChange={(value) => {
+                setFilters({ ...filters, [kind.value]: value });
+                setOffset(0);
+              }}
+              data={groups
+                .filter((v) => v.kind === kind.value)
+                .map((v) => ({ value: v.id, label: v.name }))}
+            />
+          ))}
+        </div>
+      </Drawer>
+      {stable.pending > 0 && (
+        <div>
+          <Button variant="secondary" size="sm" onClick={stable.reveal}>
+            <StatusDot tone="accent" size={6} />
+            {stable.pending} new sources · Show updates
+          </Button>
+        </div>
+      )}
+      {catalogue.isPending ? (
+        <TableWrap className="px-3">
           <SkeletonRows label="Loading sources…" rows={6} />
-        ) : !catalogue.data?.sources.length ? (
+        </TableWrap>
+      ) : !catalogue.data?.sources.length ? (
+        <div className="rounded-lg border border-border bg-card">
           <EmptyState
             icon={FolderOpen}
             title={
-              query || Object.values(filters).some(Boolean)
+              query || active.length
                 ? "No matching sources"
                 : "Start with your evidence"
             }
             description={
-              query || Object.values(filters).some(Boolean)
+              query || active.length
                 ? "Try another title or clear the selected views."
                 : "Add a text document, paste useful material, or keep a reference to a controlled source."
             }
           />
-        ) : (
-          <div className="feature-list">
-            {stable.pending > 0 && (
-              <Button variant="light" size="xs" m="sm" onClick={stable.reveal}>
-                {stable.pending} new sources · Show updates
-              </Button>
-            )}
-            {stable.rows.map((source, index) => (
-              <button
-                key={source.id}
-                className={`source-row source-record source-record-dense rc-enter ${selectedSourceId === source.id ? "is-selected" : ""}`}
-                style={staggerStyle(index)}
-                onClick={() => setSelected(source)}
-              >
-                {/* Dense row: one identifier line (title plus kind) and one
-                    status line (composite mark plus updated date). Group
-                    views, origin and version history move to the shared
-                    lineage inspector. */}
-                <span className="source-record-line">
-                  <FileText size={iconSize.action} className="source-symbol" />
-                  <span className="source-record-name">
-                    <Text fw={600} size="sm">
-                      {source.version.title}
-                    </Text>
-                  </span>
-                  <Badge size="xs" variant="light" color="gray">
-                    {source.version.availability === "reference_only"
-                      ? "Reference"
-                      : (
-                          source.version.retention_class ?? "document"
-                        ).replaceAll("_", " ")}
-                  </Badge>
-                </span>
-                <span className="source-record-line">
-                  {["queued", "running"].includes(
-                    source.version.processing,
-                  ) && (
-                    <StatusDot tone="accent" live size={7} label="Processing" />
-                  )}
-                  <StatusBadge
-                    state={
-                      source.version.processing === "ready" &&
-                      source.version.availability === "retained"
-                        ? "positive"
-                        : [
-                              "failed",
-                              "missing",
-                              "unavailable",
-                              "unreadable",
-                            ].includes(source.version.processing) ||
-                            ["missing", "unavailable", "unreadable"].includes(
-                              source.version.availability,
-                            )
-                          ? "negative"
-                          : "neutral"
-                    }
-                  >
-                    {stateLabel(source.version)}
-                  </StatusBadge>
-                  <Text size="xs" c="dimmed">
-                    {source.version.contributor} · {source.version_count}{" "}
-                    version{source.version_count === 1 ? "" : "s"} ·{" "}
-                    {new Date(source.version.recorded_at).toLocaleString()}
-                  </Text>
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {(offset > 0 || (catalogue.data?.total ?? 0) > 50) && (
-          <Group justify="space-between">
-            <Button
-              size="xs"
-              variant="default"
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - 50))}
-            >
-              Previous sources
-            </Button>
-            <Text size="xs">
-              {offset + 1}–{Math.min(offset + 50, catalogue.data?.total ?? 0)}
-            </Text>
-            <Button
-              size="xs"
-              variant="default"
-              disabled={offset + 50 >= (catalogue.data?.total ?? 0)}
-              onClick={() => setOffset(offset + 50)}
-            >
-              Next sources
-            </Button>
-          </Group>
-        )}
-        <div className="feature-note">
-          <Info size={iconSize.small} />
-          <span>
-            Search matches titles. Import supports text files, pasted text and
-            references. Content retention is managed in Settings.
-          </span>
         </div>
-      </Stack>
+      ) : (
+        <TableWrap className="overflow-clip">
+          <Table>
+            <TableHead>
+              <tr>
+                <TableHeader scope="col">Source</TableHeader>
+                <TableHeader scope="col">Kind</TableHeader>
+                <TableHeader scope="col">Status</TableHeader>
+                <TableHeader scope="col">Contributor</TableHeader>
+                <TableHeader scope="col" className="text-right">
+                  Versions
+                </TableHeader>
+                <TableHeader scope="col" className="text-right">
+                  Recorded
+                </TableHeader>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {stable.rows.map((source, index) => {
+                const isSelected = selectedSourceId === source.id;
+                const Icon =
+                  source.version.availability === "reference_only"
+                    ? Link2
+                    : FileText;
+                return (
+                  <MotionRow
+                    key={source.id}
+                    selected={isSelected}
+                    variants={listItem}
+                    custom={index}
+                    initial={firstLoad ? "initial" : false}
+                    animate="animate"
+                    className="source-row table-row cursor-pointer border-0 p-0"
+                    onClick={(event) => {
+                      // Keep focus on the row's button so closing the
+                      // inspector returns focus here.
+                      event.currentTarget
+                        .querySelector<HTMLButtonElement>("button")
+                        ?.focus({ preventScroll: true });
+                      setSelected(source);
+                    }}
+                  >
+                    {/* One identifier line (title and kind) and one status
+                        line (composite status, contributor, versions, time).
+                        Group views, origin and history live in the shared
+                        lineage inspector. */}
+                    <TableCell primary className="w-full max-w-0">
+                      <span className="source-record-line flex min-w-0">
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <Icon
+                            aria-hidden="true"
+                            className="size-4 shrink-0 text-muted-foreground"
+                          />
+                          <button
+                            type="button"
+                            aria-current={isSelected ? "true" : undefined}
+                            title={source.version.title}
+                            className="min-w-0 truncate rounded-xs text-left font-medium text-foreground outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          >
+                            {source.version.title}
+                          </button>
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant="outline">
+                        {kindLabel(source.version)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <span className="source-record-line flex">
+                        <SourceStatus version={source.version} />
+                      </span>
+                    </TableCell>
+                    <TableCell className="max-w-40 truncate whitespace-nowrap">
+                      {source.version.contributor}
+                    </TableCell>
+                    <TableCell num>{source.version_count}</TableCell>
+                    <TableCell
+                      num
+                      className="whitespace-nowrap"
+                      title={timestamp(source.version.recorded_at)}
+                    >
+                      {shortTime(source.version.recorded_at)}
+                    </TableCell>
+                  </MotionRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          {(offset > 0 || total > 50) && (
+            <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
+              <Button
+                size="sm"
+                variant="secondary"
+                aria-label="Previous sources"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - 50))}
+              >
+                Previous
+              </Button>
+              <span className="mono mx-auto text-caption text-muted-foreground">
+                {offset + 1}–{Math.min(offset + 50, total)} of {total}
+              </span>
+              <Button
+                size="sm"
+                variant="secondary"
+                aria-label="Next sources"
+                disabled={offset + 50 >= total}
+                onClick={() => setOffset(offset + 50)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </TableWrap>
+      )}
+      <Alert variant="info" role="note" className="max-w-[560px]">
+        Search matches titles. Import supports text files, pasted text and
+        references. Content retention is managed in{" "}
+        <Link
+          to="/brains/$brainId/settings"
+          params={{ brainId: brain.id }}
+          search={{ tab: "privacy" }}
+          className="text-brand-text underline-offset-[3px] hover:underline"
+        >
+          Settings
+        </Link>
+        .
+      </Alert>
       <GroupManager
         brain={brain.id}
         admin={brain.role === "admin"}
@@ -467,7 +586,7 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
         }}
         allowContent={catalogue.data?.policy.allow_document_content ?? false}
         views={groups}
-        initialGroups={Object.values(filters).filter((v): v is string => !!v)}
+        initialGroups={active}
         edit={editing}
         saved={() => {
           setImporting(false);
@@ -477,30 +596,36 @@ export function EvidencePanel({ brain }: { brain: Brain }) {
         }}
       />
       {route.version && !selected && !selectedSourceId && (
-        <Drawer
+        <DetailInspector
           opened
           onClose={() => setSelected(null)}
           title="Source evidence"
-          className="feature-drawer"
         >
           {versionReference.error ? (
-            <Alert color="red">
+            <Alert
+              variant="destructive"
+              actions={
+                <Button
+                  variant="destructive-ghost"
+                  size="sm"
+                  onClick={() => void versionReference.refetch()}
+                >
+                  Try again
+                </Button>
+              }
+            >
               {versionReference.error.message}
-              <Button
-                variant="subtle"
-                onClick={() => void versionReference.refetch()}
-              >
-                Try again
-              </Button>
             </Alert>
           ) : (
-            <Loader />
+            <Spinner label="Opening the exact source version…" />
           )}
-        </Drawer>
+        </DetailInspector>
       )}
     </section>
   );
 }
+
+const MotionRow = motion.create(TableRow);
 
 function GroupManager({
   brain,
@@ -563,19 +688,16 @@ function GroupManager({
       refresh();
     },
   });
+  const shown = views.filter((v) => v.kind === kind);
   return (
     <Modal
       opened={opened}
       onClose={close}
       title="Manage views"
+      description="Collections, areas and environments organize the same sources. Removing a view preserves its evidence."
       size="lg"
-      centered
     >
-      <Stack>
-        <Text size="sm" c="dimmed">
-          Collections, areas and environments organize the same sources.
-          Removing a view preserves its evidence.
-        </Text>
+      <div className="grid gap-4">
         <Select
           label="View kind"
           data={kinds}
@@ -584,65 +706,65 @@ function GroupManager({
           onChange={(v) => setKind(v ?? "collection")}
         />
         <form
+          className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             save.mutate();
           }}
         >
-          <Stack>
-            <TextInput
-              label="View name"
-              required
-              maxLength={120}
-              value={name}
-              onChange={(e) => setName(e.currentTarget.value)}
-            />
-            <Textarea
-              label="View description"
-              maxLength={2000}
-              value={description}
-              onChange={(e) => setDescription(e.currentTarget.value)}
-            />
-            {save.error && <Alert color="red">{save.error.message}</Alert>}
-            <Group>
+          <TextField
+            label="View name"
+            required
+            maxLength={120}
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+          />
+          <TextareaField
+            label="View description"
+            maxLength={2000}
+            value={description}
+            onChange={(e) => setDescription(e.currentTarget.value)}
+          />
+          {save.error && (
+            <Alert variant="destructive">{save.error.message}</Alert>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" loading={save.isPending} disabled={!editable}>
+              {editing ? "Save view" : "Create view"}
+            </Button>
+            {editing && (
               <Button
-                type="submit"
-                loading={save.isPending}
-                disabled={!editable}
+                variant="ghost"
+                onClick={() => {
+                  setEditing(null);
+                  setName("");
+                  setDescription("");
+                }}
               >
-                {editing ? "Save view" : "Create view"}
+                Cancel edit
               </Button>
-              {editing && (
-                <Button
-                  variant="subtle"
-                  onClick={() => {
-                    setEditing(null);
-                    setName("");
-                    setDescription("");
-                  }}
-                >
-                  Cancel edit
-                </Button>
-              )}
-            </Group>
-          </Stack>
+            )}
+          </div>
         </form>
-        <Divider />
-        {views
-          .filter((v) => v.kind === kind)
-          .map((view) => (
-            <Card withBorder key={view.id} p="sm">
-              <Group justify="space-between">
-                <div>
-                  <Text size="sm" fw={600}>
+        <Separator />
+        <div className="grid gap-2">
+          <h3 className="section-label m-0">
+            {words(kind)} views
+            <span className="mono ml-1.5">{shown.length}</span>
+          </h3>
+          {shown.map((view) => (
+            <Card key={view.id} className="grid gap-3 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="m-0 truncate text-body font-medium text-foreground">
                     {view.name}
-                  </Text>
-                  <Text size="xs" c="dimmed">
+                  </p>
+                  <p className="mono m-0 text-caption text-muted-foreground">
                     {view.source_count} source
                     {view.source_count === 1 ? "" : "s"}
-                  </Text>
+                  </p>
                 </div>
-                <Group gap="xs">
+                <div className="flex shrink-0 items-center gap-1">
                   {view.kind === "collection" && (
                     <EraseAction
                       brain={brain}
@@ -653,8 +775,8 @@ function GroupManager({
                   )}
                   <Button
                     disabled={!editable}
-                    size="compact-xs"
-                    variant="subtle"
+                    size="sm"
+                    variant="ghost"
                     onClick={() => {
                       setEditing(view.id);
                       setName(view.name);
@@ -665,9 +787,8 @@ function GroupManager({
                     Rename
                   </Button>
                   <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    color="red"
+                    size="sm"
+                    variant="destructive-ghost"
                     disabled={!editable}
                     onClick={() => {
                       remove.reset();
@@ -676,42 +797,51 @@ function GroupManager({
                   >
                     Remove view
                   </Button>
-                </Group>
-              </Group>
+                </div>
+              </div>
               {removing?.id === view.id && (
-                <Alert mt="sm" color="yellow">
-                  <Text size="sm">
+                <Alert
+                  variant="warning"
+                  actions={
+                    <>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        loading={remove.isPending}
+                        onClick={() => remove.mutate(view.id)}
+                      >
+                        Remove this view
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setRemoving(null)}
+                      >
+                        Keep view
+                      </Button>
+                    </>
+                  }
+                >
+                  <p>
                     Remove {view.name}? Its sources and history stay in the
                     Brain.
-                  </Text>
-                  {remove.error && <Text c="red">{remove.error.message}</Text>}
-                  <Group mt="xs">
-                    <Button
-                      size="xs"
-                      color="red"
-                      loading={remove.isPending}
-                      onClick={() => remove.mutate(view.id)}
-                    >
-                      Remove this view
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      onClick={() => setRemoving(null)}
-                    >
-                      Keep view
-                    </Button>
-                  </Group>
+                  </p>
+                  {remove.error && (
+                    <p className="text-destructive-text">
+                      {remove.error.message}
+                    </p>
+                  )}
                 </Alert>
               )}
             </Card>
           ))}
-        {!views.some((v) => v.kind === kind) && (
-          <Text size="sm" c="dimmed">
-            No views of this kind yet.
-          </Text>
-        )}
-      </Stack>
+          {!shown.length && (
+            <p className="m-0 text-body text-muted-foreground">
+              No views of this kind yet.
+            </p>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 }
@@ -735,6 +865,7 @@ function SourceEditor({
   edit: { source: Source; content: Content } | null;
   saved: () => void;
 }) {
+  const formId = useId();
   const [title, setTitle] = useState(edit?.content.version.title ?? "");
   const [mode, setMode] = useState(
     edit?.content.content != null
@@ -851,22 +982,40 @@ function SourceEditor({
       onClose={() => !save.isPending && close()}
       title={edit ? "Edit source · new version" : "Import source"}
       size="xl"
-      centered
+      footer={
+        <>
+          <Button variant="secondary" disabled={save.isPending} onClick={close}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            loading={save.isPending}
+            disabled={
+              loading || (mode === "text" && (!consent || !allowContent))
+            }
+          >
+            {edit ? "Save new version" : "Import source"}
+          </Button>
+        </>
+      }
     >
       <form
+        id={formId}
+        className="grid gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate();
         }}
       >
-        <Stack>
-          <TextInput
-            label="Source title"
-            required
-            maxLength={120}
-            value={title}
-            onChange={(e) => setTitle(e.currentTarget.value)}
-          />
+        <TextField
+          label="Source title"
+          required
+          maxLength={120}
+          value={title}
+          onChange={(e) => setTitle(e.currentTarget.value)}
+        />
+        <div className="grid gap-4">
           <Select
             label="Import method"
             data={[
@@ -890,116 +1039,97 @@ function SourceEditor({
             ]}
             description="Raw classes expire after 30 days by default. This class stays with the source."
           />
-          {!allowContent && (
-            <Alert color="yellow">
-              This Brain currently allows reference-only imports.
-            </Alert>
-          )}
-          <TextInput
-            label="Source reference"
-            description="A document URL or controlled source location. Recollect does not fetch it."
-            required={mode === "reference"}
-            maxLength={2000}
-            value={uri}
-            onChange={(e) => setUri(e.currentTarget.value)}
-          />
-          {mode === "text" && (
-            <>
-              <Group justify="space-between">
-                <Select
-                  label="Text format"
-                  value={media}
-                  onChange={(v) => setMedia(v ?? "text/plain")}
-                  data={[
-                    { value: "text/plain", label: "Plain text" },
-                    { value: "text/markdown", label: "Markdown" },
-                    { value: "application/json", label: "JSON" },
-                    { value: "text/yaml", label: "YAML" },
-                    { value: "application/toml", label: "TOML" },
-                  ]}
-                />
-                <FileButton
-                  onChange={readFile}
-                  accept=".txt,.md,.markdown,.json,.yaml,.yml,.toml,.log"
-                >
-                  {(props) => (
-                    <Button
-                      {...props}
-                      variant="default"
-                      leftSection={<Upload size={iconSize.small} />}
-                      loading={loading}
-                    >
-                      Choose text file
-                    </Button>
-                  )}
-                </FileButton>
-              </Group>
-              {fileError && <Alert color="red">{fileError}</Alert>}
+        </div>
+        {!allowContent && (
+          <Alert variant="warning" role="status">
+            This Brain currently allows reference-only imports.
+          </Alert>
+        )}
+        <TextField
+          label="Source reference"
+          description="A document URL or controlled source location. Recollect does not fetch it."
+          required={mode === "reference"}
+          maxLength={2000}
+          value={uri}
+          onChange={(e) => setUri(e.currentTarget.value)}
+        />
+        {mode === "text" && (
+          <>
+            <div className="flex items-end justify-between gap-4">
+              <Select
+                className="max-w-[280px]"
+                label="Text format"
+                value={media}
+                onChange={(v) => setMedia(v ?? "text/plain")}
+                data={[
+                  { value: "text/plain", label: "Plain text" },
+                  { value: "text/markdown", label: "Markdown" },
+                  { value: "application/json", label: "JSON" },
+                  { value: "text/yaml", label: "YAML" },
+                  { value: "application/toml", label: "TOML" },
+                ]}
+              />
+              <FileButton
+                onChange={readFile}
+                accept=".txt,.md,.markdown,.json,.yaml,.yml,.toml,.log"
+              >
+                {(props) => (
+                  <Button {...props} variant="secondary" loading={loading}>
+                    <Upload aria-hidden="true" />
+                    Choose text file
+                  </Button>
+                )}
+              </FileButton>
+            </div>
+            {fileError && <Alert variant="destructive">{fileError}</Alert>}
+            <Field label="Source text" required>
               <Textarea
-                label="Source text"
                 required
                 minRows={8}
                 maxRows={18}
                 autosize
                 value={content}
                 onChange={(e) => setContent(e.currentTarget.value)}
-                styles={{
-                  input: {
-                    fontFamily: "var(--rc-font-mono)",
-                    fontSize: "var(--mantine-font-size-xs)",
-                  },
-                }}
+                className="mono text-label"
               />
-              <Checkbox
-                label="Retain this document’s text in this Brain"
-                checked={consent}
-                onChange={(e) => setConsent(e.currentTarget.checked)}
-                required
-              />
-            </>
-          )}
-          <TextInput
-            label="Observed at"
-            description="Optional ISO date/time with timezone. Leave blank when unknown."
-            placeholder="2026-09-14T10:00:00Z"
-            value={observed}
-            onChange={(e) => setObserved(e.currentTarget.value)}
-          />
-          {!edit && (
-            <MultiSelect
-              label="Organize in views"
-              searchable
-              data={groupOptions(views)}
-              value={groups}
-              onChange={setGroups}
+            </Field>
+            <Checkbox
+              label="Retain this document’s text in this Brain"
+              checked={consent}
+              onChange={(e) => setConsent(e.currentTarget.checked)}
+              required
             />
-          )}
-          {edit && (
-            <Text c="dimmed" size="xs">
-              Saving creates a new version. Previous evidence and its
-              contributor history are preserved.
-            </Text>
-          )}
-          {save.error && (
-            <Alert color="red" title="Source could not be saved">
-              {save.error.message}
-            </Alert>
-          )}
-          <Group justify="flex-end">
-            <Button variant="default" disabled={save.isPending} onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              loading={save.isPending}
-              disabled={
-                loading || (mode === "text" && (!consent || !allowContent))
-              }
-            >
-              {edit ? "Save new version" : "Import source"}
-            </Button>
-          </Group>
-        </Stack>
+          </>
+        )}
+        <TextField
+          label="Observed at"
+          description="Optional ISO date/time with timezone. Leave blank when unknown."
+          placeholder="2026-09-14T10:00:00Z"
+          inputClassName="mono"
+          value={observed}
+          onChange={(e) => setObserved(e.currentTarget.value)}
+        />
+        {!edit && (
+          <MultiSelect
+            inputClassName="relative"
+            label="Organize in views"
+            searchable
+            data={groupOptions(views)}
+            value={groups}
+            onChange={setGroups}
+          />
+        )}
+        {edit && (
+          <p className="m-0 text-caption text-muted-foreground">
+            Saving creates a new version. Previous evidence and its contributor
+            history are preserved.
+          </p>
+        )}
+        {save.error && (
+          <Alert variant="destructive" title="Source could not be saved">
+            {save.error.message}
+          </Alert>
+        )}
       </form>
     </Modal>
   );
@@ -1036,14 +1166,22 @@ export function SourceInspector({
   const catalogue = useEvidenceList(brain.id);
   if (identity.isError)
     return (
-      <Alert color="red">
+      <Alert
+        variant="destructive"
+        actions={
+          <Button
+            variant="destructive-ghost"
+            size="sm"
+            onClick={() => void identity.refetch()}
+          >
+            Retry source
+          </Button>
+        }
+      >
         {identity.error.message}
-        <Button variant="subtle" onClick={() => void identity.refetch()}>
-          Retry source
-        </Button>
       </Alert>
     );
-  if (!identity.data) return <Loader size="sm" />;
+  if (!identity.data) return <InspectorSkeleton />;
   const source = identity.data;
   const refresh = () => {
     for (const key of [
@@ -1089,6 +1227,76 @@ export function SourceInspector({
         />
       )}
     </>
+  );
+}
+
+/** Shaped placeholder while a source read is in flight. */
+function InspectorSkeleton() {
+  return (
+    <div className="grid gap-4" role="status">
+      <div className="flex items-center gap-3">
+        <Skeleton width={36} height={36} className="rounded-md" />
+        <div className="grid flex-1 gap-2">
+          <Skeleton width="70%" height={14} />
+          <Skeleton width="45%" height={10} />
+        </div>
+      </div>
+      <Skeleton height={96} className="rounded-md" />
+      <span className="sr-only">Loading source…</span>
+    </div>
+  );
+}
+
+/** One recorded stage: label, icon and value, never colour alone. */
+function Stage({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  tone: "done" | "live" | "failed" | "idle";
+}) {
+  return (
+    <div className="grid min-w-0 flex-1 content-start gap-1 rounded-md border border-border bg-card px-2.5 py-2 shadow-xs">
+      <span className="section-label">{label}</span>
+      <span className="flex items-start gap-1 text-label font-medium text-foreground">
+        {tone === "done" && (
+          <Check
+            aria-hidden="true"
+            className="mt-0.5 size-3.5 shrink-0 text-brand-text"
+          />
+        )}
+        {tone === "live" && (
+          <StatusDot tone="accent" live size={7} className="mt-1.5" />
+        )}
+        {tone === "failed" && (
+          <CircleAlert
+            aria-hidden="true"
+            className="mt-0.5 size-3.5 shrink-0 text-destructive-text"
+          />
+        )}
+        {tone === "idle" && (
+          <CircleDashed
+            aria-hidden="true"
+            className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+          />
+        )}
+        <span className="min-w-0 [overflow-wrap:anywhere]">{value}</span>
+      </span>
+    </div>
+  );
+}
+
+function StageLink({ done }: { done: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "w-3.5 shrink-0 self-center border-t",
+        done ? "border-brand/50" : "border-border-strong",
+      )}
+    />
   );
 }
 
@@ -1195,291 +1403,401 @@ function SourceViewer({
           "This source reached its retention deadline. Refresh to inspect its remaining metadata.",
         )
       : null);
+  const versions = source?.version_count ?? history.data?.total;
   const body = (
-    <Stack>
+    <div className="grid">
       {error ? (
-        <Alert color="red">
+        <Alert
+          variant="destructive"
+          actions={
+            <Button
+              variant="destructive-ghost"
+              size="sm"
+              onClick={() => {
+                void evidence.refetch();
+                void history.refetch();
+              }}
+            >
+              Try again
+            </Button>
+          }
+        >
           {error.message}
-          <Button
-            variant="subtle"
-            onClick={() => {
-              void evidence.refetch();
-              void history.refetch();
-            }}
-          >
-            Try again
-          </Button>
         </Alert>
       ) : evidence.isPending ? (
-        <Loader />
+        <InspectorSkeleton />
       ) : (
         data && (
           <>
-            <Group justify="space-between" align="flex-start">
-              <div>
-                <Title order={2}>{data.version.title}</Title>
-                <Text size="xs" c="dimmed" mt="xs">
-                  Contributed by {data.version.contributor} · recorded{" "}
-                  {timestamp(data.version.recorded_at)}
-                </Text>
+            <InspectorSection>
+              <div className="flex items-start gap-3">
+                <Tile>
+                  {data.version.availability === "reference_only" ? (
+                    <Link2 aria-hidden="true" />
+                  ) : (
+                    <FileText aria-hidden="true" />
+                  )}
+                </Tile>
+                <div className="grid min-w-0 gap-0.5">
+                  <h3 className="m-0 text-title font-semibold text-foreground [overflow-wrap:anywhere]">
+                    {data.version.title}
+                  </h3>
+                  <span className="text-caption text-muted-foreground">
+                    {kindLabel(data.version)} · contributed by{" "}
+                    {data.version.contributor}
+                  </span>
+                </div>
               </div>
-              <Badge
-                color={
-                  data.version.availability === "retained" ? "teal" : "gray"
-                }
-              >
-                {stateLabel(data.version)}
-              </Badge>
-            </Group>
-            <Text size="sm" c="dimmed">
-              Retention:{" "}
-              {(data.version.retention_class ?? "document").replaceAll(
-                "_",
-                " ",
-              )}{" "}
-              ·{" "}
-              {data.version.expires_at
-                ? "expires " + timestamp(data.version.expires_at)
-                : "until erased"}
-            </Text>
-            {data.version.excerpt && (
-              <Text size="xs" c="dimmed">
-                Supporting excerpt from source lines{" "}
-                {data.version.excerpt.first_line}–
-                {data.version.excerpt.last_line}, captured{" "}
-                {timestamp(data.version.excerpt.captured_at)}.
-              </Text>
-            )}
-            <Text size="sm" c="dimmed">
-              Observed{" "}
-              {data.version.observed_at
-                ? timestamp(data.version.observed_at)
-                : "at an unknown time"}
-            </Text>
-            {data.version.source_uri && (
-              <Text size="sm" style={{ overflowWrap: "anywhere" }}>
-                Source reference: {data.version.source_uri}
-              </Text>
-            )}
-            <details className="feature-details">
-              <summary>Version history</summary>
-              <Select
-                label="Evidence version"
-                data={[
-                  ...(data &&
-                  !history.data?.versions.some((v) => v.id === version)
-                    ? [data.version]
+            </InspectorSection>
+            <InspectorSection label="Details">
+              <PropList
+                items={[
+                  {
+                    term: "Status",
+                    value: <SourceStatus version={data.version} />,
+                  },
+                  { term: "Kind", value: kindLabel(data.version) },
+                  { term: "Contributor", value: data.version.contributor },
+                  ...(versions != null
+                    ? [
+                        {
+                          term: "Versions",
+                          value: <span className="mono">{versions}</span>,
+                        },
+                      ]
                     : []),
-                  ...(history.data?.versions ?? []),
-                ].map((v) => ({
-                  value: v.id,
-                  label: `${v.id === currentVersion ? "Current · " : "Earlier · "}${timestamp(v.recorded_at)} · ${v.contributor}`,
-                }))}
-                value={version}
-                onChange={(v) => v && onVersionChange(v)}
+                  {
+                    term: "Recorded",
+                    value: (
+                      <span className="mono">
+                        {timestamp(data.version.recorded_at)}
+                      </span>
+                    ),
+                  },
+                  {
+                    term: "Observed",
+                    value: data.version.observed_at ? (
+                      <span className="mono">
+                        {timestamp(data.version.observed_at)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        At an unknown time
+                      </span>
+                    ),
+                  },
+                  {
+                    term: "Retention",
+                    value: (
+                      <span>
+                        {words(data.version.retention_class ?? "document")} ·{" "}
+                        {data.version.expires_at ? (
+                          <span className="mono">
+                            expires {timestamp(data.version.expires_at)}
+                          </span>
+                        ) : (
+                          "until erased"
+                        )}
+                      </span>
+                    ),
+                  },
+                  ...(data.version.source_uri
+                    ? [
+                        {
+                          term: "Reference",
+                          value: (
+                            <span className="mono text-caption">
+                              {data.version.source_uri}
+                            </span>
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
               />
-              {(offset > 0 || (history.data?.total ?? 0) > 20) && (
-                <Group>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    disabled={offset === 0}
-                    onClick={() => setOffset(Math.max(0, offset - 20))}
-                  >
-                    Newer history
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    disabled={offset + 20 >= (history.data?.total ?? 0)}
-                    onClick={() => setOffset(offset + 20)}
-                  >
-                    Older history
-                  </Button>
-                </Group>
+              {data.version.excerpt && (
+                <p className="m-0 text-caption text-muted-foreground">
+                  Supporting excerpt from source lines{" "}
+                  <span className="mono">
+                    {data.version.excerpt.first_line}–
+                    {data.version.excerpt.last_line}
+                  </span>
+                  , captured{" "}
+                  <span className="mono">
+                    {timestamp(data.version.excerpt.captured_at)}
+                  </span>
+                  .
+                </p>
               )}
-            </details>
+            </InspectorSection>
+            <InspectorSection label="Processing">
+              <div className="flex items-stretch">
+                <Stage
+                  label="Contributed"
+                  value={data.version.contributor}
+                  tone="done"
+                />
+                <StageLink done />
+                <Stage
+                  label="Processing"
+                  value={stateLabel(data.version)}
+                  tone={
+                    data.version.processing === "running" &&
+                    data.version.availability === "retained"
+                      ? "live"
+                      : statusState(data.version) === "positive"
+                        ? "done"
+                        : statusState(data.version) === "negative"
+                          ? "failed"
+                          : "idle"
+                  }
+                />
+                <StageLink done={statusState(data.version) === "positive"} />
+                <Stage
+                  label="Version"
+                  value={
+                    version === currentVersion
+                      ? "Current version"
+                      : "Earlier version"
+                  }
+                  tone="done"
+                />
+              </div>
+              <p className="m-0 text-caption text-muted-foreground">
+                Only recorded stages are shown.
+              </p>
+            </InspectorSection>
             {version !== currentVersion && (
-              <Alert color="yellow">
+              <Alert variant="warning" role="status" className="my-4">
                 You are viewing an earlier source version. Current knowledge may
                 refer to newer evidence.
               </Alert>
             )}
-            {data.content != null ? (
-              <>
-                <pre
-                  className={`source-content${embedded ? " source-inspector-content" : ""}`}
-                  data-testid="source-content"
-                >
-                  {data.content}
-                </pre>
-                <Text size="xs" c="dimmed">
-                  {data.version.byte_length.toLocaleString()} retained bytes ·{" "}
-                  {data.spans.length} processed support spans
-                </Text>
-              </>
-            ) : (
-              <Alert
-                color="yellow"
-                title={
-                  data.version.availability === "reference_only"
-                    ? "Reference without retained text"
-                    : "Source text is unavailable"
-                }
-              >
-                {data.version.availability === "reference_only"
-                  ? "Recollect keeps this reference but has not verified that the external source is available."
-                  : ["expired", "erased"].includes(
-                        data.version.privacy_state ?? "active",
-                      )
-                    ? "This content was " +
-                      data.version.privacy_state +
-                      ". Retention changes cannot restore removed content."
-                    : "The recorded artifact could not be read. Restore it or import a new version; existing metadata does not recreate missing evidence."}
-              </Alert>
-            )}
-            {derived?.(version)}
-            {writable && source && (
-              <Group>
-                <Button
-                  size="sm"
-                  variant="default"
-                  disabled={
-                    version !== currentVersion ||
-                    data.version.privacy_state === "erased" ||
-                    data.version.retention_class === "support_excerpt"
+            <InspectorSection label="Content">
+              {data.content != null ? (
+                <>
+                  <pre
+                    tabIndex={0}
+                    aria-label="Retained source text"
+                    className="mono m-0 max-h-[360px] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted p-3 text-label leading-5 text-foreground scrollbar-thin"
+                    data-testid="source-content"
+                  >
+                    {data.content}
+                  </pre>
+                  <p className="mono m-0 text-caption text-muted-foreground">
+                    {data.version.byte_length.toLocaleString()} retained bytes ·{" "}
+                    {data.spans.length} processed support span
+                    {data.spans.length === 1 ? "" : "s"}
+                  </p>
+                </>
+              ) : (
+                <Alert
+                  variant="warning"
+                  role="status"
+                  title={
+                    data.version.availability === "reference_only"
+                      ? "Reference without retained text"
+                      : "Source text is unavailable"
                   }
-                  onClick={() => edit(data)}
                 >
-                  Edit source
-                </Button>
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => {
-                    setGroups(source.group_ids);
-                    setOrganizing(!organizing);
-                  }}
-                >
-                  Organize source
-                </Button>
-              </Group>
-            )}
-            <Link
-              to="/brains/$brainId/graph"
-              params={{ brainId: brain }}
-              search={{
-                kind: "knowledge",
-                center: `source_version:${version}`,
-                direction: "incoming",
-                hops: 1,
-              }}
-            >
-              Explore memory linked to this version
-            </Link>
-            <Text size="xs" c="dimmed">
-              Shows recorded eligible incoming evidence relationships; it does
-              not imply every derived memory is currently eligible.
-            </Text>
-            {!source && (
-              <Text size="xs" c="dimmed">
-                This exact version was opened directly. Edit its title or
-                grouping from its row in Sources.
-              </Text>
-            )}
-            <ActionMenu label="More source actions">
-              <Stack gap="md">
-                <Text size="sm" c="dimmed">
-                  Reprocessing, explicit learning, supporting excerpts and
-                  removal use the same Brain policy and permissions.
-                </Text>
-                <EraseAction
-                  brain={brain}
-                  permitted={admin}
-                  target={{ kind: "source", id: sourceId }}
-                  name={data.version.title}
+                  {data.version.availability === "reference_only"
+                    ? "Recollect keeps this reference but has not verified that the external source is available."
+                    : ["expired", "erased"].includes(
+                          data.version.privacy_state ?? "active",
+                        )
+                      ? "This content was " +
+                        data.version.privacy_state +
+                        ". Retention changes cannot restore removed content."
+                      : "The recorded artifact could not be read. Restore it or import a new version; existing metadata does not recreate missing evidence."}
+                </Alert>
+              )}
+              <ActionMenu label="Version history">
+                <Select
+                  label="Evidence version"
+                  data={[
+                    ...(data &&
+                    !history.data?.versions.some((v) => v.id === version)
+                      ? [data.version]
+                      : []),
+                    ...(history.data?.versions ?? []),
+                  ].map((v) => ({
+                    value: v.id,
+                    label: `${v.id === currentVersion ? "Current · " : "Earlier · "}${timestamp(v.recorded_at)} · ${v.contributor}`,
+                  }))}
+                  value={version}
+                  onChange={(v) => v && onVersionChange(v)}
                 />
-
-                {writable &&
-                  data.version.privacy_state === "active" &&
-                  data.content != null && (
-                    <ExcerptAction
-                      brain={brain}
-                      source={sourceId}
-                      version={data.version.id}
-                      title={data.version.title}
-                    />
-                  )}
-
-                <LearningAction
-                  brain={brain}
-                  version={version}
-                  writable={
-                    writable &&
-                    (data.version.privacy_state ?? "active") === "active"
-                  }
-                />
-
-                {writable &&
-                  data.version.retained &&
-                  version === currentVersion && (
+                {(offset > 0 || (history.data?.total ?? 0) > 20) && (
+                  <div className="flex gap-1">
                     <Button
                       size="sm"
-                      variant="subtle"
-                      leftSection={<RefreshCw size={iconSize.small} />}
-                      loading={process.isPending}
-                      onClick={() => process.mutate()}
+                      variant="ghost"
+                      disabled={offset === 0}
+                      onClick={() => setOffset(Math.max(0, offset - 20))}
                     >
-                      Reprocess source
+                      Newer history
                     </Button>
-                  )}
-              </Stack>
-            </ActionMenu>
-            {process.error && (
-              <Alert color="red">{process.error.message}</Alert>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={offset + 20 >= (history.data?.total ?? 0)}
+                      onClick={() => setOffset(offset + 20)}
+                    >
+                      Older history
+                    </Button>
+                  </div>
+                )}
+              </ActionMenu>
+            </InspectorSection>
+            {derived && (
+              <InspectorSection label="What this source supports">
+                {derived(version)}
+              </InspectorSection>
             )}
-            {organizing && (
-              <Card withBorder>
-                <Stack>
+            <InspectorSection label="Actions">
+              {writable && source && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={
+                      version !== currentVersion ||
+                      data.version.privacy_state === "erased" ||
+                      data.version.retention_class === "support_excerpt"
+                    }
+                    onClick={() => edit(data)}
+                  >
+                    <Pencil aria-hidden="true" />
+                    Edit source
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    aria-expanded={organizing}
+                    onClick={() => {
+                      setGroups(source.group_ids);
+                      setOrganizing(!organizing);
+                    }}
+                  >
+                    <Layers aria-hidden="true" />
+                    Organize source
+                  </Button>
+                </div>
+              )}
+              {organizing && (
+                <Card className="grid gap-3 p-3">
                   <MultiSelect
+                    inputClassName="relative"
                     label="Source views"
                     data={groupOptions(views)}
                     searchable
                     value={groups}
                     onChange={setGroups}
                   />
-                  <Text size="xs" c="dimmed">
+                  <p className="m-0 text-caption text-muted-foreground">
                     Removing an association keeps the source, history and other
                     views.
-                  </Text>
+                  </p>
                   {organize.error && (
-                    <Alert color="red">{organize.error.message}</Alert>
+                    <Alert variant="destructive">
+                      {organize.error.message}
+                    </Alert>
                   )}
-                  <Button
-                    onClick={() => organize.mutate()}
-                    loading={organize.isPending}
-                  >
-                    Save associations
-                  </Button>
-                </Stack>
-              </Card>
-            )}
+                  <div>
+                    <Button
+                      size="sm"
+                      onClick={() => organize.mutate()}
+                      loading={organize.isPending}
+                    >
+                      Save associations
+                    </Button>
+                  </div>
+                </Card>
+              )}
+              <div className="grid gap-1">
+                <Link
+                  to="/brains/$brainId/graph"
+                  params={{ brainId: brain }}
+                  search={{
+                    kind: "knowledge",
+                    center: `source_version:${version}`,
+                    direction: "incoming",
+                    hops: 1,
+                  }}
+                  className="inline-flex w-fit items-center gap-1 text-label font-medium text-brand-text underline-offset-[3px] hover:underline"
+                >
+                  Explore memory linked to this version
+                  <ArrowRight aria-hidden="true" className="size-3.5" />
+                </Link>
+                <p className="m-0 text-caption text-muted-foreground">
+                  Shows recorded eligible incoming evidence relationships; it
+                  does not imply every derived memory is currently eligible.
+                </p>
+              </div>
+              {!source && (
+                <p className="m-0 text-caption text-muted-foreground">
+                  This exact version was opened directly. Edit its title or
+                  grouping from its row in Sources.
+                </p>
+              )}
+              <ActionMenu label="More source actions">
+                <p className="m-0 text-label text-muted-foreground">
+                  Reprocessing, explicit learning, supporting excerpts and
+                  removal use the same Brain policy and permissions.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <EraseAction
+                    brain={brain}
+                    permitted={admin}
+                    target={{ kind: "source", id: sourceId }}
+                    name={data.version.title}
+                  />
+                  {writable &&
+                    data.version.privacy_state === "active" &&
+                    data.content != null && (
+                      <ExcerptAction
+                        brain={brain}
+                        source={sourceId}
+                        version={data.version.id}
+                        title={data.version.title}
+                      />
+                    )}
+                  <LearningAction
+                    brain={brain}
+                    version={version}
+                    writable={
+                      writable &&
+                      (data.version.privacy_state ?? "active") === "active"
+                    }
+                  />
+                  {writable &&
+                    data.version.retained &&
+                    version === currentVersion && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={process.isPending}
+                        onClick={() => process.mutate()}
+                      >
+                        <RefreshCw aria-hidden="true" />
+                        Reprocess source
+                      </Button>
+                    )}
+                </div>
+              </ActionMenu>
+              {process.error && (
+                <Alert variant="destructive">{process.error.message}</Alert>
+              )}
+            </InspectorSection>
           </>
         )
       )}
-    </Stack>
+    </div>
   );
   return embedded ? (
     body
   ) : (
-    <DetailInspector
-      className="feature-drawer"
-      opened
-      onClose={close}
-      title="Source evidence"
-      position="right"
-      size="min(42rem, 90vw)"
-    >
+    <DetailInspector opened onClose={close} title="Source evidence">
       {body}
     </DetailInspector>
   );

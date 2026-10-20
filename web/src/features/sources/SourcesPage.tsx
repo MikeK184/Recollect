@@ -1,12 +1,9 @@
 import { EvidencePanel } from "../../EvidencePanel";
 import { useBrain } from "../../app/context";
-import { PageHeader } from "../../components/PageHeader";
+
+/** The Sources body; the Knowledge surface renders the page frame, header
+ * and view switcher around it. */
 export function SourcesPage() {
   const brain = useBrain();
-  return (
-    <>
-      <PageHeader title="Sources" />
-      <EvidencePanel key={brain.id} brain={brain} />
-    </>
-  );
+  return <EvidencePanel key={brain.id} brain={brain} />;
 }

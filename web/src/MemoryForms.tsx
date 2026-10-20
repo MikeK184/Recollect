@@ -1,21 +1,18 @@
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
+import { Plus, Trash2, X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert,
   Badge,
   Button,
-  Card,
   Checkbox,
-  Divider,
-  Group,
-  Loader,
   MultiSelect,
   Select,
-  Stack,
-  Text,
-  Textarea,
-  TextInput,
-} from "@mantine/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+  StatusBadge,
+  TextField,
+  TextareaField,
+} from "./components/ui";
+import { InspectorSection } from "./components/Inspector";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
 type Content = components["schemas"]["ClaimContent"];
@@ -49,6 +46,22 @@ export function kindContent(kind: string): Partial<Content> {
       : {}),
   };
 }
+/** A hairline group heading inside the memory editor form. */
+function FormGroup({
+  label: text,
+  children,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid min-w-0 gap-4 border-t border-border pt-4">
+      <h3 className="section-label m-0">{text}</h3>
+      {children}
+    </section>
+  );
+}
+const muted = "m-0 text-label text-muted-foreground";
 function Lines({
   label,
   values,
@@ -62,7 +75,7 @@ function Lines({
 }) {
   const [draft, setDraft] = useState(values.join("\n"));
   return (
-    <Textarea
+    <TextareaField
       label={label}
       description="One entry per line."
       autosize
@@ -200,77 +213,127 @@ export function ContributionPicker({
     },
   });
   const error = select.error ?? selected.error ?? choices.error;
+  const eligible =
+    choices.data?.items.filter((r) => r.revision.content.kind !== "handover") ??
+    [];
   return (
-    <Stack gap="sm">
-      <Text fw={600}>Contributing memory</Text>
-      <Text size="sm" c="dimmed">
-        Choose up to 12 current claims, decisions or procedures from one
-        environment. Their exact scope and evidence are preserved.
-      </Text>
-      {error && <Alert color="red">{error.message}</Alert>}
-      {choices.isPending && <Loader size="sm" />}
-      {ids.map((id) => (
-        <Group key={id} justify="space-between">
-          <Text size="sm" className="claim-wrap">
-            {selected.data?.find((r) => r.revision.id === id)?.revision.content
-              .subject ?? "Selected revision"}
-          </Text>
-          <Button
-            size="compact-xs"
-            variant="subtle"
-            disabled={select.isPending}
-            onClick={() => select.mutate(ids.filter((value) => value !== id))}
-          >
-            Remove contribution
-          </Button>
-        </Group>
-      ))}
-      {choices.data?.items
-        .filter((r) => r.revision.content.kind !== "handover")
-        .map((row) => (
-          <Checkbox
-            key={row.revision.id}
-            label={
-              row.revision.content.subject + " · " + row.revision.content.kind
-            }
-            description={row.revision.content.value.slice(0, 140)}
-            checked={ids.includes(row.revision.id)}
-            disabled={
-              select.isPending ||
-              (!ids.includes(row.revision.id) && ids.length >= 12)
-            }
-            onChange={(e) =>
-              select.mutate(
-                e.currentTarget.checked
-                  ? [...ids, row.revision.id]
-                  : ids.filter((id) => id !== row.revision.id),
-              )
-            }
-          />
-        ))}
-      {choices.data &&
-        !choices.data.items.some(
-          (r) => r.revision.content.kind !== "handover",
-        ) && <Text c="dimmed">No eligible contributions on this page.</Text>}
-      <Group>
+    <div className="grid gap-3">
+      <div className="grid gap-1">
+        <p className="m-0 text-body font-medium text-foreground">
+          Contributing memory
+        </p>
+        <p className={muted}>
+          Choose up to 12 current claims, decisions or procedures from one
+          environment. Their exact scope and evidence are preserved.
+        </p>
+      </div>
+      {error && <Alert variant="destructive">{error.message}</Alert>}
+      {choices.isPending && (
+        <p role="status" className={muted}>
+          Loading contributions…
+        </p>
+      )}
+      {ids.length > 0 && (
+        <ul className="m-0 grid list-none gap-1.5 p-0">
+          {ids.map((id) => (
+            <li
+              key={id}
+              className="flex items-center justify-between gap-3 rounded-md bg-muted px-3 py-1.5"
+            >
+              <span className="min-w-0 text-label text-foreground [overflow-wrap:anywhere]">
+                {selected.data?.find((r) => r.revision.id === id)?.revision
+                  .content.subject ?? "Selected revision"}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={select.isPending}
+                onClick={() =>
+                  select.mutate(ids.filter((value) => value !== id))
+                }
+              >
+                <X aria-hidden="true" />
+                Remove contribution
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {eligible.length > 0 && (
+        <ul className="m-0 grid max-h-[280px] list-none overflow-auto rounded-lg border border-border p-0 scrollbar-thin">
+          {eligible.map((row) => (
+            <ContributionChoice
+              key={row.revision.id}
+              row={row}
+              checked={ids.includes(row.revision.id)}
+              disabled={
+                select.isPending ||
+                (!ids.includes(row.revision.id) && ids.length >= 12)
+              }
+              onChange={(checked) =>
+                select.mutate(
+                  checked
+                    ? [...ids, row.revision.id]
+                    : ids.filter((id) => id !== row.revision.id),
+                )
+              }
+            />
+          ))}
+        </ul>
+      )}
+      {choices.data && !eligible.length && (
+        <p className={muted}>No eligible contributions on this page.</p>
+      )}
+      <div className="flex gap-2">
         <Button
-          size="compact-sm"
-          variant="subtle"
+          size="sm"
+          variant="ghost"
           disabled={!offset}
           onClick={() => setOffset(Math.max(0, offset - 20))}
         >
           Previous contributions
         </Button>
         <Button
-          size="compact-sm"
-          variant="subtle"
+          size="sm"
+          variant="ghost"
           disabled={choices.data?.next_offset == null}
           onClick={() => setOffset(choices.data?.next_offset ?? offset)}
         >
           More contributions
         </Button>
-      </Group>
-    </Stack>
+      </div>
+    </div>
+  );
+}
+/** One selectable contribution; the value preview describes the checkbox. */
+function ContributionChoice({
+  row,
+  checked,
+  disabled,
+  onChange,
+}: {
+  row: View;
+  checked: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const id = useId();
+  return (
+    <li className="grid gap-0.5 border-b border-border px-3 py-2 last:border-b-0">
+      <Checkbox
+        label={row.revision.content.subject + " · " + row.revision.content.kind}
+        aria-describedby={`${id}-value`}
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.currentTarget.checked)}
+      />
+      <span
+        id={`${id}-value`}
+        className="pl-[26px] text-caption text-muted-foreground [overflow-wrap:anywhere]"
+      >
+        {row.revision.content.value.slice(0, 140)}
+      </span>
+    </li>
   );
 }
 export function MemoryFormFields({
@@ -291,9 +354,8 @@ export function MemoryFormFields({
   return (
     <>
       {p && (
-        <Stack>
-          <Divider label="Procedure and observed outcomes" />
-          <Textarea
+        <FormGroup label="Procedure and observed outcomes">
+          <TextareaField
             label="Procedure conditions"
             required
             maxLength={2000}
@@ -308,7 +370,7 @@ export function MemoryFormFields({
             values={p.steps}
             onChange={(steps) => patch({ procedure: { ...p, steps } })}
           />
-          <Textarea
+          <TextareaField
             label="Expected outcome"
             required
             maxLength={2000}
@@ -318,9 +380,9 @@ export function MemoryFormFields({
             }
           />
           {!p.observations.length && (
-            <Text c="dimmed">
+            <p className={muted}>
               Untested: no procedure observations recorded.
-            </Text>
+            </p>
           )}
           {p.observations.map((o, index) => {
             const update = (fields: Partial<typeof o>) =>
@@ -333,18 +395,22 @@ export function MemoryFormFields({
                 },
               });
             return (
-              <Card withBorder key={index}>
-                <Stack gap="sm">
+              <div
+                key={index}
+                className="grid gap-3 rounded-lg border border-border bg-card p-3"
+              >
+                <div className="grid grid-cols-2 gap-3">
                   <Select
                     label={"Observation result " + (index + 1)}
                     data={["success", "failure"]}
                     value={o.result}
                     onChange={(value) => update({ result: value ?? "success" })}
                   />
-                  <TextInput
+                  <TextField
                     type="datetime-local"
                     step={1}
                     required
+                    inputClassName="mono"
                     label={"Observation time (UTC) " + (index + 1)}
                     value={o.observed_at.replace(/Z$/, "").slice(0, 19)}
                     onChange={(e) =>
@@ -355,55 +421,59 @@ export function MemoryFormFields({
                       })
                     }
                   />
-                  <Textarea
-                    required
-                    label={"Tested conditions " + (index + 1)}
-                    maxLength={2000}
-                    value={o.conditions}
-                    onChange={(e) => update({ conditions: e.target.value })}
-                  />
-                  <Textarea
-                    required
-                    label={"Observed result " + (index + 1)}
-                    maxLength={2000}
-                    value={o.summary}
-                    onChange={(e) => update({ summary: e.target.value })}
-                  />
-                  <MultiSelect
-                    searchable
-                    label={"Observation evidence " + (index + 1)}
-                    data={content.supports.map((s) => ({
-                      value: s.id,
-                      label:
-                        evidence.find((e) => e.id === s.id)?.label ??
-                        s.kind.replaceAll("_", " "),
-                    }))}
-                    value={o.support_ids}
-                    onChange={(support_ids) => update({ support_ids })}
-                  />
-                  <Button
-                    variant="subtle"
-                    size="xs"
-                    color="red"
-                    onClick={() =>
-                      patch({
-                        procedure: {
-                          ...p,
-                          observations: p.observations.filter(
-                            (_, i) => i !== index,
-                          ),
-                        },
-                      })
-                    }
-                  >
-                    Remove observation
-                  </Button>
-                </Stack>
-              </Card>
+                </div>
+                <TextareaField
+                  required
+                  label={"Tested conditions " + (index + 1)}
+                  maxLength={2000}
+                  value={o.conditions}
+                  onChange={(e) => update({ conditions: e.target.value })}
+                />
+                <TextareaField
+                  required
+                  label={"Observed result " + (index + 1)}
+                  maxLength={2000}
+                  value={o.summary}
+                  onChange={(e) => update({ summary: e.target.value })}
+                />
+                <MultiSelect
+                  inputClassName="relative"
+                  searchable
+                  label={"Observation evidence " + (index + 1)}
+                  data={content.supports.map((s) => ({
+                    value: s.id,
+                    label:
+                      evidence.find((e) => e.id === s.id)?.label ??
+                      s.kind.replaceAll("_", " "),
+                  }))}
+                  value={o.support_ids}
+                  onChange={(support_ids) => update({ support_ids })}
+                />
+                <Button
+                  variant="destructive-ghost"
+                  size="sm"
+                  className="w-fit"
+                  onClick={() =>
+                    patch({
+                      procedure: {
+                        ...p,
+                        observations: p.observations.filter(
+                          (_, i) => i !== index,
+                        ),
+                      },
+                    })
+                  }
+                >
+                  <Trash2 aria-hidden="true" />
+                  Remove observation
+                </Button>
+              </div>
             );
           })}
           <Button
-            variant="light"
+            variant="secondary"
+            size="sm"
+            className="w-fit"
             disabled={p.observations.length >= 20}
             onClick={() =>
               patch({
@@ -423,17 +493,17 @@ export function MemoryFormFields({
               })
             }
           >
+            <Plus aria-hidden="true" />
             Add procedure observation
           </Button>
-          <Text size="sm" c="dimmed">
+          <p className={muted}>
             Observations use this record's environment and revision
             applicability. Recording a procedure does not execute it.
-          </Text>
-        </Stack>
+          </p>
+        </FormGroup>
       )}
       {h && (
-        <Stack>
-          <Divider label="Handover" />
+        <FormGroup label="Handover">
           <ContributionPicker
             brain={brain}
             ids={h.contributions}
@@ -451,10 +521,10 @@ export function MemoryFormFields({
               onEvidence(combined.evidence);
             }}
           />
-          <Text size="sm" c="dimmed">
+          <p className={muted}>
             Contributions set scope and supporting evidence. Add any extra
             evidence after choosing them.
-          </Text>
+          </p>
           <Lines
             label="Completed work"
             values={h.completed}
@@ -470,7 +540,7 @@ export function MemoryFormFields({
             values={h.risks}
             onChange={(risks) => patch({ handover: { ...h, risks } })}
           />
-        </Stack>
+        </FormGroup>
       )}
     </>
   );
@@ -489,51 +559,70 @@ export function MemoryFormDetails({
   return (
     <>
       {p && (
-        <Stack>
-          <Divider label="Procedure" />
-          <Text fw={600}>Conditions</Text>
-          <Text className="claim-wrap">{p.conditions}</Text>
-          <ol>
+        <InspectorSection label="Procedure">
+          <div className="grid gap-1">
+            <p className="m-0 text-label font-medium text-foreground">
+              Conditions
+            </p>
+            <p className="m-0 text-body text-foreground-secondary [overflow-wrap:anywhere]">
+              {p.conditions}
+            </p>
+          </div>
+          <ol className="m-0 grid gap-1 pl-5 text-body text-foreground-secondary">
             {p.steps.map((step, i) => (
-              <li key={i} className="claim-wrap">
+              <li key={i} className="[overflow-wrap:anywhere]">
                 {step}
               </li>
             ))}
           </ol>
-          <Text fw={600}>Expected outcome</Text>
-          <Text className="claim-wrap">{p.expected_outcome}</Text>
-          {!p.observations.length && <Badge color="gray">Untested</Badge>}
+          <div className="grid gap-1">
+            <p className="m-0 text-label font-medium text-foreground">
+              Expected outcome
+            </p>
+            <p className="m-0 text-body text-foreground-secondary [overflow-wrap:anywhere]">
+              {p.expected_outcome}
+            </p>
+          </div>
+          {!p.observations.length && (
+            <div>
+              <Badge>Untested</Badge>
+            </div>
+          )}
           {p.observations.map((o, i) => (
-            <Card withBorder key={i}>
-              <Stack gap="xs">
-                <Badge
-                  color={o.result === "success" ? "teal" : "orange"}
-                  w="fit-content"
+            <div
+              key={i}
+              className="grid gap-1.5 rounded-lg border border-border bg-card p-3"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge
+                  state={o.result === "success" ? "positive" : "attention"}
                 >
                   Observed {o.result}
-                </Badge>
-                <Text size="sm">
+                </StatusBadge>
+                <span className="mono text-caption text-muted-foreground">
                   {new Date(o.observed_at).toLocaleString()}
-                </Text>
-                <Text size="sm" className="claim-wrap">
-                  {o.conditions}
-                </Text>
-                <Text className="claim-wrap">{o.summary}</Text>
-                <Text size="xs" c="dimmed">
-                  {o.support_ids.length} linked evidence supports
-                </Text>
-              </Stack>
-            </Card>
+                </span>
+              </div>
+              <p className="m-0 text-label text-foreground-secondary [overflow-wrap:anywhere]">
+                {o.conditions}
+              </p>
+              <p className="m-0 text-body text-foreground [overflow-wrap:anywhere]">
+                {o.summary}
+              </p>
+              <p className="m-0 text-caption text-muted-foreground">
+                <span className="mono">{o.support_ids.length}</span> linked
+                evidence supports
+              </p>
+            </div>
           ))}
-          <Text size="sm" c="dimmed">
+          <p className={muted}>
             These are attributed observations for the applicability below. This
             record does not grant execution permission.
-          </Text>
-        </Stack>
+          </p>
+        </InspectorSection>
       )}
       {h && (
-        <Stack>
-          <Divider label="Handover" />
+        <InspectorSection label="Handover">
           {(
             [
               ["Completed work", h.completed],
@@ -541,83 +630,89 @@ export function MemoryFormDetails({
               ["Risks and open questions", h.risks],
             ] as const
           ).map(([title, values]) => (
-            <div key={title}>
-              <Text fw={600}>{title}</Text>
+            <div key={title} className="grid gap-1">
+              <p className="m-0 text-label font-medium text-foreground">
+                {title}
+              </p>
               {values.length ? (
-                <ul>
+                <ul className="m-0 grid gap-1 pl-5 text-body text-foreground-secondary">
                   {values.map((value, i) => (
-                    <li key={i} className="claim-wrap">
+                    <li key={i} className="[overflow-wrap:anywhere]">
                       {value}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <Text c="dimmed">None recorded.</Text>
+                <p className={muted}>None recorded.</p>
               )}
             </div>
           ))}
-          <Text fw={600}>Exact contributions</Text>
+          <p className="m-0 text-label font-medium text-foreground">
+            Exact contributions
+          </p>
           {view.contributions?.map((c) => (
-            <Card withBorder key={c.revision_id}>
-              <Stack gap="xs">
-                <Badge
-                  color={c.state === "current" ? "gray" : "yellow"}
-                  w="fit-content"
-                >
-                  {c.state}
-                </Badge>
-                {c.revision ? (
-                  <>
-                    <Button
-                      variant="subtle"
-                      justify="start"
-                      h="auto"
-                      className="claim-evidence-button"
-                      onClick={() =>
-                        onInspect(c.revision!.claim_id, c.revision!.recorded_at)
-                      }
-                    >
-                      {c.revision.content.subject}
-                    </Button>
-                    <Text size="sm">
-                      Review: {c.revision.review} · Freshness:{" "}
-                      {c.eligibility?.effective_freshness} · Assessment:{" "}
-                      {c.revision.content.operational}
-                    </Text>
-                    <Text size="sm" className="claim-wrap">
-                      Repositories:{" "}
-                      {(c.revision.content.selection.repository_ids ?? [])
-                        .map(
-                          (id) =>
-                            catalogue?.repositories.find((r) => r.id === id)
-                              ?.canonical_origin ?? id,
-                        )
-                        .join(", ") || "All in this Brain"}
-                    </Text>
-                    <Text size="sm">
-                      Environment:{" "}
-                      {catalogue?.environments.find(
-                        (e) =>
-                          e.id === c.revision!.content.selection.environment_id,
-                      )?.name ??
-                        (c.revision.content.selection.environment_id
-                          ? "Selected environment"
-                          : "All in this Brain")}
-                    </Text>
-                    {!!c.revision.content.manifest_revision_id && (
-                      <Text size="xs" className="claim-wrap">
-                        Exact manifest:{" "}
-                        {c.revision.content.manifest_revision_id}
-                      </Text>
-                    )}
-                  </>
+            <div
+              key={c.revision_id}
+              className="grid gap-1.5 rounded-lg border border-border bg-card p-3"
+            >
+              <div>
+                {c.state === "current" ? (
+                  <Badge>{c.state}</Badge>
                 ) : (
-                  <Text>Contributing content is unavailable.</Text>
+                  <StatusBadge state="attention">{c.state}</StatusBadge>
                 )}
-              </Stack>
-            </Card>
+              </div>
+              {c.revision ? (
+                <>
+                  <Button
+                    variant="link"
+                    className="claim-evidence-button w-fit justify-start text-left [overflow-wrap:anywhere] whitespace-normal"
+                    onClick={() =>
+                      onInspect(c.revision!.claim_id, c.revision!.recorded_at)
+                    }
+                  >
+                    {c.revision.content.subject}
+                  </Button>
+                  <p className="m-0 text-label text-foreground-secondary">
+                    Review: {c.revision.review} · Freshness:{" "}
+                    {c.eligibility?.effective_freshness} · Assessment:{" "}
+                    {c.revision.content.operational}
+                  </p>
+                  <p className="m-0 text-label text-foreground-secondary [overflow-wrap:anywhere]">
+                    Repositories:{" "}
+                    {(c.revision.content.selection.repository_ids ?? [])
+                      .map(
+                        (id) =>
+                          catalogue?.repositories.find((r) => r.id === id)
+                            ?.canonical_origin ?? id,
+                      )
+                      .join(", ") || "All in this Brain"}
+                  </p>
+                  <p className="m-0 text-label text-foreground-secondary">
+                    Environment:{" "}
+                    {catalogue?.environments.find(
+                      (e) =>
+                        e.id === c.revision!.content.selection.environment_id,
+                    )?.name ??
+                      (c.revision.content.selection.environment_id
+                        ? "Selected environment"
+                        : "All in this Brain")}
+                  </p>
+                  {!!c.revision.content.manifest_revision_id && (
+                    <p className="m-0 text-caption text-muted-foreground [overflow-wrap:anywhere]">
+                      Exact manifest:{" "}
+                      <span className="mono">
+                        {c.revision.content.manifest_revision_id}
+                      </span>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className={muted}>Contributing content is unavailable.</p>
+              )}
+            </div>
           ))}
-        </Stack>
+        </InspectorSection>
       )}
     </>
   );

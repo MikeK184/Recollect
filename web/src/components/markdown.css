@@ -1,7 +1,11 @@
+/* Rendered Markdown (answers, evidence, tool descriptions). Content markup
+   comes from react-markdown, so it is styled by descendant selectors here;
+   every value is a version 2 token. */
 .rc-markdown {
   min-width: 0;
-  font-size: 0.9375rem;
-  line-height: 1.7;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 22px;
   overflow-wrap: anywhere;
 }
 .rc-markdown > :first-child {
@@ -14,208 +18,210 @@
 .rc-markdown h4,
 .rc-markdown h5,
 .rc-markdown h6 {
-  font-family: var(--mantine-font-family);
-  font-size: 1rem;
-  line-height: 1.4;
-  margin: 1.4em 0 0.65em;
+  margin: 1.25em 0 0.5em;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: -0.011em;
 }
 .rc-markdown p,
 .rc-markdown ul,
 .rc-markdown ol {
-  margin-block: 0.7em;
+  margin-block: 0.6em;
+}
+.rc-markdown ul,
+.rc-markdown ol {
+  padding-left: 1.25em;
+}
+.rc-markdown ul {
+  list-style: disc;
+}
+.rc-markdown ol {
+  list-style: decimal;
 }
 .rc-markdown.markdown-preserve-lines > p {
   white-space: pre-line;
 }
 .rc-markdown li {
-  margin-block: 0.25em;
+  margin-block: 0.2em;
+}
+.rc-markdown li::marker {
+  color: var(--faint-foreground);
 }
 .rc-markdown a {
-  color: var(--rc-accent);
+  color: var(--brand-text);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
   text-underline-offset: 3px;
+}
+.rc-markdown a:hover {
+  text-decoration-color: currentColor;
+}
+.rc-markdown strong {
+  font-weight: 600;
+}
+.rc-markdown hr {
+  margin: 1.25em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
 }
 .rc-markdown blockquote {
   margin: 1em 0;
-  padding: 0.2em 1em;
-  border-left: 3px solid var(--rc-border);
-  color: var(--rc-secondary);
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--foreground-secondary);
 }
 .rc-markdown :not(pre) > code {
-  font-family: var(--rc-font-mono);
-  background: var(--rc-selection);
-  border-radius: 3px;
-  padding: 0.12em 0.35em;
-  font-size: 0.85em;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--secondary);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
-.markdown-code {
-  max-width: 100%;
-  margin: 1em 0;
-  border: 1px solid var(--rc-border);
-  border-radius: 7px;
-  overflow: hidden;
-  background: var(--rc-surface);
+/* Answers and quoted memory use the serif reading face. */
+.rc-markdown.markdown-answer {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 28px;
+  max-width: var(--reading-measure);
 }
-.markdown-code-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--rc-border);
-  color: var(--rc-muted);
-  font-family: var(--rc-font-mono);
-  font-size: 0.6875rem;
-}
-.markdown-code-toolbar button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px;
-  border: 0;
-  background: transparent;
-  color: var(--rc-secondary);
-  font: inherit;
-  cursor: pointer;
-}
-.markdown-code-actions { display: flex; align-items: center; gap: 12px; }
-.tool-description > .tool-description-preview { margin: 6px 0; }
-.tool-description:has(> details[open]) > .tool-description-preview { display: none; }
-.tool-description:not(:has(> details)) > .tool-description-preview {
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
-}
-.tool-description > details > summary { font-size: 12px; color: var(--rc-accent); cursor: pointer; }
-.tool-description > details[open] > summary { margin-bottom: 8px; }
-.markdown-code pre,
-.markdown-original pre {
-  max-width: 100%;
-  max-height: 420px;
-  overflow: auto;
-  margin: 0;
-  padding: 14px;
-  font-family: var(--rc-font-mono);
-  font-size: 0.8125rem;
-  line-height: 1.65;
-  white-space: pre;
-  overflow-wrap: normal;
+.rc-markdown.markdown-answer h3,
+.rc-markdown.markdown-answer h4 {
+  font-family: var(--font-sans);
 }
 .markdown-code pre > code {
-  display: block;
-  white-space: pre;
   padding: 0;
   border: 0;
-  border-radius: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-family: var(--rc-font-mono);
-}
-.tool-description-preview {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  color: var(--rc-secondary);
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-.tool-description-preview p {
-  margin: 0;
-}
-.tool-description-preview .markdown-code {
-  display: none;
 }
 .markdown-code .hljs-keyword,
 .markdown-code .hljs-literal,
-.markdown-code .hljs-selector-tag {
-  color: var(--rc-cat-procedure);
+.markdown-code .hljs-selector-tag,
+.markdown-code-tokens .hljs-keyword,
+.markdown-code-tokens .hljs-literal {
+  color: var(--kind-procedure);
 }
 .markdown-code .hljs-string,
 .markdown-code .hljs-attr,
-.markdown-code .hljs-title {
-  color: var(--rc-accent);
+.markdown-code .hljs-title,
+.markdown-code-tokens .hljs-string,
+.markdown-code-tokens .hljs-attr,
+.markdown-code-tokens .hljs-title {
+  color: var(--kind-source);
 }
 .markdown-code .hljs-number,
-.markdown-code .hljs-built_in {
-  color: var(--rc-amber);
+.markdown-code .hljs-built_in,
+.markdown-code-tokens .hljs-number,
+.markdown-code-tokens .hljs-built_in {
+  color: var(--kind-decision);
 }
 .markdown-code .hljs-comment,
-.markdown-code .hljs-quote {
-  color: var(--rc-muted);
+.markdown-code .hljs-quote,
+.markdown-code-tokens .hljs-comment {
+  color: var(--muted-foreground);
   font-style: italic;
 }
 .markdown-table {
   max-width: 100%;
-  overflow: auto;
   margin-block: 1em;
-  border: 1px solid var(--rc-border);
-  border-radius: 6px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
 }
 .markdown-table table {
-  border-collapse: collapse;
   width: 100%;
-  font-size: 0.8125rem;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
 }
 .markdown-table th,
 .markdown-table td {
-  padding: 9px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--rc-border);
   min-width: 90px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
 }
 .markdown-table th {
-  background: var(--rc-sidebar);
-  font-weight: 600;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
 }
 .markdown-table tr:last-child td {
   border-bottom: 0;
 }
 .markdown-original {
   margin-top: 16px;
-  color: var(--rc-muted);
-  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+  font-size: 12px;
 }
 .markdown-original > summary {
   cursor: pointer;
 }
 .markdown-original pre {
-  margin-top: 8px;
+  max-height: 420px;
+  margin: 8px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  color: var(--foreground-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: var(--rc-sidebar);
-  color: var(--rc-secondary);
-}
-.markdown-copy-error {
-  display: block;
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  color: var(--rc-secondary);
 }
 .markdown-image-label {
-  color: var(--rc-muted);
+  color: var(--muted-foreground);
   font-size: 0.875em;
 }
-
 .markdown-loading {
   margin: 0;
+  font-family: var(--font-sans);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-family: var(--rc-font-ui);
 }
-
-.markdown-code-tokens .hljs-keyword,
-.markdown-code-tokens .hljs-literal {
-  color: var(--rc-cat-procedure);
+/* Tool descriptions: a two-line preview that expands into full Markdown. */
+.tool-description > .tool-description-preview {
+  margin: 6px 0;
 }
-.markdown-code-tokens .hljs-string,
-.markdown-code-tokens .hljs-attr,
-.markdown-code-tokens .hljs-title {
-  color: var(--rc-accent);
+.tool-description:has(> details[open]) > .tool-description-preview {
+  display: none;
 }
-.markdown-code-tokens .hljs-number,
-.markdown-code-tokens .hljs-built_in {
-  color: var(--rc-amber);
+.tool-description:not(:has(> details)) > .tool-description-preview {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
 }
-.markdown-code-tokens .hljs-comment {
-  color: var(--rc-muted);
+.tool-description > details > summary {
+  color: var(--brand-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.tool-description > details[open] > summary {
+  margin-bottom: 8px;
+}
+.tool-description-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--foreground-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.tool-description-preview p {
+  margin: 0;
+}
+.tool-description-preview .markdown-code {
+  display: none;
 }

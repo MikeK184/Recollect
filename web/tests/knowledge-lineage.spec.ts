@@ -353,7 +353,7 @@ test("dense rows keep the three status dimensions readable as text and hide mach
   // One composite status mark whose meaning is also its text.
   await expect(row.locator(".memory-record-status")).toHaveCount(1);
   await expect(
-    row.locator(".memory-record-status .mantine-Badge-root"),
+    row.locator(".memory-record-status [data-slot='badge']"),
   ).toHaveCount(1);
   const statusText = (
     await row.locator(".memory-record-status").allInnerTexts()
@@ -369,7 +369,7 @@ test("dense rows keep the three status dimensions readable as text and hide mach
   await page.goto(`/brains/${fixture.brain}/sources`);
   const sourceRow = page.locator(".source-row").first();
   await expect(sourceRow.locator(".source-record-line")).toHaveCount(2);
-  await expect(sourceRow.locator(".mantine-Badge-root")).toHaveCount(2);
+  await expect(sourceRow.locator("[data-slot='badge']")).toHaveCount(2);
   const sourceRows = (await page.locator(".source-row").allInnerTexts()).join(
     "\n",
   );

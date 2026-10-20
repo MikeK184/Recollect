@@ -1,23 +1,5 @@
 import { useEffect, useState } from "react";
-import "./features/feature-views.css";
-import "./features/settings/ai-settings.css";
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Divider,
-  Group,
-  Loader,
-  Modal,
-  MultiSelect,
-  NumberInput,
-  Select,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { Sparkles } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, type Brain } from "./api";
 import type { components } from "./api-schema";
@@ -33,6 +15,22 @@ import {
   SelectedModelsCard,
   UsageSection,
 } from "./ModelsSections";
+import { EmptyState } from "./components/AsyncState";
+import { SkeletonRows } from "./components/Skeleton";
+import {
+  Alert,
+  Button,
+  Card,
+  Modal,
+  MultiSelect,
+  NumberField,
+  Select,
+  StatusBadge,
+  Switch,
+  TextField,
+} from "./components/ui";
+import { useFirstLoadStagger } from "./features/activity/firstLoad";
+import { cn } from "./lib/utils";
 
 type Policy = components["schemas"]["ModelPolicy"];
 type Settings = components["schemas"]["ModelSettings"];
@@ -119,17 +117,21 @@ function PolicyEditor({
     },
   ];
   return (
-    <Modal opened onClose={onClose} title="AI permissions" size="lg">
-      <Stack>
-        <Text size="sm">
-          Choose what this Brain may send to the installed provider. Capture
-          permission is separate.
-        </Text>
+    <Modal
+      opened
+      onClose={onClose}
+      title="AI permissions"
+      description="Choose what this Brain may send to the installed provider. Capture permission is separate."
+      size="lg"
+      footer={
+        <Button loading={save.isPending} onClick={() => save.mutate()}>
+          Save AI permissions
+        </Button>
+      }
+    >
+      <div className="grid gap-4">
         <Switch
           label="Allow model transmission"
-          description={
-            draft.text_model ? undefined : "Choose a text model first."
-          }
           disabled={!draft.text_model}
           checked={draft.enabled}
           onChange={(e) =>
@@ -141,6 +143,11 @@ function PolicyEditor({
             })
           }
         />
+        {!draft.text_model && (
+          <p className="-mt-3 m-0 pl-[42px] text-caption text-muted-foreground">
+            Choose a text model first.
+          </p>
+        )}
         <MultiSelect
           searchable
           label="Permitted processing"
@@ -168,68 +175,84 @@ function PolicyEditor({
           value={draft.content_classes}
           onChange={(content_classes) => patch({ content_classes })}
         />
-        <Text size="xs" c="dimmed">
+        <p className="m-0 text-caption text-muted-foreground">
           Query permission is also required for Ask, semantic search and the
           fixed synthetic connection check. Answering is a separate permission
           and does not run tools or save conversations.
-        </Text>
-        <details className="feature-advanced">
-          <summary>Resource limits and automatic processing</summary>
-          <Stack mt="md">
-            {" "}
-            <TextInput
-              label="Text model"
-              placeholder="Not selected"
-              value={draft.text_model}
-              readOnly
-            />
-            <TextInput
-              label="Embedding model"
-              value={draft.embedding_model}
-              readOnly
-            />
-            <Text size="sm">
-              {draft.embedding_dimensions.toLocaleString()} embedding dimensions
-              · {settings.installed.endpoint}
-            </Text>
-            {limits.map((field) => (
-              <NumberInput
-                key={field.key}
-                label={field.name}
-                value={draft[field.key]}
-                min={field.min}
-                max={field.max}
-                allowDecimal={false}
-                onChange={(value) => patch({ [field.key]: Number(value) })}
+        </p>
+        <details className="group rounded-lg border border-border">
+          <summary className="cursor-pointer px-3.5 py-2.5 text-label font-medium text-foreground">
+            Resource limits and automatic processing
+          </summary>
+          <div className="grid gap-4 border-t border-border px-3.5 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <TextField
+                label="Text model"
+                placeholder="Not selected"
+                value={draft.text_model}
+                inputClassName="mono"
+                readOnly
               />
-            ))}
-            <Switch
-              label="Build semantic search automatically"
-              checked={draft.automatic_embedding ?? false}
-              disabled={!draft.enabled || !draft.purposes.includes("embedding")}
-              onChange={(e) =>
-                patch({ automatic_embedding: e.currentTarget.checked })
-              }
-            />
-            <Text size="sm">
-              Index existing and newly eligible content using the approved
-              embedding model and content classes. Processing runs in the
-              background without per-record review.
-            </Text>
-            <Switch
-              label="Maintain memory autonomously"
-              checked={draft.autonomous_memory}
-              onChange={(e) => {
-                const autonomous_memory = e.currentTarget.checked;
-                patch({ autonomous_memory });
-              }}
-            />
-            <Text size="sm">
-              Automatically learn permitted sources, reconcile changes and
-              refresh generated handovers. Supported results are accepted by
-              policy; uncertain evidence stays labeled. Human review is
-              optional.
-            </Text>
+              <TextField
+                label="Embedding model"
+                value={draft.embedding_model}
+                inputClassName="mono"
+                readOnly
+              />
+            </div>
+            <p className="m-0 text-label text-foreground-secondary">
+              <span className="mono">
+                {draft.embedding_dimensions.toLocaleString()}
+              </span>{" "}
+              embedding dimensions ·{" "}
+              <span className="mono">{settings.installed.endpoint}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {limits.map((field) => (
+                <NumberField
+                  key={field.key}
+                  label={field.name}
+                  value={draft[field.key]}
+                  min={field.min}
+                  max={field.max}
+                  allowDecimal={false}
+                  onChange={(value) => patch({ [field.key]: Number(value) })}
+                />
+              ))}
+            </div>
+            <div className="grid gap-1">
+              <Switch
+                label="Build semantic search automatically"
+                checked={draft.automatic_embedding ?? false}
+                disabled={
+                  !draft.enabled || !draft.purposes.includes("embedding")
+                }
+                onChange={(e) =>
+                  patch({ automatic_embedding: e.currentTarget.checked })
+                }
+              />
+              <p className="m-0 pl-[42px] text-caption text-muted-foreground">
+                Index existing and newly eligible content using the approved
+                embedding model and content classes. Processing runs in the
+                background without per-record review.
+              </p>
+            </div>
+            <div className="grid gap-1">
+              <Switch
+                label="Maintain memory autonomously"
+                checked={draft.autonomous_memory}
+                onChange={(e) => {
+                  const autonomous_memory = e.currentTarget.checked;
+                  patch({ autonomous_memory });
+                }}
+              />
+              <p className="m-0 pl-[42px] text-caption text-muted-foreground">
+                Automatically learn permitted sources, reconcile changes and
+                refresh generated handovers. Supported results are accepted by
+                policy; uncertain evidence stays labeled. Human review is
+                optional.
+              </p>
+            </div>
             {!draft.autonomous_memory && (
               <>
                 <Switch
@@ -244,7 +267,12 @@ function PolicyEditor({
                     patch({ automatic_learning: e.currentTarget.checked })
                   }
                 />
-                <Divider label="Automatic acceptance" />
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="text-caption font-medium text-muted-foreground">
+                    Automatic acceptance
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
                 <Switch
                   label="Accept permitted literal configuration facts"
                   checked={!!draft.acceptance}
@@ -263,13 +291,14 @@ function PolicyEditor({
                 />
                 {draft.acceptance && (
                   <>
-                    <Text size="sm">
-                      Only exact declarations such as Amber.port = 8080 can
+                    <p className="m-0 text-label text-foreground-secondary">
+                      Only exact declarations such as{" "}
+                      <span className="mono">Amber.port = 8080</span> can
                       qualify. In explicit mode, other interpretations remain
                       proposals. Acceptance records this policy and does not
                       create a human reviewer.
-                    </Text>
-                    <TextInput
+                    </p>
+                    <TextField
                       label="Acceptance rule name"
                       value={draft.acceptance.name}
                       onChange={(e) =>
@@ -281,7 +310,7 @@ function PolicyEditor({
                         })
                       }
                     />
-                    <TextInput
+                    <TextField
                       label="Allowed literal properties"
                       description="Comma-separated property names, for example port, protocol"
                       value={properties}
@@ -330,13 +359,10 @@ function PolicyEditor({
                 )}
               </>
             )}
-          </Stack>
+          </div>
         </details>
         <Failure error={save.error} />
-        <Button loading={save.isPending} onClick={() => save.mutate()}>
-          Save AI permissions
-        </Button>
-      </Stack>
+      </div>
     </Modal>
   );
 }
@@ -358,50 +384,81 @@ function PolicyHistory({
       ),
   });
   return (
-    <Modal opened onClose={onClose} title="Model policy history" size="lg">
-      <Stack>
-        <Failure error={history.error} />
-        {history.isPending && <Loader />}
-        {history.data?.length === 0 && <Text>No saved policy revisions.</Text>}
-        {history.data?.map((p) => (
-          <Card key={p.change_id} withBorder>
-            <Text fw={600}>
-              {p.created_at ? time(p.created_at) : "Initial policy"} ·{" "}
-              {p.policy.enabled ? "Enabled" : "Disabled"}
-            </Text>
-            <Text size="sm">
-              {p.policy.text_model || "No text model selected"} ·{" "}
-              {p.policy.embedding_model}
-            </Text>
-            <Text size="sm">
-              Purposes: {p.policy.purposes.join(", ") || "none"}. Content:{" "}
-              {p.policy.content_classes.map(label).join(", ") || "none"}.
-            </Text>
-            <Text size="xs">
-              Acceptance:{" "}
-              {p.policy.autonomous_memory
-                ? "Autonomous evidence policy"
-                : (p.policy.acceptance?.name ?? "Explicit proposals")}
-            </Text>
-          </Card>
-        ))}
-        <Group>
+    <Modal
+      opened
+      onClose={onClose}
+      title="Model policy history"
+      size="lg"
+      footer={
+        <>
           <Button
-            variant="subtle"
+            variant="ghost"
             disabled={!offset}
             onClick={() => setOffset(Math.max(0, offset - 20))}
           >
             Newer policies
           </Button>
           <Button
-            variant="subtle"
+            variant="ghost"
             disabled={(history.data?.length ?? 0) < 20}
             onClick={() => setOffset(offset + 20)}
           >
             Older policies
           </Button>
-        </Group>
-      </Stack>
+        </>
+      }
+    >
+      <div className="grid gap-3">
+        <Failure error={history.error} />
+        {history.isPending && (
+          <SkeletonRows rows={3} label="Loading policy history…" />
+        )}
+        {history.data?.length === 0 && (
+          <p className="m-0 text-body text-muted-foreground">
+            No saved policy revisions.
+          </p>
+        )}
+        {!!history.data?.length && (
+          <ol className="m-0 grid list-none gap-0 p-0">
+            {history.data.map((p) => (
+              <li
+                key={p.change_id}
+                className="relative grid gap-1 border-l border-border pb-4 pl-5 last:pb-0"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute -left-[5px] top-1.5 size-[9px] rounded-full border-2 border-card",
+                    p.policy.enabled ? "bg-brand" : "bg-faint-foreground",
+                  )}
+                />
+                <p className="m-0 flex flex-wrap items-center gap-2 text-body font-semibold text-foreground">
+                  <span className="mono text-label">
+                    {p.created_at ? time(p.created_at) : "Initial policy"}
+                  </span>
+                  <StatusBadge state={p.policy.enabled ? "positive" : "neutral"}>
+                    {p.policy.enabled ? "Enabled" : "Disabled"}
+                  </StatusBadge>
+                </p>
+                <p className="m-0 mono text-label text-foreground-secondary">
+                  {p.policy.text_model || "No text model selected"} ·{" "}
+                  {p.policy.embedding_model}
+                </p>
+                <p className="m-0 text-label text-foreground-secondary">
+                  Purposes: {p.policy.purposes.join(", ") || "none"}. Content:{" "}
+                  {p.policy.content_classes.map(label).join(", ") || "none"}.
+                </p>
+                <p className="m-0 text-caption text-muted-foreground">
+                  Acceptance:{" "}
+                  {p.policy.autonomous_memory
+                    ? "Autonomous evidence policy"
+                    : (p.policy.acceptance?.name ?? "Explicit proposals")}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </Modal>
   );
 }
@@ -417,7 +474,8 @@ export function LearningAction({
   const [opened, setOpened] = useState(false);
   return writable ? (
     <>
-      <Button variant="light" onClick={() => setOpened(true)}>
+      <Button variant="secondary" size="sm" onClick={() => setOpened(true)}>
+        <Sparkles aria-hidden="true" />
         Learn from this source
       </Button>
       {opened && (
@@ -489,15 +547,27 @@ function LearningEditor({
     },
   });
   return (
-    <Modal opened onClose={onClose} title="Learn from source" size="lg">
-      <Stack>
-        <Text size="sm">
+    <Modal
+      opened
+      onClose={onClose}
+      title="Learn from source"
+      size="lg"
+      footer={
+        save.data ? undefined : (
+          <Button loading={save.isPending} onClick={() => save.mutate()}>
+            Queue learning
+          </Button>
+        )
+      }
+    >
+      <div className="grid gap-4">
+        <p className="m-0 text-body text-foreground-secondary">
           Extract supported claims from this exact retained version using the
           Brain's model policy. Empty applicability means the whole Brain.
           Supported results are accepted under autonomous policy; uncertainty
           remains labeled. Legacy explicit mode uses its configured acceptance
           rules.
-        </Text>
+        </p>
         <MultiSelect
           searchable
           label="Learning repositories"
@@ -524,59 +594,57 @@ function LearningEditor({
           value={selection.area_ids ?? []}
           onChange={(area_ids) => setSelection({ ...selection, area_ids })}
         />
-        <Select
-          label="Learning environment"
-          clearable
-          data={
-            catalogue.data?.environments.map((r) => ({
-              value: r.id,
-              label: r.name,
-            })) ?? []
-          }
-          value={selection.environment_id}
-          onChange={(environment_id) => {
-            setSelection({ ...selection, environment_id });
-            setManifest(null);
-            setOffset(0);
-          }}
-        />
-        <Select
-          label="Learning manifest revision"
-          clearable
-          data={
-            manifests.data?.items.map((m) => ({
-              value: m.id,
-              label: m.name + " · " + time(m.created_at),
-            })) ?? []
-          }
-          value={manifest}
-          onChange={(value) => {
-            setManifest(value);
-            const entry = manifests.data?.items.find((m) => m.id === value);
-            if (entry)
-              setSelection({
-                ...selection,
-                environment_id: entry.environment_id,
-              });
-          }}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <Select
+            label="Learning environment"
+            clearable
+            data={
+              catalogue.data?.environments.map((r) => ({
+                value: r.id,
+                label: r.name,
+              })) ?? []
+            }
+            value={selection.environment_id}
+            onChange={(environment_id) => {
+              setSelection({ ...selection, environment_id });
+              setManifest(null);
+              setOffset(0);
+            }}
+          />
+          <Select
+            label="Learning manifest revision"
+            clearable
+            data={
+              manifests.data?.items.map((m) => ({
+                value: m.id,
+                label: m.name + " · " + time(m.created_at),
+              })) ?? []
+            }
+            value={manifest}
+            onChange={(value) => {
+              setManifest(value);
+              const entry = manifests.data?.items.find((m) => m.id === value);
+              if (entry)
+                setSelection({
+                  ...selection,
+                  environment_id: entry.environment_id,
+                });
+            }}
+          />
+        </div>
         <Pages
           offset={offset}
           total={manifests.data?.total ?? 0}
           change={setOffset}
         />
         <Failure error={catalogue.error ?? manifests.error ?? save.error} />
-        {save.data ? (
-          <Alert color="teal">
+        {save.data && (
+          <Alert variant="brand" role="status">
             Learning queued. Results and review links appear in the Model
             learning panel.
           </Alert>
-        ) : (
-          <Button loading={save.isPending} onClick={() => save.mutate()}>
-            Queue learning
-          </Button>
         )}
-      </Stack>
+      </div>
     </Modal>
   );
 }
@@ -621,40 +689,62 @@ function LearningRows({
       });
     },
   });
+  const stagger = useFirstLoadStagger(query.data?.items.map((run) => run.id));
   return (
-    <Stack>
-      <Failure error={query.error ?? retry.error} />
-      {query.isPending && <Loader />}
+    <div className="grid">
+      {(query.error || retry.error) && (
+        <div className="px-4 pt-3">
+          <Failure error={query.error ?? retry.error} />
+        </div>
+      )}
+      {query.isPending && (
+        <div className="px-4 py-2">
+          <SkeletonRows rows={3} label="Loading learning runs…" />
+        </div>
+      )}
       {query.data?.total === 0 && (
-        <Text size="sm">
-          No learning runs. Open retained source evidence to start one.
-        </Text>
+        <EmptyState
+          icon={Sparkles}
+          title="No learning runs"
+          description="Open retained source evidence to start one."
+          className="py-8"
+        />
       )}
       {!query.error &&
-        query.data?.items.map((run) => (
-          <Card key={run.id} withBorder>
-            <Stack gap="xs">
-              <Group justify="space-between">
-                <Text fw={600}>
+        query.data?.items.map((run, index) => {
+          const entrance = stagger(run.id, index);
+          return (
+            <div
+              key={run.id}
+              className={cn(
+                "grid gap-1.5 border-b border-border px-4 py-3 last:border-b-0",
+                entrance.className,
+              )}
+              style={entrance.style}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-body font-medium text-foreground">
                   {run.automatic ? "Automatic learning" : "Source learning"}
-                </Text>
-                <Badge
-                  color={
-                    run.state === "succeeded"
-                      ? "teal"
-                      : run.state === "failed"
-                        ? "red"
-                        : "gray"
-                  }
-                >
-                  {label(run.state)}
-                </Badge>
-              </Group>
-              <Text size="xs" c="dimmed">
-                {time(run.created_at)}
-              </Text>
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="mono text-caption text-muted-foreground">
+                    {time(run.created_at)}
+                  </span>
+                  <StatusBadge
+                    state={
+                      run.state === "succeeded"
+                        ? "positive"
+                        : run.state === "failed"
+                          ? "negative"
+                          : "neutral"
+                    }
+                  >
+                    <span className="capitalize">{label(run.state)}</span>
+                  </StatusBadge>
+                </span>
+              </div>
               {run.error_code && (
-                <Text size="sm" c="red">
+                <p className="m-0 text-label text-destructive-text">
                   {label(run.error_code)}.{" "}
                   {run.state === "removed"
                     ? "The input cannot be restored by retrying."
@@ -663,53 +753,72 @@ function LearningRows({
                       : run.error_code === "model_input_too_large"
                         ? "Use a smaller retained excerpt or adjust Maximum input bytes in AI permissions."
                         : "Inspect the policy and source before starting another attempt."}
-                </Text>
+                </p>
               )}
               {run.state === "succeeded" && (
                 <>
-                  <Text size="sm">
+                  <p className="m-0 text-label text-foreground-secondary">
                     {run.accepted} accepted by policy · {run.proposed} proposed
                     · {run.blocked} blocked · {run.conflicting} conflicting ·{" "}
                     {run.reused} existing claims reused · {run.revised ?? 0}{" "}
                     revised · {run.retired ?? 0} retired
-                  </Text>
+                  </p>
                   {run.claim_ids.length === 0 && (
-                    <Text size="sm">The model found no supported claims.</Text>
+                    <p className="m-0 text-label text-muted-foreground">
+                      The model found no supported claims.
+                    </p>
                   )}
                 </>
               )}
-              <Group>
-                {run.claim_ids.map((id, index) => (
-                  <Button
-                    key={id}
-                    variant="subtle"
-                    size="compact-sm"
-                    onClick={() => onInspect(id)}
-                  >
-                    Inspect learned claim {index + 1}
-                  </Button>
-                ))}
-              </Group>
-              {["failed", "cancelled"].includes(run.state) &&
-                !brain.archived &&
-                ["admin", "writer"].includes(brain.role) && (
-                  <Button
-                    variant="light"
-                    loading={retry.isPending && retry.variables?.id === run.id}
-                    onClick={() => retry.mutate(run)}
-                  >
-                    Start new learning attempt
-                  </Button>
-                )}
-            </Stack>
-          </Card>
-        ))}
-      <Pages
-        offset={offset}
-        total={query.data?.total ?? 0}
-        change={setOffset}
-      />
-    </Stack>
+              {(run.claim_ids.length > 0 ||
+                (["failed", "cancelled"].includes(run.state) &&
+                  !brain.archived &&
+                  ["admin", "writer"].includes(brain.role))) && (
+                <div
+                  className={cn(
+                    "flex flex-wrap items-center gap-1.5",
+                    run.claim_ids.length > 0 && "-ml-2.5",
+                  )}
+                >
+                  {run.claim_ids.map((id, index) => (
+                    <Button
+                      key={id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onInspect(id)}
+                    >
+                      Inspect learned claim {index + 1}
+                    </Button>
+                  ))}
+                  {["failed", "cancelled"].includes(run.state) &&
+                    !brain.archived &&
+                    ["admin", "writer"].includes(brain.role) && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={
+                          retry.isPending && retry.variables?.id === run.id
+                        }
+                        onClick={() => retry.mutate(run)}
+                      >
+                        Start new learning attempt
+                      </Button>
+                    )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      {(query.data?.total ?? 0) > 20 && (
+        <div className="border-t border-border px-4 py-2">
+          <Pages
+            offset={offset}
+            total={query.data?.total ?? 0}
+            change={setOffset}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 export function ModelsPanel({
@@ -904,114 +1013,114 @@ export function ModelsPanel({
     command.reset();
   };
   return (
-    <section
-      className={
-        section === "settings" ? "models-management" : "feature-setting"
-      }
-      id="models"
-    >
-      <Stack>
-        {section === "settings" && (
-          <>
-            <Failure error={settings.error} />
-            {settings.isPending && <Loader size="sm" />}
-            {policy && installed && (
-              <div className="management-split">
-                <div className="management-side">
-                  <AiPermissionsCard
-                    brain={brain}
-                    policy={policy}
-                    installed={installed}
-                    editing={editing}
-                    editable={editable}
-                    saving={save.isPending}
-                    saveError={save.error}
-                    changedEmbedding={changedEmbedding}
-                    onEdit={startEditing}
-                    onCancel={cancelEditing}
-                    onSave={() => save.mutate()}
-                    updateDraft={updateDraft}
-                    togglePurpose={togglePurpose}
-                  />
-                </div>
-                <div className="management-side">
-                  <SelectedModelsCard
-                    brain={brain}
-                    policy={policy}
-                    installed={installed}
-                    providers={settings.data?.providers}
-                    modelCatalogue={modelCatalogue.data}
-                    catalogueError={modelCatalogue.error ?? refreshModels.error}
-                    catalogueProvider={catalogueProvider}
-                    refreshing={refreshModels.isPending}
-                    editable={editable}
-                    changedEmbedding={changedEmbedding}
-                    updateDraft={updateDraft}
-                    refreshModels={(provider) => refreshModels.mutate(provider)}
-                  />
-                  <MoreOptionsCard
-                    brain={brain}
-                    editing={editing}
-                    onDiagnostics={() => setDiagnostics(true)}
-                    onHistory={() => setHistory(true)}
-                    onAdvanced={() => setAdvancedEditing(true)}
-                  />
-                </div>
-              </div>
-            )}
-            <DiagnosticsModal
-              brain={brain}
-              diagnostics={diagnostics}
-              failed={!!settings.error}
-              installed={installed}
-              policy={policy}
-              checkPending={check.isPending}
-              checkError={check.error}
-              checkPassed={!!check.data}
-              onClose={() => setDiagnostics(false)}
-              onHistory={() => setHistory(true)}
-              onCheck={() => check.mutate(crypto.randomUUID())}
-            />
-          </>
-        )}
-        {section === "activity" && (
-          <UsageSection
-            usage={usage.data}
-            usageError={usage.error}
-            usagePending={usage.isPending}
-            offset={offset}
-            onOffset={setOffset}
-            learning={<LearningRows brain={brain} onInspect={setSelected} />}
-          />
-        )}
-        {advancedEditing &&
-          brain.role === "admin" &&
-          !brain.archived &&
-          settings.data &&
-          !settings.error && (
-            <PolicyEditor
-              brain={brain.id}
-              settings={settings.data}
-              onClose={() => setAdvancedEditing(false)}
-            />
+    <section id="models" className="grid gap-4">
+      {section === "settings" && (
+        <>
+          <Failure error={settings.error} />
+          {settings.isPending && (
+            <div className="grid grid-cols-[minmax(0,1fr)_380px] items-start gap-4">
+              <Card className="p-5">
+                <SkeletonRows rows={6} label="Loading AI permissions…" />
+              </Card>
+              <Card className="p-5">
+                <SkeletonRows rows={4} label="Loading selected models…" />
+              </Card>
+            </div>
           )}
-        {history && (
-          <PolicyHistory brain={brain.id} onClose={() => setHistory(false)} />
-        )}
-        {selected && (
-          <ClaimDialog
+          {policy && installed && (
+            <div className="grid grid-cols-[minmax(0,1fr)_380px] items-start gap-4">
+              <AiPermissionsCard
+                brain={brain}
+                policy={policy}
+                installed={installed}
+                editing={editing}
+                editable={editable}
+                saving={save.isPending}
+                saveError={save.error}
+                changedEmbedding={changedEmbedding}
+                onEdit={startEditing}
+                onCancel={cancelEditing}
+                onSave={() => save.mutate()}
+                updateDraft={updateDraft}
+                togglePurpose={togglePurpose}
+              />
+              <div className="grid gap-4">
+                <SelectedModelsCard
+                  brain={brain}
+                  policy={policy}
+                  installed={installed}
+                  providers={settings.data?.providers}
+                  modelCatalogue={modelCatalogue.data}
+                  catalogueError={modelCatalogue.error ?? refreshModels.error}
+                  catalogueProvider={catalogueProvider}
+                  refreshing={refreshModels.isPending}
+                  editable={editable}
+                  changedEmbedding={changedEmbedding}
+                  updateDraft={updateDraft}
+                  refreshModels={(provider) => refreshModels.mutate(provider)}
+                />
+                <MoreOptionsCard
+                  brain={brain}
+                  editing={editing}
+                  onDiagnostics={() => setDiagnostics(true)}
+                  onHistory={() => setHistory(true)}
+                  onAdvanced={() => setAdvancedEditing(true)}
+                />
+              </div>
+            </div>
+          )}
+          <DiagnosticsModal
             brain={brain}
-            id={selected}
-            catalogue={catalogue.data}
-            onClose={() => setSelected(null)}
-            onSaved={() => {
-              void cache.invalidateQueries({
-                predicate: (q) => q.queryKey.includes(brain.id),
-              });
-            }}
+            diagnostics={diagnostics}
+            failed={!!settings.error}
+            installed={installed}
+            policy={policy}
+            checkPending={check.isPending}
+            checkError={check.error}
+            checkPassed={!!check.data}
+            onClose={() => setDiagnostics(false)}
+            onHistory={() => setHistory(true)}
+            onCheck={() => check.mutate(crypto.randomUUID())}
+          />
+        </>
+      )}
+      {section === "activity" && (
+        <UsageSection
+          usage={usage.data}
+          usageError={usage.error}
+          usagePending={usage.isPending}
+          offset={offset}
+          onOffset={setOffset}
+          learning={<LearningRows brain={brain} onInspect={setSelected} />}
+        />
+      )}
+      {advancedEditing &&
+        brain.role === "admin" &&
+        !brain.archived &&
+        settings.data &&
+        !settings.error && (
+          <PolicyEditor
+            brain={brain.id}
+            settings={settings.data}
+            onClose={() => setAdvancedEditing(false)}
           />
         )}
-      </Stack>
+      {history && (
+        <PolicyHistory brain={brain.id} onClose={() => setHistory(false)} />
+      )}
+      {selected && (
+        <ClaimDialog
+          brain={brain}
+          id={selected}
+          catalogue={catalogue.data}
+          onClose={() => setSelected(null)}
+          onSaved={() => {
+            void cache.invalidateQueries({
+              predicate: (q) => q.queryKey.includes(brain.id),
+            });
+          }}
+        />
+      )}
     </section>
   );
 }

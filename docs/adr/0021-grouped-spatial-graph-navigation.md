@@ -9,7 +9,9 @@ reopens 3D presentation. Add lazy `react-force-graph-3d`/Three.js over the same
 qualified bounded nodes, edges, selection and evidence inspection as 2D. Use
 stable, named topic groups with explicit expansion, readable selection and finite
 layout settling. Retain Cytoscape 2D and accessible HTML controls as alternatives.
-The existing cream/ink/sage visual language remains.
+The existing cream/ink/sage visual language remains (amended 2026-10-19 by
+[ADR 0025](0025-two-theme-desktop-redesign.md): both renderers take their
+colours from the Light and Ink design tokens).
 
 PostgreSQL owns identity, topics, scope and evidence. Neo4j/GDS owns declared
 native graph computation. Three.js and layout physics only position the current

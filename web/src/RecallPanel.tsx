@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert, Card, Loader, Stack } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { client, result, RequestError, type Brain } from "./api";
+import { Alert } from "./components/ui";
 import { RecallAnswer } from "./RecallAnswer";
 import { RecallComposer } from "./RecallComposer";
 import { RecallDetailDialogs, type RecallDetail } from "./RecallDetailDialogs";
@@ -236,76 +236,78 @@ export function RecallPanel({
     (filters.environment ? 1 : 0) +
     (filters.collection ? 1 : 0);
   return (
-    <Card
-      className="recall-view evidence-search"
-      p={0}
-      component="section"
+    <section
+      className="mx-auto grid w-full max-w-[960px] content-start gap-4"
       aria-label="Recall memory"
     >
-      <Stack>
-        <RecallComposer
+      <RecallComposer
+        filters={filters}
+        queryText={queryText}
+        selectedCount={selectedCount}
+        optionsOpen={optionsOpen}
+        toggleOptions={() => setOptionsOpen((value) => !value)}
+        hasResults={!!submitted}
+        disabled={disabled}
+        fetching={query.isFetching}
+        onQueryChange={(value) => change({ query: value })}
+        onSearch={search}
+        onClear={() => {
+          void cache.cancelQueries({
+            queryKey: ["recall", brain.id],
+          });
+          setSubmitted(null);
+          setDetail(null);
+        }}
+      >
+        <RecallOptions
           filters={filters}
-          queryText={queryText}
-          selectedCount={selectedCount}
-          optionsOpen={optionsOpen}
-          toggleOptions={() => setOptionsOpen((value) => !value)}
-          hasResults={!!submitted}
-          disabled={disabled}
-          fetching={query.isFetching}
-          onQueryChange={(value) => change({ query: value })}
-          onSearch={search}
-          onClear={() => {
-            void cache.cancelQueries({
-              queryKey: ["recall", brain.id],
-            });
-            setSubmitted(null);
-            setDetail(null);
-          }}
+          change={change}
+          open={optionsOpen}
+          setOpen={setOptionsOpen}
+          catalogue={catalogue.data}
+          groups={groups.data}
+          manifests={manifests.data}
+          manifestOffset={manifestOffset}
+          setManifestOffset={setManifestOffset}
+        />
+      </RecallComposer>
+      {(catalogue.error || groups.error || manifests.error) && (
+        <Alert variant="destructive">
+          Scope choices could not be loaded. Reload the Brain and retry.
+        </Alert>
+      )}
+      {notice && <Alert title="Investigation cleared">{notice}</Alert>}
+      {submitted && query.error && (
+        <Alert variant="destructive" title="Recall failed">
+          {query.error.message}
+        </Alert>
+      )}
+      {submitted && query.isLoading && (
+        <p
+          role="status"
+          aria-label="Recalling memory"
+          className="shimmer-text m-0 w-fit px-1 text-body"
         >
-          <RecallOptions
-            filters={filters}
-            change={change}
-            open={optionsOpen}
-            setOpen={setOptionsOpen}
-            catalogue={catalogue.data}
-            groups={groups.data}
-            manifests={manifests.data}
-            manifestOffset={manifestOffset}
-            setManifestOffset={setManifestOffset}
-          />
-        </RecallComposer>
-        {(catalogue.error || groups.error || manifests.error) && (
-          <Alert color="red">
-            Scope choices could not be loaded. Reload the Brain and retry.
-          </Alert>
-        )}
-        {notice && <Alert title="Investigation cleared">{notice}</Alert>}
-        {submitted && query.error && (
-          <Alert color="red" title="Recall failed">
-            {query.error.message}
-          </Alert>
-        )}
-        {submitted && query.isLoading && (
-          <Loader aria-label="Recalling memory" />
-        )}
-        {answer && (
-          <RecallAnswer
-            brain={brain}
-            answer={answer}
-            request={submitted!.request}
-            nonce={submitted!.nonce}
-            catalogue={catalogue.data}
-            groups={groups.data}
-            copied={copied}
-            copyError={copyError}
-            setCopied={setCopied}
-            setCopyError={setCopyError}
-            onClaim={(id) => setDetail({ claim: id })}
-            onEvidence={(e) => setDetail({ evidence: e })}
-            onGraph={(item) => setDetail({ graph: item })}
-          />
-        )}
-      </Stack>
+          Recalling memory from {brain.name}…
+        </p>
+      )}
+      {answer && (
+        <RecallAnswer
+          brain={brain}
+          answer={answer}
+          request={submitted!.request}
+          nonce={submitted!.nonce}
+          catalogue={catalogue.data}
+          groups={groups.data}
+          copied={copied}
+          copyError={copyError}
+          setCopied={setCopied}
+          setCopyError={setCopyError}
+          onClaim={(id) => setDetail({ claim: id })}
+          onEvidence={(e) => setDetail({ evidence: e })}
+          onGraph={(item) => setDetail({ graph: item })}
+        />
+      )}
       <RecallDetailDialogs
         brain={brain}
         detail={detail}
@@ -321,6 +323,6 @@ export function RecallPanel({
           });
         }}
       />
-    </Card>
+    </section>
   );
 }

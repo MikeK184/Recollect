@@ -7,8 +7,8 @@ import {
   useState,
   type MutableRefObject,
 } from "react";
-import { Button, Select, Text } from "@mantine/core";
-import { useReducedMotion } from "@mantine/hooks";
+import { useReducedMotion } from "motion/react";
+import { Focus, Scan, Search, Shuffle } from "lucide-react";
 import ForceGraph3D, { type ForceGraphMethods } from "react-force-graph-3d";
 import {
   CanvasTexture,
@@ -16,6 +16,7 @@ import {
   Mesh,
   MeshLambertMaterial,
   SphereGeometry,
+  SRGBColorSpace,
   Sprite,
   SpriteMaterial,
   Vector2,
@@ -23,7 +24,22 @@ import {
 } from "three";
 import type { GraphCanvasProps } from "./GraphCanvas";
 import type { GraphDisplayGroup } from "./GraphRenderer";
-import { palette, fonts } from "./design/tokens";
+import { fonts } from "./design/tokens";
+import { IconButton, Select } from "./components/ui";
+import { cn } from "./lib/utils";
+import { GraphSwatch } from "./GraphCanvas";
+import {
+  ChromeSlot,
+  chromeCard,
+  useGraphStage,
+} from "./features/graph/GraphStage";
+import {
+  groupLabel,
+  groupOrder,
+  kindGroup,
+  useGraphColors,
+  type GraphColors,
+} from "./features/graph/graphColors";
 import {
   spatialModel,
   type SpatialModel,
@@ -38,16 +54,8 @@ const rendererConfig = {
   powerPreference: "low-power" as const,
 };
 const kindLabel = (value: string) => value.replaceAll("_", " ");
-const baseColor = (kind: string) =>
-  kind === "claim"
-    ? palette.amber
-    : kind === "device"
-      ? palette.violet
-      : kind === "contributor"
-        ? palette.inkSoft
-        : kind === "repository"
-          ? palette.sageDark
-          : palette.sage;
+const slow = 360;
+type LabelColors = Pick<GraphColors, "popover" | "foreground" | "border">;
 
 function disposeLabel(object: ObjectGroup) {
   const label = object.getObjectByName("evidence-label");
@@ -58,35 +66,61 @@ function disposeLabel(object: ObjectGroup) {
     object.remove(label);
   }
 }
-// A label is rebuilt only when its text or on-screen scale changes.
-function ensureLabel(object: ObjectGroup, text: string, scale: number) {
+// A label is rebuilt only when its text, on-screen scale or theme changes.
+function ensureLabel(
+  object: ObjectGroup,
+  text: string,
+  scale: number,
+  colors: LabelColors,
+) {
   const existing = object.getObjectByName("evidence-label");
+  const theme = `${colors.popover}${colors.foreground}${colors.border}`;
   if (
     existing instanceof Sprite &&
     existing.userData.text === text &&
-    existing.userData.scale === scale
+    existing.userData.scale === scale &&
+    existing.userData.theme === theme
   )
     return;
   disposeLabel(object);
-  addLabel(object, text, scale);
+  addLabel(object, text, scale, colors);
 }
-function addLabel(object: ObjectGroup, text: string, scale: number) {
+// Labels are popover pills with foreground text, drawn from the current
+// Light or Ink tokens (the same surface as the 2D labels).
+function addLabel(
+  object: ObjectGroup,
+  text: string,
+  scale: number,
+  colors: LabelColors,
+) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
   if (!context) return;
   const short = text.length > 44 ? `${text.slice(0, 43)}…` : text;
-  context.font = `24px ${fonts.ui}`;
-  canvas.width = Math.ceil(context.measureText(short).width) + 28;
+  const font = `500 24px ${fonts.ui}`;
+  context.font = font;
+  canvas.width = Math.ceil(context.measureText(short).width) + 32;
   canvas.height = 48;
-  context.fillStyle = palette.paperLight;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.font = `24px ${fonts.ui}`;
-  context.fillStyle = palette.ink;
+  context.beginPath();
+  if (context.roundRect)
+    context.roundRect(1, 1, canvas.width - 2, canvas.height - 2, 12);
+  else context.rect(1, 1, canvas.width - 2, canvas.height - 2);
+  context.fillStyle = colors.popover;
+  context.fill();
+  context.lineWidth = 2;
+  context.strokeStyle = colors.border;
+  context.stroke();
+  context.font = font;
+  context.fillStyle = colors.foreground;
   context.textBaseline = "middle";
-  context.fillText(short, 14, canvas.height / 2);
+  context.fillText(short, 16, canvas.height / 2 + 1);
+  // Canvas pixels are sRGB; without this the renderer treats them as linear
+  // and the token colours come out washed out (most visibly in Ink).
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
   const label = new Sprite(
     new SpriteMaterial({
-      map: new CanvasTexture(canvas),
+      map: texture,
       depthTest: false,
       sizeAttenuation: false,
     }),
@@ -96,10 +130,16 @@ function addLabel(object: ObjectGroup, text: string, scale: number) {
   // another mounted view or retaining an old WebGLRenderer.
   label.geometry = label.geometry.clone();
   label.name = "evidence-label";
-  label.userData = { text, scale };
+  label.userData = {
+    text,
+    scale,
+    theme: `${colors.popover}${colors.foreground}${colors.border}`,
+  };
   label.scale.set((scale * canvas.width) / canvas.height, scale, 1);
   label.position.set(0, 14, 0);
-  label.renderOrder = 2;
+  // three-forcegraph draws links at renderOrder 10; labels go after them so
+  // a relationship line never strikes through a name.
+  label.renderOrder = 20;
   const viewportSize = new Vector2(),
     projected = new Vector3();
   label.onBeforeRender = (renderer, _scene, camera) => {
@@ -133,6 +173,7 @@ export default function GraphCanvas3D({
   pathEdges,
   focusRequest = 0,
   tools,
+  leading,
   displayGroups,
   session,
   onFailure,
@@ -162,6 +203,14 @@ export default function GraphCanvas3D({
   const selection = useRef(choice);
   selection.current = choice;
   const reducedMotion = useReducedMotion();
+  const colors = useGraphColors();
+  const colorsRef = useRef(colors);
+  colorsRef.current = colors;
+  const stage = useGraphStage();
+  const insets = useRef(stage?.insets);
+  insets.current = stage?.insets;
+  const pointer = useRef({ x: 0, y: 0 });
+  const [tip, setTip] = useState<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [ready, setReady] = useState(false),
     [settled, setSettled] = useState(false);
@@ -201,7 +250,9 @@ export default function GraphCanvas3D({
           object.add(
             new Mesh(
               sphere,
-              new MeshLambertMaterial({ color: baseColor(node.kind) }),
+              new MeshLambertMaterial({
+                color: colorsRef.current.kinds[kindGroup(node.kind)],
+              }),
             ),
           );
           return [node.id, object] as const;
@@ -209,6 +260,45 @@ export default function GraphCanvas3D({
       ),
     [model, sphere],
   );
+  // New nodes fade and scale in from 0.9 with motion-slow (motion.md). The
+  // frame loop runs only for that transition, never while the scene is still.
+  useEffect(() => {
+    if (reducedMotion) return;
+    const objects = [...nodeObjects.values()];
+    const materials = objects.map(
+      (object) =>
+        (object.children[0] as Mesh<SphereGeometry, MeshLambertMaterial>)
+          .material,
+    );
+    for (const material of materials) {
+      material.transparent = true;
+      material.opacity = 0;
+      material.needsUpdate = true;
+    }
+    for (const object of objects) object.scale.setScalar(0.9);
+    const started = performance.now();
+    let frame = requestAnimationFrame(function step(now) {
+      const t = Math.min(1, (now - started) / slow);
+      const eased = 1 - (1 - t) ** 3;
+      for (const material of materials) material.opacity = eased;
+      for (const object of objects) object.scale.setScalar(0.9 + 0.1 * eased);
+      if (t < 1) frame = requestAnimationFrame(step);
+      else
+        for (const material of materials) {
+          material.transparent = false;
+          material.needsUpdate = true;
+        }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      for (const material of materials) {
+        material.opacity = 1;
+        material.transparent = false;
+        material.needsUpdate = true;
+      }
+      for (const object of objects) object.scale.setScalar(1);
+    };
+  }, [nodeObjects, reducedMotion]);
   const objectFor = useCallback(
     (node: SpatialNode) => nodeObjects.get(node.id)!,
     [nodeObjects],
@@ -219,16 +309,16 @@ export default function GraphCanvas3D({
     ),
     edgePath = useMemo(() => new Set(pathEdges), [JSON.stringify(pathEdges)]);
   const selectedEdge = choice?.kind === "edge" ? choice.id : null;
+  // Rest edges are border-strong; a path or selection is brand. A theme
+  // change swaps this accessor, which recolours links without reheating.
   const linkColor = useCallback(
     (link: SpatialLink) =>
-      selectedEdge === link.id
-        ? palette.ink
-        : edgePath.has(link.id)
-          ? palette.sageDark
-          : link.family === "cross_repository"
-            ? palette.violet
-            : palette.lineDark,
-    [selectedEdge, edgePath],
+      selectedEdge === link.id || edgePath.has(link.id)
+        ? colors.brand
+        : link.family === "cross_repository"
+          ? colors.cross
+          : colors.edge,
+    [selectedEdge, edgePath, colors],
   );
   const linkWidth = useCallback(
     (link: SpatialLink) =>
@@ -249,11 +339,9 @@ export default function GraphCanvas3D({
         mesh = object.children[0] as Mesh<SphereGeometry, MeshLambertMaterial>;
       const highlighted = choice?.kind === "node" && choice.id === node.id;
       mesh.material.color.set(
-        highlighted
-          ? palette.ink
-          : nodePath.has(node.id)
-            ? palette.sageDark
-            : baseColor(node.kind),
+        highlighted || nodePath.has(node.id)
+          ? colors.brand
+          : colors.kinds[kindGroup(node.kind)],
       );
       mesh.scale.setScalar(
         highlighted ? 1.5 : nodePath.has(node.id) ? 1.25 : 1,
@@ -263,7 +351,7 @@ export default function GraphCanvas3D({
         hover === node.id ||
         (model.nodes.length <= 12 && !choice && displayGroups.length === 0)
       )
-        ensureLabel(object, node.label, labelScale);
+        ensureLabel(object, node.label, labelScale, colors);
       else disposeLabel(object);
     }
     for (const link of model.links) {
@@ -283,6 +371,7 @@ export default function GraphCanvas3D({
     hover,
     labelScale,
     displayGroups.length,
+    colors,
   ]);
   useEffect(
     () => () => {
@@ -438,7 +527,7 @@ export default function GraphCanvas3D({
       const members = model.nodes.filter((node) => node.groupId === group.id);
       if (!members.length) continue;
       const heading = new ObjectGroup();
-      addLabel(heading, group.label, labelScale);
+      addLabel(heading, group.label, labelScale, colors);
       const anchor = members[0].anchor;
       heading.position.set(anchor.x, anchor.y + 35, anchor.z);
       const label = heading.children[0] as Sprite;
@@ -456,7 +545,7 @@ export default function GraphCanvas3D({
       if (topicHeadings.current === headingObjects)
         topicHeadings.current = null;
     };
-  }, [ready, model, displayGroups, labelScale]);
+  }, [ready, model, displayGroups, labelScale, colors]);
 
   useEffect(() => {
     if (topicHeadings.current)
@@ -478,7 +567,7 @@ export default function GraphCanvas3D({
       session.current.value = null;
     }
   }, [model]);
-  const fit = (duration = reducedMotion ? 0 : 240, initial = false) => {
+  const fit = (duration = reducedMotion ? 0 : slow, initial = false) => {
     const api = graph.current;
     const visible = model.nodes.filter((node) =>
       [node.x, node.y, node.z].every(Number.isFinite),
@@ -507,8 +596,12 @@ export default function GraphCanvas3D({
     const right = new Vector3().crossVectors(forward, camera.up).normalize();
     if (!right.lengthSq()) right.set(1, 0, 0);
     const up = new Vector3().crossVectors(right, forward).normalize();
+    // Keep the fitted scene inside the band between the canvas chrome rows,
+    // centred, so floating controls never cover a node after a fit.
+    const chrome = insets.current?.() ?? { top: 0, bottom: 0 };
+    const band = size.height - 2 * (Math.max(chrome.top, chrome.bottom) + 16);
     const tanV =
-      Math.max(1, size.height - 130) /
+      Math.max(1, band >= 160 ? band : size.height - 130) /
       size.height /
       Math.abs(camera.projectionMatrix.elements[5]);
     const tanH =
@@ -540,7 +633,7 @@ export default function GraphCanvas3D({
     graph.current.cameraPosition(
       { x: x + 35, y: y + 25, z: z + 170 },
       { x, y, z },
-      reducedMotion ? 0 : 240,
+      reducedMotion ? 0 : slow,
     );
   };
   useEffect(() => {
@@ -573,48 +666,162 @@ export default function GraphCanvas3D({
   );
   const hovered = model.nodes.find((n) => n.id === hover);
   const hoveredLink = model.links.find((link) => link.id === hoverEdge);
+  const present = groupOrder.filter((group) =>
+    nodes.some((node) => kindGroup(node.evidence.kind) === group),
+  );
+  const tooltip = hovered
+    ? `${hovered.label} · ${kindLabel(hovered.kind)}`
+    : hoveredLink
+      ? `${labels.get(hoveredLink.from)} → ${labels.get(hoveredLink.to)} · ${kindLabel(hoveredLink.relation)}`
+      : null;
+  // The hover label appears where the pointer met the node or relationship;
+  // it does not chase the pointer (no re-render per pointer move).
+  useEffect(() => {
+    setTip(tooltip ? { ...pointer.current } : null);
+  }, [tooltip]);
   return (
-    <div className="graph-stage rc-graph-stage graph-spatial-stage">
-      <div className="graph-canvas-toolbar" data-graph-chrome="">
-        <Select
-          className="graph-canvas-finder"
-          aria-label="Inspect graph entity"
-          placeholder="Find entity…"
-          searchable
-          clearable
-          allowDeselect={false}
-          limit={50}
-          value={
-            choice?.kind === "node" && labels.has(choice.id) ? choice.id : null
-          }
-          data={nodeOptions}
-          onOptionSubmit={(id) => choose.current({ kind: "node", id })}
-          onChange={(id) => {
-            if (!id) choose.current(null);
-          }}
-        />
-        {tools}
-      </div>
-      <div className="graph-spatial-viewport" ref={viewport}>
-        {hovered && (
-          <Text className="graph-canvas-hover-label" role="tooltip" size="sm">
-            {hovered.label} · {kindLabel(hovered.kind)}
-          </Text>
-        )}
-        {hoveredLink && (
-          <Text className="graph-canvas-hover-label" role="tooltip" size="sm">
-            {labels.get(hoveredLink.from)} → {labels.get(hoveredLink.to)} ·{" "}
-            {kindLabel(hoveredLink.relation)}
-          </Text>
+    <div className="graph-stage graph-spatial-stage relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <ChromeSlot zone="top-right" order={0}>
+        <div
+          className={cn(chromeCard, "flex flex-wrap items-center justify-end gap-1 p-1")}
+          data-graph-chrome=""
+        >
+          {leading}
+          <Select
+            className="w-52"
+            size="sm"
+            aria-label="Inspect graph entity"
+            placeholder="Find entity…"
+            leftSection={<Search />}
+            searchable
+            limit={50}
+            clearable
+            value={
+              choice?.kind === "node" && labels.has(choice.id)
+                ? choice.id
+                : null
+            }
+            data={nodeOptions}
+            onChange={(id) =>
+              choose.current(id ? { kind: "node", id } : null)
+            }
+          />
+          {tools}
+        </div>
+      </ChromeSlot>
+      <ChromeSlot zone="top-right" order={1}>
+        <div
+          className={cn(chromeCard, "flex items-center gap-0.5 p-1")}
+          data-graph-chrome=""
+        >
+          <IconButton size="icon-sm" label="Fit graph" onClick={() => fit()}>
+            <Scan aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            size="icon-sm"
+            label="Focus selection"
+            disabled={choice?.kind !== "node"}
+            onClick={focus}
+          >
+            <Focus aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            size="icon-sm"
+            label="Rearrange"
+            onClick={() => {
+              restored.current = false;
+              setSettled(false);
+              graph.current?.d3ReheatSimulation();
+            }}
+          >
+            <Shuffle aria-hidden="true" />
+          </IconButton>
+        </div>
+      </ChromeSlot>
+      {present.length > 0 && (
+        <ChromeSlot zone="bottom-left" order={0}>
+          <ul
+            aria-label="Kinds in this view"
+            className={cn(
+              chromeCard,
+              "m-0 flex list-none flex-wrap items-center gap-x-3.5 gap-y-1 px-2.5 py-1.5",
+            )}
+            data-graph-chrome=""
+          >
+            {present.map((group) => (
+              <li
+                key={group}
+                className="flex items-center gap-1.5 text-caption text-foreground-secondary"
+              >
+                <GraphSwatch group={group} />
+                {groupLabel[group]}
+              </li>
+            ))}
+          </ul>
+        </ChromeSlot>
+      )}
+      <ChromeSlot zone="bottom-right" order={0}>
+        <div
+          className={cn(chromeCard, "grid w-[22rem] max-w-full gap-1.5 p-1.5")}
+          data-graph-chrome=""
+        >
+          <Select
+            size="sm"
+            aria-label="Inspect graph relationship"
+            placeholder="Find relationship…"
+            searchable
+            limit={50}
+            clearable
+            value={choice?.kind === "edge" ? choice.id : null}
+            data={edgeOptions}
+            onChange={(id) =>
+              choose.current(id ? { kind: "edge", id } : null)
+            }
+          />
+          <p
+            className="m-0 px-1 text-caption text-muted-foreground"
+            role="status"
+          >
+            <span className="mono">
+              {model.nodes.length} loaded nodes · {model.links.length} directed
+              relationships
+            </span>{" "}
+            · {settled ? "Layout settled" : "Arranging"}. Drag to orbit, scroll
+            to zoom. Position is presentation; evidence defines relationships.
+          </p>
+        </div>
+      </ChromeSlot>
+      <div
+        className="graph-spatial-viewport relative min-h-0 flex-1 overflow-hidden"
+        ref={viewport}
+        onPointerMove={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          pointer.current = {
+            x: event.clientX - box.left,
+            y: event.clientY - box.top,
+          };
+        }}
+      >
+        {tooltip && tip && (
+          <p
+            role="tooltip"
+            className="pointer-events-none absolute z-20 m-0 max-w-[26rem] -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-sm bg-primary px-2 py-[5px] text-caption font-medium text-primary-foreground shadow-md [overflow-wrap:anywhere]"
+            style={{ left: tip.x, top: tip.y }}
+          >
+            {tooltip}
+          </p>
         )}
         {nodes.length === 0 && (
-          <Text className="graph-canvas-empty" role="status">
+          <p
+            className="pointer-events-none absolute inset-x-4 top-1/2 z-[1] m-0 text-center text-body text-muted-foreground"
+            role="status"
+          >
             No eligible entities in this loaded read.
-          </Text>
+          </p>
         )}
         <div
           ref={container}
-          className="graph-spatial-canvas"
+          className="graph-spatial-canvas absolute inset-0 [&_canvas]:block"
           role="img"
           aria-label={`Interactive 3D graph: ${model.nodes.length} loaded nodes and ${model.links.length} directed relationships. Use Find entity and Find relationship for keyboard inspection.`}
           data-testid="graph-canvas"
@@ -634,7 +841,7 @@ export default function GraphCanvas3D({
               height={size.height}
               rendererConfig={rendererConfig}
               controlType="orbit"
-              backgroundColor={palette.paper}
+              backgroundColor={colors.background}
               showNavInfo={false}
               nodeThreeObject={objectFor}
               nodeLabel={() => ""}
@@ -681,50 +888,6 @@ export default function GraphCanvas3D({
             />
           )}
         </div>
-      </div>
-      <div className="graph-spatial-controls" data-graph-chrome="">
-        <Select
-          aria-label="Inspect graph relationship"
-          placeholder="Find relationship…"
-          searchable
-          clearable
-          allowDeselect={false}
-          limit={50}
-          value={choice?.kind === "edge" ? choice.id : null}
-          data={edgeOptions}
-          onOptionSubmit={(id) => choose.current({ kind: "edge", id })}
-          onChange={(id) => {
-            if (!id) choose.current(null);
-          }}
-        />
-        <Button size="compact-xs" variant="subtle" onClick={() => fit()}>
-          Fit graph
-        </Button>
-        <Button
-          size="compact-xs"
-          variant="subtle"
-          disabled={choice?.kind !== "node"}
-          onClick={focus}
-        >
-          Focus selection
-        </Button>
-        <Button
-          size="compact-xs"
-          variant="subtle"
-          onClick={() => {
-            restored.current = false;
-            setSettled(false);
-            graph.current?.d3ReheatSimulation();
-          }}
-        >
-          Rearrange
-        </Button>
-      </div>
-      <div className="graph-spatial-caption" role="status">
-        {model.nodes.length} loaded nodes · {model.links.length} directed
-        relationships · {settled ? "Layout settled" : "Arranging"}. Drag to
-        orbit, scroll to zoom. Position is presentation; evidence defines
-        relationships.
       </div>
     </div>
   );
